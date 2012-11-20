@@ -1,0 +1,20 @@
+*.egg
+*.egg-info
+*.pyc
+*.db
+*.sqlite
+*.sql
+*.cache
+*.lock
+
+# Some Pylons-generated directories that should be ignored
+dist/
+data/
+build/
+
+# Some OLD-specific directories that should be ignored
+files/
+analysis/
+
+# The client-side JavaScript application should be kept separate, at least for now
+old/public/

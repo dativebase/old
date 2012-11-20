@@ -1,0 +1,50 @@
+First-time setup
+================================================================================
+
+Tell git who you are:
+
+    $ git config --global user.name "John Doe"
+    $ git config --global user.email johndoe@example.c
+
+and what editor you want to use:
+
+    $ git config --global core.editor nano
+
+Review your settings:
+
+    $ git config --list
+
+Initialize a repository
+================================================================================
+
+cd to the repository and run:
+
+    $ git init
+
+Write your local .gitignore file, write and config your global gitignore file
+and alter the .git/info/exclude file (if necessary, see below) 
+
+
+Gitignore
+================================================================================
+
+Basically, you tell git to ignore files in 3 ways:
+
+1. .gitignore file in the root directory of the repo (and subdirectories?).
+   Use this as the catch-all ignore file.
+
+2. .gitignore_global file that you have tell git to acknowledge by running
+
+    $ git config --global core.excludesfile <path/to/globa/gitignore/file>
+
+   This is useful for things that git should ignore for any repo.
+
+3. Add ignore patterns to the repo exclude file in .git/info/exclude.
+   This is good for files that you don't expect others to generate in the repo,
+   e.g., .komodoproject files.
+
+More info:
+
+- https://help.github.com/articles/ignoring-files
+- http://www.kernel.org/pub/software/scm/git/docs/gitignore.html
+- http://git-scm.com/book/en/Getting-Started-First-Time-Git-Setup
