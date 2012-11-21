@@ -101,7 +101,8 @@ def getLanguageObjects(filename, config):
         iso_639_3FilePath = os.path.join(languagesPath, 'iso_639_3.tab')
     iso_639_3File = codecs.open(iso_639_3FilePath, 'r', 'utf-8')
     languageList = [l.split('\t') for l in iso_639_3File]
-    return [getLanguageObject(language) for language in languageList]
+    return [getLanguageObject(language) for language in languageList
+            if len(languageList) == 8]
 
 def getLanguageObject(languageList):
     """Given a list of ISO-639-3 language data, return an OLD language model."""
