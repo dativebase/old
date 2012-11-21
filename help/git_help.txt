@@ -111,3 +111,9 @@ More info:
 - https://help.github.com/articles/ignoring-files
 - http://www.kernel.org/pub/software/scm/git/docs/gitignore.html
 - http://git-scm.com/book/en/Getting-Started-First-Time-Git-Setup
+
+
+Submodules
+================================================================================
+
+- http://git-scm.com/book/en/Git-Tools-Submodules

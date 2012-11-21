@@ -5,13 +5,14 @@ import re
 from mako.lookup import TemplateLookup
 from pylons.configuration import PylonsConfig
 from pylons.error import handle_mako_error
-from sqlalchemy import engine_from_config
-from sqlalchemy.interfaces import PoolListener
+from sqlalchemy import engine_from_config, event
+from sqlalchemy.engine import Engine
 
 import old.lib.app_globals as app_globals
 import old.lib.helpers
 from old.config.routing import make_map
 from old.model import init_model
+
 
 def load_environment(global_conf, app_conf):
     """Configure the Pylons environment via the ``pylons.config``
@@ -57,40 +58,34 @@ def load_environment(global_conf, app_conf):
     # CONFIGURATION OPTIONS HERE (note: all config options will override
     # any Pylons config options)
 
-    # Setup the SQLAlchemy database engine
-    # *NOTE: Modification.* Check if SQLite is the RDBMS and, if so, give the
-    # engine an SQLiteSetup listener which provides the regexp function missing
-    # from the SQLite dbapi.  See below for the listener class.
-    # Cf. http://groups.google.com/group/pylons-discuss/browse_thread/thread/8c82699e6b6a400c/5c5237c86202e2b8
+    engine = engine_from_config(config, 'sqlalchemy.')
 
+    # Patch the SQLAlchemy database engine if SQLite is the RDBMS.  Add a REGEXP
+    # function and make LIKE searches case-sensitive.
     RDBMSName = config['sqlalchemy.url'].split(':')[0]
     app_globals.RDBMSName = RDBMSName
     if RDBMSName == 'sqlite':
-        engine = engine_from_config(
-            config, 'sqlalchemy.', listeners=[SQLiteSetup()])
-        # Make LIKE searches case sensitive in SQLite
-        engine.execute('PRAGMA case_sensitive_like=ON')
-    else:
-        engine = engine_from_config(config, 'sqlalchemy.')
+        @event.listens_for(Engine, 'connect')
+        def sqlite_patches(dbapi_connection, connection_record):
+            # Define a regexp function for SQLite,
+            def regexp(expr, item):
+                """This is the Python re-based regexp function that we provide
+                for SQLite.  Note that searches will be case-sensitive by
+                default.  Such behaviour is assured in MySQL by inserting
+                COLLATE expressions into the query (cf. in SQLAQueryBuilder.py).
+                """
+                patt = re.compile(expr)
+                try:
+                    return item and patt.search(item) is not None
+                # This will make regexp searches work on int, date & datetime fields.
+                except TypeError:
+                    return item and patt.search(str(item)) is not None
+            dbapi_connection.create_function('regexp', 2, regexp)
+
+            # Make LIKE searches case-sensitive in SQLite.
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA case_sensitive_like=ON")
+            cursor.close()
+
     init_model(engine)
-
     return config
-
-
-class SQLiteSetup(PoolListener):
-    """A PoolListener used to provide the SQLite dbapi with a regexp function.
-    """
-    def connect(self, conn, conn_record):
-        conn.create_function('regexp', 2, self.regexp)
-
-    def regexp(self, expr, item):
-        """This is the Python re-based regexp function that we provide for SQLite.
-        Note that searches will be case-sensitive by default, which may not be
-        the default for the MySQL regexp, depending on the collation."""
-        patt = re.compile(expr)
-        try:
-            return item and patt.search(item) is not None
-        # This will make regexp searches work on int, date & datetime fields.
-        # I think this is desirable ...
-        except TypeError:
-            return item and patt.search(str(item)) is not None

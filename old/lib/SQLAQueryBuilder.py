@@ -47,6 +47,7 @@ import datetime
 from sqlalchemy.sql import or_, and_, not_
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql.expression import collate
+#from utils import getRDBMSName
 
 try:
     import simplejson as json
@@ -90,7 +91,6 @@ except ImportError:
             return datetime.datetime.strptime(dateString, "%Y-%m-%d").date()
         except ValueError:
             return None
-
 
 class OLDSearchParseError(Exception):
     def __init__(self, errors):
@@ -440,14 +440,27 @@ class SQLAQueryBuilder(object):
                 u'Searching on %s.%s is not permitted' % (modelName, attributeName))
         return attributeDict
 
-    def _getAttribute(self, attributeName, model, modelName):
+    def _getAttribute(self, attributeName, model, modelName, relationName):
         try:
-            attribute = getattr(model, attributeName)
+            attribute = self._collateAttribute(relationName,
+                                               getattr(model, attributeName))
         except AttributeError:  # model can be None
             attribute = None
             self._addToErrors('%s.%s' % (modelName, attributeName),
                 u"There is no attribute %s of %s" % (attributeName, modelName))
         return attribute
+
+    def _collateAttribute(self, relationName, attribute):
+        """Append a MySQL COLLATE utf8_bin expression after the column name, if
+        appropriate.  This allows regexp and like searches to be case-sensitive.
+        An example SQLA query would be meta.Session.query(model.Form).filter(
+        collate(model.Form.transcription, 'latin1_bin').like(u'a%'))
+        """
+        if self.RDBMSName == 'mysql' and relationName in ('like', 'regexp') and \
+        attribute is not None:
+            return collate(attribute, 'utf8_bin')
+        else:
+            return attribute
 
     ############################################################################
     # Relation getters
@@ -494,12 +507,6 @@ class SQLAQueryBuilder(object):
             self._addToErrors('%s.%s.%s' % (modelName, attributeName, relationName),
                 u"There is no relation '%s' of '%s.%s'" % (relationName, modelName, attributeName))
         return relation
-
-    # forms = meta.Session.query(model.Form).filter(collate(model.Form.transcription, 'latin1_bin').like(u'a%')).all()
-    def _collateAttribute(relationName, attribute):
-        if relationName in ('like', 'regexp') and attribute is not None and \
-        self.RDBMSName == 'mysql':
-            return collate(attribute)
 
     ############################################################################
     # Value getters
@@ -571,7 +578,7 @@ class SQLAQueryBuilder(object):
         value = self._getValue(valueLiteral, modelName, attributeName, relationName)
         if self.mode == 'production':
             model = self._getModel(modelName)
-            attribute = self._getAttribute(attributeName, model, modelName)
+            attribute = self._getAttribute(attributeName, model, modelName, relationName)
             relation = self._getRelation(relationName, attribute, attributeName, modelName)
             return self._getFilterExpression(relation, value,
                                     modelName, attributeName, relationName)
