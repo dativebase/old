@@ -47,7 +47,7 @@ import datetime
 from sqlalchemy.sql import or_, and_, not_
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql.expression import collate
-#from utils import getRDBMSName
+from sqlalchemy.types import Unicode, UnicodeText
 
 try:
     import simplejson as json
@@ -203,6 +203,8 @@ class SQLAQueryBuilder(object):
         except Exception, e:
             self.errors['Malformed OLD query error'] = u'The submitted query was malformed'
             self.errors['Exception'] = e.__unicode__()
+
+    SQLAlchemyStringTypes = (Unicode, UnicodeText)
 
     errors = {}
 
@@ -454,9 +456,12 @@ class SQLAQueryBuilder(object):
         """Append a MySQL COLLATE utf8_bin expression after the column name, if
         appropriate.  This allows regexp and like searches to be case-sensitive.
         An example SQLA query would be meta.Session.query(model.Form).filter(
-        collate(model.Form.transcription, 'latin1_bin').like(u'a%'))
+        collate(model.Form.transcription, 'utf8_bin').like(u'a%'))
+        
+        TODO: test what happens with bad charsets
         """
         if self.RDBMSName == 'mysql' and relationName in ('like', 'regexp') and \
+        isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes) and \
         attribute is not None:
             return collate(attribute, 'utf8_bin')
         else:
