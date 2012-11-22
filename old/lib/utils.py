@@ -10,7 +10,7 @@ import simplejson as json
 from pylons import config as config_
 from sqlalchemy.sql import or_, not_, desc, asc
 import old.model as model
-import old.model.meta as meta
+from old.model.meta import Session
 import orthography
 from simplejson.decoder import JSONDecodeError
 
@@ -434,7 +434,7 @@ def getForeignWords():
 
     foreignWordTag = getForeignWordTag()
     if foreignWordTag:
-        return meta.Session.query(model.Form).filter(
+        return Session.query(model.Form).filter(
             model.Form.tags.contains(foreignWordTag)).all()
     else:
         return getForms()
@@ -488,10 +488,10 @@ def getForeignWords_():
     """
 
     foreignWordTagId = getForeignWordTagId()
-    formTags = meta.Session.query(model.FormTag).filter(
+    formTags = Session.query(model.FormTag).filter(
         model.FormTag.tag_id==foreignWordTagId).all()
     formIds = [ft.form_id for ft in formTags]
-    return meta.Session.query(model.Form).filter(
+    return Session.query(model.Form).filter(
         model.Form.id.in_(formIds)).all()
 
 
@@ -518,7 +518,7 @@ def getMorphemeDelimiters():
         return []
 
 def getApplicationSettings():
-    return meta.Session.query(model.ApplicationSettings).order_by(
+    return Session.query(model.ApplicationSettings).order_by(
         desc(model.ApplicationSettings.id)).first()
 
 def getOrthographies():
@@ -535,25 +535,25 @@ def getFormsUserCanAccess(user, paginator=None):
     entererCondition = model.Form.enterer == user
     restrictedTag = getRestrictedTag()
     unrestrictedCondition = not_(model.Form.tags.contains(restrictedTag))
-    filteredQuery = meta.Session.query(model.Form).filter(
+    filteredQuery = Session.query(model.Form).filter(
         or_(entererCondition, unrestrictedCondition)).order_by(asc(model.Form.id))
     if paginator:
         return filteredQuery.slice(paginator['start'], paginator['end']).all()
     return filteredQuery.all()
 
 def getForms(paginator=None):
-    formQuery = meta.Session.query(model.Form).order_by(asc(model.Form.id))
+    formQuery = Session.query(model.Form).order_by(asc(model.Form.id))
     if paginator:
         return formQuery.slice(paginator['start'], paginator['end']).all()
     return formQuery.all()
 
 def getFormByUUID(UUID):
     """Return the Form models with UUID."""
-    return meta.Session.query(model.Form).filter(model.Form.UUID==UUID).first()
+    return Session.query(model.Form).filter(model.Form.UUID==UUID).first()
 
 def getFormBackupsByUUID(UUID):
     """Return all FormBackup models with UUID = UUID."""
-    return meta.Session.query(model.FormBackup).filter(
+    return Session.query(model.FormBackup).filter(
         model.FormBackup.UUID==UUID).order_by(desc(
         model.FormBackup.id)).all()
 
@@ -562,7 +562,7 @@ def getFormBackupsByFormId(formId):
     data may be returned (on an SQLite backend) if primary key ids of deleted
     forms are recycled.
     """
-    return meta.Session.query(model.FormBackup).filter(
+    return Session.query(model.FormBackup).filter(
         model.FormBackup.form_id==formId).order_by(desc(
         model.FormBackup.id)).all()
 
@@ -573,11 +573,11 @@ def getFiles():
     return getModelsByName('File')
 
 def getForeignWordTag():
-    return meta.Session.query(model.Tag).filter(
+    return Session.query(model.Tag).filter(
         model.Tag.name == u'foreign word').first()
 
 def getRestrictedTag():
-    return meta.Session.query(model.Tag).filter(
+    return Session.query(model.Tag).filter(
         model.Tag.name == u'restricted').first()
 
 def getSyntacticCategories():
@@ -597,10 +597,10 @@ def getModelNames():
 
 def getModelsByName(modelName):
     return getQueryByModelName(modelName).all()
-    #return meta.Session.query(getattr(model, modelName)).all()
+    #return Session.query(getattr(model, modelName)).all()
 
 def getQueryByModelName(modelName):
-    return meta.Session.query(getattr(model, modelName))
+    return Session.query(getattr(model, modelName))
 
 def clearAllModels(retain=['Language']):
     """Convenience function for removing all OLD models from the database.
@@ -610,8 +610,8 @@ def clearAllModels(retain=['Language']):
         if modelName not in retain:
             models = getModelsByName(modelName)
             for model in models:
-                meta.Session.delete(model)
-    meta.Session.commit()
+                Session.delete(model)
+    Session.commit()
 
 def getAllModels():
     return dict([(mn, getModelsByName(mn)) for mn in getModelNames()])
@@ -861,7 +861,7 @@ def getMostRecentModificationDatetime(modelName):
 
     OLDModel = getattr(model, modelName, None)
     if OLDModel:
-        return meta.Session.query(OLDModel).order_by(
+        return Session.query(OLDModel).order_by(
             desc(OLDModel.datetimeModified)).first().datetimeModified
     return OLDModel
 

@@ -5,7 +5,7 @@ Provides the BaseController class for subclassing.
 from pylons.controllers import WSGIController
 from pylons.templating import render_mako as render
 
-from old.model import meta
+from old.model.meta import Session
 import old.model as model
 from pylons import request, response, session, app_globals
 import old.lib.helpers as h
@@ -21,7 +21,7 @@ class BaseController(WSGIController):
         try:
             return WSGIController.__call__(self, environ, start_response)
         finally:
-            meta.Session.remove()
+            Session.remove()
 
 
     def __before__(self):
@@ -51,12 +51,12 @@ class BaseController(WSGIController):
 
         if 'test.authentication.role' in request.environ:
             role = unicode(request.environ['test.authentication.role'])
-            user = meta.Session.query(model.User).filter(
+            user = Session.query(model.User).filter(
                 model.User.role==role).first()
             if user:
                 session['user'] = user
         if 'test.authentication.id' in request.environ:
-            user = meta.Session.query(model.User).get(
+            user = Session.query(model.User).get(
                 request.environ['test.authentication.id'])
             if user:
                 session['user'] = user

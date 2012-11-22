@@ -5,20 +5,26 @@ import codecs
 import datetime
 import os
 
+import pylons.test
 from old.config.environment import load_environment
+from old.model.meta import Base, Session
 from old.model import meta
 from old import model
 import old.lib.helpers as h
+from pylons import config
 
 log = logging.getLogger(__name__)
 
 def setup_app(command, conf, vars):
     """Place any commands to setup onlinelinguisticdatabase here"""
 
+    #if not pylons.test.pylonsapp:
+        #load_environment(conf.global_conf, conf.local_conf)
     config = load_environment(conf.global_conf, conf.local_conf)
 
     log.info('Environment loaded.')
-    meta.metadata.bind = meta.engine
+    Base.metadata.create_all(bind=Session.bind)
+    ##meta.metadata.bind = meta.engine
     filename = os.path.split(conf.filename)[-1] # e.g., production.ini, development.ini, test.ini, ...
 
     # Create the files directories.
@@ -46,21 +52,22 @@ def setup_app(command, conf, vars):
     # If we are running tests, make sure the test db contains only language data.
     if filename == 'test.ini':
         # Permanently drop any existing tables
-        meta.metadata.drop_all(checkfirst=True)
+        Base.metadata.drop_all(bind=Session.bind, checkfirst=True)
         log.info("Existing tables dropped.")
 
         # Create the tables if they don't already exist
-        meta.metadata.create_all(checkfirst=True)
+        ##meta.metadata.create_all(checkfirst=True)
+        Base.metadata.create_all(bind=Session.bind, checkfirst=True)
         log.info('Tables created.')
 
-        meta.Session.add_all(languages + [administrator, contributor, viewer])
-        meta.Session.commit()
+        Session.add_all(languages + [administrator, contributor, viewer])
+        Session.commit()
 
     # Not a test: add a bunch of nice defaults.
     else:
 
         # Create the tables if they don't already exist
-        meta.metadata.create_all(checkfirst=True)
+        Base.metadata.create_all(bind=Session.bind, checkfirst=True)
         log.info('Tables created.')
 
         # Get default home & help pages.
@@ -87,8 +94,8 @@ def setup_app(command, conf, vars):
         if config['addLanguageData'] != '0':
             data += languages
         if config['emptyDatabase'] == '0':
-            meta.Session.add_all(data)
-            meta.Session.commit()
+            Session.add_all(data)
+            Session.commit()
         log.info("OLD successfully set up.")
 
 def getLanguageObjects(filename, config):

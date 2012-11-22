@@ -4,12 +4,12 @@ from sqlalchemy import orm, schema, types
 import simplejson as json
 import datetime
 
-from old.model import meta
+from old.model.meta import Session, Base
 
 def init_model(engine):
     """Call me before using any of the tables or classes in the model"""
-    meta.engine = engine
-
+    ##meta.engine = engine
+    Session.configure(bind=engine)
 
 def now():
     return datetime.datetime.utcnow()
@@ -19,7 +19,7 @@ def now():
 ################################################################################
 
 # form_table holds the data that constitute OLD Forms
-form_table = schema.Table('form', meta.metadata,
+form_table = schema.Table('form', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('form_seq_id', optional=True), primary_key=True),
     schema.Column('UUID', types.Unicode(36)),
@@ -68,7 +68,7 @@ form_table = schema.Table('form', meta.metadata,
 )
 
 # gloss_table holds the glosses for OLD Forms
-gloss_table = schema.Table('gloss', meta.metadata,
+gloss_table = schema.Table('gloss', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('gloss_seq_id', optional=True), primary_key=True),
     schema.Column('gloss', types.UnicodeText(), nullable=False),
@@ -82,7 +82,7 @@ gloss_table = schema.Table('gloss', meta.metadata,
 )
 
 # file_table holds the info about OLD Files (i.e., images, audio, video, PDFs) 
-file_table = schema.Table('file', meta.metadata,
+file_table = schema.Table('file', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('file_seq_id', optional=True), primary_key=True),
 
@@ -112,7 +112,7 @@ file_table = schema.Table('file', meta.metadata,
 
 # collection_table holds info about OLD Collections: stories, discourses,
 #  elicitations, ...
-collection_table = schema.Table('collection', meta.metadata, 
+collection_table = schema.Table('collection', Base.metadata, 
     schema.Column('id', types.Integer,
         schema.Sequence('collection_seq_id', optional=True), primary_key=True),
 
@@ -135,7 +135,7 @@ collection_table = schema.Table('collection', meta.metadata,
 )
 
 # user_table holds info about registered users
-user_table = schema.Table('user', meta.metadata,
+user_table = schema.Table('user', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('user_seq_id', optional=True), primary_key=True),
 
@@ -153,7 +153,7 @@ user_table = schema.Table('user', meta.metadata,
     schema.Column('datetimeModified', types.DateTime(), default=now)
 )
 
-speaker_table = schema.Table('speaker', meta.metadata,
+speaker_table = schema.Table('speaker', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('speaker_seq_id', optional=True), primary_key=True),
     schema.Column('firstName', types.Unicode(255)),
@@ -163,7 +163,7 @@ speaker_table = schema.Table('speaker', meta.metadata,
     schema.Column('datetimeModified', types.DateTime(), default=now)
 )
 
-syntacticcategory_table = schema.Table('syntacticcategory', meta.metadata,
+syntacticcategory_table = schema.Table('syntacticcategory', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('syntacticcategory_seq_id', optional=True),
         primary_key=True),
@@ -173,7 +173,7 @@ syntacticcategory_table = schema.Table('syntacticcategory', meta.metadata,
     schema.Column('datetimeModified', types.DateTime(), default=now)
 )
 
-tag_table = schema.Table('tag', meta.metadata,
+tag_table = schema.Table('tag', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('tag_seq_id', optional=True), primary_key=True),
     schema.Column('name', types.Unicode(255), unique=True),
@@ -181,7 +181,7 @@ tag_table = schema.Table('tag', meta.metadata,
     schema.Column('datetimeModified', types.DateTime(), default=now)
 )
 
-elicitationmethod_table = schema.Table('elicitationmethod', meta.metadata,
+elicitationmethod_table = schema.Table('elicitationmethod', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('elicitationmethod_seq_id', optional=True),
         primary_key=True),
@@ -190,7 +190,7 @@ elicitationmethod_table = schema.Table('elicitationmethod', meta.metadata,
     schema.Column('datetimeModified', types.DateTime(), default=now)
 )
 
-source_table = schema.Table('source', meta.metadata,
+source_table = schema.Table('source', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('source_seq_id', optional=True), primary_key=True),
     schema.Column('authorFirstName', types.Unicode(255)),
@@ -203,7 +203,7 @@ source_table = schema.Table('source', meta.metadata,
 )
 
 # applicationsettings_table holds the info about the settings of the application
-applicationsettings_table = schema.Table('applicationsettings', meta.metadata,
+applicationsettings_table = schema.Table('applicationsettings', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('applicationsettings_seq_id', optional=True),
         primary_key=True
@@ -248,7 +248,7 @@ applicationsettings_table = schema.Table('applicationsettings', meta.metadata,
 )
 
 # orthography_table
-orthography_table = schema.Table('orthography', meta.metadata,
+orthography_table = schema.Table('orthography', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('orthography_seq_id', optional=True),
         primary_key=True
@@ -264,7 +264,7 @@ orthography_table = schema.Table('orthography', meta.metadata,
 #  - see http://www.sil.org/iso639-3/download.asp
 #  - this table is populated from lib/languages/iso-639-3.tab
 #    when "paster setup-app" is run
-language_table = schema.Table('language', meta.metadata,
+language_table = schema.Table('language', Base.metadata,
     schema.Column('Id', types.Unicode(3), primary_key=True),
     schema.Column('Part2B', types.Unicode(3)),
     schema.Column('Part2T', types.Unicode(3)),
@@ -277,7 +277,7 @@ language_table = schema.Table('language', meta.metadata,
 )
 
 # page_table holds the text (markup) for user-generated pages 
-page_table = schema.Table('page', meta.metadata,
+page_table = schema.Table('page', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('page_seq_id', optional=True),
         primary_key=True
@@ -291,7 +291,7 @@ page_table = schema.Table('page', meta.metadata,
 )
 
 # phonology_table holds the metadata for phonology FSTs
-phonology_table = schema.Table('phonology', meta.metadata,
+phonology_table = schema.Table('phonology', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('phonology_seq_id', optional=True),
         primary_key=True
@@ -306,7 +306,7 @@ phonology_table = schema.Table('phonology', meta.metadata,
 )
 
 # formsearch_table holds the searches on OLD Forms
-formsearch_table = schema.Table('formsearch', meta.metadata,
+formsearch_table = schema.Table('formsearch', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('formsearch_seq_id', optional=True), primary_key=True),
     schema.Column('json', types.UnicodeText()),
@@ -320,7 +320,7 @@ formsearch_table = schema.Table('formsearch', meta.metadata,
 
 """formfile_table encodes the many-to-many relationship
 between OLD Forms and OLD Files."""
-formfile_table = schema.Table('formfile', meta.metadata,
+formfile_table = schema.Table('formfile', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('formfile_seq_id', optional=True), primary_key=True),
     schema.Column('form_id', types.Integer, schema.ForeignKey('form.id')),
@@ -330,7 +330,7 @@ formfile_table = schema.Table('formfile', meta.metadata,
 
 """formtag_table encodes the many-to-many relationship
 between OLD Forms and OLD Tags."""
-formtag_table = schema.Table('formtag', meta.metadata,
+formtag_table = schema.Table('formtag', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('formfile_seq_id', optional=True), primary_key=True),
     schema.Column('form_id', types.Integer, schema.ForeignKey('form.id')),
@@ -339,7 +339,7 @@ formtag_table = schema.Table('formtag', meta.metadata,
 )
 
 
-collectionform_table = schema.Table('collectionform', meta.metadata,
+collectionform_table = schema.Table('collectionform', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('collectionform_seq_id', optional=True), primary_key=True),
     schema.Column('collection_id', types.Integer, schema.ForeignKey('collection.id')),
@@ -347,7 +347,7 @@ collectionform_table = schema.Table('collectionform', meta.metadata,
     schema.Column('datetimeModified', types.DateTime(), default=now)
 )
 
-collectionfile_table = schema.Table('collectionfile', meta.metadata,
+collectionfile_table = schema.Table('collectionfile', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('collectionfile_seq_id', optional=True), primary_key=True),
     schema.Column('collection_id', types.Integer, schema.ForeignKey('collection.id')),
@@ -358,7 +358,7 @@ collectionfile_table = schema.Table('collectionfile', meta.metadata,
 """userform_table encodes the many-to-many relationship
 between OLD Users and OLD Forms.  This is where the per-user
 Memory is stored."""
-userform_table = schema.Table('userform', meta.metadata,
+userform_table = schema.Table('userform', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('userform_seq_id', optional=True), primary_key=True),
     schema.Column('form_id', types.Integer, schema.ForeignKey('form.id')),
@@ -367,7 +367,7 @@ userform_table = schema.Table('userform', meta.metadata,
 )
 
 applicationsettingsorthography_table = schema.Table(
-    'applicationsettingsorthography', meta.metadata,
+    'applicationsettingsorthography', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('applicationsettingsorthography_seq_id', optional=True),
         primary_key=True),
@@ -379,7 +379,7 @@ applicationsettingsorthography_table = schema.Table(
 )
 
 applicationsettingsuser_table = schema.Table(
-    'applicationsettingsuser', meta.metadata,
+    'applicationsettingsuser', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('applicationsettingsuser_seq_id', optional=True),
         primary_key=True),
@@ -398,7 +398,7 @@ applicationsettingsuser_table = schema.Table(
 # formbackup_table is used to save form_table data that has been updated
 #  or deleted.  This is a non-relational table, because keeping a copy of 
 #  every single change seemed more work than it's worth.
-formbackup_table = schema.Table('formbackup', meta.metadata,
+formbackup_table = schema.Table('formbackup', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('formbackup_seq_id', optional=True), primary_key=True),
     # form_id is NOT a foreign key.  This is because (1) the form can be deleted,
@@ -455,7 +455,7 @@ formbackup_table = schema.Table('formbackup', meta.metadata,
 
 # collectionbackup_table is used to save collection_table data that has been
 #  updated or deleted.  Like formbackup_table, this table has no foreign keys.
-collectionbackup_table = schema.Table('collectionbackup', meta.metadata,
+collectionbackup_table = schema.Table('collectionbackup', Base.metadata,
     schema.Column('id', types.Integer,
         schema.Sequence('collectionbackup_seq_id', optional=True), primary_key=True),
 
