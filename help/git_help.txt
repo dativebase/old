@@ -88,6 +88,31 @@ Push your branch (e.g., master) to a remote (e.g., origin):
     $ git push origin master
 
 
+Branching & Merging
+================================================================================
+
+Create a new branch:
+
+    $ git branch branchName
+
+Switch to a branch:
+
+    $ git checkout branchName
+
+Create a new branch and switch to it in one command:
+
+    $ git checkout -b branchName
+
+Merge a branch back into the master:
+
+    $ git checkout master
+    $ git merge branchName
+
+For more complicated branchings and mergins, see:
+
+- http://git-scm.com/book/en/Git-Branching-Basic-Branching-and-Merging
+
+
 Gitignore
 ================================================================================
 
