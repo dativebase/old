@@ -4,8 +4,8 @@ import simplejson as json
 from nose.tools import nottest
 
 from old.tests import *
-import old.model as model
-import old.model.meta as meta
+from old.model import ApplicationSettings, User
+from old.model.meta import Session
 import old.lib.helpers as h
 
 log = logging.getLogger(__name__)
@@ -15,12 +15,12 @@ def addDefaultApplicationSettings():
     """Add the default application settings to the database."""
     orthography1 = h.generateDefaultOrthography1()
     orthography2 = h.generateDefaultOrthography2()
-    contributor = meta.Session.query(model.User).filter(
-        model.User.role==u'contributor').first()
+    contributor = Session.query(User).filter(
+        User.role==u'contributor').first()
     applicationSettings = h.generateDefaultApplicationSettings(
         [orthography1, orthography2], [contributor])
-    meta.Session.add(applicationSettings)
-    meta.Session.commit()
+    Session.add(applicationSettings)
+    Session.commit()
     return applicationSettings
 
 
@@ -59,17 +59,17 @@ class TestApplicationsettingsController(TestController):
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()
         viewer = h.generateDefaultViewer()
-        meta.Session.add_all([administrator, contributor, viewer])
-        meta.Session.commit()
+        Session.add_all([administrator, contributor, viewer])
+        Session.commit()
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /applicationsettings returns a JSON array of application settings objects."""
 
         # Add an empty application settings.
-        applicationSettings = model.ApplicationSettings()
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        applicationSettings = ApplicationSettings()
+        Session.add(applicationSettings)
+        Session.commit()
 
         response = self.app.get(url('applicationsettings'),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
@@ -100,8 +100,8 @@ class TestApplicationsettingsController(TestController):
         # Add some orthographies.
         orthography1 = h.generateDefaultOrthography1()
         orthography2 = h.generateDefaultOrthography2()
-        meta.Session.add_all([orthography1, orthography2])
-        meta.Session.commit()
+        Session.add_all([orthography1, orthography2])
+        Session.commit()
         orthographies = [orthography1.id, orthography2.id]
 
         params = self.createParams.copy()
@@ -116,8 +116,8 @@ class TestApplicationsettingsController(TestController):
             'morphemeDelimiters': u'-,+',
             'punctuation': u'!?.,;:-_',
             'grammaticalities': u'*,**,***,?,??,???,#,##,###',
-            'unrestrictedUsers': [meta.Session.query(model.User).filter(
-                model.User.role==u'viewer').first().id],
+            'unrestrictedUsers': [Session.query(User).filter(
+                User.role==u'viewer').first().id],
             'orthographies': orthographies,
             'storageOrthography': orthographies[1],
             'inputOrthography': orthographies[1],
@@ -135,7 +135,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['unrestrictedUsers'][0]['email'] == u'viewer@example.com'
         assert 'password' not in resp['unrestrictedUsers'][0]
 
-    @nottest
+    #@nottest
     def test_create_invalid(self):
         """Tests that POST /applicationsettings responds with an appropriate error when invalid params are submitted in the request."""
 
@@ -165,7 +165,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['errors']['storageOrthography'] == \
             u'Please enter an integer value'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /applicationsettings/new returns an appropriate JSON object for creating a new application settings object.
 
@@ -176,8 +176,8 @@ class TestApplicationsettingsController(TestController):
         # Add some orthographies.
         orthography1 = h.generateDefaultOrthography1()
         orthography2 = h.generateDefaultOrthography2()
-        meta.Session.add_all([orthography1, orthography2])
-        meta.Session.commit()
+        Session.add_all([orthography1, orthography2])
+        Session.commit()
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
@@ -225,12 +225,12 @@ class TestApplicationsettingsController(TestController):
         assert resp['users'] == data['users']
         assert resp['orthographies'] == data['orthographies']
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /applicationsettings/id correctly updates an existing application settings."""
 
-        applicationSettingsCount = meta.Session.query(
-            model.ApplicationSettings).count()
+        applicationSettingsCount = Session.query(
+            ApplicationSettings).count()
 
         # Create an application settings to update.
         params = self.createParams.copy()
@@ -245,16 +245,16 @@ class TestApplicationsettingsController(TestController):
             'morphemeDelimiters': u'+',
             'punctuation': u'!.;:',
             'grammaticalities': u'*,**,?,??,#,##',
-            'unrestrictedUsers': [meta.Session.query(model.User).filter(
-                model.User.role==u'contributor').first().id]
+            'unrestrictedUsers': [Session.query(User).filter(
+                User.role==u'contributor').first().id]
         })
         params = json.dumps(params)
         response = self.app.post(url('applicationsettings'), params,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         id = int(resp['id'])
-        newApplicationSettingsCount = meta.Session.query(
-            model.ApplicationSettings).count()
+        newApplicationSettingsCount = Session.query(
+            ApplicationSettings).count()
         assert resp['objectLanguageName'] == u'test_update object language name'
         assert resp['unrestrictedUsers'][0]['role'] == u'contributor'
         assert newApplicationSettingsCount == applicationSettingsCount + 1
@@ -272,8 +272,8 @@ class TestApplicationsettingsController(TestController):
         response = self.app.put(url('applicationsetting', id=id), params,
                                 self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        newApplicationSettingsCount = meta.Session.query(
-            model.ApplicationSettings).count()
+        newApplicationSettingsCount = Session.query(
+            ApplicationSettings).count()
         assert resp['objectLanguageName'] == u'Updated!'
         assert newApplicationSettingsCount == applicationSettingsCount + 1
 
@@ -285,7 +285,7 @@ class TestApplicationsettingsController(TestController):
         resp = json.loads(response.body)
         assert u'the submitted data were not new' in resp['error']
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /applicationsettings/id deletes the application settings with id=id and returns a JSON representation.
 
@@ -294,13 +294,13 @@ class TestApplicationsettingsController(TestController):
         """
 
         # Count the original number of application settings.
-        applicationSettingsCount = meta.Session.query(
-            model.ApplicationSettings).count()
+        applicationSettingsCount = Session.query(
+            ApplicationSettings).count()
 
         # Add an orthography.
         orthography1 = h.generateDefaultOrthography1()
-        meta.Session.add(orthography1)
-        meta.Session.commit()
+        Session.add(orthography1)
+        Session.commit()
         orthography1 = h.getOrthographies()[0]
         orthography1Id = orthography1.id
         orthography1Orthography = orthography1.orthography
@@ -320,8 +320,8 @@ class TestApplicationsettingsController(TestController):
         response = self.app.post(url('applicationsettings'), params,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        newApplicationSettingsCount = meta.Session.query(
-            model.ApplicationSettings).count()
+        newApplicationSettingsCount = Session.query(
+            ApplicationSettings).count()
         assert resp['objectLanguageName'] == u'test_delete object language name'
         assert resp['orthographies'][0]['orthography'] == orthography1Orthography
         assert newApplicationSettingsCount == applicationSettingsCount + 1
@@ -331,8 +331,8 @@ class TestApplicationsettingsController(TestController):
             url('applicationsetting', id=resp['id']),
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        newApplicationSettingsCount = meta.Session.query(
-            model.ApplicationSettings).count()
+        newApplicationSettingsCount = Session.query(
+            ApplicationSettings).count()
         assert newApplicationSettingsCount == applicationSettingsCount
         # The deleted application settings will be returned to us, so the
         # assertions from above should still hold true.
@@ -340,8 +340,8 @@ class TestApplicationsettingsController(TestController):
         assert resp['orthographies'][0]['orthography'] == orthography1Orthography
 
         # Trying to get the deleted form from the db should return None.
-        deletedApplicationSettings = meta.Session.query(
-            model.ApplicationSettings).get(resp['id'])
+        deletedApplicationSettings = Session.query(
+            ApplicationSettings).get(resp['id'])
         assert deletedApplicationSettings == None
 
         # Delete with an invalid id
@@ -357,7 +357,7 @@ class TestApplicationsettingsController(TestController):
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /applicationsettings/id returns the JSON application settings object with id=id
         or a 404 status code depending on whether the id is valid or
@@ -392,7 +392,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['storageOrthography']['name'] == \
             applicationSettings.storageOrthography.name
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /applicationsettings/id/edit returns a JSON object for editing an existing application settings.
 

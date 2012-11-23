@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from old.tests import *
 import old.model as model
-import old.model.meta as meta
+from old.model.meta import Session
 import old.lib.helpers as h
 
 log = logging.getLogger(__name__)
@@ -50,8 +50,8 @@ class TestFormsController(TestController):
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()
         viewer = h.generateDefaultViewer()
-        meta.Session.add_all([administrator, contributor, viewer])
-        meta.Session.commit()
+        Session.add_all([administrator, contributor, viewer])
+        Session.commit()
 
         # Perform a vacuous GET just to delete app_globals.applicationSettings
         # to clean up for subsequent tests.
@@ -60,7 +60,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('forms'), extra_environ=extra_environ)
 
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /forms returns a JSON array of forms with expected values."""
 
@@ -76,9 +76,9 @@ class TestFormsController(TestController):
         myContributor = h.generateDefaultUser()
         myContributorFirstName = u'Mycontributor'
         myContributor.firstName = myContributorFirstName
-        meta.Session.add_all([restrictedTag, myContributor])
-        meta.Session.commit()
-        myContributor = meta.Session.query(model.User).filter(
+        Session.add_all([restrictedTag, myContributor])
+        Session.commit()
+        myContributor = Session.query(model.User).filter(
             model.User.firstName == myContributorFirstName).first()
         myContributorId = myContributor.id
         restrictedTag = h.getRestrictedTag()
@@ -87,8 +87,8 @@ class TestFormsController(TestController):
         # only unrestricted user.
         applicationSettings = h.generateDefaultApplicationSettings()
         applicationSettings.unrestrictedUsers = [myContributor]
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
 
         # Finally, issue two POST requests to create two default forms with the
         # *default* contributor as the enterer.  One form will be restricted and
@@ -172,8 +172,8 @@ class TestFormsController(TestController):
         # the second form will be denied.
         applicationSettings = h.getApplicationSettings()
         applicationSettings.unrestrictedUsers = []
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
 
         # Mycontributor (no longer an unrestricted user) should now *not* be
         # able to view the restricted form.
@@ -187,10 +187,10 @@ class TestFormsController(TestController):
 
         # Remove the restricted tag from the form and the viewer should now be
         # able to view it too.
-        restrictedForm = meta.Session.query(model.Form).get(restrictedFormId)
+        restrictedForm = Session.query(model.Form).get(restrictedFormId)
         restrictedForm.tags = []
-        meta.Session.add(restrictedForm)
-        meta.Session.commit()
+        Session.add(restrictedForm)
+        Session.commit()
         extra_environ = {'test.authentication.role': 'viewer',
                          'test.applicationSettings': True}
         response = self.app.get(url('forms'), headers=self.json_headers,
@@ -207,15 +207,15 @@ class TestFormsController(TestController):
             form.transcription = u'transcription %d' % index
             return form
         forms = [createFormFromIndex(i) for i in range(1, 101)]
-        meta.Session.add_all(forms)
-        meta.Session.commit()
+        Session.add_all(forms)
+        Session.commit()
         forms = h.getForms()
         restrictedTag = h.getRestrictedTag()
         for form in forms:
             if int(form.transcription.split(' ')[1]) % 2 == 0:
                 form.tags.append(restrictedTag)
-            meta.Session.add(form)
-        meta.Session.commit()
+            Session.add(form)
+        Session.commit()
 
         # An administrator should be able to retrieve all of the forms.
         extra_environ = {'test.authentication.role': 'administrator',
@@ -264,7 +264,7 @@ class TestFormsController(TestController):
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /forms correctly creates a new form."""
 
@@ -285,7 +285,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert type(resp) == type({})
         assert resp['transcription'] == u'test_create_transcription'
         assert resp['glosses'][0]['gloss'] == u'test_create_gloss'
@@ -299,8 +299,8 @@ class TestFormsController(TestController):
         Num = h.generateNumSyntacticCategory()
         S = h.generateSSyntacticCategory()
         applicationSettings = model.ApplicationSettings()
-        meta.Session.add_all([S, N, Num, applicationSettings])
-        meta.Session.commit()
+        Session.add_all([S, N, Num, applicationSettings])
+        Session.commit()
 
         # Create two lexical forms.
         params = self.createParams.copy()
@@ -309,7 +309,7 @@ class TestFormsController(TestController):
             'morphemeBreak': u'chien',
             'morphemeGloss': u'dog',
             'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
-            'syntacticCategory': meta.Session.query(
+            'syntacticCategory': Session.query(
                 model.SyntacticCategory).filter(
                 model.SyntacticCategory.name==u'N').first().id
         })
@@ -322,14 +322,14 @@ class TestFormsController(TestController):
             'morphemeBreak': u's',
             'morphemeGloss': u'PL',
             'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
-            'syntacticCategory': meta.Session.query(
+            'syntacticCategory': Session.query(
                 model.SyntacticCategory).filter(
                 model.SyntacticCategory.name==u'Num').first().id
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert formCount == 3
 
         # Create another form whose morphemic analysis will reference the
@@ -342,7 +342,7 @@ class TestFormsController(TestController):
             'morphemeBreak': u'les chien-s aboient',
             'morphemeGloss': u'the dog-PL bark',
             'glosses': [{'gloss': u'The dogs are barking.', 'glossGrammaticality': u''}],
-            'syntacticCategory': meta.Session.query(
+            'syntacticCategory': Session.query(
                 model.SyntacticCategory).filter(
                 model.SyntacticCategory.name==u'S').first().id
         })
@@ -350,7 +350,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert type(resp) == type({})
         assert resp['transcription'] == u'Les chiens aboient.'
         assert resp['glosses'][0]['gloss'] == u'The dogs are barking.'
@@ -365,12 +365,12 @@ class TestFormsController(TestController):
         # morphemeGlossIDs and syntacticCategoryString to have non-vacuous
         # values since '-' is specified as a morpheme delimiter.
         applicationSettings = h.generateDefaultApplicationSettings()
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert resp['morphemeBreakIDs'] != [[[]]]
         assert resp['syntacticCategoryString'] != u''
         # The syntactic category string should contain 'N-Num' for 'chien-s'.
@@ -393,25 +393,25 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         morphemeBreakIDs = resp['morphemeBreakIDs']
         assert len(morphemeBreakIDs) == 4   # 3 spaces in the mb field
         assert len(morphemeBreakIDs[1]) == 2 # 'chien-' is split into 'chien' and ''
         assert 'N-?' in resp['syntacticCategoryString'] and \
             '?-Num' in resp['syntacticCategoryString']
 
-    @nottest
+    #@nottest
     def test_create_invalid(self):
         """Tests that POST /forms with invalid input returns an appropriate error."""
 
         # Empty transcription and glosses should raise error
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         params = self.createParams.copy()
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert resp['errors']['transcription'] == u'Please enter a value'
         assert resp['errors']['glosses'] == u'Please enter a value'
         assert newFormCount == formCount
@@ -431,7 +431,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         tooLongError = u'Enter a value not more than 255 characters long'
         assert resp['errors']['transcription'] == tooLongError
         assert resp['errors']['phoneticTranscription'] == tooLongError
@@ -443,8 +443,8 @@ class TestFormsController(TestController):
         # Add some default application settings and set
         # app_globals.applicationSettings.
         applicationSettings = h.generateDefaultApplicationSettings()
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
         extra_environ = self.extra_environ_admin.copy()
         extra_environ['test.applicationSettings'] = True
         badGrammaticality = u'***'
@@ -464,7 +464,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ=extra_environ, status=400)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert resp['errors']['grammaticality'] == \
             u'The grammaticality submitted does not match any of the available options.'
         assert resp['errors']['glosses'] == \
@@ -483,7 +483,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ=extra_environ)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert resp['grammaticality'] == goodGrammaticality
         assert goodGrammaticality in [g['glossGrammaticality'] for g in
                                       resp['glosses']]
@@ -510,7 +510,7 @@ class TestFormsController(TestController):
                                  extra_environ=extra_environ, status=400)
         resp = json.loads(response.body)
         formCount = newFormCount
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert resp['errors']['elicitationMethod'] == \
             u'There is no elicitation method with id %d.' % badId
         assert resp['errors']['speaker'] == \
@@ -528,11 +528,11 @@ class TestFormsController(TestController):
         S = h.generateSSyntacticCategory()
         speaker = h.generateDefaultSpeaker()
         source = h.generateDefaultSource()
-        meta.Session.add_all([elicitationMethod, S, speaker, source])
-        meta.Session.commit()
-        contributor = meta.Session.query(model.User).filter(
+        Session.add_all([elicitationMethod, S, speaker, source])
+        Session.commit()
+        contributor = Session.query(model.User).filter(
             model.User.role==u'contributor').first()
-        administrator = meta.Session.query(model.User).filter(
+        administrator = Session.query(model.User).filter(
             model.User.role==u'administrator').first()
         params = self.createParams.copy()
         params.update({
@@ -550,12 +550,12 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ=extra_environ)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert resp['elicitationMethod']['name'] == elicitationMethod.name
         assert resp['source']['year'] == source.year    # etc. ...
         assert newFormCount == formCount + 1
 
-    @nottest
+    #@nottest
     def test_create_with_inventory_validation(self):
         """Tests that POST /forms correctly applies inventory-based validation on form creation attempts."""
 
@@ -566,8 +566,8 @@ class TestFormsController(TestController):
         orthography.orthography = u'o,O'
         orthography.lowercase = True
         orthography.initialGlottalStops = True
-        meta.Session.add(orthography)
-        meta.Session.commit()
+        Session.add(orthography)
+        Session.commit()
         applicationSettings = h.generateDefaultApplicationSettings()
         applicationSettings.orthographicValidation = u'Error'
         applicationSettings.narrowPhoneticInventory = u'n,p,N,P'
@@ -578,8 +578,8 @@ class TestFormsController(TestController):
         applicationSettings.morphemeBreakValidation = u'Error'
         applicationSettings.phonemicInventory = u'p,i,P,I'
         applicationSettings.storageOrthography = h.getOrthographies()[0]
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
 
         # Here we indirectly cause app_globals.applicationSettings to be set to
         # an ApplicationSettings instance.  See lib.base.BaseController().__before__/__after__.
@@ -599,7 +599,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ, status=400)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert u'The orthographic transcription you have entered is not valid' \
             in resp['errors']['transcription']
         assert u'The broad phonetic transcription you have entered is not valid' \
@@ -624,7 +624,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ, status=400)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert resp['errors']['transcription'] == u'Please enter a value'
         assert u'The broad phonetic transcription you have entered is not valid' \
             in resp['errors']['phoneticTranscription']
@@ -644,8 +644,8 @@ class TestFormsController(TestController):
         applicationSettings.morphemeBreakValidation = u'Error'
         applicationSettings.phonemicInventory = u'p,i,P,I'
         applicationSettings.storageOrthography = h.getOrthographies()[0]
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
         params = self.createParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'test narrow phonetic transcription validation',
@@ -658,7 +658,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ, status=400)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert u'transcription' not in resp['errors']
         assert u'phoneticTranscription' not in resp['errors']
         assert u'The narrow phonetic transcription you have entered is not valid' \
@@ -681,7 +681,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert u'errors' not in resp
         assert formCount == 1
 
@@ -696,8 +696,8 @@ class TestFormsController(TestController):
         retain_extra_environ = extra_environ.copy()
         retain_extra_environ['test.retainApplicationSettings'] = True
         foreignWordTag = h.generateForeignWordTag()
-        meta.Session.add(foreignWordTag)
-        meta.Session.commit()
+        Session.add(foreignWordTag)
+        Session.commit()
         params = self.createParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'f`ore_n',
@@ -711,7 +711,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  retain_extra_environ)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         applicationSettings = response.g.applicationSettings
         assert 'f`ore_n' in applicationSettings.narrowPhoneticInventory.inputList
         assert 'foren' in applicationSettings.broadPhoneticInventory.inputList
@@ -734,15 +734,15 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert u'errors' not in resp
         assert formCount == 3
 
-    @nottest
+    #@nottest
     def test_relational_attribute_creation(self):
         """Tests that POST/PUT create and update many-to-many data correctly."""
 
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
 
         # Add an empty application settings and two syntactic categories.
         restrictedTag = h.generateRestrictedTag()
@@ -753,9 +753,9 @@ class TestFormsController(TestController):
         file1.name = file1Name
         file2 = h.generateDefaultFile()
         file2.name = file2Name
-        meta.Session.add_all([restrictedTag, foreignWordTag,
+        Session.add_all([restrictedTag, foreignWordTag,
                               file1, file2])
-        meta.Session.commit()
+        Session.commit()
 
         # Create a form with some files and tags.
         params = self.createParams.copy()
@@ -769,9 +769,9 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin)
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         resp = json.loads(response.body)
-        formFiles = meta.Session.query(model.FormFile)
+        formFiles = Session.query(model.FormFile)
         createdFormId = resp['id']
         assert newFormCount == formCount + 1
         assert len([ff.form_id for ff in formFiles
@@ -815,7 +815,7 @@ class TestFormsController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         formCount = newFormCount
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert newFormCount == formCount
         assert len(resp['files']) == 1
         assert restrictedTag.name in [t['name'] for t in resp['tags']]
@@ -834,7 +834,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         formCount = newFormCount
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         resp = json.loads(response.body)
         assert newFormCount == formCount
         assert u'Please enter an integer value' in resp['errors']['files']
@@ -843,7 +843,7 @@ class TestFormsController(TestController):
         assert u'There is no tag with id 9875.' in resp['errors']['tags']
         assert u'Please enter an integer value' in resp['errors']['tags']
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for creating a new OLD form.
 
@@ -874,10 +874,10 @@ class TestFormsController(TestController):
         file1.name = u'file1'
         file2 = h.generateDefaultFile()
         file2.name = u'file2'
-        meta.Session.add_all([applicationSettings, elicitationMethod,
+        Session.add_all([applicationSettings, elicitationMethod,
                     foreignWordTag, restrictedTag, N, Num, S, speaker, source,
                     file1, file2])
-        meta.Session.commit()
+        Session.commit()
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
@@ -944,17 +944,17 @@ class TestFormsController(TestController):
         assert resp['sources'] == []
         assert resp['files'] == []
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /forms/id correctly updates an existing form."""
 
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
 
         # Add the default application settings and the restricted tag.
         restrictedTag = h.generateRestrictedTag()
         applicationSettings = h.generateDefaultApplicationSettings()
-        meta.Session.add_all([applicationSettings, restrictedTag])
-        meta.Session.commit()
+        Session.add_all([applicationSettings, restrictedTag])
+        Session.commit()
         restrictedTag = h.getRestrictedTag()
 
         # Create a form to update.
@@ -971,7 +971,7 @@ class TestFormsController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         id = int(resp['id'])
-        newFormCount = meta.Session.query(model.Form).count()
+        newFormCount = Session.query(model.Form).count()
         assert resp['transcription'] == originalTranscription
         assert resp['glosses'][0]['gloss'] == originalGloss
         assert newFormCount == formCount + 1
@@ -993,7 +993,7 @@ class TestFormsController(TestController):
 
         # As an administrator now, update the form just created and expect to
         # succeed.
-        origBackupCount = meta.Session.query(model.FormBackup).count()
+        origBackupCount = Session.query(model.FormBackup).count()
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated!',
@@ -1005,8 +1005,8 @@ class TestFormsController(TestController):
         response = self.app.put(url('form', id=id), params,
                                 self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
-        newBackupCount = meta.Session.query(model.FormBackup).count()
+        newFormCount = Session.query(model.Form).count()
+        newBackupCount = Session.query(model.FormBackup).count()
         assert resp['transcription'] == u'Updated!'
         assert resp['glosses'][0]['gloss'] == u'test_update_gloss'
         assert resp['morphemeBreak'] == u'a-b'
@@ -1015,7 +1015,7 @@ class TestFormsController(TestController):
         assert resp['morphemeGlossIDs'] == [[[], []]]
         assert newFormCount == formCount + 1
         assert origBackupCount + 1 == newBackupCount
-        backup = meta.Session.query(model.FormBackup).filter(
+        backup = Session.query(model.FormBackup).filter(
             model.FormBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(model.FormBackup.id)).first()
@@ -1025,10 +1025,10 @@ class TestFormsController(TestController):
         # Attempt an update with no new data.  Expect a 400 error
         # and response['errors'] = {'no change': The update request failed
         # because the submitted data were not new.'}.
-        origBackupCount = meta.Session.query(model.FormBackup).count()
+        origBackupCount = Session.query(model.FormBackup).count()
         response = self.app.put(url('form', id=id), params, self.json_headers,
                                 self.extra_environ_admin, status=400)
-        newBackupCount = meta.Session.query(model.FormBackup).count()
+        newBackupCount = Session.query(model.FormBackup).count()
         resp = json.loads(response.body)
         assert origBackupCount == newBackupCount
         assert u'the submitted data were not new' in resp['error']
@@ -1037,7 +1037,7 @@ class TestFormsController(TestController):
         # morphemeGlossIDs attributes of the aforementioned form to change.  Now
         # an update with no new data will succeed -- simply because the lexicon
         # of the database has changed.
-        origBackupCount = meta.Session.query(model.FormBackup).count()
+        origBackupCount = Session.query(model.FormBackup).count()
         newParams = self.createParams.copy()
         newParams.update({
             'transcription': u'a',
@@ -1050,7 +1050,7 @@ class TestFormsController(TestController):
                                  self.extra_environ_admin)
         response = self.app.put(url('form', id=id), params, self.json_headers,
                                 self.extra_environ_admin)
-        newBackupCount = meta.Session.query(model.FormBackup).count()
+        newBackupCount = Session.query(model.FormBackup).count()
         resp = json.loads(response.body)
         morphemeBreakIDs = resp['morphemeBreakIDs']
         morphemeGlossIDs = resp['morphemeGlossIDs']
@@ -1074,8 +1074,8 @@ class TestFormsController(TestController):
         orthography.orthography = u'o,O'
         orthography.lowercase = True
         orthography.initialGlottalStops = True
-        meta.Session.add(orthography)
-        meta.Session.commit()
+        Session.add(orthography)
+        Session.commit()
         applicationSettings = h.generateDefaultApplicationSettings()
         applicationSettings.orthographicValidation = u'Error'
         applicationSettings.narrowPhoneticInventory = u'n,p,N,P'
@@ -1087,8 +1087,8 @@ class TestFormsController(TestController):
         applicationSettings.phonemicInventory = u'p,i,P,I'
         applicationSettings.storageOrthography = h.getOrthographies()[0]
         foreignWordTag = h.generateForeignWordTag()
-        meta.Session.add_all([applicationSettings, foreignWordTag])
-        meta.Session.commit()
+        Session.add_all([applicationSettings, foreignWordTag])
+        Session.commit()
         # Here we indirectly cause app_globals.applicationSettings to be set to
         # an h.ApplicationSettings instance that has our model.ApplicationSettings
         # instance as an attribute.  We do this with some special keys in environ.
@@ -1125,8 +1125,8 @@ class TestFormsController(TestController):
 
         # Now update our form by adding a many-to-one datum, viz. a speaker
         speaker = h.generateDefaultSpeaker()
-        meta.Session.add(speaker)
-        meta.Session.commit()
+        Session.add(speaker)
+        Session.commit()
         speaker = h.getSpeakers()[0]
         params = self.createParams.copy()
         params.update({
@@ -1141,7 +1141,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['speaker']['firstName'] == speaker.firstName
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /forms/id deletes the form with id=id and returns a JSON representation.
 
@@ -1154,20 +1154,20 @@ class TestFormsController(TestController):
         speaker = h.generateDefaultSpeaker()
         myContributor = h.generateDefaultUser()
         myContributor.username = u'uniqueusername'
-        meta.Session.add_all([applicationSettings, speaker, myContributor])
-        meta.Session.commit()
-        myContributor = meta.Session.query(model.User).filter(
+        Session.add_all([applicationSettings, speaker, myContributor])
+        Session.commit()
+        myContributor = Session.query(model.User).filter(
             model.User.username==u'uniqueusername').first()
         myContributorId = myContributor.id
 
         # Count the original number of forms and formBackups.
-        formCount = meta.Session.query(model.Form).count()
-        formBackupCount = meta.Session.query(model.FormBackup).count()
+        formCount = Session.query(model.Form).count()
+        formBackupCount = Session.query(model.FormBackup).count()
 
         # First, as myContributor, create a form to delete.
         extra_environ = {'test.authentication.id': myContributorId,
                          'test.applicationSettings': True}
-        speaker = meta.Session.query(model.Speaker).first()
+        speaker = Session.query(model.Speaker).first()
         speakerFirstName = speaker.firstName
         params = self.createParams.copy()
         params.update({
@@ -1184,8 +1184,8 @@ class TestFormsController(TestController):
         assert resp['glosses'][0]['gloss'] == u'test_delete_gloss'
 
         # Now count the forms and formBackups.
-        newFormCount = meta.Session.query(model.Form).count()
-        newFormBackupCount = meta.Session.query(model.FormBackup).count()
+        newFormCount = Session.query(model.Form).count()
+        newFormBackupCount = Session.query(model.FormBackup).count()
         assert newFormCount == formCount + 1
         assert newFormBackupCount == formBackupCount
 
@@ -1205,9 +1205,9 @@ class TestFormsController(TestController):
         response = self.app.delete(url('form', id=toDeleteId),
                                    extra_environ=extra_environ)
         resp = json.loads(response.body)
-        newFormCount = meta.Session.query(model.Form).count()
-        newFormBackupCount = meta.Session.query(model.FormBackup).count()
-        glossOfDeletedForm = meta.Session.query(model.Gloss).get(
+        newFormCount = Session.query(model.Form).count()
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        glossOfDeletedForm = Session.query(model.Gloss).get(
             resp['glosses'][0]['id'])
         assert glossOfDeletedForm is None
         assert newFormCount == formCount
@@ -1219,11 +1219,11 @@ class TestFormsController(TestController):
         assert resp['glosses'][0]['gloss'] == u'test_delete_gloss'
 
         # Trying to get the deleted form from the db should return None
-        deletedForm = meta.Session.query(model.Form).get(toDeleteId)
+        deletedForm = Session.query(model.Form).get(toDeleteId)
         assert deletedForm == None
 
         # The backed up form should have the deleted form's attributes
-        backedUpForm = meta.Session.query(model.FormBackup).filter(
+        backedUpForm = Session.query(model.FormBackup).filter(
             model.FormBackup.UUID==unicode(resp['UUID'])).first()
         assert backedUpForm.transcription == resp['transcription']
         backuper = json.loads(unicode(backedUpForm.backuper))
@@ -1247,7 +1247,7 @@ class TestFormsController(TestController):
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
 
-    @nottest
+    #@nottest
     def test_delete_foreign_word(self):
         """Tests that DELETE /forms/id on a foreign word updates the global Inventory objects correctly."""
 
@@ -1258,8 +1258,8 @@ class TestFormsController(TestController):
         orthography.orthography = u'o,O'
         orthography.lowercase = True
         orthography.initialGlottalStops = True
-        meta.Session.add(orthography)
-        meta.Session.commit()
+        Session.add(orthography)
+        Session.commit()
         applicationSettings = h.generateDefaultApplicationSettings()
         applicationSettings.orthographicValidation = u'Error'
         applicationSettings.narrowPhoneticInventory = u'n,p,N,P'
@@ -1271,8 +1271,8 @@ class TestFormsController(TestController):
         applicationSettings.phonemicInventory = u'p,i,P,I'
         applicationSettings.storageOrthography = h.getOrthographies()[0]
         foreignWordTag = h.generateForeignWordTag()
-        meta.Session.add_all([applicationSettings, foreignWordTag])
-        meta.Session.commit()
+        Session.add_all([applicationSettings, foreignWordTag])
+        Session.commit()
 
         # The extra_environ request param causes app_globals.applicationSettings to be set to
         # an h.ApplicationSettings instance that has our model.ApplicationSettings
@@ -1312,7 +1312,7 @@ class TestFormsController(TestController):
         applicationSettings = response.g.applicationSettings
         assert 'test_delete_transcription' not in applicationSettings.orthographicInventory.inputList
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /forms/id returns a JSON form object, null or 404
         depending on whether the id is valid, invalid or unspecified,
@@ -1321,8 +1321,8 @@ class TestFormsController(TestController):
 
         # First add a form.
         form = h.generateDefaultForm()
-        meta.Session.add(form)
-        meta.Session.commit()
+        Session.add(form)
+        Session.commit()
         formId = h.getForms()[0].id
 
         # Invalid id
@@ -1358,9 +1358,9 @@ class TestFormsController(TestController):
         myContributorFirstName = u'Mycontributor'
         myContributor.firstName = myContributorFirstName
         myContributor.username = u'uniqueusername'
-        meta.Session.add_all([restrictedTag, myContributor])
-        meta.Session.commit()
-        myContributor = meta.Session.query(model.User).filter(
+        Session.add_all([restrictedTag, myContributor])
+        Session.commit()
+        myContributor = Session.query(model.User).filter(
             model.User.firstName == myContributorFirstName).first()
         myContributorId = myContributor.id
 
@@ -1368,8 +1368,8 @@ class TestFormsController(TestController):
         # only unrestricted user.
         applicationSettings = h.generateDefaultApplicationSettings()
         applicationSettings.unrestrictedUsers = [myContributor]
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
         # Finally, issue a POST request to create the restricted form with
         # the *default* contributor as the enterer.
         extra_environ = {'test.authentication.id': contributorId,
@@ -1413,8 +1413,8 @@ class TestFormsController(TestController):
         # Remove Mycontributor from the unrestricted users list and access will be denied.
         applicationSettings = h.getApplicationSettings()
         applicationSettings.unrestrictedUsers = []
-        meta.Session.add(applicationSettings)
-        meta.Session.commit()
+        Session.add(applicationSettings)
+        Session.commit()
         # Mycontributor (no longer an unrestricted user) should now *not* be
         # able to view this restricted form.
         extra_environ = {'test.authentication.id': myContributorId,
@@ -1423,16 +1423,16 @@ class TestFormsController(TestController):
             headers=self.json_headers, extra_environ=extra_environ, status=403)
         # Remove the restricted tag from the form and the viewer should now be
         # able to view it too.
-        restrictedForm = meta.Session.query(model.Form).get(restrictedFormId)
+        restrictedForm = Session.query(model.Form).get(restrictedFormId)
         restrictedForm.tags = []
-        meta.Session.add(restrictedForm)
-        meta.Session.commit()
+        Session.add(restrictedForm)
+        Session.commit()
         extra_environ = {'test.authentication.role': 'viewer',
                          'test.applicationSettings': True}
         response = self.app.get(url('form', id=restrictedFormId),
                         headers=self.json_headers, extra_environ=extra_environ)
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /forms/id/edit returns a JSON object of data necessary to edit the form with id=id.
         
@@ -1444,14 +1444,14 @@ class TestFormsController(TestController):
         # Add the default application settings and the restricted tag.
         applicationSettings = h.generateDefaultApplicationSettings()
         restrictedTag = h.generateRestrictedTag()
-        meta.Session.add_all([restrictedTag, applicationSettings])
-        meta.Session.commit()
+        Session.add_all([restrictedTag, applicationSettings])
+        Session.commit()
         restrictedTag = h.getRestrictedTag()
         # Create a restricted form.
         form = h.generateDefaultForm()
         form.tags = [restrictedTag]
-        meta.Session.add(form)
-        meta.Session.commit()
+        Session.add(form)
+        Session.commit()
         restrictedForm = h.getForms()[0]
         restrictedFormId = restrictedForm.id
 
@@ -1513,9 +1513,9 @@ class TestFormsController(TestController):
         file1.name = u'file1'
         file2 = h.generateDefaultFile()
         file2.name = u'file2'
-        meta.Session.add_all([applicationSettings, elicitationMethod,
+        Session.add_all([applicationSettings, elicitationMethod,
             foreignWordTag, N, Num, S, speaker, source, file1, file2])
-        meta.Session.commit()
+        Session.commit()
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
@@ -1568,7 +1568,7 @@ class TestFormsController(TestController):
         assert u'There is no form with id %s' % id in json.loads(response.body)[
             'error']
 
-    @nottest
+    #@nottest
     def test_history(self):
         """Tests that GET /forms/id/history returns the form with id=id and its previous incarnations.
         
@@ -1590,9 +1590,9 @@ class TestFormsController(TestController):
         Num = h.generateNumSyntacticCategory()
         S = h.generateSSyntacticCategory()
         speaker = h.generateDefaultSpeaker()
-        meta.Session.add_all([applicationSettings, elicitationMethod, source,
+        Session.add_all([applicationSettings, elicitationMethod, source,
             restrictedTag, foreignWordTag, file1, file2, N, Num, S, speaker])
-        meta.Session.commit()
+        Session.commit()
 
         # Create a restricted form (via request) as the default contributor
         users = h.getUsers()
@@ -1619,7 +1619,7 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
                         extra_environ)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         resp = json.loads(response.body)
         formId = resp['id']
         formUUID = resp['UUID']
@@ -1647,7 +1647,7 @@ class TestFormsController(TestController):
         response = self.app.put(url('form', id=formId), params,
                         self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert formCount == 1
 
         # Finally, update our form (via request) as the default contributor.
@@ -1671,7 +1671,7 @@ class TestFormsController(TestController):
         response = self.app.put(url('form', id=formId), params,
                         self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         assert formCount == 1
 
         # Now get the history of this form.
@@ -1836,7 +1836,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                         self.extra_environ_admin)
         resp = json.loads(response.body)
-        formCount = meta.Session.query(model.Form).count()
+        formCount = Session.query(model.Form).count()
         formId = resp['id']
         formUUID = resp['UUID']
         assert formCount == 1
@@ -1891,7 +1891,7 @@ class TestFormsController(TestController):
             u'2nd form restricted'
         assert resp['form']['transcription'] == u'2nd form unrestricted updated'
 
-    @nottest
+    #@nottest
     def test_remember(self):
         """Tests that POST /forms/remember correctly saves the input list of forms to the logged in user's rememberedForms list.
         """
@@ -1903,12 +1903,12 @@ class TestFormsController(TestController):
         form1.transcription = u'form1'
         form2.transcription = u'form2'
         form3.transcription = u'form3'
-        meta.Session.add_all([form1, form2, form3, restrictedTag])
-        meta.Session.commit()
+        Session.add_all([form1, form2, form3, restrictedTag])
+        Session.commit()
         restrictedTag = h.getRestrictedTag()
         form1.tags = [restrictedTag]
-        meta.Session.add(form1)
-        meta.Session.commit()
+        Session.add(form1)
+        Session.commit()
         forms = h.getForms()
         formIds = [form.id for form in forms]
         form1Id = [f.id for f in forms if f.transcription == u'form1'][0]
@@ -1923,7 +1923,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(formIds)
         assert formIdsSet == set(resp)
-        administrator = meta.Session.query(model.User).filter(
+        administrator = Session.query(model.User).filter(
             model.User.role==u'administrator').first()
         assert formIdsSet == set([f.id for f in administrator.rememberedForms])
 
@@ -1974,10 +1974,10 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(formIds)
         assert formIdsSet == set(resp)
-        administrator = meta.Session.query(model.User).filter(
+        administrator = Session.query(model.User).filter(
             model.User.role==u'administrator').first()
         assert formIdsSet == set([f.id for f in administrator.rememberedForms])
-        userForms = meta.Session.query(model.UserForm).filter(
+        userForms = Session.query(model.UserForm).filter(
             model.UserForm.user_id==administrator.id).all()
         assert len(userForms) == len(formIds)
 
@@ -1992,7 +1992,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(formIds) - 1
         assert form1Id not in resp
-        viewer = meta.Session.query(model.User).filter(
+        viewer = Session.query(model.User).filter(
             model.User.role==u'viewer').first()
         assert len(resp) == len(viewer.rememberedForms)
         assert form1Id not in [f.id for id in viewer.rememberedForms]
@@ -2005,7 +2005,7 @@ class TestFormsController(TestController):
             extra_environ=extra_environ_viewer, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
-        viewer = meta.Session.query(model.User).filter(
+        viewer = Session.query(model.User).filter(
             model.User.role==u'viewer').first()
         assert len(viewer.rememberedForms) == 2
         assert form1Id not in [f.id for id in viewer.rememberedForms]

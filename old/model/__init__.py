@@ -488,7 +488,9 @@ collectionbackup_table = schema.Table('collectionbackup', Base.metadata,
 
 
 class Model(object):
-
+    """This is the class from which all the models (e.g., Form, File,
+    Collection, etc.) inherit.
+    """
     def getDictFromModel(self, model, attrs):
         dict_ = {}
         try:

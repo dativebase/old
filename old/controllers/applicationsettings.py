@@ -9,9 +9,10 @@ from sqlalchemy.sql import desc, asc
 
 from old.lib.base import BaseController
 from old.lib.schemata import ApplicationSettingsSchema
-import old.model as model
-import old.model.meta as meta
 import old.lib.helpers as h
+
+from old.model.meta import Session
+from old.model import ApplicationSettings, Orthography, User
 
 log = logging.getLogger(__name__)
 
@@ -71,8 +72,8 @@ class ApplicationsettingsController(BaseController):
         """
         # url('applicationsettings')
         response.content_type = 'application/json'
-        return json.dumps(meta.Session.query(model.ApplicationSettings).order_by(
-            asc(model.ApplicationSettings.id)).all(), cls=h.JSONOLDEncoder)
+        return json.dumps(Session.query(ApplicationSettings).order_by(
+            asc(ApplicationSettings.id)).all(), cls=h.JSONOLDEncoder)
 
     @restrict('POST')
     @h.authenticate
@@ -93,8 +94,8 @@ class ApplicationsettingsController(BaseController):
             result = json.dumps({'errors': e.unpack_errors()})
         else:
             applicationSettings = createNewApplicationSettings(result)
-            meta.Session.add(applicationSettings)
-            meta.Session.commit()
+            Session.add(applicationSettings)
+            Session.commit()
             result = json.dumps(applicationSettings, cls=h.JSONOLDEncoder)
             app_globals.applicationSettings = h.ApplicationSettings()
         return result
@@ -124,8 +125,7 @@ class ApplicationsettingsController(BaseController):
         """PUT /applicationsettings/id: Update an existing application settings."""
 
         response.content_type = 'application/json'
-        applicationSettings = meta.Session.query(
-            model.ApplicationSettings).get(int(id))
+        applicationSettings = Session.query(ApplicationSettings).get(int(id))
         if applicationSettings:
             try:
                 schema = ApplicationSettingsSchema()
@@ -143,8 +143,8 @@ class ApplicationsettingsController(BaseController):
                     applicationSettings, result)
                 # applicationSettings will be False if there are no changes
                 if applicationSettings:
-                    meta.Session.add(applicationSettings)
-                    meta.Session.commit()
+                    Session.add(applicationSettings)
+                    Session.commit()
                     result = json.dumps(applicationSettings, cls=h.JSONOLDEncoder)
                     app_globals.applicationSettings = h.ApplicationSettings()
                 else:
@@ -164,15 +164,14 @@ class ApplicationsettingsController(BaseController):
         """DELETE /applicationsettings/id: Delete an existing application settings."""
 
         response.content_type = 'application/json'
-        applicationSettings = meta.Session.query(
-            model.ApplicationSettings).get(id)
+        applicationSettings = Session.query(ApplicationSettings).get(id)
         if applicationSettings:
             activeApplicationSettingsId = getattr(
                 h.getApplicationSettings(), 'id', None)
             toBeDeletedApplicationSettingsId = applicationSettings.id
             result = json.dumps(applicationSettings, cls=h.JSONOLDEncoder)
-            meta.Session.delete(applicationSettings)
-            meta.Session.commit()
+            Session.delete(applicationSettings)
+            Session.commit()
             if activeApplicationSettingsId == toBeDeletedApplicationSettingsId:
                 app_globals.applicationSettings = h.ApplicationSettings()
         else:
@@ -194,8 +193,7 @@ class ApplicationsettingsController(BaseController):
         """
 
         response.content_type = 'application/json'
-        applicationSettings = meta.Session.query(
-            model.ApplicationSettings).get(id)
+        applicationSettings = Session.query(ApplicationSettings).get(id)
         if applicationSettings:
             result = json.dumps(applicationSettings, cls=h.JSONOLDEncoder)
         else:
@@ -231,8 +229,7 @@ class ApplicationsettingsController(BaseController):
         """
         # url('edit_applicationsetting', id=ID)
         response.content_type = 'application/json'
-        applicationSettings = meta.Session.query(
-            model.ApplicationSettings).get(id)
+        applicationSettings = Session.query(ApplicationSettings).get(id)
         if applicationSettings:
             data = getNewApplicationSettingsData(request.GET)
             result = {'data': data, 'applicationSettings': applicationSettings}
@@ -250,7 +247,7 @@ def createNewApplicationSettings(data):
     """
 
     # Create the applicationSettings model object.
-    applicationSettings = model.ApplicationSettings()
+    applicationSettings = ApplicationSettings()
     applicationSettings.objectLanguageName = data['objectLanguageName']
     applicationSettings.objectLanguageId = data['objectLanguageId']
     applicationSettings.metalanguageName = data['metalanguageName']
@@ -277,18 +274,18 @@ def createNewApplicationSettings(data):
         data['grammaticalities']))
 
     # Many-to-One
-    applicationSettings.storageOrthography = meta.Session.query(
-        model.Orthography).get(data['storageOrthography'])
-    applicationSettings.inputOrthography = meta.Session.query(
-        model.Orthography).get(data['inputOrthography'])
-    applicationSettings.outputOrthography = meta.Session.query(
-        model.Orthography).get(data['outputOrthography'])
+    applicationSettings.storageOrthography = Session.query(
+        Orthography).get(data['storageOrthography'])
+    applicationSettings.inputOrthography = Session.query(
+        Orthography).get(data['inputOrthography'])
+    applicationSettings.outputOrthography = Session.query(
+        Orthography).get(data['outputOrthography'])
 
     # Many-to-Many Data: orthographies & unrestrictedUsers
     def getUser(id):
-        return meta.Session.query(model.User).get(id)
+        return Session.query(User).get(id)
     def getOrthography(id):
-        return meta.Session.query(model.Orthography).get(id)
+        return Session.query(Orthography).get(id)
     applicationSettings.orthographies = [o for o in [
         getOrthography(id) for id in data['orthographies']] if o]
     applicationSettings.unrestrictedUsers = [uu for uu in [
@@ -350,25 +347,25 @@ def updateApplicationSettings(applicationSettings, data):
     # Many-to-One
     if data['storageOrthography']:
         if data['storageOrthography'] != applicationSettings.storageOrthography.id:
-            applicationSettings.storageOrthography = meta.Session.query(
-                model.Orthography).get(data['storageOrthography'])
+            applicationSettings.storageOrthography = Session.query(
+                Orthography).get(data['storageOrthography'])
             CHANGED = True
     if data['inputOrthography']:
         if data['inputOrthography'] != applicationSettings.inputOrthography.id:
-            applicationSettings.inputOrthography = meta.Session.query(
-                model.Orthography).get(data['inputOrthography'])
+            applicationSettings.inputOrthography = Session.query(
+                Orthography).get(data['inputOrthography'])
             CHANGED = True
     if data['outputOrthography']:
         if data['outputOrthography'] != applicationSettings.outputOrthography.id:
-            applicationSettings.outputOrthography = meta.Session.query(
-                model.Orthography).get(data['outputOrthography'])
+            applicationSettings.outputOrthography = Session.query(
+                Orthography).get(data['outputOrthography'])
             CHANGED = True
 
     # Many-to-Many Data: orthographies & unrestrictedUsers
     # First check if the user has made any changes. If there are changes, just
     # delete all and replace with new.
     def getOrthography(id):
-        return meta.Session.query(model.Orthography).get(id)
+        return Session.query(Orthography).get(id)
     orthographiesToAdd = sorted(data['orthographies'])
     orthographiesWeHave = sorted(
         [o.id for o in applicationSettings.orthographies])
@@ -379,7 +376,7 @@ def updateApplicationSettings(applicationSettings, data):
             applicationSettings.orthographies = orthographiesToAddTake2
             CHANGED = True
     def getUser(id):
-        return meta.Session.query(model.User).get(id)
+        return Session.query(User).get(id)
     unrestrictedUsersToAdd = sorted(data['unrestrictedUsers'])
     unrestrictedUsersWeHave = sorted(
         [uu.id for uu in applicationSettings.unrestrictedUsers])

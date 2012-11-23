@@ -6,7 +6,7 @@ from pylons.controllers import WSGIController
 from pylons.templating import render_mako as render
 
 from old.model.meta import Session
-import old.model as model
+from old.model import User
 from pylons import request, response, session, app_globals
 import old.lib.helpers as h
 
@@ -51,12 +51,11 @@ class BaseController(WSGIController):
 
         if 'test.authentication.role' in request.environ:
             role = unicode(request.environ['test.authentication.role'])
-            user = Session.query(model.User).filter(
-                model.User.role==role).first()
+            user = Session.query(User).filter(User.role==role).first()
             if user:
                 session['user'] = user
         if 'test.authentication.id' in request.environ:
-            user = Session.query(model.User).get(
+            user = Session.query(User).get(
                 request.environ['test.authentication.id'])
             if user:
                 session['user'] = user

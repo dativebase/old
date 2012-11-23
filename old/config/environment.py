@@ -1,6 +1,5 @@
 """Pylons environment configuration"""
-import os
-import re
+import os, re
 
 from mako.lookup import TemplateLookup
 from pylons.configuration import PylonsConfig
@@ -11,7 +10,6 @@ import old.lib.app_globals as app_globals
 import old.lib.helpers
 from old.config.routing import make_map
 from old.model import init_model
-
 
 def load_environment(global_conf, app_conf):
     """Configure the Pylons environment via the ``pylons.config``
@@ -38,12 +36,13 @@ def load_environment(global_conf, app_conf):
     pylons.cache._push_object(config['pylons.app_globals'].cache)
 
     # Create the Mako TemplateLookup, with the default auto-escaping
+    # TODO: SAFELY REMOVE THIS
     config['pylons.app_globals'].mako_lookup = TemplateLookup(
         directories=paths['templates'],
         error_handler=handle_mako_error,
         module_directory=os.path.join(app_conf['cache_dir'], 'templates'),
         input_encoding='utf-8', default_filters=['escape'],
-        imports=['from markupsafe import escape'])
+        imports=['from webhelpers.html import escape'])
 
     engine = engine_from_config(config, 'sqlalchemy.')
 
@@ -102,5 +101,6 @@ def load_environment(global_conf, app_conf):
                     # I think this is desirable ...
                     except TypeError:
                         return item and patt.search(str(item)) is not None
+
     init_model(engine)
     return config

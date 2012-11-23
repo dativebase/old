@@ -1,17 +1,12 @@
 """Setup the old application"""
-
-import logging
-import codecs
-import datetime
-import os
+import logging, os, codecs, datetime
 
 import pylons.test
+
 from old.config.environment import load_environment
 from old.model.meta import Base, Session
-from old.model import meta
 from old import model
 import old.lib.helpers as h
-from pylons import config
 
 log = logging.getLogger(__name__)
 
@@ -21,10 +16,9 @@ def setup_app(command, conf, vars):
     #if not pylons.test.pylonsapp:
         #load_environment(conf.global_conf, conf.local_conf)
     config = load_environment(conf.global_conf, conf.local_conf)
-
     log.info('Environment loaded.')
+
     Base.metadata.create_all(bind=Session.bind)
-    ##meta.metadata.bind = meta.engine
     filename = os.path.split(conf.filename)[-1] # e.g., production.ini, development.ini, test.ini, ...
 
     # Create the files directories.
@@ -45,9 +39,9 @@ def setup_app(command, conf, vars):
 
     # Get default users.
     log.info("Creating a default administrator, contributor and viewer.")
-    administrator = h.generateDefaultAdministrator(config)
-    contributor = h.generateDefaultContributor(config)
-    viewer = h.generateDefaultViewer(config)
+    administrator = h.generateDefaultAdministrator()
+    contributor = h.generateDefaultContributor()
+    viewer = h.generateDefaultViewer()
 
     # If we are running tests, make sure the test db contains only language data.
     if filename == 'test.ini':
@@ -56,7 +50,6 @@ def setup_app(command, conf, vars):
         log.info("Existing tables dropped.")
 
         # Create the tables if they don't already exist
-        ##meta.metadata.create_all(checkfirst=True)
         Base.metadata.create_all(bind=Session.bind, checkfirst=True)
         log.info('Tables created.')
 

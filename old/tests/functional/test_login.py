@@ -2,9 +2,8 @@ import logging
 import simplejson as json
 from old.tests import *
 from nose.tools import nottest
-from pylons import session
 import old.model as model
-import old.model.meta as meta
+from old.model.meta import Session
 import old.lib.helpers as h
 
 
@@ -20,7 +19,7 @@ class TestLoginController(TestController):
     def tearDown(self):
         h.clearAllModels(['Language', 'User'])
 
-    @nottest
+    #@nottest
     def test_authenticate(self):
         """Tests that POST /login/authenticate correctly handles authentication attempts."""
 
@@ -45,7 +44,7 @@ class TestLoginController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['username'] == 'Missing value'
 
-    @nottest
+    #@nottest
     def test_logout(self):
         """Tests that GET /login/logout logs the user out."""
 
@@ -62,7 +61,7 @@ class TestLoginController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
 
-    @nottest
+    #@nottest
     def test_email_reset_password(self):
         """Tests that POST /login/email_reset_password sends a user a newly generated password.
 

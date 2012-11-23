@@ -7,12 +7,13 @@ import unicodedata
 import string
 from uuid import uuid4, UUID
 import simplejson as json
-from pylons import config as config_
 from sqlalchemy.sql import or_, not_, desc, asc
 import old.model as model
+from old.model import Form, FormBackup, FormTag
 from old.model.meta import Session
 import orthography
 from simplejson.decoder import JSONDecodeError
+from paste.deploy import appconfig
 
 ################################################################################
 # Get data for 'new' action
@@ -130,17 +131,18 @@ JSONDecodeErrorResponse = json.dumps({'error':
 # File system functions
 ################################################################################
 
-def createResearcherDirectory(researcher, config=None):
-    """Creates a directory named researcher.username in files/researchers/.
-    
-    """
-    if config is None:
-        config = config_
+def createResearcherDirectory(researcher):
+    """Creates a directory named researcher.username in files/researchers/."""
+    # I am not entirely sure why pylons.config lacks a 'permanent_store' key
+    # when this function is called.  In the getRDBMSName func below I use
+    # pylons.config to get 'sqlalchemy.url' ...  WARNING: if test.ini needs a
+    # distinct researcher directory (it shouldn't), then the 'config:test.ini'
+    # should be passed to appconfig here.
+    config = appconfig('config:development.ini', relative_to='.')
     directoryPath = os.path.join(
         config['permanent_store'], 'researchers',
         researcher.username
     )
-
     makeDirectorySafely(directoryPath)
 
 
@@ -257,7 +259,7 @@ def normalizeDict(dict_):
 
 class ApplicationSettings(object):
     """ApplicationSettings is a class that adds functionality to a
-    model.ApplicationSettings object.
+    ApplicationSettings object.
 
     The value of the applicationSettings attribute is the most recently added
     ApplicationSettings model.  Other values, e.g., storageOrthography or
@@ -434,8 +436,8 @@ def getForeignWords():
 
     foreignWordTag = getForeignWordTag()
     if foreignWordTag:
-        return Session.query(model.Form).filter(
-            model.Form.tags.contains(foreignWordTag)).all()
+        return Session.query(Form).filter(
+            Form.tags.contains(foreignWordTag)).all()
     else:
         return getForms()
 
@@ -488,11 +490,11 @@ def getForeignWords_():
     """
 
     foreignWordTagId = getForeignWordTagId()
-    formTags = Session.query(model.FormTag).filter(
-        model.FormTag.tag_id==foreignWordTagId).all()
+    formTags = Session.query(FormTag).filter(
+        FormTag.tag_id==foreignWordTagId).all()
     formIds = [ft.form_id for ft in formTags]
-    return Session.query(model.Form).filter(
-        model.Form.id.in_(formIds)).all()
+    return Session.query(Form).filter(
+        Form.id.in_(formIds)).all()
 
 
 ################################################################################
@@ -532,39 +534,39 @@ def getElicitationMethods():
     return getModelsByName('ElicitationMethod')
 
 def getFormsUserCanAccess(user, paginator=None):
-    entererCondition = model.Form.enterer == user
+    entererCondition = Form.enterer == user
     restrictedTag = getRestrictedTag()
-    unrestrictedCondition = not_(model.Form.tags.contains(restrictedTag))
-    filteredQuery = Session.query(model.Form).filter(
-        or_(entererCondition, unrestrictedCondition)).order_by(asc(model.Form.id))
+    unrestrictedCondition = not_(Form.tags.contains(restrictedTag))
+    filteredQuery = Session.query(Form).filter(
+        or_(entererCondition, unrestrictedCondition)).order_by(asc(Form.id))
     if paginator:
         return filteredQuery.slice(paginator['start'], paginator['end']).all()
     return filteredQuery.all()
 
 def getForms(paginator=None):
-    formQuery = Session.query(model.Form).order_by(asc(model.Form.id))
+    formQuery = Session.query(Form).order_by(asc(Form.id))
     if paginator:
         return formQuery.slice(paginator['start'], paginator['end']).all()
     return formQuery.all()
 
 def getFormByUUID(UUID):
     """Return the Form models with UUID."""
-    return Session.query(model.Form).filter(model.Form.UUID==UUID).first()
+    return Session.query(Form).filter(Form.UUID==UUID).first()
 
 def getFormBackupsByUUID(UUID):
     """Return all FormBackup models with UUID = UUID."""
-    return Session.query(model.FormBackup).filter(
-        model.FormBackup.UUID==UUID).order_by(desc(
-        model.FormBackup.id)).all()
+    return Session.query(FormBackup).filter(
+        FormBackup.UUID==UUID).order_by(desc(
+        FormBackup.id)).all()
 
 def getFormBackupsByFormId(formId):
     """Return all FormBackup models with form_id = formId.  WARNING: unexpected
     data may be returned (on an SQLite backend) if primary key ids of deleted
     forms are recycled.
     """
-    return Session.query(model.FormBackup).filter(
-        model.FormBackup.form_id==formId).order_by(desc(
-        model.FormBackup.id)).all()
+    return Session.query(FormBackup).filter(
+        FormBackup.form_id==formId).order_by(desc(
+        FormBackup.id)).all()
 
 def getTags():
     return getModelsByName('Tag')
@@ -593,11 +595,11 @@ def getSources():
     return getModelsByName('Source')
 
 def getModelNames():
-    return [mn for mn in dir(model) if mn[0].isupper() and mn != 'Model']
+    return [mn for mn in dir(model) if mn[0].isupper()
+            and mn not in ('Model', 'Base', 'Session')]
 
 def getModelsByName(modelName):
     return getQueryByModelName(modelName).all()
-    #return Session.query(getattr(model, modelName)).all()
 
 def getQueryByModelName(modelName):
     return Session.query(getattr(model, modelName))
@@ -620,9 +622,7 @@ def getAllModels():
 # OLD model objects getters: for defaults and testing
 ################################################################################
 
-def generateDefaultAdministrator(config=None):
-    if config is None:
-        config = config_
+def generateDefaultAdministrator():
     admin = model.User()
     admin.firstName = u'Admin'
     admin.lastName = u'Admin'
@@ -634,12 +634,10 @@ def generateDefaultAdministrator(config=None):
     admin.inputOrthography = None
     admin.outputOrthography = None
     admin.personalPageContent = u''
-    createResearcherDirectory(admin, config)
+    createResearcherDirectory(admin)
     return admin
 
-def generateDefaultContributor(config=None):
-    if config is None:
-        config = config_
+def generateDefaultContributor():
     contributor = model.User()
     contributor.firstName = u'Contributor'
     contributor.lastName = u'Contributor'
@@ -651,12 +649,10 @@ def generateDefaultContributor(config=None):
     contributor.inputOrthography = None
     contributor.outputOrthography = None
     contributor.personalPageContent = u''
-    createResearcherDirectory(contributor, config)
+    createResearcherDirectory(contributor)
     return contributor
 
-def generateDefaultViewer(config=None):
-    if config is None:
-        config = config_
+def generateDefaultViewer():
     viewer = model.User()
     viewer.firstName = u'Viewer'
     viewer.lastName = u'Viewer'
@@ -668,7 +664,7 @@ def generateDefaultViewer(config=None):
     viewer.inputOrthography = None
     viewer.outputOrthography = None
     viewer.personalPageContent = u''
-    createResearcherDirectory(viewer, config)
+    createResearcherDirectory(viewer)
     return viewer
 
 def generateDefaultHomePage():
@@ -761,7 +757,7 @@ phonetic and phonemic inventories.'''
     return foreignWordTag
 
 def generateDefaultForm():
-    form = model.Form()
+    form = Form()
     form.UUID = unicode(uuid4())
     form.transcription = u'test transcription'
     form.morphemeBreakIDs = u'null'
@@ -918,7 +914,7 @@ def userIsAuthorizedToAccessForm(user, form, unrestrictedUsers):
     enterers and unrestricted users.
     """
 
-    if isinstance(form, model.Form):
+    if isinstance(form, Form):
         formTags = form.tags
         formTagNames = [t.name for t in form.tags]
         entererId = form.enterer_id
@@ -948,8 +944,8 @@ unauthorizedJSONMsg = json.dumps(
 
 
 
-def getRDBMSName(config=None):
-    if config is None:
-        config = config_
-    SQLAlchemyURL = config['sqlalchemy.url']
+def getRDBMSName():
+    #config = appconfig('config:development.ini', relative_to='.')
+    from pylons import config as config_
+    SQLAlchemyURL = config_['sqlalchemy.url']
     return SQLAlchemyURL.split(':')[0]

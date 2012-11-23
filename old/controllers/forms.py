@@ -10,9 +10,10 @@ from formencode.validators import Invalid
 
 from old.lib.base import BaseController
 from old.lib.schemata import FormSchema, FormIdsSchema, PaginatorSchema
-import old.model as model
-import old.model.meta as meta
 import old.lib.helpers as h
+
+from old.model.meta import Session
+from old.model import Form, FormBackup, Gloss, User
 
 log = logging.getLogger(__name__)
 
@@ -195,9 +196,9 @@ def getMorphemeIDLists(form, validDelimiters=None):
                 gloss = mgWordMorphemesList[ii]
                 matches = []
                 if morpheme and gloss:
-                    matches = meta.Session.query(model.Form).filter(
-                        model.Form.morphemeBreak==morpheme).filter(
-                        model.Form.morphemeGloss==gloss).all()
+                    matches = Session.query(Form).filter(
+                        Form.morphemeBreak==morpheme).filter(
+                        Form.morphemeGloss==gloss).all()
                 # If one or more Forms match both gloss and morpheme, append a
                 #  list of the IDs of those Forms in morphemeBreakIDs and
                 #  morphemeGlossIDs
@@ -215,9 +216,8 @@ def getMorphemeIDLists(form, validDelimiters=None):
                 else:
                     morphemeMatches = []
                     if morpheme:
-                        morphemeMatches = meta.Session.query(
-                            model.Form).filter(
-                            model.Form.morphemeBreak==morpheme).all()
+                        morphemeMatches = Session.query(Form).filter(
+                            Form.morphemeBreak==morpheme).all()
                     if morphemeMatches:
                         mbWordIDList.append([f.syntacticCategory and
                             (f.id, f.morphemeGloss, f.syntacticCategory.name) 
@@ -227,9 +227,8 @@ def getMorphemeIDLists(form, validDelimiters=None):
                         mbWordIDList.append([])
                     glossMatches = []
                     if gloss:
-                        glossMatches = meta.Session.query(
-                            model.Form).filter(
-                            model.Form.morphemeGloss==gloss).all()
+                        glossMatches = Session.query(Form).filter(
+                            Form.morphemeGloss==gloss).all()
                     if glossMatches:
                         mgWordIDList.append([f.syntacticCategory and
                             (f.id, f.morphemeBreak, f.syntacticCategory.name)
@@ -272,7 +271,7 @@ def getFormAndPreviousVersions(id):
     previousVersions = []
     try:
         id = int(id)
-        form = meta.Session.query(model.Form).get(id)
+        form = Session.query(Form).get(id)
         if form:
             previousVersions = h.getFormBackupsByUUID(form.UUID)
         else:
@@ -355,8 +354,8 @@ class FormsController(BaseController):
             result = json.dumps({'errors': e.unpack_errors()})
         else:
             form = createNewForm(result)
-            meta.Session.add(form)
-            meta.Session.commit()
+            Session.add(form)
+            Session.commit()
             updateApplicationSettingsIfFormIsForeignWord(form)
             result = json.dumps(form, cls=h.JSONOLDEncoder)
         return result
@@ -387,7 +386,7 @@ class FormsController(BaseController):
         """PUT /forms/id: Update an existing form."""
 
         response.content_type = 'application/json'
-        form = meta.Session.query(model.Form).get(int(id))
+        form = Session.query(Form).get(int(id))
         if form:
             unrestrictedUsers = getUnrestrictedUsers()
             user = session['user']
@@ -410,8 +409,8 @@ class FormsController(BaseController):
                     # form will be False if there are no changes (cf. updateForm).
                     if form:
                         backupForm(formDict, form.datetimeModified)
-                        meta.Session.add(form)
-                        meta.Session.commit()
+                        Session.add(form)
+                        Session.commit()
                         updateApplicationSettingsIfFormIsForeignWord(form)
                         result = json.dumps(form, cls=h.JSONOLDEncoder)
                     else:
@@ -436,14 +435,14 @@ class FormsController(BaseController):
         """
 
         response.content_type = 'application/json'
-        form = meta.Session.query(model.Form).get(id)
+        form = Session.query(Form).get(id)
         if form:
             if session['user'].role == u'administrator' or \
             form.enterer is session['user']:
                 formDict = form.getDict()
                 backupForm(formDict)
-                meta.Session.delete(form)
-                meta.Session.commit()
+                Session.delete(form)
+                Session.commit()
                 updateApplicationSettingsIfFormIsForeignWord(form)
                 result = json.dumps(form, cls=h.JSONOLDEncoder)
             else:
@@ -467,7 +466,7 @@ class FormsController(BaseController):
         """
 
         response.content_type = 'application/json'
-        form = meta.Session.query(model.Form).get(id)
+        form = Session.query(Form).get(id)
         if form:
             unrestrictedUsers = getUnrestrictedUsers()
             user = session['user']
@@ -505,7 +504,7 @@ class FormsController(BaseController):
         """
 
         response.content_type = 'application/json'
-        form = meta.Session.query(model.Form).get(id)
+        form = Session.query(Form).get(id)
         if form:
             unrestrictedUsers = getUnrestrictedUsers()
             if not h.userIsAuthorizedToAccessForm(
@@ -587,7 +586,7 @@ class FormsController(BaseController):
                                      if accessible(user, f, unrestrictedUsers)]
                 if unrestrictedForms:
                     session['user'].rememberedForms += unrestrictedForms
-                    meta.Session.commit()
+                    Session.commit()
                     result = json.dumps([f.id for f in unrestrictedForms])
                 else:
                     response.status_int = 403
@@ -606,9 +605,9 @@ def backupForm(formDict, datetimeModified=None):
     table.  When backing up a form that is being updated, set update to True.
     """
 
-    formBackup = model.FormBackup()
+    formBackup = FormBackup()
     formBackup.vivify(formDict, session['user'], datetimeModified)
-    meta.Session.add(formBackup)
+    Session.add(formBackup)
 
 
 
@@ -617,7 +616,7 @@ def backupForm(formDict, datetimeModified=None):
 ################################################################################
 
 def createNewGloss(data):
-    gloss = model.Gloss()
+    gloss = Gloss()
     gloss.gloss = h.toSingleSpace(h.normalize(data['gloss']))
     gloss.glossGrammaticality = data['glossGrammaticality']
     return gloss
@@ -628,7 +627,7 @@ def createNewForm(data):
     user (as a JSON object).
     """
 
-    form = model.Form()
+    form = Form()
     form.UUID = unicode(uuid4())
 
     # Unicode Data
@@ -671,12 +670,12 @@ def createNewForm(data):
     now = datetime.datetime.utcnow()
     form.datetimeEntered = now
     form.datetimeModified = now
-    form.enterer = meta.Session.query(model.User).get(session['user'].id)
+    form.enterer = Session.query(User).get(session['user'].id)
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
     # We add the form first to get an ID so that monomorphemic Forms can be
     # self-referential.
-    meta.Session.add(form)
+    Session.add(form)
     form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString = \
                                                         getMorphemeIDLists(form)
 

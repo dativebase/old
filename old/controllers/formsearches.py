@@ -29,8 +29,6 @@ from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 
 from old.lib.base import BaseController
-import old.model as model
-import old.model.meta as meta
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 

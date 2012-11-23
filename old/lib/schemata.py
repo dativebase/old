@@ -7,7 +7,7 @@ from formencode.api import NoDefault
 import old.lib.helpers as h
 from pylons import app_globals
 import old.model as model
-import old.model.meta as meta
+from old.model.meta import Session
 import logging
 log = logging.getLogger(__name__)
 
@@ -222,8 +222,8 @@ def getGrammaticalities():
 class ValidOLDModelObject(FancyValidator):
     """Validator for input values that are integer ids (i.e., primary keys) of
     OLD model objects.  Value must be int-able as well as the id of an existing
-    OLD of the type specified in the modelName kwarg.
-    Usage: ValidOLDModelObject(modelName='User').
+    OLD of the type specified in the modelName kwarg.  If valid, the model
+    object is returned.  Example usage: ValidOLDModelObject(modelName='User').
     """
 
     messages = {u'invalid_model':
@@ -234,7 +234,7 @@ class ValidOLDModelObject(FancyValidator):
             return None
         else:
             id = Int().to_python(value, state)
-            modelObject = meta.Session.query(getattr(model, self.modelName)).get(id)
+            modelObject = Session.query(getattr(model, self.modelName)).get(id)
             if modelObject is None:
                 raise Invalid(self.message("invalid_model", state, id=id,
                     modelNameEng=h.camelCase2lowerSpace(self.modelName)),

@@ -15,9 +15,10 @@ from formencode.validators import Invalid
 
 from old.lib.base import BaseController
 from old.lib.schemata import LoginSchema, PasswordResetSchema
-import old.model as model
-import old.model.meta as meta
 import old.lib.helpers as h
+
+from old.model import Form, User
+from old.model.meta import Session
 
 log = logging.getLogger(__name__)
 
@@ -58,9 +59,8 @@ class LoginController(BaseController):
         else:
             username = result['username']
             password = unicode(hashlib.sha224(result['password']).hexdigest())
-            user = meta.Session.query(model.User).filter(
-                model.User.username==username).filter(
-                model.User.password==password).first()
+            user = Session.query(User).filter(User.username==username).filter(
+                User.password==password).first()
             if user:
                 session['user'] = user
                 session.save()
@@ -100,8 +100,8 @@ class LoginController(BaseController):
             response.status_int = 400
             result = json.dumps({'errors': e.unpack_errors()})
         else:
-            user = meta.Session.query(model.User).filter(
-                model.User.username==result['username']).first()
+            user = Session.query(User).filter(
+                User.username==result['username']).first()
             if user:
                 # Generate a new password.
                 newPassword = generatePassword()
@@ -131,7 +131,7 @@ class LoginController(BaseController):
                     smtpObj.sendmail(sender, receivers, message)
                     smtpObj.quit()
                     user.password = newPassword
-                    meta.Session.commit()
+                    Session.commit()
                     result = json.dumps({'validUsername': True, 'passwordReset': True})
                 except socket.error:
                     response.status_int = 500
