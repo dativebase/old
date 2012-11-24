@@ -9,8 +9,8 @@ from uuid import uuid4, UUID
 import simplejson as json
 from sqlalchemy.sql import or_, not_, desc, asc
 import old.model as model
-from old.model import Form, FormBackup, FormTag
-from old.model.meta import Session
+from old.model import Form, FormBackup
+from old.model.meta import Session, Model
 import orthography
 from simplejson.decoder import JSONDecodeError
 from paste.deploy import appconfig
@@ -77,6 +77,16 @@ def getDataForNewAction(GET_params, getterMap, modelNameMap):
 # JSON functionality
 ################################################################################
 
+
+def deleteKey(dict_, key_):
+    """Try to delete the key_ from the dict_; then return the dict_."""
+    try:
+        del dict_[key_]
+    except:
+        pass
+    return dict_
+
+
 class JSONOLDEncoder(json.JSONEncoder):
     """Permits the jsonification of an OLD class instance obj via
 
@@ -86,39 +96,18 @@ class JSONOLDEncoder(json.JSONEncoder):
     """
 
     def default(self, obj):
-
-        def delete(dict_, key_):
-            """Try to delete the key_ from the dict_; then return the dict_."""
-            try:
-                del dict_[key_]
-            except:
-                pass
-            return dict_
-
         try:
             return json.JSONEncoder.default(self, obj)
         except TypeError:
             if isinstance(obj, (datetime.datetime, datetime.date)):
                 return obj.isoformat()
-            elif isinstance(obj, model.Model):
-                return obj.getDict()
-            elif isinstance(obj, model.ApplicationSettings):
-                result = {
-                    'storageOrthography': obj.storageOrthography,
-                    'inputOrthography': obj.inputOrthography,
-                    'outputOrthography': obj.outputOrthography,
-                    'orthographies': obj.orthographies,
-                    'unrestrictedUsers': obj.unrestrictedUsers
-                }
-                result.update(obj.__dict__)
-                return result
             elif isinstance(obj, model.User):
-                return delete(obj.__dict__, 'password')
-            elif isinstance(obj, (model.Gloss, model.ElicitationMethod,
-                    model.Tag, model.SyntacticCategory,
-                    model.Speaker, model.Source, model.File,
-                    model.Page, model.Orthography, model.Language)):
-                return obj.__dict__
+                return deleteKey(obj.__dict__, 'password')
+            elif isinstance(obj, Model):
+                try:
+                    return obj.getDict()
+                except AttributeError:
+                    return obj.__dict__
             else:
                 return None
 
@@ -476,25 +465,6 @@ def formIsForeignWord(form):
 
 def getForeignWordTagId():
     return getForeignWordTag().id
-
-
-# Deprecated but maybe useful for buggy SQLite ...
-def getForeignWords_():
-    """Return the forms that are tagged with a 'foreign word' tag.  This is
-    useful for input validation as foreign words may contain otherwise illicit
-    characters/graphemes.
-
-    ***Note*** This should obviously be done with a SQL join!  However, SQLite
-    on my system is taking *forever* to perform a join query, hence this
-    roundabout.
-    """
-
-    foreignWordTagId = getForeignWordTagId()
-    formTags = Session.query(FormTag).filter(
-        FormTag.tag_id==foreignWordTagId).all()
-    formIds = [ft.form_id for ft in formTags]
-    return Session.query(Form).filter(
-        Form.id.in_(formIds)).all()
 
 
 ################################################################################
