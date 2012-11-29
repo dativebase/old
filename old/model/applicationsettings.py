@@ -76,11 +76,8 @@ class ApplicationSettings(Base):
     def getDict(self):
         """Return a Python dictionary representation of the ApplicationSettings.
         This facilitates JSON-stringification, cf. utils.JSONOLDEncoder.
-        Relational data are truncated, e.g., ...
-
-        TODO: ...formDict['elicitor'] is a dict with keys for
-        'id', 'firstName' and 'lastName' (cf. getMiniUserDict above) and lacks
-        keys for other attributes such as 'username', 'personalPageContent', etc.
+        Relational data are truncated, e.g., applicationSettingsDict['storageOrthography']
+        is a dict with keys that are a subset of an orthography's attributes.
         """
 
         applicationSettingsDict = {}

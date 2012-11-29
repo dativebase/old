@@ -279,10 +279,9 @@ class FormIdsSchema(Schema):
 
 class PaginatorSchema(Schema):
     allow_extra_fields = True
-    filter_extra_fields = True
+    filter_extra_fields = False
     itemsPerPage = Int(not_empty=True, min=1)
     page = Int(not_empty=True, min=1)
-
 
 ################################################################################
 # ApplicationSettings Schemata

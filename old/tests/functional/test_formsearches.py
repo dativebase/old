@@ -8,11 +8,6 @@ import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
 
-# TODO: test like and regexp with capitalization -- does one ignore it?  is this db-specific?
-#     regexp is case-sensitive (makes sense since it's Pythonic for SQLite)
-#     like is case-insensitive (something to do with collation ...)
-# TODO: test regex patterns of varying complexity
-# TODO: test searches on one/many-to-many relations: does only one object need to match the search expression?
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +143,7 @@ class TestFormsearchesController(TestController):
         response = self.app.get(url('forms'), extra_environ=extra_environ)
         """
 
-    #@nottest
+    @nottest
     def test_index(self):
         response = self.app.get(url('formsearches'))
         #log.debug(json.loads(response.body))
@@ -158,13 +153,13 @@ class TestFormsearchesController(TestController):
     # requirement that the initialize "test" needs to run first, these create
     # tests do not need to be executed in the order determined by their names;
     # it just helps in locating them.
-    #@nottest
+    @nottest
     def test_0_create_a_initialize(self):
         """Tests POST /formsearches: initialize database."""
         # Add a bunch of data to the db.
         createTestData(self.n)
 
-    #@nottest
+    @nottest
     def test_a_create_b_equals(self):
         """Tests POST /formsearches: equals."""
         # Simple == search on transcriptions
@@ -175,7 +170,7 @@ class TestFormsearchesController(TestController):
         assert len(resp) == 1
         assert resp[0]['transcription'] == u'transcription 10'
 
-    #@nottest
+    @nottest
     def test_a_create_c_not_equals(self):
         """Tests POST /formsearches: not equals."""
         jsonQuery = json.dumps(['not', ['Form', 'transcription', '=', u'transcription 10']])
@@ -185,7 +180,7 @@ class TestFormsearchesController(TestController):
         assert len(resp) == self.n - 1
         assert u'transcription 10' not in [f['transcription'] for f in resp]
 
-    #@nottest
+    @nottest
     def test_a_create_d_like(self):
         """Tests POST /formsearches: like."""
         jsonQuery = json.dumps(['Form', 'transcription', 'like', u'%1%'])
@@ -202,7 +197,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-    #@nottest
+    @nottest
     def test_a_create_e_not_like(self):
         """Tests POST /formsearches: not like."""
         jsonQuery = json.dumps(['not', ['Form', 'transcription', 'like', u'%1%']])
@@ -211,7 +206,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 80
 
-    #@nottest
+    @nottest
     def test_a_create_f_regexp(self):
         """Tests POST /formsearches: regular expression."""
         jsonQuery = json.dumps(['Form', 'transcription', 'regex', u'[345]2'])
@@ -230,7 +225,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-    #@nottest
+    @nottest
     def test_a_create_g_not_regexp(self):
         """Tests POST /formsearches: not regular expression."""
         jsonQuery = json.dumps(['not', ['Form', 'transcription', 'regexp', u'[345]2']])
@@ -239,7 +234,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 97
 
-    #@nottest
+    @nottest
     def test_a_create_h_empty(self):
         """Tests POST /formsearches: is NULL."""
         jsonQuery = json.dumps(['Form', 'narrowPhoneticTranscription', '=', None])
@@ -255,7 +250,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 75
 
-    #@nottest
+    @nottest
     def test_a_create_i_not_empty(self):
         """Tests POST /formsearches: is not NULL."""
         jsonQuery = json.dumps(['not', ['Form', 'narrowPhoneticTranscription', '=', None]])
@@ -271,7 +266,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 25
 
-    #@nottest
+    @nottest
     def test_a_create_j_invalid_json(self):
         """Tests POST /formsearches: invalid JSON params."""
         jsonQuery = json.dumps(['not', ['Form', 'narrowPhoneticTranscription', '=', None]])
@@ -282,7 +277,7 @@ class TestFormsearchesController(TestController):
         assert resp['error'] == \
             u'JSON decode error: the parameters provided were not valid JSON.'
 
-    #@nottest
+    @nottest
     def test_a_create_k_malformed_query(self):
         """Tests POST /formsearches: malformed query."""
 
@@ -344,7 +339,7 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['TypeError'] == u"unhashable type: 'list'"
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
-    #@nottest
+    @nottest
     def test_a_create_l_lexical_semantic_error(self):
         """Tests POST /formsearches: lexical & semantic errors.
         
@@ -390,7 +385,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert u'InvalidRequestError' in resp['errors']
 
-    #@nottest
+    @nottest
     def test_a_create_m_conjunction(self):
         """Tests POST /formsearches: conjunction."""
         users = h.getUsers()
@@ -455,7 +450,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 20
 
-    #@nottest
+    @nottest
     def test_a_create_n_disjunction(self):
         """Tests POST /formsearches: disjunction."""
         users = h.getUsers()
@@ -500,7 +495,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 76
 
-    #@nottest
+    @nottest
     def test_a_create_o_int(self):
         """Tests POST /formsearches: integer searches."""
 
@@ -573,7 +568,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(expectedMatches)
 
-    #@nottest
+    @nottest
     def test_a_create_p_date(self):
         """Tests POST /formsearches: date searches."""
 
@@ -662,7 +657,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 98
 
-    #@nottest
+    @nottest
     def test_a_create_q_date_invalid(self):
         """Tests POST /formsearches: invalid date searches."""
 
@@ -719,7 +714,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-    #@nottest
+    @nottest
     def test_a_create_r_datetime(self):
         """Tests POST /formsearches: datetime searches."""
 
@@ -815,7 +810,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 49
 
-    #@nottest
+    @nottest
     def test_a_create_s_datetime_invalid(self):
         """Tests POST /formsearches: invalid datetime searches."""
 
@@ -881,7 +876,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 99
 
-    #@nottest
+    @nottest
     def test_a_create_t_many_to_one(self):
         """Tests POST /formsearches: searches on many-to-one attributes."""
 
@@ -944,7 +939,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(expectedForms)
 
-    #@nottest
+    @nottest
     def test_a_create_u_one_to_many(self):
         """Tests POST /formsearches: searches on one-to-many attributes, viz. Gloss."""
 
@@ -1026,7 +1021,7 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-    #@nottest
+    @nottest
     def test_a_create_v_many_to_many(self):
         """Tests POST /formsearches: searches on many-to-many attributes, i.e., Tag, File, Collection."""
 
@@ -1106,7 +1101,7 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-    #@nottest
+    @nottest
     def test_a_create_w_in(self):
         """Tests POST /formsearches: searches using the in_ relation."""
 
@@ -1124,7 +1119,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 0
 
-    #@nottest
+    @nottest
     def test_a_create_x_complex(self):
         """Tests POST /formsearches: complex searches."""
         forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
@@ -1201,7 +1196,7 @@ class TestFormsearchesController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
-    #@nottest
+    @nottest
     def test_a_create_y_cleanup(self):
         """Tests POST /formsearches: clean up the database."""
 
@@ -1218,14 +1213,53 @@ class TestFormsearchesController(TestController):
         extra_environ['test.applicationSettings'] = True
         response = self.app.get(url('forms'), extra_environ=extra_environ)
 
-    #@nottest
+    @nottest
+    def test_test(self):
+        """Tests that SEARCH /forms allows us to perform a search on forms.
+        
+        NOTE: getting the non-standard http SEARCH method to work in the tests
+        involved using self.app.request.  WebTest prints a WSGIWarning about the
+        unknown method, so I altered the global valid_methods tuple by adding
+        a 'SEARCH' method.  This means that in standard installs, running
+        nosetests will generate at least one WSGIWarning.
+        """
+        jsonQuery = json.dumps([
+            'and', [
+                ['Form', 'transcription', 'like', '%5%'],
+                ['Form', 'morphemeBreak', 'like', '%9%'],
+                ['not', ['Gloss', 'gloss', 'like', '%6%']],
+                ['or', [
+                    ['Form', 'datetimeEntered', '<', todayTimestamp.isoformat()],
+                    ['Form', 'datetimeModified', '>', yesterdayTimestamp.isoformat()],
+                    ['not', ['Form', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
+                    ['and', [
+                        ['Form', 'enterer', 'regex', '[135680]'],
+                        ['Form', 'id', '<', 90]
+                    ]]
+                ]],
+                ['not', ['not', ['not', ['Tag', 'name', '=', 'name 7']]]]
+            ]
+        ])
+        # Test that SEARCH /forms works.
+        response = self.app.request(url('forms'), method='SEARCH',
+            body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['copy'] == 'that'
+
+        # Test that POST /forms/search works.
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers,
+            self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['copy'] == 'that'
+
+    @nottest
     def test_new(self):
         response = self.app.get(url('new_formsearch'))
 
-    #@nottest
+    @nottest
     def test_delete(self):
         response = self.app.delete(url('formsearch', id=1))
 
-    #@nottest
+    @nottest
     def test_show(self):
         response = self.app.get(url('formsearch', id=1))

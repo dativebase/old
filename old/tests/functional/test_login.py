@@ -80,7 +80,7 @@ class TestLoginController(TestController):
                     action='email_reset_password'), params, self.json_headers, status=[200, 500])
         resp = json.loads(response.body)
         # smtplib.SMTP('localhost').sendmail may or may not work.  Assert True
-        # for a stronger test.  TODO: test on Linux.
+        # for a stronger test.
         assert (resp['validUsername'] == True and resp['passwordReset'] == True) or \
             resp['error'] == u'The server is unable to send email.'
 

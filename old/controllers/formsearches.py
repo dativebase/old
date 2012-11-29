@@ -57,9 +57,6 @@ class FormsearchesController(BaseController):
             pythonQuery = json.loads(jsonQuery)
             SQLAQuery = self.queryBuilder.getSQLAQuery(pythonQuery)
             forms = SQLAQuery.all()
-            # TODO: save query: FormSearch has id, json, searcher and datetimeModified attributes
-            # TODO: pagination or some way to prevent creation requests from returning massive arrays of forms
-            #       ... maybe create should just return {'id': ..., 'json': ..., 'datetimeModified', ...} ...
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse

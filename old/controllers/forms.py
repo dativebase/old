@@ -7,37 +7,17 @@ from uuid import uuid4
 from pylons import request, response, session, app_globals
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
+from sqlalchemy.exc import OperationalError, InvalidRequestError
+from sqlalchemy.sql import asc
 
 from old.lib.base import BaseController
 from old.lib.schemata import FormSchema, FormIdsSchema, PaginatorSchema
 import old.lib.helpers as h
-
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session
 from old.model import Form, FormBackup, Gloss, User
 
 log = logging.getLogger(__name__)
-
-# TODO: search/query action (schema)
-# TODO: smart search/ quicksearch
-# TODO: test the count action
-
-# TODO: export form (leave this for later, do as much client-side as possible)
-#   - plain text (various reps)
-#   - XML ?
-#   - JSON - X
-#   - tab-delimited
-#   - CSV
-#   - XeLaTeX/LaTeX
-#   - PDF (from XeLaTeX) (*must be done server-side*)
-
-# TODO: find duplicate of form based on its transcription
-#   - this should be done client-side using the standard server-side search action
-
-# TODO: guess morphology (client-side?)
-#   - leave this for later
-#   - morpho-phonological parser must be implemented server-side
-#   - lookup could be done client-side ...
-
 
 class State(object):
     """Empty class used to create a state instance with a 'full_dict' attribute
@@ -286,16 +266,63 @@ def getFormAndPreviousVersions(id):
     return (form, previousVersions)
 
 
-def getPaginator(GET_params):
-    if GET_params:
-        paginator = PaginatorSchema.to_python(dict(GET_params))
-        paginator['start'] = (paginator['page'] - 1) * paginator['itemsPerPage']
-        paginator['end'] = paginator['start'] + paginator['itemsPerPage']
-        return paginator
-    return None
+def addPagination(query, paginator):
+    if paginator:
+        paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
+        return h.getPaginatedQueryResults(query, paginator)
+    else:
+        return query.all()
+
+
+def filterRestrictedForms(query):
+    user = session['user']
+    unrestrictedUsers = getUnrestrictedUsers()
+    userIsUnrestricted = h.userIsUnrestricted(user, unrestrictedUsers)
+    if userIsUnrestricted:
+        return query
+    else:
+        return h.filterRestrictedFormsFromQuery(query, user)
+
 
 class FormsController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol."""
+
+    queryBuilder = SQLAQueryBuilder()
+
+    @restrict('SEARCH', 'POST')
+    @h.authenticate
+    def search(self):
+        """SEARCH /forms: Return all forms matching the filter passed as JSON in
+        the request body.  Note: POST /forms/search also routes to this action.
+        The request body must be a JSON object with a 'query' attribute; a
+        'paginator' attribute is optional.  The 'query' object is passed to the
+        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+        is returned or an error is raised.  The 'query' object requires a
+        'filter' attribute; an 'orderBy' attribute is optional.
+        """
+
+        response.content_type = 'application/json'
+        try:
+            jsonSearchParams = unicode(request.body, request.charset)
+            pythonSearchParams = json.loads(jsonSearchParams)
+            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            query = filterRestrictedForms(SQLAQuery)
+            result = addPagination(query, pythonSearchParams.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return json.dumps({'errors': e.unpack_errors()})
+        # SQLAQueryBuilder should have captured these exceptions (and packed
+        # them into an OLDSearchParseError) or sidestepped them, but here we'll
+        # handle any that got past -- just in case.
+        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+            response.status_int = 400
+            return json.dumps({'error':
+                u'The specified search parameters generated an invalid database query'})
+        else:
+            return json.dumps(result, cls=h.JSONOLDEncoder)
 
     @restrict('GET')
     @h.authenticate
@@ -304,33 +331,13 @@ class FormsController(BaseController):
         # url('forms')
         response.content_type = 'application/json'
         try:
-            user = session['user']
-            unrestrictedUsers = getUnrestrictedUsers()
-            userIsUnrestricted = h.userIsUnrestricted(user, unrestrictedUsers)
-            paginator = getPaginator(request.GET)
+            query = filterRestrictedForms(Session.query(Form).order_by(asc(Form.id)))
+            result = addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
+            return json.dumps({'errors': e.unpack_errors()})
         else:
-            if userIsUnrestricted:
-               result = json.dumps(h.getForms(paginator), cls=h.JSONOLDEncoder)
-            else:
-               result = json.dumps(h.getFormsUserCanAccess(user, paginator), cls=h.JSONOLDEncoder)
-        return result
-
-    @restrict('GET')
-    @h.authenticate
-    def count(self):
-        """GET /forms/count: Return the number of forms in the database."""
-        response.content_type = 'application/json'
-        user = session['user']
-        unrestrictedUsers = getUnrestrictedUsers()
-        userIsUnrestricted = h.userIsUnrestricted(user, unrestrictedUsers)
-        if userIsUnrestricted:
-           result = json.dumps(h.getFormsCount())
-        else:
-           result = json.dumps(h.getFormsUserCanAccessCount(user))
-        return result
+            return json.dumps(result, cls=h.JSONOLDEncoder)
 
     @restrict('POST')
     @h.authenticate

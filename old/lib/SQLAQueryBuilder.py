@@ -44,7 +44,7 @@ in (5) above will cause getSQLAQuery to add an outer join on Form.glosses.
 """
 
 import datetime
-from sqlalchemy.sql import or_, and_, not_
+from sqlalchemy.sql import or_, and_, not_, asc, desc
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql.expression import collate
 from sqlalchemy.types import Unicode, UnicodeText
@@ -56,7 +56,7 @@ except ImportError:
 
 try:
     import old.model as old_model
-    from old.model import meta
+    from old.model.meta import Session
 except ImportError:
     pass
 
@@ -122,13 +122,17 @@ class SQLAQueryBuilder(object):
     """
 
     def __init__(self, modelName='Form', mode='production'):
-        self.modelName = modelName  # The name of the target model, i.e., the one we are querying.
+        self.modelName = modelName  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
         self.mode = mode
         self.RDBMSName = getRDBMSName()
 
     def getSQLAQuery(self, python):
+        filterExpression = self.getSQLAFilter(python.get('filter'))
+        orderByExpression = self.getSQLAOrderBy(python.get('orderBy'))
+        self._raiseSearchParseErrorIfNecessary()
         query = self._getBaseQuery()
-        query = self._addFilterToQuery(query, python)
+        query = query.filter(filterExpression)
+        query = query.order_by(orderByExpression)
         query = self._addJoinsToQuery(query)
         return query
 
@@ -138,24 +142,42 @@ class SQLAQueryBuilder(object):
         invalid.
         """
         if self.mode == u'production':
-            filterExpression = self._python2sqla(python)
+            return self._python2sqla(python)
         else:
-            filterExpression = self._python2sqla_debug(python)
+            return self._python2sqla_debug(python)
 
+    def getSQLAOrderBy(self, orderBy):
+        """Input is an array of the form [<model>, <attribute>, <direction>];
+        output is an SQLA order_by expression.
+        """
+        defaultOrderBy = asc(getattr(getattr(old_model, self.modelName), 'id'))
+        if orderBy is None:
+            return defaultOrderBy
+        try:
+            modelName = self._getModelName(orderBy[0])
+            attributeName = self._getAttributeName(orderBy[1], modelName)
+            model = self._getModel(modelName)            
+            attribute = getattr(model, attributeName)
+            if self.RDBMSName == 'sqlite' and attribute is not None and \
+            isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes):
+                attribute = collate(attribute, 'NOCASE')    # Force SQLite to order case-insensitively
+            try:
+                return {'asc': asc, 'desc': desc}.get(orderBy[2], asc)(attribute)
+            except IndexError:
+                return asc(attribute)
+        except (IndexError, AttributeError):
+            self._addToErrors('OrderByError', 'The provided order by expression was invalid.')
+            return defaultOrderBy
+
+    def _raiseSearchParseErrorIfNecessary(self):
         if self.errors:
             errors = self.errors.copy()
             self.errors = {}    # Clear the errors so the instance can be reused to build further queries
             raise OLDSearchParseError(errors)
-        else:
-            return filterExpression
 
     def _getBaseQuery(self):
         queryModel = getattr(old_model, self.modelName)
-        return meta.Session.query(queryModel)
-
-    def _addFilterToQuery(self, query, python):
-        filterExpression = self.getSQLAFilter(python)
-        return query.filter(filterExpression)
+        return Session.query(queryModel)
 
     def _addJoinsToQuery(self, query):
         for collectionAttribute in set(self.joinCollections):
@@ -455,10 +477,8 @@ class SQLAQueryBuilder(object):
     def _collateAttribute(self, relationName, attribute):
         """Append a MySQL COLLATE utf8_bin expression after the column name, if
         appropriate.  This allows regexp and like searches to be case-sensitive.
-        An example SQLA query would be meta.Session.query(model.Form).filter(
+        An example SQLA query would be Session.query(model.Form).filter(
         collate(model.Form.transcription, 'utf8_bin').like(u'a%'))
-        
-        TODO: test what happens with bad charsets
         """
         if self.RDBMSName == 'mysql' and relationName in ('like', 'regexp') and \
         isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes) and \

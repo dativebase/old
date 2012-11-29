@@ -10,8 +10,6 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation, backref
 from old.model.meta import Base, now
 
-# TODO: add a UUID field here and in the Collection model
-# TODO: make several of the Unicode columns UnicodeText
 
 class CollectionBackup(Base):
 

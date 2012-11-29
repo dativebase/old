@@ -13,7 +13,6 @@ import old.lib.helpers as h
 
 log = logging.getLogger(__name__)
 
-# TODO: make sure that deleting a tag (e.g., 'restricted') removes that tag from the form.
 
 class TestFormsController(TestController):
 
@@ -231,8 +230,8 @@ class TestFormsController(TestController):
         response = self.app.get(url('forms'), paginator, headers=self.json_headers,
                                 extra_environ=extra_environ)
         resp = json.loads(response.body)
-        assert len(resp) == 23
-        assert resp[0]['transcription'] == u'transcription 47'
+        assert len(resp['items']) == 23
+        assert resp['items'][0]['transcription'] == u'transcription 47'
 
         # The default viewer should only be able to see the odd numbered forms,
         # even with a paginator.
@@ -244,8 +243,8 @@ class TestFormsController(TestController):
         response = self.app.get(url('forms'), paginator, headers=self.json_headers,
                                 extra_environ=extra_environ)
         resp = json.loads(response.body)
-        assert len(resp) == itemsPerPage
-        assert resp[0]['transcription'] == u'transcription %d' % (
+        assert len(resp['items']) == itemsPerPage
+        assert resp['items'][0]['transcription'] == u'transcription %d' % (
             ((itemsPerPage * (page - 1)) * 2) + 1)
 
         # Expect a 400 error when the paginator GET params are, empty, not

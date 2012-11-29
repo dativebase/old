@@ -20,6 +20,8 @@ def make_map(config):
     map.connect('/error/{action}/{id}', controller='error')
 
     # CUSTOM ROUTES HERE
+    map.connect('forms', '/forms', controller='forms',
+                action='search', conditions=dict(method='SEARCH'))
 
     # RESTful resoure mappings
     map.resource('orthography', 'orthographies')

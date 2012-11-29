@@ -503,20 +503,29 @@ def getLanguages():
 def getElicitationMethods():
     return getModelsByName('ElicitationMethod')
 
-def getFormsUserCanAccess(user, paginator=None):
+def getStartAndEndFromPaginator(paginator):
+    start = (paginator['page'] - 1) * paginator['itemsPerPage']
+    return (start, start + paginator['itemsPerPage'])
+
+def filterRestrictedFormsFromQuery(query, user):
     entererCondition = Form.enterer == user
     restrictedTag = getRestrictedTag()
     unrestrictedCondition = not_(Form.tags.contains(restrictedTag))
-    filteredQuery = Session.query(Form).filter(
-        or_(entererCondition, unrestrictedCondition)).order_by(asc(Form.id))
+    return query.filter(or_(entererCondition, unrestrictedCondition))
+
+def getFormsUserCanAccess(user, paginator=None):
+    query = filterRestrictedFormsFromQuery(Session.query(Form), user).order_by(
+        asc(Form.id))
     if paginator:
-        return filteredQuery.slice(paginator['start'], paginator['end']).all()
-    return filteredQuery.all()
+        start, end = getStartAndEndFromPaginator(paginator)
+        return query.slice(start, end).all()
+    return query.all()
 
 def getForms(paginator=None):
     formQuery = Session.query(Form).order_by(asc(Form.id))
     if paginator:
-        return formQuery.slice(paginator['start'], paginator['end']).all()
+        start, end = getStartAndEndFromPaginator(paginator)
+        return formQuery.slice(start, end).all()
     return formQuery.all()
 
 def getFormByUUID(UUID):
@@ -587,6 +596,16 @@ def clearAllModels(retain=['Language']):
 
 def getAllModels():
     return dict([(mn, getModelsByName(mn)) for mn in getModelNames()])
+
+def getPaginatedQueryResults(query, paginator):
+    if 'count' not in paginator:
+        paginator['count'] = query.count()
+    start, end = getStartAndEndFromPaginator(paginator)
+    return {
+        'paginator': paginator,
+        'items': query.slice(start, end).all()
+    }
+
 
 ################################################################################
 # OLD model objects getters: for defaults and testing

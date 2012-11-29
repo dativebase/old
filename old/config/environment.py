@@ -36,7 +36,6 @@ def load_environment(global_conf, app_conf):
     pylons.cache._push_object(config['pylons.app_globals'].cache)
 
     # Create the Mako TemplateLookup, with the default auto-escaping
-    # TODO: SAFELY REMOVE THIS
     config['pylons.app_globals'].mako_lookup = TemplateLookup(
         directories=paths['templates'],
         error_handler=handle_mako_error,

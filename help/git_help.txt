@@ -108,7 +108,11 @@ Merge a branch back into the master:
     $ git checkout master
     $ git merge branchName
 
-For more complicated branchings and mergins, see:
+Delete a branch:
+
+    $ git branch -d branchName
+
+For more complicated branchings and mergings, see:
 
 - http://git-scm.com/book/en/Git-Branching-Basic-Branching-and-Merging
 
