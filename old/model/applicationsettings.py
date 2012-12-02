@@ -21,7 +21,8 @@ applicationsettingsorthography_table = Table(
         primary_key=True),
     Column('applicationsettings_id', Integer, ForeignKey('applicationsettings.id')),
     Column('orthography_id', Integer, ForeignKey('orthography.id')),
-    Column('datetimeModified', DateTime, default=now)
+    Column('datetimeModified', DateTime, default=now),
+    mysql_charset='utf8'
 )
 
 applicationsettingsuser_table = Table(
@@ -31,12 +32,14 @@ applicationsettingsuser_table = Table(
         primary_key=True),
     Column('applicationsettings_id', Integer, ForeignKey('applicationsettings.id')),
     Column('user_id', Integer, ForeignKey('user.id')),
-    Column('datetimeModified', DateTime, default=now)
+    Column('datetimeModified', DateTime, default=now),
+    mysql_charset='utf8'
 )
 
 class ApplicationSettings(Base):
 
     __tablename__ = 'applicationsettings'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<ApplicationSettings (%s)>' % self.id

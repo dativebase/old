@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class Gloss(Base):
 
     __tablename__ = 'gloss'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Gloss (%s)>' % self.id

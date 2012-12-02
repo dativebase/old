@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class Orthography(Base):
 
     __tablename__ = 'orthography'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Orthography (%s)>' % self.id

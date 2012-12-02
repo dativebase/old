@@ -10,12 +10,14 @@ collectionfile_table = Table('collectionfile', Base.metadata,
     Column('id', Integer, Sequence('collectionfile_seq_id', optional=True), primary_key=True),
     Column('collection_id', Integer, ForeignKey('collection.id')),
     Column('file_id', Integer, ForeignKey('file.id')),
-    Column('datetimeModified', DateTime(), default=now)
+    Column('datetimeModified', DateTime(), default=now),
+    mysql_charset='utf8'
 )
 
 class Collection(Base):
 
     __tablename__ = 'collection'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<Collection (%s)>" % self.id

@@ -14,6 +14,7 @@ from old.model.meta import Base, now
 class CollectionBackup(Base):
 
     __tablename__ = "collectionbackup"
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<CollectionBackup (%s)>" % self.id

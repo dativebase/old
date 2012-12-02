@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class Source(Base):
 
     __tablename__ = 'source'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Source (%s)>' % self.id

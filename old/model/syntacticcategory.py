@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class SyntacticCategory(Base):
 
     __tablename__ = 'syntacticcategory'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<SyntacticCategory (%s)>' % self.id

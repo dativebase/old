@@ -24,6 +24,7 @@ class FormBackup(Base):
     """
 
     __tablename__ = "formbackup"
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<FormBackup (%s)>" % self.id

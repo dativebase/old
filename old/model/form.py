@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class FormFile(Base):
 
     __tablename__ = 'formfile'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     id = Column(Integer, Sequence('formfile_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
@@ -18,18 +19,21 @@ formtag_table = Table('formtag', Base.metadata,
     Column('id', Integer, Sequence('formfile_seq_id', optional=True), primary_key=True),
     Column('form_id', Integer, ForeignKey('form.id')),
     Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetimeModified', DateTime(), default=now)
+    Column('datetimeModified', DateTime(), default=now),
+    mysql_charset='utf8'
 )
 
 collectionform_table = Table('collectionform', Base.metadata,
     Column('id', Integer, Sequence('collectionform_seq_id', optional=True), primary_key=True),
     Column('collection_id', Integer, ForeignKey('collection.id')),
     Column('form_id', Integer, ForeignKey('form.id')),
-    Column('datetimeModified', DateTime(), default=now)
+    Column('datetimeModified', DateTime(), default=now),
+    mysql_charset='utf8'
 )
 
 class Form(Base):
     __tablename__ = "form"
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<Form (%s)>" % self.id

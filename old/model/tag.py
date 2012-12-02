@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class Tag(Base):
 
     __tablename__ = 'tag'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Tag (%s)>' % self.id

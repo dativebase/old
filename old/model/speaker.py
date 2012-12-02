@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class Speaker(Base):
 
     __tablename__ = 'speaker'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Speaker (%s)>' % self.id

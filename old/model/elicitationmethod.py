@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class ElicitationMethod(Base):
 
     __tablename__ = 'elicitationmethod'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<ElicitationMethod (%s)>' % self.id

@@ -483,9 +483,8 @@ class SQLAQueryBuilder(object):
         if self.RDBMSName == 'mysql' and relationName in ('like', 'regexp') and \
         isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes) and \
         attribute is not None:
-            return collate(attribute, 'utf8_bin')
-        else:
-            return attribute
+            attribute = collate(attribute, 'utf8_bin')
+        return attribute
 
     ############################################################################
     # Relation getters

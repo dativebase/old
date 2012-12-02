@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class Phonology(Base):
 
     __tablename__ = 'phonology'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Phonology (%s)>' % self.id

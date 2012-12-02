@@ -8,6 +8,7 @@ from old.model.meta import Base, now
 class UserForm(Base):
 
     __tablename__ = 'userform'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     id = Column(Integer, Sequence('userform_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
@@ -17,6 +18,7 @@ class UserForm(Base):
 class User(Base):
 
     __tablename__ = 'user'
+    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<User (%s)>" % self.id
