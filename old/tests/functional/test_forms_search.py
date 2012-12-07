@@ -204,6 +204,15 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 50
 
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['or', [
+                ['Form', 'transcription', 'like', u'T%'],
+                ['Form', 'transcription', 'like', u't%']]]}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                                 self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 100
+
     #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /forms: not like."""
@@ -229,11 +238,50 @@ class TestFormsSearchController(TestController):
         # Case-sensitive regexp.  This shows that _collateAttribute is working
         # as expected in SQLAQueryBuilder.
         jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'transcription', 'regex', u'T']}})
+            {'query': {'filter': ['Form', 'transcription', 'regex', u'^T']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
+
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'regex', u'^[Tt]']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                                 self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 100
+
+        # Beginning and end of string anchors
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'regex', u'^[Tt]ranscription 1.$']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                                 self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 10
+
+        # Quantifiers
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'regex', u'2{2,}']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                                 self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+
+        # Quantifiers
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'regex', u'[123]{2,}']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                                 self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 9
+
+        # Bad regex
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'regex', u'[123]{3,2}']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
     #@nottest
     def test_search_g_not_regexp(self):
