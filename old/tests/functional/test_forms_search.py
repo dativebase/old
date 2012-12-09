@@ -125,6 +125,12 @@ def createTestForms(n=100):
             f.source = testModels['sources'][i]
         if i != 87:
             f.glosses.append(g)
+        if i == 79:
+            g = model.Gloss()
+            g.gloss = u'gloss %d the second' % i
+            f.glosses.append(g)
+            t = testModels['tags'][i - 2]
+            f.tags.append(t)
         Session.add(f)
     Session.commit()
 
@@ -1172,6 +1178,25 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
+        # Search based on two distinct glosses (only Form #79 has two)
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [
+                ['Gloss', 'gloss', '=', 'gloss 79'],
+                ['Gloss', 'gloss', '=', 'gloss 79 the second']]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+        # ... one is ungrammatical, the other is unspecified
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [
+                ['Gloss', 'glossGrammaticality', '=', '*'],
+                ['Gloss', 'glossGrammaticality', '=', None]]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+
     #@nottest
     def test_search_v_many_to_many(self):
         """Tests POST /forms/search: searches on many-to-many attributes, i.e., Tag, File, Collection."""
@@ -1258,6 +1283,32 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
+
+        # tag.name in_ with double matches (Form #79 has Tags #78 and #79)
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Tag', 'name', 'in_', [u'name 78', u'name 79']]}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 2
+
+        # Form #79 has Tags #78 and #79
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [
+                ['Tag', 'name', '=', u'name 78'],
+                ['Tag', 'name', '=', u'name 79']]]}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+
+        # Form #79 has Tags #78 and #79, Form #78 has Tag #78
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Tag', 'name', '=', u'name 78']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 2
 
     #@nottest
     def test_search_w_in(self):

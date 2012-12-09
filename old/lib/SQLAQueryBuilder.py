@@ -47,7 +47,9 @@ import datetime
 from sqlalchemy.sql import or_, and_, not_, asc, desc
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql.expression import collate
+from sqlalchemy.orm import aliased
 from sqlalchemy.types import Unicode, UnicodeText
+#alias = aliased(model.Tag)
 
 try:
     import simplejson as json
@@ -180,9 +182,9 @@ class SQLAQueryBuilder(object):
         return Session.query(queryModel)
 
     def _addJoinsToQuery(self, query):
-        for collectionAttribute in set(self.joinCollections):
-            query = query.outerjoin(collectionAttribute)
-        self.joinCollections = []
+        for join in self.joins:
+            query = query.outerjoin(join[0], join[1])
+        self.joins = []
         return query
 
     def _python2sqla(self, python):
@@ -233,7 +235,8 @@ class SQLAQueryBuilder(object):
     def _addToErrors(self, key, msg):
         self.errors[str(key)] = msg
 
-    joinCollections = [] # holds the collection attributes of the target model that need joining, e.g., model.Form.tags
+    joins = [] # holds tuples of aliased models and their collection attributes
+    # on the target model, e.g., (aliased(model.Tag), model.Form.tags)
 
     ############################################################################
     # Value converters
@@ -425,19 +428,22 @@ class SQLAQueryBuilder(object):
             model = None
             self._addToErrors(modelName, u"The OLD has no model %s" % modelName)
 
-        # This is where any implicit joins are stored in self.joinCollections
-        # awaiting addition to the query in self._addJoinsToQuery.
+        # Store any implicit joins in self.joins to await addition to the query
+        # in self._addJoinsToQuery.  Using sqlalchemy.orm's aliased to alias
+        # models/tables is what permits filters on multiple -to-many relations,
+        # e.g., has both tags X and Y.
         if modelName != self.modelName:
             joinModels = self.models2joins.get(self.modelName, {})
-            if modelName not in joinModels:
-                self._addToErrors(modelName,
-                    u"Searching the %s model by joining on the %s model is not possible" % (
-                        self.modelName, modelName))
-            else:
+            if modelName in joinModels:
                 joinCollectionName = joinModels[modelName]
                 joinCollection = getattr(getattr(old_model, self.modelName),
                                         joinCollectionName)
-                self.joinCollections.append(joinCollection)
+                model = aliased(model)
+                self.joins.append((model, joinCollection))
+            else:
+                self._addToErrors(modelName,
+                    u"Searching the %s model by joining on the %s model is not possible" % (
+                        self.modelName, modelName))
         return model
 
     ############################################################################
