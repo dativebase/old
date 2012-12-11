@@ -59,7 +59,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('forms'), extra_environ=extra_environ)
 
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /forms returns a JSON array of forms with expected values."""
 
@@ -263,7 +263,7 @@ class TestFormsController(TestController):
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /forms correctly creates a new form."""
 
@@ -399,7 +399,7 @@ class TestFormsController(TestController):
         assert 'N-?' in resp['syntacticCategoryString'] and \
             '?-Num' in resp['syntacticCategoryString']
 
-    #@nottest
+    @nottest
     def test_create_invalid(self):
         """Tests that POST /forms with invalid input returns an appropriate error."""
 
@@ -554,7 +554,7 @@ class TestFormsController(TestController):
         assert resp['source']['year'] == source.year    # etc. ...
         assert newFormCount == formCount + 1
 
-    #@nottest
+    @nottest
     def test_create_with_inventory_validation(self):
         """Tests that POST /forms correctly applies inventory-based validation on form creation attempts."""
 
@@ -737,7 +737,7 @@ class TestFormsController(TestController):
         assert u'errors' not in resp
         assert formCount == 3
 
-    #@nottest
+    @nottest
     def test_relational_attribute_creation(self):
         """Tests that POST/PUT create and update many-to-many data correctly."""
 
@@ -842,7 +842,7 @@ class TestFormsController(TestController):
         assert u'There is no tag with id 9875.' in resp['errors']['tags']
         assert u'Please enter an integer value' in resp['errors']['tags']
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for creating a new OLD form.
 
@@ -943,7 +943,7 @@ class TestFormsController(TestController):
         assert resp['sources'] == []
         assert resp['files'] == []
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /forms/id correctly updates an existing form."""
 
@@ -1182,6 +1182,10 @@ class TestFormsController(TestController):
         assert resp['transcription'] == u'test_delete_transcription'
         assert resp['glosses'][0]['gloss'] == u'test_delete_gloss'
 
+        # Query the Gloss from the db and expect it to be present.
+        gloss = Session.query(model.Gloss).get(resp['glosses'][0]['id'])
+        assert gloss.gloss == u'test_delete_gloss'
+
         # Now count the forms and formBackups.
         newFormCount = Session.query(model.Form).count()
         newFormBackupCount = Session.query(model.FormBackup).count()
@@ -1246,7 +1250,7 @@ class TestFormsController(TestController):
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
 
-    #@nottest
+    @nottest
     def test_delete_foreign_word(self):
         """Tests that DELETE /forms/id on a foreign word updates the global Inventory objects correctly."""
 
@@ -1311,7 +1315,7 @@ class TestFormsController(TestController):
         applicationSettings = response.g.applicationSettings
         assert 'test_delete_transcription' not in applicationSettings.orthographicInventory.inputList
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /forms/id returns a JSON form object, null or 404
         depending on whether the id is valid, invalid or unspecified,
@@ -1431,7 +1435,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('form', id=restrictedFormId),
                         headers=self.json_headers, extra_environ=extra_environ)
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /forms/id/edit returns a JSON object of data necessary to edit the form with id=id.
         
@@ -1567,7 +1571,7 @@ class TestFormsController(TestController):
         assert u'There is no form with id %s' % id in json.loads(response.body)[
             'error']
 
-    #@nottest
+    @nottest
     def test_history(self):
         """Tests that GET /forms/id/history returns the form with id=id and its previous incarnations.
         
@@ -1890,7 +1894,7 @@ class TestFormsController(TestController):
             u'2nd form restricted'
         assert resp['form']['transcription'] == u'2nd form unrestricted updated'
 
-    #@nottest
+    @nottest
     def test_remember(self):
         """Tests that POST /forms/remember correctly saves the input list of forms to the logged in user's rememberedForms list.
         """
