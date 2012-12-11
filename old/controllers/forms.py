@@ -11,7 +11,7 @@ from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
 
 from old.lib.base import BaseController
-from old.lib.schemata import FormSchema, FormIdsSchema, PaginatorSchema
+from old.lib.schemata import FormSchema, FormIdsSchema, PaginatorSchema, OrderBySchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session
@@ -267,11 +267,23 @@ def getFormAndPreviousVersions(id):
 
 
 def addPagination(query, paginator):
-    if paginator:
+    if paginator and paginator.get('page') is not None and \
+    paginator.get('itemsPerPage') is not None:
         paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
         return h.getPaginatedQueryResults(query, paginator)
     else:
         return query.all()
+
+
+def addOrderBy(query, orderByParams, orderByGenerator):
+    if orderByParams and orderByParams.get('orderByModel') and \
+    orderByParams.get('orderByAttribute') and orderByParams.get('orderByDirection'):
+        orderByParams = OrderBySchema.to_python(orderByParams)
+        orderByParams = [orderByParams['orderByModel'],
+            orderByParams['orderByAttribute'], orderByParams['orderByDirection']]
+        return query.order_by(orderByGenerator(orderByParams, False))
+    else:
+        return query.order_by(asc(Form.id))
 
 
 def filterRestrictedForms(query):
@@ -331,7 +343,9 @@ class FormsController(BaseController):
         # url('forms')
         response.content_type = 'application/json'
         try:
-            query = filterRestrictedForms(Session.query(Form).order_by(asc(Form.id)))
+            query = Session.query(Form)
+            query = addOrderBy(query, dict(request.GET), self.queryBuilder.getSQLAOrderBy)
+            query = filterRestrictedForms(query)
             result = addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400

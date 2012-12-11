@@ -148,7 +148,7 @@ class SQLAQueryBuilder(object):
         else:
             return self._python2sqla_debug(python)
 
-    def getSQLAOrderBy(self, orderBy):
+    def getSQLAOrderBy(self, orderBy, errors=True):
         """Input is an array of the form [<model>, <attribute>, <direction>];
         output is an SQLA order_by expression.
         """
@@ -158,7 +158,7 @@ class SQLAQueryBuilder(object):
         try:
             modelName = self._getModelName(orderBy[0])
             attributeName = self._getAttributeName(orderBy[1], modelName)
-            model = self._getModel(modelName)            
+            model = self._getModel(modelName)
             attribute = getattr(model, attributeName)
             if self.RDBMSName == 'sqlite' and attribute is not None and \
             isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes):
@@ -168,7 +168,8 @@ class SQLAQueryBuilder(object):
             except IndexError:
                 return asc(attribute)
         except (IndexError, AttributeError):
-            self._addToErrors('OrderByError', 'The provided order by expression was invalid.')
+            if errors:
+                self._addToErrors('OrderByError', 'The provided order by expression was invalid.')
             return defaultOrderBy
 
     def _raiseSearchParseErrorIfNecessary(self):

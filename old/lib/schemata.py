@@ -283,6 +283,13 @@ class PaginatorSchema(Schema):
     itemsPerPage = Int(not_empty=True, min=1)
     page = Int(not_empty=True, min=1)
 
+class OrderBySchema(Schema):
+    allow_extra_fields = True
+    filter_extra_fields = False
+    orderByModel = UnicodeString()
+    orderByAttribute = UnicodeString()
+    orderByDirection = OneOf([u'asc', u'desc'])
+
 ################################################################################
 # ApplicationSettings Schemata
 ################################################################################
