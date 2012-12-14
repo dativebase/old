@@ -22,6 +22,8 @@ def make_map(config):
     # CUSTOM ROUTES HERE
     map.connect('forms', '/forms', controller='forms',
                 action='search', conditions=dict(method='SEARCH'))
+    map.connect('/forms/update_morpheme_references', controller='forms',
+            action='update_morpheme_references', conditions=dict(method='PUT'))
 
     # RESTful resoure mappings
     map.resource('orthography', 'orthographies')

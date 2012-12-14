@@ -299,7 +299,7 @@ class TestFormsController(TestController):
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /forms correctly creates a new form."""
 
@@ -435,7 +435,7 @@ class TestFormsController(TestController):
         assert 'N-?' in resp['syntacticCategoryString'] and \
             '?-Num' in resp['syntacticCategoryString']
 
-    @nottest
+    #@nottest
     def test_create_invalid(self):
         """Tests that POST /forms with invalid input returns an appropriate error."""
 
@@ -590,7 +590,7 @@ class TestFormsController(TestController):
         assert resp['source']['year'] == source.year    # etc. ...
         assert newFormCount == formCount + 1
 
-    @nottest
+    #@nottest
     def test_create_with_inventory_validation(self):
         """Tests that POST /forms correctly applies inventory-based validation on form creation attempts."""
 
@@ -773,7 +773,7 @@ class TestFormsController(TestController):
         assert u'errors' not in resp
         assert formCount == 3
 
-    @nottest
+    #@nottest
     def test_relational_attribute_creation(self):
         """Tests that POST/PUT create and update many-to-many data correctly."""
 
@@ -878,7 +878,7 @@ class TestFormsController(TestController):
         assert u'There is no tag with id 9875.' in resp['errors']['tags']
         assert u'Please enter an integer value' in resp['errors']['tags']
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for creating a new OLD form.
 
@@ -979,7 +979,7 @@ class TestFormsController(TestController):
         assert resp['sources'] == []
         assert resp['files'] == []
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /forms/id correctly updates an existing form."""
 
@@ -1176,7 +1176,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['speaker']['firstName'] == speaker.firstName
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /forms/id deletes the form with id=id and returns a JSON representation.
 
@@ -1307,7 +1307,7 @@ class TestFormsController(TestController):
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
 
-    @nottest
+    #@nottest
     def test_delete_foreign_word(self):
         """Tests that DELETE /forms/id on a foreign word updates the global Inventory objects correctly."""
 
@@ -1372,7 +1372,7 @@ class TestFormsController(TestController):
         applicationSettings = response.g.applicationSettings
         assert 'test_delete_transcription' not in applicationSettings.orthographicInventory.inputList
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /forms/id returns a JSON form object, null or 404
         depending on whether the id is valid, invalid or unspecified,
@@ -1492,7 +1492,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('form', id=restrictedFormId),
                         headers=self.json_headers, extra_environ=extra_environ)
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /forms/id/edit returns a JSON object of data necessary to edit the form with id=id.
         
@@ -1628,7 +1628,7 @@ class TestFormsController(TestController):
         assert u'There is no form with id %s' % id in json.loads(response.body)[
             'error']
 
-    @nottest
+    #@nottest
     def test_history(self):
         """Tests that GET /forms/id/history returns the form with id=id and its previous incarnations.
         
@@ -1951,7 +1951,7 @@ class TestFormsController(TestController):
             u'2nd form restricted'
         assert resp['form']['transcription'] == u'2nd form unrestricted updated'
 
-    @nottest
+    #@nottest
     def test_remember(self):
         """Tests that POST /forms/remember correctly saves the input list of forms to the logged in user's rememberedForms list.
         """
@@ -2069,3 +2069,190 @@ class TestFormsController(TestController):
             model.User.role==u'viewer').first()
         assert len(viewer.rememberedForms) == 2
         assert form1Id not in [f.id for id in viewer.rememberedForms]
+
+    #@nottest
+    def test_update_morpheme_references(self):
+        """Tests that GET /forms/update_morpheme_references correctly updates the morpheme references."""
+
+        # First create a couple of syntactic categories and the application settings
+        N = h.generateNSyntacticCategory()
+        Num = h.generateNumSyntacticCategory()
+        applicationSettings = h.generateDefaultApplicationSettings()
+        Session.add_all([N, Num, applicationSettings])
+        Session.commit()
+        NId = N.id
+        NumId = Num.id
+
+        extra_environ = {'test.authentication.role': u'administrator',
+                               'test.applicationSettings': True}
+
+        # Create two forms with morphological analyses.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'abc',
+            'morphemeBreak': u'a-b-c',
+            'morphemeGloss': u'1-2-3',
+            'glosses': [{'gloss': u'123', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'xyz',
+            'morphemeBreak': u'x-y-z',
+            'morphemeGloss': u'7-8-9',
+            'glosses': [{'gloss': u'789', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        # GET the forms and confirm that the morphemeBreakIDs values are "empty"
+        response = self.app.get(url('forms'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 2
+        assert [f['morphemeBreakIDs'] for f in resp] == [[[[], [], []]], [[[], [], []]]]
+        assert [f['morphemeGlossIDs'] for f in resp] == [[[[], [], []]], [[[], [], []]]]
+        assert [f['syntacticCategoryString'] for f in resp] == [u'?-?-?', u'?-?-?']
+
+        # Request PUT /forms/update_morpheme_references and expect nothing to change
+        response = self.app.put(url('/forms/update_morpheme_references'),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        response = self.app.get(url('forms'), headers=self.json_headers,
+                                extra_environ=extra_environ)
+        resp2 = json.loads(response.body)
+        assert [(f['id'], f['datetimeModified']) for f in resp] == \
+            [(f['id'], f['datetimeModified']) for f in resp2]
+        assert [f['morphemeBreakIDs'] for f in resp2] == [[[[], [], []]], [[[], [], []]]]
+        assert [f['morphemeGlossIDs'] for f in resp2] == [[[[], [], []]], [[[], [], []]]]
+        assert [f['syntacticCategoryString'] for f in resp2] == [u'?-?-?', u'?-?-?']
+
+        # Now add the implicit lexical items for the two forms just entered and
+        # *then* call /forms/update_morpheme_references and expect a change
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'x',
+            'morphemeBreak': u'x',
+            'morphemeGloss': u'7',
+            'glosses': [{'gloss': u'7', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'y',
+            'morphemeBreak': u'y',
+            'morphemeGloss': u'8',
+            'glosses': [{'gloss': u'8', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'z',
+            'morphemeBreak': u'z',
+            'morphemeGloss': u'9',
+            'glosses': [{'gloss': u'9', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'a',
+            'morphemeBreak': u'a',
+            'morphemeGloss': u'1',
+            'glosses': [{'gloss': u'1', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'b',
+            'morphemeBreak': u'b',
+            'morphemeGloss': u'2',
+            'glosses': [{'gloss': u'2', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'c',
+            'morphemeBreak': u'c',
+            'morphemeGloss': u'3',
+            'glosses': [{'gloss': u'3', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 extra_environ)
+
+        # Request PUT /forms/update_morpheme_references
+        response = self.app.put(url('/forms/update_morpheme_references'),
+            headers=self.json_headers, extra_environ=extra_environ)
+
+        # Search for our two original morphologically complex forms
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'id', 'in', [f['id'] for f in resp]]}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+
+        resp3 = json.loads(response.body)
+        assert [f['id'] for f in resp] == [f['id'] for f in resp2] == [f['id'] for f in resp3]
+        assert [f['datetimeModified'] for f in resp3] != [f['datetimeModified'] for f in resp2]
+        assert [f['datetimeModified'] for f in resp3] != [f['datetimeModified'] for f in resp]
+
+        assert resp3[0]['morphemeBreakIDs'][0][0][0][1] == u'1'
+        assert resp3[0]['morphemeBreakIDs'][0][0][0][2] == u'Num'
+        assert resp3[0]['morphemeBreakIDs'][0][1][0][1] == u'2'
+        assert resp3[0]['morphemeBreakIDs'][0][1][0][2] == u'N'
+        assert resp3[0]['morphemeBreakIDs'][0][2][0][1] == u'3'
+        assert resp3[0]['morphemeBreakIDs'][0][2][0][2] == u'Num'
+
+        assert resp3[0]['morphemeGlossIDs'][0][0][0][1] == u'a'
+        assert resp3[0]['morphemeGlossIDs'][0][0][0][2] == u'Num'
+        assert resp3[0]['morphemeGlossIDs'][0][1][0][1] == u'b'
+        assert resp3[0]['morphemeGlossIDs'][0][1][0][2] == u'N'
+        assert resp3[0]['morphemeGlossIDs'][0][2][0][1] == u'c'
+        assert resp3[0]['morphemeGlossIDs'][0][2][0][2] == u'Num'
+
+        assert resp3[0]['syntacticCategoryString'] == u'Num-N-Num'
+
+        assert resp3[1]['morphemeBreakIDs'][0][0][0][1] == u'7'
+        assert resp3[1]['morphemeBreakIDs'][0][0][0][2] == u'Num'
+        assert resp3[1]['morphemeBreakIDs'][0][1][0][1] == u'8'
+        assert resp3[1]['morphemeBreakIDs'][0][1][0][2] == u'N'
+        assert resp3[1]['morphemeBreakIDs'][0][2][0][1] == u'9'
+        assert resp3[1]['morphemeBreakIDs'][0][2][0][2] == u'Num'
+
+        assert resp3[1]['morphemeGlossIDs'][0][0][0][1] == u'x'
+        assert resp3[1]['morphemeGlossIDs'][0][0][0][2] == u'Num'
+        assert resp3[1]['morphemeGlossIDs'][0][1][0][1] == u'y'
+        assert resp3[1]['morphemeGlossIDs'][0][1][0][2] == u'N'
+        assert resp3[1]['morphemeGlossIDs'][0][2][0][1] == u'z'
+        assert resp3[1]['morphemeGlossIDs'][0][2][0][2] == u'Num'
+
+        assert resp3[1]['syntacticCategoryString'] == u'Num-N-Num'
+
+        formBackups = Session.query(model.FormBackup).all()
+        assert len(formBackups) == 2
+        assert [json.loads(f.morphemeBreakIDs) for f in formBackups] == \
+            [[[[], [], []]], [[[], [], []]]]
+        assert [json.loads(f.backuper)['role'] for f in formBackups] == [
+            u'administrator', u'administrator']

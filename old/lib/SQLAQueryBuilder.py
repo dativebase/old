@@ -148,7 +148,7 @@ class SQLAQueryBuilder(object):
         else:
             return self._python2sqla_debug(python)
 
-    def getSQLAOrderBy(self, orderBy, errors=True):
+    def getSQLAOrderBy(self, orderBy):
         """Input is an array of the form [<model>, <attribute>, <direction>];
         output is an SQLA order_by expression.
         """
@@ -168,14 +168,16 @@ class SQLAQueryBuilder(object):
             except IndexError:
                 return asc(attribute)
         except (IndexError, AttributeError):
-            if errors:
-                self._addToErrors('OrderByError', 'The provided order by expression was invalid.')
+            self._addToErrors('OrderByError', 'The provided order by expression was invalid.')
             return defaultOrderBy
+
+    def clearErrors(self):
+        self.errors = {}
 
     def _raiseSearchParseErrorIfNecessary(self):
         if self.errors:
             errors = self.errors.copy()
-            self.errors = {}    # Clear the errors so the instance can be reused to build further queries
+            self.clearErrors()    # Clear the errors so the instance can be reused to build further queries
             raise OLDSearchParseError(errors)
 
     def _getBaseQuery(self):

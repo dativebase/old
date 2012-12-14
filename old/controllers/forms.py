@@ -275,13 +275,15 @@ def addPagination(query, paginator):
         return query.all()
 
 
-def addOrderBy(query, orderByParams, orderByGenerator):
+def addOrderBy(query, orderByParams, queryBuilder):
     if orderByParams and orderByParams.get('orderByModel') and \
     orderByParams.get('orderByAttribute') and orderByParams.get('orderByDirection'):
         orderByParams = OrderBySchema.to_python(orderByParams)
         orderByParams = [orderByParams['orderByModel'],
             orderByParams['orderByAttribute'], orderByParams['orderByDirection']]
-        return query.order_by(orderByGenerator(orderByParams, False))
+        orderByExpression = queryBuilder.getSQLAOrderBy(orderByParams)
+        queryBuilder.clearErrors()
+        return query.order_by(orderByExpression)
     else:
         return query.order_by(asc(Form.id))
 
@@ -344,7 +346,7 @@ class FormsController(BaseController):
         response.content_type = 'application/json'
         try:
             query = Session.query(Form)
-            query = addOrderBy(query, dict(request.GET), self.queryBuilder.getSQLAOrderBy)
+            query = addOrderBy(query, dict(request.GET), self.queryBuilder)
             query = filterRestrictedForms(query)
             result = addPagination(query, dict(request.GET))
         except Invalid, e:
@@ -617,6 +619,38 @@ class FormsController(BaseController):
                 result = json.dumps({'error': u'No valid form ids were provided.'})
         return result
 
+    @restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator'])
+    def update_morpheme_references(self):
+        """Update all of the morpheme references (i.e., the morphemeBreakIDs,
+        morphemeGlossIDs and syntacticCategoryString fields) by calling
+        updateForm on each form in the database.  Return a list of ids
+        corresponding to the forms that were updated.
+
+        Note 1: this functionality should probably be replaced by client-side
+        logic that makes multiple requests to PUT /forms/id since the current
+        implementation may overtax memory resources when the database is quite
+        large.
+
+        Note 2: if this function is to be executed as a scheduled task, we need
+        to decide what to do about the backuper attribute.
+        """
+        validDelimiters = h.getMorphemeDelimiters()
+        forms = h.getForms()
+        updatedFormIds = []
+        for form in forms:
+            formDict = form.getDict()
+            form = updateMorphemeReferencesOfForm(form, validDelimiters)
+            # form will be False if there are no changes.
+            if form:
+                backupForm(formDict, form.datetimeModified)
+                Session.add(form)
+                Session.commit()
+                updateApplicationSettingsIfFormIsForeignWord(form)
+                updatedFormIds.append(form.id)
+        return json.dumps(updatedFormIds)
+
 ################################################################################
 # Backup form
 ################################################################################
@@ -699,7 +733,6 @@ def createNewForm(data):
     Session.add(form)
     form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString = \
                                                         getMorphemeIDLists(form)
-
     return form
 
 # Global CHANGED variable keeps track of whether an update request should
@@ -806,4 +839,34 @@ def updateForm(form, data):
         CHANGED = None      # It's crucial to reset the CHANGED global!
         form.datetimeModified = datetime.datetime.utcnow()
         return form
+    return CHANGED
+
+
+def updateMorphemeReferencesOfForm(form, validDelimiters=None):
+    """This function behaves just like updateForm() above except that it doesn't
+    take any content-ful input -- it just tries to update the morpheme reference
+    data.
+    """
+
+    global CHANGED
+
+    # Attempt to recreate the morphemeBreakIDs, morphemeGlossIDs and
+    # syntacticCategoryString attributes.
+    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString = \
+                                    getMorphemeIDLists(form, validDelimiters)
+    if morphemeBreakIDs != form.morphemeBreakIDs:
+        form.morphemeBreakIDs = morphemeBreakIDs
+        CHANGED = True
+    if morphemeGlossIDs != form.morphemeGlossIDs:
+        form.morphemeGlossIDs = morphemeGlossIDs
+        CHANGED = True
+    if syntacticCategoryString != form.syntacticCategoryString:
+        form.syntacticCategoryString = syntacticCategoryString
+        CHANGED = True
+
+    if CHANGED:
+        CHANGED = None      # It's crucial to reset the CHANGED global!
+        form.datetimeModified = datetime.datetime.utcnow()
+        return form
+
     return CHANGED
