@@ -441,26 +441,35 @@ class TestFilesController(TestController):
 
     #@nottest
     def test_create_large(self):
-        """Tests that POST /files correctly creates a large file.  WARNING: LONG-RUNNING TEST"""
+        """Tests that POST /files correctly creates a large file.
 
-        # Create a large (>60 MB) test audio file.
-        wavFilePath = os.path.join(self.testFilesPath, 'old_test_long.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createParams.copy()
-        params.update({
-            'name': u'old_test_long.wav',
-            'file': encodestring(open(wavFilePath).read())
-        })
-        params = json.dumps(params)
-        response = self.app.post(url('files'), params, self.json_headers,
-                                 self.extra_environ_admin)
-        resp = json.loads(response.body)
-        fileCount = Session.query(model.File).count()
-        assert resp['name'] == u'old_test_long.wav'
-        assert resp['MIMEtype'] == u'audio/x-wav'
-        assert resp['size'] == wavFileSize
-        assert resp['enterer']['firstName'] == u'Admin'
-        assert fileCount == 1
+        WARNING 1: long-running test.
+
+        WARNING: 2: if a large file named old_test_long.wav does not exist in
+        test_files, this test will pass vacuously.  I don't want to include such
+        a large file in the code base so this file needs to be created if one
+        wants this test to run.
+        """
+        wavFileName = u'old_test_long.wav'
+        wavFilePath = os.path.join(self.testFilesPath, wavFileName)
+        if os.path.exists(wavFilePath):
+            # Create a large (>60 MB) test audio file.
+            wavFileSize = os.path.getsize(wavFilePath)
+            params = self.createParams.copy()
+            params.update({
+                'name': wavFileName,
+                'file': encodestring(open(wavFilePath).read())
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('files'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = json.loads(response.body)
+            fileCount = Session.query(model.File).count()
+            assert resp['name'] == wavFileName
+            assert resp['MIMEtype'] == u'audio/x-wav'
+            assert resp['size'] == wavFileSize
+            assert resp['enterer']['firstName'] == u'Admin'
+            assert fileCount == 1
 
     #@nottest
     def test_new(self):
