@@ -5,9 +5,8 @@ NOTE: getting the non-standard http SEARCH method to work in the tests required
 using the request method of TestController().app and specifying values for the
 method, body, headers, and environ kwarg parameters.  WebTest prints a
 WSGIWarning when unknown HTTP methods (e.g., SEARCH) are used.  To prevent this,
-I altered the global valid_methods tuple by adding a 'SEARCH' method.  This
-means that in standard installs, running nosetests will generate at least one
-WSGIWarning.
+I altered the global valid_methods tuple of webtest.lint at runtime by adding a
+'SEARCH' method (see addSEARCHToWebTestValidMethods() below).
 """
 
 import re

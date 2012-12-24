@@ -6,14 +6,18 @@ import datetime
 import unicodedata
 import string
 from uuid import uuid4, UUID
+from mimetypes import guess_type
 import simplejson as json
 from sqlalchemy.sql import or_, not_, desc, asc
 import old.model as model
-from old.model import Form, FormBackup
+from old.model import Form, FormBackup, File, Collection
 from old.model.meta import Session, Model
 import orthography
 from simplejson.decoder import JSONDecodeError
 from paste.deploy import appconfig
+from pylons import app_globals, session
+from formencode.schema import Schema
+from formencode.validators import Int, UnicodeString, OneOf
 
 ################################################################################
 # Get data for 'new' action
@@ -494,7 +498,6 @@ def getApplicationSettings():
         desc(model.ApplicationSettings.id)).first()
 
 def getOrthographies():
-
     return getModelsByName('Orthography')
 
 def getLanguages():
@@ -507,14 +510,24 @@ def getStartAndEndFromPaginator(paginator):
     start = (paginator['page'] - 1) * paginator['itemsPerPage']
     return (start, start + paginator['itemsPerPage'])
 
-def filterRestrictedFormsFromQuery(query, user):
-    entererCondition = Form.enterer == user
+def filterRestrictedModels(modelName, query):
+    user = session['user']
+    unrestrictedUsers = getUnrestrictedUsers()
+    userIsUnrestricted_ = userIsUnrestricted(user, unrestrictedUsers)
+    if userIsUnrestricted_:
+        return query
+    else:
+        return filterRestrictedModelsFromQuery(modelName, query, user)
+
+def filterRestrictedModelsFromQuery(modelName, query, user):
+    model_ = getattr(model, modelName)
+    entererCondition = model_.enterer == user
     restrictedTag = getRestrictedTag()
-    unrestrictedCondition = not_(Form.tags.contains(restrictedTag))
+    unrestrictedCondition = not_(model_.tags.contains(restrictedTag))
     return query.filter(or_(entererCondition, unrestrictedCondition))
 
 def getFormsUserCanAccess(user, paginator=None):
-    query = filterRestrictedFormsFromQuery(Session.query(Form), user).order_by(
+    query = filterRestrictedModelsFromQuery(Session.query(Form), user).order_by(
         asc(Form.id))
     if paginator:
         start, end = getStartAndEndFromPaginator(paginator)
@@ -551,7 +564,7 @@ def getTags():
     return getModelsByName('Tag')
 
 def getFiles():
-    return getModelsByName('File')
+    return getModelsByName('File', True)
 
 def getForeignWordTag():
     return Session.query(model.Tag).filter(
@@ -577,11 +590,14 @@ def getModelNames():
     return [mn for mn in dir(model) if mn[0].isupper()
             and mn not in ('Model', 'Base', 'Session')]
 
-def getModelsByName(modelName):
-    return getQueryByModelName(modelName).all()
+def getModelsByName(modelName, sortByIdAsc=False):
+    return getQueryByModelName(modelName, sortByIdAsc).all()
 
-def getQueryByModelName(modelName):
-    return Session.query(getattr(model, modelName))
+def getQueryByModelName(modelName, sortByIdAsc=False):
+    model_ = getattr(model, modelName)
+    if sortByIdAsc:
+        return Session.query(model_).order_by(asc(getattr(model_, 'id')))
+    return Session.query(model_)
 
 def clearAllModels(retain=['Language']):
     """Convenience function for removing all OLD models from the database.
@@ -605,6 +621,27 @@ def getPaginatedQueryResults(query, paginator):
         'paginator': paginator,
         'items': query.slice(start, end).all()
     }
+
+def addPagination(query, paginator):
+    if paginator and paginator.get('page') is not None and \
+    paginator.get('itemsPerPage') is not None:
+        paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
+        return getPaginatedQueryResults(query, paginator)
+    else:
+        return query.all()
+
+def addOrderBy(query, orderByParams, queryBuilder):
+    if orderByParams and orderByParams.get('orderByModel') and \
+    orderByParams.get('orderByAttribute') and orderByParams.get('orderByDirection'):
+        orderByParams = OrderBySchema.to_python(orderByParams)
+        orderByParams = [orderByParams['orderByModel'],
+            orderByParams['orderByAttribute'], orderByParams['orderByDirection']]
+        orderByExpression = queryBuilder.getSQLAOrderBy(orderByParams)
+        queryBuilder.clearErrors()
+        return query.order_by(orderByExpression)
+    else:
+        model_ = getattr(model, queryBuilder.modelName)
+        return query.order_by(asc(model_.id))
 
 
 ################################################################################
@@ -830,6 +867,7 @@ def generateDefaultSource():
     source.fullReference = u'test source full reference'
     return source
 
+
 ################################################################################
 # Date & Time-related Functions
 ################################################################################
@@ -893,30 +931,39 @@ def getInt(int_):
 class FakeForm(object):
     pass
 
+class State(object):
+    """Empty class used to create a state instance with a 'full_dict' attribute
+    that points to a dict of values being validated by a schema.  For example,
+    the call to FormSchema().to_python in controllers/forms.py requires this
+    State() instance as its second argument in order to make the inventory-based
+    validators work correctly (see, e.g., ValidOrthographicTranscription).
+    """
+    pass
+
 ################################################################################
 # Authorization Functions
 ################################################################################
 
-def userIsAuthorizedToAccessForm(user, form, unrestrictedUsers):
-    """Return True if the user is authorized to access the form.  Forms tagged
-    with the 'restricted' tag are only accessible to administrators, their
+def userIsAuthorizedToAccessModel(user, modelObject, unrestrictedUsers):
+    """Return True if the user is authorized to access the model object.  Models
+    tagged with the 'restricted' tag are only accessible to administrators, their
     enterers and unrestricted users.
     """
-
-    if isinstance(form, Form):
-        formTags = form.tags
-        formTagNames = [t.name for t in form.tags]
-        entererId = form.enterer_id
+    if user.role == u'administrator':
+        return True
+    if isinstance(modelObject, (Form, File, Collection)):
+        tags = modelObject.tags
+        tagNames = [t.name for t in tags]
+        entererId = modelObject.enterer_id
     else:
-        formBackupDict = form.getDict()
-        formTags = formBackupDict['tags']
-        formTagNames = [t['name'] for t in formTags]
-        entererId = formBackupDict['enterer'].get('id', None)
-    return not formTags or \
-        'restricted' not in formTagNames or \
+        modelBackupDict = modelObject.getDict()
+        tags = modelBackupDict['tags']
+        tagNames = [t['name'] for t in tags]
+        entererId = modelBackupDict['enterer'].get('id', None)
+    return not tags or \
+        'restricted' not in tagNames or \
         user in unrestrictedUsers or \
-        user.id == entererId or \
-        user.role == u'administrator'
+        user.id == entererId
 
 
 def userIsUnrestricted(user, unrestrictedUsers):
@@ -928,9 +975,16 @@ def userIsUnrestricted(user, unrestrictedUsers):
                                            user in unrestrictedUsers
 
 
+def getUnrestrictedUsers():
+    """Return the list of unrestricted users in
+    app_globals.applicationSettings.applicationSettings.unrestrictedUsers.
+    """
+    return getattr(getattr(getattr(app_globals, 'applicationSettings', None),
+                   'applicationSettings', None), 'unrestrictedUsers', [])
+
+
 unauthorizedJSONMsg = json.dumps(
     {'error': 'You are not authorized to access this resource.'})
-
 
 
 def getRDBMSName():
@@ -938,3 +992,58 @@ def getRDBMSName():
     from pylons import config as config_
     SQLAlchemyURL = config_['sqlalchemy.url']
     return SQLAlchemyURL.split(':')[0]
+
+
+################################################################################
+# Some simple and ubiquitously used schemata
+################################################################################
+
+class PaginatorSchema(Schema):
+    allow_extra_fields = True
+    filter_extra_fields = False
+    itemsPerPage = Int(not_empty=True, min=1)
+    page = Int(not_empty=True, min=1)
+
+class OrderBySchema(Schema):
+    allow_extra_fields = True
+    filter_extra_fields = False
+    orderByModel = UnicodeString()
+    orderByAttribute = UnicodeString()
+    orderByDirection = OneOf([u'asc', u'desc'])
+
+allowedFileTypes = (
+    u'text/plain',
+    u'application/x-latex',
+    u'application/msword',
+    u'application/vnd.ms-powerpoint',
+    u'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    u'application/vnd.oasis.opendocument.text',
+    u'application/pdf',
+    u'image/gif',
+    u'image/jpeg',
+    u'image/png',
+    u'audio/mpeg',
+    u'audio/ogg',
+    u'audio/x-wav',
+    u'video/mpeg',
+    u'video/mp4',
+    u'video/ogg',
+    u'video/quicktime',
+    u'video/x-ms-wmv'
+)
+
+utteranceTypes = (
+    u'None',
+    u'Object Language Utterance',
+    u'Metalanguage Utterance',
+    u'Mixed Utterance'
+)
+
+guess_type = guess_type
+
+
+def clearDirectoryOfFiles(directoryPath):
+    """Removes all files from the directory path but leaves the directory."""
+    for fileName in os.listdir(directoryPath):
+        if os.path.isfile(os.path.join(directoryPath, fileName)):
+            os.remove(os.path.join(directoryPath, fileName))

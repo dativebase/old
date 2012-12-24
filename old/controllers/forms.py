@@ -11,23 +11,13 @@ from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
 
 from old.lib.base import BaseController
-from old.lib.schemata import FormSchema, FormIdsSchema, PaginatorSchema, OrderBySchema
+from old.lib.schemata import FormSchema, FormIdsSchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session
 from old.model import Form, FormBackup, Gloss, User
 
 log = logging.getLogger(__name__)
-
-class State(object):
-    """Empty class used to create a state instance with a 'full_dict' attribute
-    that points to a dict of values being validated by a schema.  The call to
-    FormSchema().to_python requires this State() instance as its second argument
-    in order to make my inventory-based validators work correctly (see, e.g.,
-    ValidOrthographicTranscription).
-    """
-    pass
-
 
 def updateApplicationSettingsIfFormIsForeignWord(form):
     """If the input form is a foreign word, attempt to update the attributes in
@@ -232,14 +222,6 @@ def getMorphemeIDLists(form, validDelimiters=None):
     )
 
 
-def getUnrestrictedUsers():
-    """Return the list of unrestricted users in
-    app_globals.applicationSettings.applicationSettings.unrestrictedUsers.
-    """
-    return getattr(getattr(getattr(app_globals, 'applicationSettings', None),
-                   'applicationSettings', None), 'unrestrictedUsers', [])
-
-
 def getFormAndPreviousVersions(id):
     """The id parameter is a string representing either an integer id or a UUID.
     Return the form such that form.id==id or form.UUID==UUID (if there is one)
@@ -266,38 +248,6 @@ def getFormAndPreviousVersions(id):
     return (form, previousVersions)
 
 
-def addPagination(query, paginator):
-    if paginator and paginator.get('page') is not None and \
-    paginator.get('itemsPerPage') is not None:
-        paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
-        return h.getPaginatedQueryResults(query, paginator)
-    else:
-        return query.all()
-
-
-def addOrderBy(query, orderByParams, queryBuilder):
-    if orderByParams and orderByParams.get('orderByModel') and \
-    orderByParams.get('orderByAttribute') and orderByParams.get('orderByDirection'):
-        orderByParams = OrderBySchema.to_python(orderByParams)
-        orderByParams = [orderByParams['orderByModel'],
-            orderByParams['orderByAttribute'], orderByParams['orderByDirection']]
-        orderByExpression = queryBuilder.getSQLAOrderBy(orderByParams)
-        queryBuilder.clearErrors()
-        return query.order_by(orderByExpression)
-    else:
-        return query.order_by(asc(Form.id))
-
-
-def filterRestrictedForms(query):
-    user = session['user']
-    unrestrictedUsers = getUnrestrictedUsers()
-    userIsUnrestricted = h.userIsUnrestricted(user, unrestrictedUsers)
-    if userIsUnrestricted:
-        return query
-    else:
-        return h.filterRestrictedFormsFromQuery(query, user)
-
-
 class FormsController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol."""
 
@@ -320,8 +270,8 @@ class FormsController(BaseController):
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            query = filterRestrictedForms(SQLAQuery)
-            result = addPagination(query, pythonSearchParams.get('paginator'))
+            query = h.filterRestrictedModels('Form', SQLAQuery)
+            result = h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -346,9 +296,9 @@ class FormsController(BaseController):
         response.content_type = 'application/json'
         try:
             query = Session.query(Form)
-            query = addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = filterRestrictedForms(query)
-            result = addPagination(query, dict(request.GET))
+            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
+            query = h.filterRestrictedModels('Form', query)
+            result = h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return json.dumps({'errors': e.unpack_errors()})
@@ -366,7 +316,7 @@ class FormsController(BaseController):
         try:
             schema = FormSchema()
             values = json.loads(unicode(request.body, request.charset))
-            state = State()
+            state = h.State()
             state.full_dict = values
             result = schema.to_python(values, state)
         except h.JSONDecodeError:
@@ -411,13 +361,13 @@ class FormsController(BaseController):
         response.content_type = 'application/json'
         form = Session.query(Form).get(int(id))
         if form:
-            unrestrictedUsers = getUnrestrictedUsers()
+            unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
-            if h.userIsAuthorizedToAccessForm(user, form, unrestrictedUsers):
+            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
                 try:
                     schema = FormSchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    state = State()
+                    state = h.State()
                     state.full_dict = values
                     result = schema.to_python(values, state)
                 except h.JSONDecodeError:
@@ -491,9 +441,9 @@ class FormsController(BaseController):
         response.content_type = 'application/json'
         form = Session.query(Form).get(id)
         if form:
-            unrestrictedUsers = getUnrestrictedUsers()
+            unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
-            if h.userIsAuthorizedToAccessForm(user, form, unrestrictedUsers):
+            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
                 result = json.dumps(form, cls=h.JSONOLDEncoder)
             else:
                 response.status_int = 403
@@ -529,8 +479,8 @@ class FormsController(BaseController):
         response.content_type = 'application/json'
         form = Session.query(Form).get(id)
         if form:
-            unrestrictedUsers = getUnrestrictedUsers()
-            if not h.userIsAuthorizedToAccessForm(
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            if not h.userIsAuthorizedToAccessModel(
                                     session['user'], form, unrestrictedUsers):
                 response.status_int = 403
                 result = h.unauthorizedJSONMsg
@@ -560,9 +510,9 @@ class FormsController(BaseController):
         response.content_type = 'application/json'
         form, previousVersions = getFormAndPreviousVersions(id)
         if form or previousVersions:
-            unrestrictedUsers = getUnrestrictedUsers()
+            unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
-            accessible = h.userIsAuthorizedToAccessForm
+            accessible = h.userIsAuthorizedToAccessModel
             unrestrictedPreviousVersions = [fb for fb in previousVersions
                                     if accessible(user, fb, unrestrictedUsers)]
             formIsRestricted = form and not accessible(user, form, unrestrictedUsers)
@@ -602,8 +552,8 @@ class FormsController(BaseController):
             result = json.dumps({'errors': e.unpack_errors()})
         else:
             if forms:
-                accessible = h.userIsAuthorizedToAccessForm
-                unrestrictedUsers = getUnrestrictedUsers()
+                accessible = h.userIsAuthorizedToAccessModel
+                unrestrictedUsers = h.getUnrestrictedUsers()
                 user = session['user']
                 unrestrictedForms = [f for f in forms
                                      if accessible(user, f, unrestrictedUsers)]

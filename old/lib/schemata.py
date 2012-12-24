@@ -1,7 +1,7 @@
 from formencode import variabledecode, All
 from formencode.schema import Schema
 from formencode.validators import Invalid, FancyValidator, Int, DateConverter, \
-    UnicodeString, OneOf, Regex, Email, StringBoolean
+    UnicodeString, OneOf, Regex, Email, StringBoolean, String
 from formencode.foreach import ForEach
 from formencode.api import NoDefault
 import old.lib.helpers as h
@@ -9,6 +9,9 @@ from pylons import app_globals
 import old.model as model
 from old.model.meta import Session
 import logging
+from base64 import b64decode
+import os
+
 log = logging.getLogger(__name__)
 
 
@@ -247,7 +250,6 @@ class FormSchema(Schema):
     """FormSchema is a Schema for validating the data input upon a form
     creation request.
     """
-
     allow_extra_fields = True
     filter_extra_fields = True
 
@@ -277,18 +279,62 @@ class FormIdsSchema(Schema):
     forms = ForEach(ValidOLDModelObject(modelName='Form'), not_empty=True)
 
 
-class PaginatorSchema(Schema):
-    allow_extra_fields = True
-    filter_extra_fields = False
-    itemsPerPage = Int(not_empty=True, min=1)
-    page = Int(not_empty=True, min=1)
+################################################################################
+# File Schemata
+################################################################################
 
-class OrderBySchema(Schema):
+class ValidBase64EncodedFile(String):
+    """Validator for the 'file' attribute of a file create request."""
+
+    messages = {u'invalid_base64_encoded_file':
+                u'The uploaded file must be base64 encoded.'}
+
+    def _to_python(self, value, state):
+        try:
+            return b64decode(value)
+        except (TypeError, UnicodeEncodeError):
+            raise Invalid(self.message('invalid_base64_encoded_file', state), value, state)
+
+class ValidFileName(UnicodeString):
+    """Ensures that the filename of the file to be uploaded has a valid extension
+    given the allowed file types listed in lib/utils.py.
+    """
+
+    messages = {u'invalid_file_name':
+                u'The file upload failed because the file type is not allowed.'}
+
+    def _to_python(self, value, state):
+        if h.guess_type(value)[0] in h.allowedFileTypes:
+            return value.replace(os.sep, '_').replace("'", "").replace(
+                '"', '').replace(' ', '_')
+        else:
+            raise Invalid(self.message('invalid_file_name', state), value, state)
+
+class FileUpdateSchema(Schema):
+    """FileUpdateSchema is a Schema for validating the data input upon a file
+    update request.
+    """
     allow_extra_fields = True
-    filter_extra_fields = False
-    orderByModel = UnicodeString()
-    orderByAttribute = UnicodeString()
-    orderByDirection = OneOf([u'asc', u'desc'])
+    filter_extra_fields = True
+
+    description = UnicodeString()
+    utteranceType = OneOf(h.utteranceTypes)
+    embeddedFileMarkup = UnicodeString()
+    embeddedFilePassword = UnicodeString(max=255)
+    speaker = ValidOLDModelObject(modelName='Speaker')
+    elicitor = ValidOLDModelObject(modelName='User')
+    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
+    forms = ForEach(ValidOLDModelObject(modelName='Form'))
+    dateElicited = DateConverter(month_style='mm/dd/yyyy')
+
+class FileCreateSchema(FileUpdateSchema):
+    """FileCreateSchema is a Schema for validating the data input upon a file
+    create request.  The file data and name can only be specified on the create
+    request.
+    """
+    file = ValidBase64EncodedFile(not_empty=True)
+    name = ValidFileName(not_empty=True, max=255)
+
 
 ################################################################################
 # ApplicationSettings Schemata
@@ -299,9 +345,9 @@ class ApplicationSettingsSchema(Schema):
     submitted to ApplicationsettingsController
     (controllers/applicationsettings.py).
     """
-
     allow_extra_fields = True
     filter_extra_fields = True
+
     validationValues = [u'None', u'Warning', u'Error']
     objectLanguageName = UnicodeString(max=255)
     objectLanguageId = UnicodeString(max=3)

@@ -1184,6 +1184,8 @@ class TestFormsController(TestController):
         are returned, respectively.
         """
 
+        originalContributorId = Session.query(model.User).filter(
+            model.User.role==u'contributor').first().id
         # Add some objects to the db: a default application settings, a speaker,
         # a tag, a file ...
         applicationSettings = h.generateDefaultApplicationSettings()
@@ -1240,7 +1242,7 @@ class TestFormsController(TestController):
 
         # Now, as the default contributor, attempt to delete the myContributor-
         # entered form we just created and expect to fail.
-        extra_environ = {'test.authentication.role': 'contributor',
+        extra_environ = {'test.authentication.id': originalContributorId,
                          'test.applicationSettings': True}
         response = self.app.delete(url('form', id=toDeleteId),
                                    extra_environ=extra_environ, status=403)

@@ -367,7 +367,9 @@ class SQLAQueryBuilder(object):
             'speaker_id': {},
             'utteranceType': {},
             'embeddedFileMarkup': {},
-            'embeddedFilePassword': {}
+            'embeddedFilePassword': {},
+            'tags': {'relations': equalityRelations},
+            'forms': {'relations': equalityRelations}
         },
         'Gloss': {
             'id': {},
@@ -411,6 +413,10 @@ class SQLAQueryBuilder(object):
             'Gloss': 'glosses',
             'Tag': 'tags',
             'Collection': 'collections'
+        },
+        'File': {
+            'Tag': 'tags',
+            'Form': 'forms'
         }
     }
 

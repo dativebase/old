@@ -64,6 +64,9 @@ class Model(object):
     def getFilesList(self, files):
         return [self.getMiniFileDict(file) for file in files]
 
+    def getFormsList(self, forms):
+        return [form.getDict() for form in forms]
+
     def getUsersList(self, users):
         return [self.getMiniUserDict(user) for user in users]
 
