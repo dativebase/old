@@ -311,7 +311,6 @@ class FormsController(BaseController):
     def create(self):
         """POST /forms: Create a new form."""
         # url('forms')
-
         response.content_type = 'application/json'
         try:
             schema = FormSchema()

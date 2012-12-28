@@ -13,7 +13,6 @@ import old.lib.helpers as h
 
 log = logging.getLogger(__name__)
 
-# TODO: test association of forms to files on create/update requests
 
 class TestFilesController(TestController):
 
@@ -686,6 +685,7 @@ class TestFilesController(TestController):
                                  extra_environ)
         resp = json.loads(response.body)
         toDeleteId = resp['id']
+        toDeleteName = resp['name']
         assert resp['name'] == u'test_delete.jpg'
         assert resp['tags'][0]['name'] == u'default tag'
 
@@ -700,6 +700,10 @@ class TestFilesController(TestController):
         response = self.app.delete(url('file', id=toDeleteId),
                                    extra_environ=extra_environ, status=403)
         resp = json.loads(response.body)
+        fileThatWasNotDeleted = Session.query(model.File).get(toDeleteId)
+        filePath = os.path.join(self.filesPath, toDeleteName)
+        assert os.path.exists(filePath)
+        assert fileThatWasNotDeleted is not None
         assert resp['error'] == u'You are not authorized to access this resource.'
 
         # As myContributor, attempt to delete the file we just created and
@@ -720,14 +724,12 @@ class TestFilesController(TestController):
 
         # The deleted file will be returned to us, so the assertions from above
         # should still hold true.
-        assert resp['name'] == u'test_delete.jpg'
-
-        # Trying to get the deleted file from the db should return None
-        deletedFile = Session.query(model.File).get(toDeleteId)
-        assert deletedFile == None
-
-        # Make sure the binary file is actually removed.
+        fileThatWasDeleted = Session.query(model.File).get(toDeleteId)
+        filePath = os.path.join(self.filesPath, toDeleteName)
+        assert not os.path.exists(filePath)
         assert 'old_test.jpg' not in os.listdir(self.filesPath)
+        assert fileThatWasDeleted is None
+        assert resp['name'] == u'test_delete.jpg'
 
         # Delete with an invalid id
         id = 9999999999999

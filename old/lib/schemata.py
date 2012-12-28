@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 ################################################################################
 
 class LoginSchema(Schema):
-    """LoginSchema validates that both username and passwrod have been entered.""" 
+    """LoginSchema validates that both username and password have been entered.""" 
 
     allow_extra_fields = True
     filter_extra_fields = True
@@ -334,6 +334,32 @@ class FileCreateSchema(FileUpdateSchema):
     """
     file = ValidBase64EncodedFile(not_empty=True)
     name = ValidFileName(not_empty=True, max=255)
+
+
+################################################################################
+# Collection Schemata
+################################################################################
+
+class CollectionSchema(Schema):
+    """CollectionSchema is a Schema for validating the data input upon
+    collection create and update requests.
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+
+    title = UnicodeString(max=255)
+    type = UnicodeString(max=255)
+    url = UnicodeString(max=255)
+    description = UnicodeString()
+    markupLanguage = OneOf(h.markupLanguages)
+    contents = UnicodeString()
+    html = Column(UnicodeText)      # allow for possibility that html is generated client-side
+    speaker = ValidOLDModelObject(modelName='Speaker')
+    source = ValidOLDModelObject(modelName='Source')
+    elicitor = ValidOLDModelObject(modelName='User')
+    enterer = ValidOLDModelObject(modelName='User')
+    dateElicited = DateConverter(month_style='mm/dd/yyyy')
+    files = ForEach(ValidOLDModelObject(modelName='File'))
 
 
 ################################################################################

@@ -1039,6 +1039,19 @@ utteranceTypes = (
     u'Mixed Utterance'
 )
 
+collectionTypes = (
+    u'story',
+    u'elicitation',
+    u'paper',
+    u'discourse',
+    u'other'
+)
+
+markupLanguages = (
+    u'markdown',
+    u'reStructuredText'
+)
+
 guess_type = guess_type
 
 

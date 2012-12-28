@@ -23,9 +23,14 @@ class Collection(Base):
         return "<Collection (%s)>" % self.id
 
     id = Column(Integer, Sequence('collection_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     title = Column(Unicode(255))
     type = Column(Unicode(255))
     url = Column(Unicode(255))
+    description = Column(UnicodeText)
+    markupLanguage = Unicode(100)
+    contents = Column(UnicodeText)
+    html = Column(UnicodeText)
     speaker_id = Column(Integer, ForeignKey('speaker.id'))
     speaker = relation('Speaker')
     source_id = Column(Integer, ForeignKey('source.id'))
@@ -37,7 +42,35 @@ class Collection(Base):
     dateElicited = Column(Date)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
-    description = Column(UnicodeText)
-    contents = Column(UnicodeText)
     files = relation('File', secondary=collectionfile_table)
     forms = relation('Form', secondary=collectionform_table)
+
+    def getDict(self):
+        """Return a Python dictionary representation of the Collection.  This
+        facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
+        data are truncated, e.g., collectionDict['elicitor'] is a dict with keys
+        for 'id', 'firstName' and 'lastName' (cf. getMiniUserDict above) and
+        lacks keys for other attributes such as 'username',
+        'personalPageContent', etc.
+        """
+
+        collectionDict = {}
+        collectionDict['id'] = self.id
+        collectionDict['UUID'] = self.UUID
+        collectionDict['title'] = self.title
+        collectionDict['type'] = self.type
+        collectionDict['url'] = self.url
+        collectionDict['description'] = self.description
+        collectionDict['markupLanguage'] = self.markupLanguage
+        collectionDict['contents'] = self.contents
+        collectionDict['html'] = self.html
+        collectionDict['dateElicited'] = self.dateElicited
+        collectionDict['datetimeEntered'] = self.datetimeEntered
+        collectionDict['datetimeModified'] = self.datetimeModified
+        collectionDict['speaker'] = self.getMiniSpeakerDict(self.speaker)
+        collectionDict['source'] = self.getMiniSourceDict(self.source)
+        collectionDict['elicitor'] = self.getMiniUserDict(self.elicitor)
+        collectionDict['enterer'] = self.getMiniUserDict(self.enterer)
+        collectionDict['files'] = self.getFilesList(self.files)
+        collectionDict['forms'] = self.getFormsList(self.forms)
+        return collectionDict
