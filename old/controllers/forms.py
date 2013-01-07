@@ -62,8 +62,7 @@ def getNewEditFormData(GET_params):
         'syntacticCategories': 'SyntacticCategory',
         'speakers': 'Speaker',
         'users': 'User',
-        'sources': 'Source',
-        'files': 'File'
+        'sources': 'Source'
     }
 
     # map_ maps param names to functions that retrieve the appropriate data
@@ -75,8 +74,7 @@ def getNewEditFormData(GET_params):
         'syntacticCategories': h.getSyntacticCategories,
         'speakers': h.getSpeakers,
         'users': h.getUsers,
-        'sources': h.getSources,
-        'files': h.getFiles
+        'sources': h.getSources
     }
 
     # result is initialized as a dict with empty list values.
@@ -315,8 +313,7 @@ class FormsController(BaseController):
         try:
             schema = FormSchema()
             values = json.loads(unicode(request.body, request.charset))
-            state = h.State()
-            state.full_dict = values
+            state = h.getStateObject(values)
             result = schema.to_python(values, state)
         except h.JSONDecodeError:
             response.status_int = 400
@@ -366,8 +363,7 @@ class FormsController(BaseController):
                 try:
                     schema = FormSchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    state = h.State()
-                    state.full_dict = values
+                    state = h.getStateObject(values)
                     result = schema.to_python(values, state)
                 except h.JSONDecodeError:
                     response.status_int = 400
@@ -670,6 +666,15 @@ def createNewForm(data):
     form.tags = [t for t in data['tags'] if t]
     form.files = [f for f in data['files'] if f]
 
+    # Restrict the entire form if it is associated to restricted files.
+    tags = [f.tags for f in form.files]
+    tags = [tag for tagList in tags for tag in tagList]
+    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+    if restrictedTags:
+        restrictedTag = restrictedTags[0]
+        if restrictedTag not in form.tags:
+            form.tags.append(restrictedTag)
+
     # OLD-generated Data
     now = datetime.datetime.utcnow()
     form.datetimeEntered = now
@@ -760,15 +765,25 @@ def updateForm(form, data):
 
     # Many-to-Many Data: tags & files
     # Update only if the user has made changes.
-    tagsToAdd = sorted([t.id for t in data['tags'] if t])
-    tagsWeHave = sorted([t.id for t in form.tags])
-    if tagsToAdd != tagsWeHave:
-        form.tags = [t for t in data['tags'] if t]
+    filesToAdd = [f for f in data['files'] if f]
+    tagsToAdd = [t for t in data['tags'] if t]
+
+    if set(filesToAdd) != set(form.files):
+        form.files = filesToAdd
         CHANGED = True
-    filesToAdd = sorted([f.id for f in data['files'] if f])
-    filesWeHave = sorted([f.id for f in form.files])
-    if filesToAdd != filesWeHave:
-        form.files = [f for f in data['files'] if f]
+
+        # Cause the entire form to be tagged as restricted if any one of its
+        # files are so tagged.
+        tags = [f.tags for f in form.files]
+        tags = [tag for tagList in tags for tag in tagList]
+        restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+        if restrictedTags:
+            restrictedTag = restrictedTags[0]
+            if restrictedTag not in tagsToAdd:
+                tagsToAdd.append(restrictedTag)
+
+    if set(tagsToAdd) != set(form.tags):
+        form.tags = tagsToAdd
         CHANGED = True
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.

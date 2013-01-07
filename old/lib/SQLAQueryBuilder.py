@@ -416,7 +416,13 @@ class SQLAQueryBuilder(object):
         },
         'File': {
             'Tag': 'tags',
-            'Form': 'forms'
+            'Form': 'forms',
+            'Collection': 'collections'
+        },
+        'Collection': {
+            'Form': 'forms',
+            'File': 'files',
+            'Tag': 'tags'
         }
     }
 

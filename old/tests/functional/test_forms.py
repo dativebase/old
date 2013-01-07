@@ -1,8 +1,10 @@
 import datetime
 import logging
+import os
 import simplejson as json
 from nose.tools import nottest
-
+from base64 import encodestring
+from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
 
@@ -15,6 +17,10 @@ log = logging.getLogger(__name__)
 
 
 class TestFormsController(TestController):
+
+    here = appconfig('config:development.ini', relative_to='.')['here']
+    filesPath = os.path.join(here, 'files')
+    testFilesPath = os.path.join(here, 'test_files')
 
     createParams = {
         'transcription': u'',
@@ -36,6 +42,21 @@ class TestFormsController(TestController):
         'dateElicited': u''     # mm/dd/yyyy
     }
 
+    createFileParams = {
+        'name': u'',
+        'description': u'',
+        'dateElicited': u'',    # mm/dd/yyyy
+        'elicitor': u'',
+        'speaker': u'',
+        'utteranceType': u'',
+        'embeddedFileMarkup': u'',
+        'embeddedFilePassword': u'',
+        'tags': [],
+        'forms': [],
+        'file': ''      # file data Base64 encoded
+    }
+
+    extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     json_headers = {'Content-Type': 'application/json'}
 
@@ -879,12 +900,167 @@ class TestFormsController(TestController):
         assert u'Please enter an integer value' in resp['errors']['tags']
 
     #@nottest
+    def test_relational_restrictions(self):
+        """Tests that the restricted tag works correctly with respect to relational attributes of forms.
+
+        That is, tests that (a) form.files does not return restricted files to
+        restricted users and (b) a restricted user cannot append a restricted
+        form to file.forms."""
+
+        admin = self.extra_environ_admin.copy()
+        admin.update({'test.applicationSettings': True})
+        contrib = self.extra_environ_contrib.copy()
+        contrib.update({'test.applicationSettings': True})
+
+        # Create a test form.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'test',
+            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 admin)
+        resp = json.loads(response.body)
+        formCount = Session.query(model.Form).count()
+        assert resp['transcription'] == u'test'
+        assert formCount == 1
+
+        # Now create the restricted tag.
+        restrictedTag = h.generateRestrictedTag()
+        Session.add(restrictedTag)
+        Session.commit()
+        restrictedTagId = restrictedTag.id
+
+        # Then create two files, one restricted and one not.
+        wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
+        wavFileSize = os.path.getsize(wavFilePath)
+        wavFileBase64 = encodestring(open(wavFilePath).read())
+
+        params = self.createFileParams.copy()
+        params.update({
+            'name': u'restrictedFile.wav',
+            'file': wavFileBase64,
+            'tags': [restrictedTagId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 admin)
+        resp = json.loads(response.body)
+        restrictedFileId = resp['id']
+
+        params = self.createFileParams.copy()
+        params.update({
+            'name': u'unrestrictedFile.wav',
+            'file': wavFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 admin)
+        resp = json.loads(response.body)
+        unrestrictedFileId = resp['id']
+
+        # Now, as a (restricted) contributor, attempt to create a form and
+        # associate it to a restricted file -- expect to fail.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'test',
+            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'files': [restrictedFileId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 contrib, status=400)
+        resp = json.loads(response.body)
+        assert u'You are not authorized to access the file with id %d.' % restrictedFileId in \
+            resp['errors']['files']
+
+        # Now, as a (restricted) contributor, attempt to create a form and
+        # associate it to an unrestricted file -- expect to succeed.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'test',
+            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'files': [unrestrictedFileId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 contrib)
+        resp = json.loads(response.body)
+        unrestrictedFormId = resp['id']
+        assert resp['transcription'] == u'test'
+        assert resp['files'][0]['name'] == u'unrestrictedFile.wav'
+
+        # Now, as a(n unrestricted) administrator, attempt to create a form and
+        # associate it to a restricted file -- expect (a) to succeed and (b) to
+        # find that the form is now restricted.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'test',
+            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'files': [restrictedFileId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, admin)
+        resp = json.loads(response.body)
+        indirectlyRestrictedFormId = resp['id']
+        assert resp['transcription'] == u'test'
+        assert resp['files'][0]['name'] == u'restrictedFile.wav'
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        # Now show that the indirectly restricted forms are inaccessible to
+        # unrestricted users.
+        response = self.app.get(url('forms'), headers=self.json_headers,
+                                extra_environ=contrib)
+        resp = json.loads(response.body)
+        assert indirectlyRestrictedFormId not in [f['id'] for f in resp]
+
+        # Now, as a(n unrestricted) administrator, create a form.
+        unrestrictedFormParams = self.createParams.copy()
+        unrestrictedFormParams.update({
+            'transcription': u'test',
+            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(unrestrictedFormParams)
+        response = self.app.post(url('forms'), params, self.json_headers, admin)
+        resp = json.loads(response.body)
+        unrestrictedFormId = resp['id']
+        assert resp['transcription'] == u'test'
+
+        # As a restricted contributor, attempt to update the unrestricted form
+        # just created by associating it to a restricted file -- expect to fail.
+        unrestrictedFormParams.update({'files': [restrictedFileId]})
+        params = json.dumps(unrestrictedFormParams)
+        response = self.app.put(url('form', id=unrestrictedFormId), params,
+                                self.json_headers, contrib, status=400)
+        resp = json.loads(response.body)
+        assert u'You are not authorized to access the file with id %d.' % restrictedFileId in \
+            resp['errors']['files']
+
+        # As an unrestricted administrator, attempt to update an unrestricted form
+        # by associating it to a restricted file -- expect to succeed.
+        response = self.app.put(url('form', id=unrestrictedFormId), params,
+                                self.json_headers, admin)
+        resp = json.loads(response.body)
+        assert resp['id'] == unrestrictedFormId
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        # Now show that the newly indirectly restricted form is also
+        # inaccessible to an unrestricted user.
+        response = self.app.get(url('form', id=unrestrictedFormId),
+                headers=self.json_headers, extra_environ=contrib, status=403)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'You are not authorized to access this resource.'
+
+        h.clearDirectoryOfFiles(self.filesPath)
+
+    #@nottest
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for creating a new OLD form.
 
         The properties of the JSON object are 'grammaticalities',
         'elicitationMethods', 'tags', 'syntacticCategories', 'speakers',
-        'users', 'sources' and 'files' and their values are arrays/lists.
+        'users' and 'sources' and their values are arrays/lists.
         """
 
         # Unauthorized user ('viewer') should return a 401 status code on the
@@ -905,13 +1081,8 @@ class TestFormsController(TestController):
         S = h.generateSSyntacticCategory()
         speaker = h.generateDefaultSpeaker()
         source = h.generateDefaultSource()
-        file1 = h.generateDefaultFile()
-        file1.name = u'file1'
-        file2 = h.generateDefaultFile()
-        file2.name = u'file2'
         Session.add_all([applicationSettings, elicitationMethod,
-                    foreignWordTag, restrictedTag, N, Num, S, speaker, source,
-                    file1, file2])
+                    foreignWordTag, restrictedTag, N, Num, S, speaker, source])
         Session.commit()
 
         # Get the data currently in the db (see websetup.py for the test data).
@@ -922,8 +1093,7 @@ class TestFormsController(TestController):
             'syntacticCategories': h.getSyntacticCategories(),
             'speakers': h.getSpeakers(),
             'users': h.getUsers(),
-            'sources': h.getSources(),
-            'files': h.getFiles(),
+            'sources': h.getSources()
         }
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
@@ -941,7 +1111,6 @@ class TestFormsController(TestController):
         assert resp['speakers'] == data['speakers']
         assert resp['users'] == data['users']
         assert resp['sources'] == data['sources']
-        assert resp['files'] == data['files']
 
         # GET /new_form with params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -977,7 +1146,6 @@ class TestFormsController(TestController):
         assert resp['speakers'] == []
         assert resp['users'] == []
         assert resp['sources'] == []
-        assert resp['files'] == []
 
     #@nottest
     def test_update(self):
@@ -1571,12 +1739,8 @@ class TestFormsController(TestController):
         S = h.generateSSyntacticCategory()
         speaker = h.generateDefaultSpeaker()
         source = h.generateDefaultSource()
-        file1 = h.generateDefaultFile()
-        file1.name = u'file1'
-        file2 = h.generateDefaultFile()
-        file2.name = u'file2'
         Session.add_all([applicationSettings, elicitationMethod,
-            foreignWordTag, N, Num, S, speaker, source, file1, file2])
+            foreignWordTag, N, Num, S, speaker, source])
         Session.commit()
 
         # Get the data currently in the db (see websetup.py for the test data).
@@ -1587,9 +1751,9 @@ class TestFormsController(TestController):
             'syntacticCategories': h.getSyntacticCategories(),
             'speakers': h.getSpeakers(),
             'users': h.getUsers(),
-            'sources': h.getSources(),
-            'files': h.getFiles()
+            'sources': h.getSources()
         }
+
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
         data = json.loads(json.dumps(data, cls=h.JSONOLDEncoder))
@@ -1617,7 +1781,6 @@ class TestFormsController(TestController):
         assert resp['data']['speakers'] == []
         assert resp['data']['users'] == []
         assert resp['data']['sources'] == data['sources']
-        assert resp['data']['files'] == []
 
         # Invalid id with GET params.  It should still return 'null'.
         params = {

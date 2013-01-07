@@ -73,7 +73,7 @@ class Form(Base):
     source = relation('Source')
     glosses = relation('Gloss', backref='form', cascade='all, delete, delete-orphan')
     files = relation('File', secondary=FormFile.__table__, backref='forms')
-    collections = relation('Collection', secondary=collectionform_table)
+    collections = relation('Collection', secondary=collectionform_table, backref='forms')
     tags = relation('Tag', secondary=formtag_table, backref='forms')
     def getDict(self):
         """Return a Python dictionary representation of the Form.  This
@@ -83,34 +83,32 @@ class Form(Base):
         keys for other attributes such as 'username', 'personalPageContent', etc.
         """
 
-        formDict = {}
-        formDict['id'] = self.id
-        formDict['UUID'] = self.UUID
-        formDict['transcription'] = self.transcription
-        formDict['phoneticTranscription'] = self.phoneticTranscription
-        formDict['narrowPhoneticTranscription'] = self.narrowPhoneticTranscription
-        formDict['morphemeBreak'] = self.morphemeBreak
-        formDict['morphemeGloss'] = self.morphemeGloss
-        formDict['comments'] = self.comments
-        formDict['speakerComments'] = self.speakerComments
-        formDict['grammaticality'] = self.grammaticality
-        formDict['dateElicited'] = self.dateElicited
-        formDict['datetimeEntered'] = self.datetimeEntered
-        formDict['datetimeModified'] = self.datetimeModified
-        formDict['syntacticCategoryString'] = self.syntacticCategoryString
-        formDict['morphemeBreakIDs'] = self.jsonLoads(self.morphemeBreakIDs)
-        formDict['morphemeGlossIDs'] = self.jsonLoads(self.morphemeGlossIDs)
-        formDict['breakGlossCategory'] = self.breakGlossCategory
-        formDict['elicitor'] = self.getMiniUserDict(self.elicitor)
-        formDict['enterer'] = self.getMiniUserDict(self.enterer)
-        formDict['verifier'] = self.getMiniUserDict(self.verifier)
-        formDict['speaker'] = self.getMiniSpeakerDict(self.speaker)
-        formDict['elicitationMethod'] = self.getMiniElicitationMethodDict(
-            self.elicitationMethod)
-        formDict['syntacticCategory'] = self.getMiniSyntacticCategoryDict(
-            self.syntacticCategory)
-        formDict['source'] = self.getMiniSourceDict(self.source)
-        formDict['glosses'] = self.getGlossesList(self.glosses)
-        formDict['tags'] = self.getTagsList(self.tags)
-        formDict['files'] = self.getFilesList(self.files)
-        return formDict
+        return {
+            'id': self.id,
+            'UUID': self.UUID,
+            'transcription': self.transcription,
+            'phoneticTranscription': self.phoneticTranscription,
+            'narrowPhoneticTranscription': self.narrowPhoneticTranscription,
+            'morphemeBreak': self.morphemeBreak,
+            'morphemeGloss': self.morphemeGloss,
+            'comments': self.comments,
+            'speakerComments': self.speakerComments,
+            'grammaticality': self.grammaticality,
+            'dateElicited': self.dateElicited,
+            'datetimeEntered': self.datetimeEntered,
+            'datetimeModified': self.datetimeModified,
+            'syntacticCategoryString': self.syntacticCategoryString,
+            'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
+            'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
+            'breakGlossCategory': self.breakGlossCategory,
+            'elicitor': self.getMiniUserDict(self.elicitor),
+            'enterer': self.getMiniUserDict(self.enterer),
+            'verifier': self.getMiniUserDict(self.verifier),
+            'speaker': self.getMiniSpeakerDict(self.speaker),
+            'elicitationMethod': self.getMiniElicitationMethodDict(self.elicitationMethod),
+            'syntacticCategory': self.getMiniSyntacticCategoryDict(self.syntacticCategory),
+            'source': self.getMiniSourceDict(self.source),
+            'glosses': self.getGlossesList(self.glosses),
+            'tags': self.getTagsList(self.tags),
+            'files': self.getFilesList(self.files)
+        }

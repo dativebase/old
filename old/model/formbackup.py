@@ -99,36 +99,37 @@ class FormBackup(Base):
         self.files = unicode(json.dumps(formDict['files']))
 
     def getDict(self):
-        formBackupDict = {}
-        formBackupDict['UUID'] = self.UUID
-        formBackupDict['form_id'] = self.form_id
-        formBackupDict['transcription'] = self.transcription
-        formBackupDict['phoneticTranscription'] = self.phoneticTranscription
-        formBackupDict['narrowPhoneticTranscription'] = self.narrowPhoneticTranscription
-        formBackupDict['morphemeBreak'] = self.morphemeBreak
-        formBackupDict['morphemeGloss'] = self.morphemeGloss
-        formBackupDict['grammaticality'] = self.grammaticality
-        formBackupDict['comments'] = self.comments
-        formBackupDict['speakerComments'] = self.speakerComments
-        formBackupDict['dateElicited'] = self.dateElicited
-        formBackupDict['datetimeEntered'] = self.datetimeEntered
-        formBackupDict['datetimeModified'] = self.datetimeModified
-        formBackupDict['syntacticCategoryString'] = self.syntacticCategoryString
-        formBackupDict['morphemeBreakIDs'] = self.jsonLoads(self.morphemeBreakIDs)
-        formBackupDict['morphemeGlossIDs'] = self.jsonLoads(self.morphemeGlossIDs)
-        formBackupDict['breakGlossCategory'] = self.breakGlossCategory
-        formBackupDict['elicitationMethod'] = self.jsonLoads(self.elicitationMethod)
-        formBackupDict['syntacticCategory'] = self.jsonLoads(self.syntacticCategory)
-        formBackupDict['source'] = self.jsonLoads(self.source)
-        formBackupDict['speaker'] = self.jsonLoads(self.speaker)
-        formBackupDict['elicitor'] = self.jsonLoads(self.elicitor)
-        formBackupDict['enterer'] = self.jsonLoads(self.enterer)
-        formBackupDict['verifier'] = self.jsonLoads(self.verifier)
-        formBackupDict['backuper'] = self.jsonLoads(self.backuper)
-        formBackupDict['glosses'] = self.jsonLoads(self.glosses)
-        formBackupDict['tags'] = self.jsonLoads(self.tags)
-        formBackupDict['files'] = self.jsonLoads(self.files)
-        return formBackupDict
+        return {
+            'id': self.id,
+            'UUID': self.UUID,
+            'form_id': self.form_id,
+            'transcription': self.transcription,
+            'phoneticTranscription': self.phoneticTranscription,
+            'narrowPhoneticTranscription': self.narrowPhoneticTranscription,
+            'morphemeBreak': self.morphemeBreak,
+            'morphemeGloss': self.morphemeGloss,
+            'grammaticality': self.grammaticality,
+            'comments': self.comments,
+            'speakerComments': self.speakerComments,
+            'dateElicited': self.dateElicited,
+            'datetimeEntered': self.datetimeEntered,
+            'datetimeModified': self.datetimeModified,
+            'syntacticCategoryString': self.syntacticCategoryString,
+            'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
+            'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
+            'breakGlossCategory': self.breakGlossCategory,
+            'elicitationMethod': self.jsonLoads(self.elicitationMethod),
+            'syntacticCategory': self.jsonLoads(self.syntacticCategory),
+            'source': self.jsonLoads(self.source),
+            'speaker': self.jsonLoads(self.speaker),
+            'elicitor': self.jsonLoads(self.elicitor),
+            'enterer': self.jsonLoads(self.enterer),
+            'verifier': self.jsonLoads(self.verifier),
+            'backuper': self.jsonLoads(self.backuper),
+            'glosses': self.jsonLoads(self.glosses),
+            'tags': self.jsonLoads(self.tags),
+            'files': self.jsonLoads(self.files)
+        }
 
     def load(self):
         """Convert the JSON objects back into Column objects, thus making the

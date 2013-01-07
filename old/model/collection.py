@@ -4,12 +4,19 @@ from sqlalchemy import Table, Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation, backref
 from old.model.meta import Base, now
-from old.model.form import collectionform_table
 
 collectionfile_table = Table('collectionfile', Base.metadata,
     Column('id', Integer, Sequence('collectionfile_seq_id', optional=True), primary_key=True),
     Column('collection_id', Integer, ForeignKey('collection.id')),
     Column('file_id', Integer, ForeignKey('file.id')),
+    Column('datetimeModified', DateTime(), default=now),
+    mysql_charset='utf8'
+)
+
+collectiontag_table = Table('collectiontag', Base.metadata,
+    Column('id', Integer, Sequence('collectiontag_seq_id', optional=True), primary_key=True),
+    Column('collection_id', Integer, ForeignKey('collection.id')),
+    Column('tag_id', Integer, ForeignKey('tag.id')),
     Column('datetimeModified', DateTime(), default=now),
     mysql_charset='utf8'
 )
@@ -28,7 +35,7 @@ class Collection(Base):
     type = Column(Unicode(255))
     url = Column(Unicode(255))
     description = Column(UnicodeText)
-    markupLanguage = Unicode(100)
+    markupLanguage = Column(Unicode(100))
     contents = Column(UnicodeText)
     html = Column(UnicodeText)
     speaker_id = Column(Integer, ForeignKey('speaker.id'))
@@ -42,8 +49,9 @@ class Collection(Base):
     dateElicited = Column(Date)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
-    files = relation('File', secondary=collectionfile_table)
-    forms = relation('Form', secondary=collectionform_table)
+    tags = relation('Tag', secondary=collectiontag_table)
+    files = relation('File', secondary=collectionfile_table, backref='collections')
+    # forms attribute is defined in a relation/backref in the form model
 
     def getDict(self):
         """Return a Python dictionary representation of the Collection.  This
@@ -54,23 +62,24 @@ class Collection(Base):
         'personalPageContent', etc.
         """
 
-        collectionDict = {}
-        collectionDict['id'] = self.id
-        collectionDict['UUID'] = self.UUID
-        collectionDict['title'] = self.title
-        collectionDict['type'] = self.type
-        collectionDict['url'] = self.url
-        collectionDict['description'] = self.description
-        collectionDict['markupLanguage'] = self.markupLanguage
-        collectionDict['contents'] = self.contents
-        collectionDict['html'] = self.html
-        collectionDict['dateElicited'] = self.dateElicited
-        collectionDict['datetimeEntered'] = self.datetimeEntered
-        collectionDict['datetimeModified'] = self.datetimeModified
-        collectionDict['speaker'] = self.getMiniSpeakerDict(self.speaker)
-        collectionDict['source'] = self.getMiniSourceDict(self.source)
-        collectionDict['elicitor'] = self.getMiniUserDict(self.elicitor)
-        collectionDict['enterer'] = self.getMiniUserDict(self.enterer)
-        collectionDict['files'] = self.getFilesList(self.files)
-        collectionDict['forms'] = self.getFormsList(self.forms)
-        return collectionDict
+        return {
+            'id': self.id,
+            'UUID': self.UUID,
+            'title': self.title,
+            'type': self.type,
+            'url': self.url,
+            'description': self.description,
+            'markupLanguage': self.markupLanguage,
+            'contents': self.contents,
+            'html': self.html,
+            'dateElicited': self.dateElicited,
+            'datetimeEntered': self.datetimeEntered,
+            'datetimeModified': self.datetimeModified,
+            'speaker': self.getMiniSpeakerDict(self.speaker),
+            'source': self.getMiniSourceDict(self.source),
+            'elicitor': self.getMiniUserDict(self.elicitor),
+            'enterer': self.getMiniUserDict(self.enterer),
+            'tags': self.getTagsList(self.tags),
+            'files': self.getFilesList(self.files),
+            'forms': self.getFormsList(self.forms)
+        }

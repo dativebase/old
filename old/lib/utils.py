@@ -10,7 +10,7 @@ from mimetypes import guess_type
 import simplejson as json
 from sqlalchemy.sql import or_, not_, desc, asc
 import old.model as model
-from old.model import Form, FormBackup, File, Collection
+from old.model import Form, FormBackup, File, Collection, CollectionBackup
 from old.model.meta import Session, Model
 import orthography
 from simplejson.decoder import JSONDecodeError
@@ -18,6 +18,8 @@ from paste.deploy import appconfig
 from pylons import app_globals, session
 from formencode.schema import Schema
 from formencode.validators import Int, UnicodeString, OneOf
+from markdown import Markdown
+from docutils.core import publish_parts
 
 ################################################################################
 # Get data for 'new' action
@@ -542,14 +544,24 @@ def getForms(paginator=None):
     return formQuery.all()
 
 def getFormByUUID(UUID):
-    """Return the Form models with UUID."""
+    """Return the first (and only, hopefully) Form model with UUID."""
     return Session.query(Form).filter(Form.UUID==UUID).first()
+
+def getCollectionByUUID(UUID):
+    """Return the first (and only, hopefully) Collection model with UUID."""
+    return Session.query(Collection).filter(Collection.UUID==UUID).first()
 
 def getFormBackupsByUUID(UUID):
     """Return all FormBackup models with UUID = UUID."""
     return Session.query(FormBackup).filter(
         FormBackup.UUID==UUID).order_by(desc(
         FormBackup.id)).all()
+
+def getCollectionBackupsByUUID(UUID):
+    """Return all CollectionBackup models with UUID = UUID."""
+    return Session.query(CollectionBackup).filter(
+        CollectionBackup.UUID==UUID).order_by(desc(
+        CollectionBackup.id)).all()
 
 def getFormBackupsByFormId(formId):
     """Return all FormBackup models with form_id = formId.  WARNING: unexpected
@@ -559,6 +571,17 @@ def getFormBackupsByFormId(formId):
     return Session.query(FormBackup).filter(
         FormBackup.form_id==formId).order_by(desc(
         FormBackup.id)).all()
+
+def getCollectionBackupsByCollectionId(collectionId):
+    """Return all CollectionBackup models with collection_id = collectionId.
+    WARNING: unexpected data may be returned (on an SQLite backend) if primary
+    key ids of deleted collections are recycled.
+    """
+    return Session.query(CollectionBackup).filter(
+        CollectionBackup.collection_id==collectionId).order_by(desc(
+        CollectionBackup.id)).all()
+
+
 
 def getTags():
     return getModelsByName('Tag')
@@ -940,6 +963,15 @@ class State(object):
     """
     pass
 
+def getStateObject(values):
+    """Return a State instance with some special attributes needed in the forms
+    and oldcollections controllers.
+    """
+    state = State()
+    state.full_dict = values
+    state.user = session['user']
+    return state
+
 ################################################################################
 # Authorization Functions
 ################################################################################
@@ -1011,6 +1043,10 @@ class OrderBySchema(Schema):
     orderByAttribute = UnicodeString()
     orderByDirection = OneOf([u'asc', u'desc'])
 
+################################################################################
+# File-specific data & functionality
+################################################################################
+
 allowedFileTypes = (
     u'text/plain',
     u'application/x-latex',
@@ -1039,6 +1075,19 @@ utteranceTypes = (
     u'Mixed Utterance'
 )
 
+guess_type = guess_type
+
+def clearDirectoryOfFiles(directoryPath):
+    """Removes all files from the directory path but leaves the directory."""
+    for fileName in os.listdir(directoryPath):
+        if os.path.isfile(os.path.join(directoryPath, fileName)):
+            os.remove(os.path.join(directoryPath, fileName))
+
+
+################################################################################
+# Collection-specific data & functionality
+################################################################################
+
 collectionTypes = (
     u'story',
     u'elicitation',
@@ -1047,16 +1096,18 @@ collectionTypes = (
     u'other'
 )
 
-markupLanguages = (
-    u'markdown',
-    u'reStructuredText'
-)
+# This is the regex for finding form references in the contents of collections.
+formReferencePattern = re.compile('[Ff]orm\[([0-9]+)\]')
 
-guess_type = guess_type
+def rst2html(string):
+    return publish_parts(string, writer_name='html')['html_body']
 
+markupLanguageToFunc = {
+    'markdown': Markdown().convert,
+    'reStructuredText': rst2html
+}
 
-def clearDirectoryOfFiles(directoryPath):
-    """Removes all files from the directory path but leaves the directory."""
-    for fileName in os.listdir(directoryPath):
-        if os.path.isfile(os.path.join(directoryPath, fileName)):
-            os.remove(os.path.join(directoryPath, fileName))
+markupLanguages = markupLanguageToFunc.keys()
+
+def getHTMLFromCollectionContents(contents, markupLanguage):
+    return markupLanguageToFunc.get(markupLanguage, rst2html)(contents)

@@ -46,21 +46,21 @@ class File(Base):
         data are truncated.
         """
 
-        fileDict = {}
-        fileDict['id'] = self.id
-        fileDict['dateElicited'] = self.dateElicited
-        fileDict['datetimeEntered'] = self.datetimeEntered
-        fileDict['datetimeModified'] = self.datetimeModified
-        fileDict['name'] = self.name
-        fileDict['MIMEtype'] = self.MIMEtype
-        fileDict['size'] = self.size
-        fileDict['description'] = self.description
-        fileDict['utteranceType'] = self.utteranceType
-        fileDict['embeddedFileMarkup'] = self.embeddedFileMarkup
-        fileDict['embeddedFilePassword'] = self.embeddedFilePassword
-        fileDict['enterer'] = self.getMiniUserDict(self.enterer)
-        fileDict['elicitor'] = self.getMiniUserDict(self.elicitor)
-        fileDict['speaker'] = self.getMiniSpeakerDict(self.speaker)
-        fileDict['tags'] = self.getTagsList(self.tags)
-        fileDict['forms'] = self.getFormsList(self.forms)
-        return fileDict
+        return {
+            'id': self.id,
+            'dateElicited': self.dateElicited,
+            'datetimeEntered': self.datetimeEntered,
+            'datetimeModified': self.datetimeModified,
+            'name': self.name,
+            'MIMEtype': self.MIMEtype,
+            'size': self.size,
+            'description': self.description,
+            'utteranceType': self.utteranceType,
+            'embeddedFileMarkup': self.embeddedFileMarkup,
+            'embeddedFilePassword': self.embeddedFilePassword,
+            'enterer': self.getMiniUserDict(self.enterer),
+            'elicitor': self.getMiniUserDict(self.elicitor),
+            'speaker': self.getMiniSpeakerDict(self.speaker),
+            'tags': self.getTagsList(self.tags),
+            'forms': self.getFormsList(self.forms)
+        }

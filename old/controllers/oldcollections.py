@@ -2,6 +2,7 @@ import logging
 import datetime
 import re
 import os
+from uuid import uuid4
 import simplejson as json
 from string import letters, digits
 from random import sample
@@ -88,7 +89,9 @@ class OldcollectionsController(BaseController):
         try:
             schema = CollectionSchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
+            values = addFormIdsListToValues(values)
+            state = h.getStateObject(values)
+            result = schema.to_python(values, state)
         except h.JSONDecodeError:
             response.status_int = 400
             result = h.JSONDecodeErrorResponse
@@ -109,8 +112,9 @@ class OldcollectionsController(BaseController):
         """GET /new_collection: Return the data necessary to create a new OLD collection.
 
         Return a JSON object with the following properties: 'collectionTypes',
-        'markupLanguages', 'speakers' and 'users', the value of each of which is
-        an array that is either empty or contains the appropriate objects.
+        'markupLanguages', 'tags', 'speakers', 'users' and 'sources', the value
+        of each of which is an array that is either empty or contains the
+        appropriate objects.
 
         See the getNewEditCollectionData function to understand how the GET params can
         affect the contents of the arrays.
@@ -135,7 +139,9 @@ class OldcollectionsController(BaseController):
                 try:
                     schema = CollectionSchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    result = schema.to_python(values)
+                    values = addFormIdsListToValues(values)
+                    state = h.getStateObject(values)
+                    result = schema.to_python(values, state)
                 except h.JSONDecodeError:
                     response.status_int = 400
                     result = h.JSONDecodeErrorResponse
@@ -143,9 +149,11 @@ class OldcollectionsController(BaseController):
                     response.status_int = 400
                     result = json.dumps({'errors': e.unpack_errors()})
                 else:
+                    collectionDict = collection.getDict()
                     collection = updateCollection(collection, result)
                     # collection will be False if there are no changes (cf. updateCollection).
                     if collection:
+                        backupCollection(collectionDict, collection.datetimeModified)
                         Session.add(collection)
                         Session.commit()
                         result = json.dumps(collection, cls=h.JSONOLDEncoder)
@@ -219,18 +227,19 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /collections/id/edit: Return the data necessary to update an existing
-        OLD collection, i.e., the collection's properties and the necessary additional data,
-        i.e., users, speakers, etc.
+        """GET /collections/id/edit: Return the data necessary to update an
+        existing OLD collection, i.e., the collection's properties and the
+        necessary additional data, i.e., users, speakers, etc.
 
         This action can be thought of as a combination of the 'show' and 'new'
         actions.  The output will be a JSON object of the form
 
             {collection: {...}, data: {...}},
 
-        where output.collection is an object containing the collection's properties (cf. the
-        output of show) and output.data is an object containing the data
-        required to add a new collection (cf. the output of new).
+        where output.collection is an object containing the collection's
+        properties (cf. the output of show) and output.data is an object
+        containing the data required to add a new collection (cf. the output of
+        new).
 
         GET parameters will affect the value of output.data in the same way as
         for the new action, i.e., no params will result in all the necessary
@@ -242,18 +251,80 @@ class OldcollectionsController(BaseController):
         collection = Session.query(Collection).get(id)
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
-            if not h.userIsAuthorizedToAccessModel(
-                                    session['user'], collection, unrestrictedUsers):
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
-            else:
+            if h.userIsAuthorizedToAccessModel(
+                                session['user'], collection, unrestrictedUsers):
                 data = getNewEditCollectionData(request.GET)
                 result = {'data': data, 'collection': collection}
                 result = json.dumps(result, cls=h.JSONOLDEncoder)
+            else:
+                response.status_int = 403
+                result = h.unauthorizedJSONMsg
         else:
             response.status_int = 404
             result = json.dumps({'error': 'There is no collection with id %s' % id})
         return result
+
+    @restrict('GET')
+    @h.authenticate
+    def history(self, id):
+        """GET /collections/history/id: Return a JSON object representation of the collection and its previous versions.
+
+        The id parameter can be either an integer id or a UUID.  If no collection and
+        no collection backups match id, then a 404 is returned.  Otherwise a 200 is
+        returned (or a 403 if the restricted keyword is relevant).  See below:
+
+        collection          None    None          collection collection
+        previousVersions    []      [1, 2,...]    []         [1, 2,...]
+        response            404     200/403       200/403    200/403
+        """
+
+        response.content_type = 'application/json'
+        collection, previousVersions = getCollectionAndPreviousVersions(id)
+        if collection or previousVersions:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            user = session['user']
+            accessible = h.userIsAuthorizedToAccessModel
+            unrestrictedPreviousVersions = [cb for cb in previousVersions
+                                    if accessible(user, cb, unrestrictedUsers)]
+            collectionIsRestricted = collection and not accessible(user, collection, unrestrictedUsers)
+            previousVersionsAreRestricted = previousVersions and not unrestrictedPreviousVersions
+            if collectionIsRestricted or previousVersionsAreRestricted :
+                response.status_int = 403
+                result = h.unauthorizedJSONMsg
+            else :
+                result = {'collection': collection,
+                          'previousVersions': unrestrictedPreviousVersions}
+                result = json.dumps(result, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'No collections or collection backups match %s' % id})
+        return result
+
+
+def getCollectionAndPreviousVersions(id):
+    """The id parameter is a string representing either an integer id or a UUID.
+    Return the collection such that collection.id==id or collection.UUID==UUID
+    (if there is one) as well as all collection backups such that
+    collectionBackup.UUID==id or collectionBackup.collection_id==id.
+    """
+
+    collection = None
+    previousVersions = []
+    try:
+        id = int(id)
+        collection = Session.query(Collection).get(id)
+        if collection:
+            previousVersions = h.getCollectionBackupsByUUID(collection.UUID)
+        else:
+            previousVersions = h.getCollectionBackupsByCollectionId(id)
+    except ValueError:
+        try:
+            UUID = unicode(h.UUID(id))
+            form = h.getCollectionByUUID(UUID)
+            previousVersions = h.getCollectionBackupsByUUID(UUID)
+        except (AttributeError, ValueError):
+            pass    # id is neither an integer nor a UUID
+    return (collection, previousVersions)
 
 
 ################################################################################
@@ -273,6 +344,19 @@ def backupCollection(collectionDict, datetimeModified=None):
 ################################################################################
 # Collection Create & Update Functions
 ################################################################################
+
+def addFormIdsListToValues(values):
+    contents = getContentsFromCollectionInputValues(values)
+    values['forms'] = [int(id) for id in h.formReferencePattern.findall(contents)]
+    return values
+
+def getContentsFromCollectionInputValues(values):
+    contents = values.get('contents', u'')
+    if not isinstance(contents, (unicode, str)):
+        return u''
+    else:
+        return unicode(contents)
+
 
 def getNewEditCollectionData(GET_params):
     """Return the data necessary to create a new OLD collection or update an existing
@@ -296,14 +380,18 @@ def getNewEditCollectionData(GET_params):
     # Map param names to the OLD model objects from which they are derived.
     paramName2ModelName = {
         'speakers': 'Speaker',
-        'users': 'User'
+        'users': 'User',
+        'tags': 'Tag',
+        'sources': 'Source'
     }
 
     # map_ maps param names to functions that retrieve the appropriate data
     # from the db.
     map_ = {
         'speakers': h.getSpeakers,
-        'users': h.getUsers
+        'users': h.getUsers,
+        'tags': h.getTags,
+        'sources': h.getSources
     }
 
     # result is initialized as a dict with empty list values.
@@ -345,27 +433,42 @@ def createNewCollection(data):
     """
 
     collection = Collection()
+    collection.UUID = unicode(uuid4())
 
     # User-inputted string data
-    collection.name = h.normalize(data['name'])
+    collection.title = h.normalize(data['title'])
+    collection.type = h.normalize(data['type'])
+    collection.url = h.normalize(data['url'])
     collection.description = h.normalize(data['description'])
-    collection.utteranceType = h.normalize(data['utteranceType'])
-    collection.embeddedCollectionMarkup = h.normalize(data['embeddedCollectionMarkup'])
-    collection.embeddedCollectionPassword = h.normalize(data['embeddedCollectionPassword'])
+    collection.markupLanguage = h.normalize(data['markupLanguage'])
+    collection.contents = h.normalize(data['contents'])
+    collection.html = h.getHTMLFromCollectionContents(collection.contents,
+                                                      collection.markupLanguage)
 
     # User-inputted date: dateElicited
     collection.dateElicited = data['dateElicited']
-    collection.MIMEtype = unicode(h.guess_type(collection.name)[0])
 
     # Many-to-One
     if data['elicitor']:
         collection.elicitor = data['elicitor']
     if data['speaker']:
         collection.speaker = data['speaker']
+    if data['source']:
+        collection.source = data['source']
 
-    # Many-to-Many
+    # Many-to-Many: tags, files & forms
     collection.tags = [t for t in data['tags'] if t]
+    collection.files = [f for f in data['files'] if f]
     collection.forms = [f for f in data['forms'] if f]
+
+    # Restrict the entire collection if it is associated to restricted forms or files.
+    tags = [f.tags for f in collection.files + collection.forms]
+    tags = [tag for tagList in tags for tag in tagList]
+    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+    if restrictedTags:
+        restrictedTag = restrictedTags[0]
+        if restrictedTag not in collection.tags:
+            collection.tags.append(restrictedTag)
 
     # OLD-generated Data
     now = datetime.datetime.utcnow()
@@ -373,32 +476,6 @@ def createNewCollection(data):
     collection.datetimeModified = now
     collection.enterer = Session.query(User).get(session['user'].id)
 
-    # Write the collection to disk (making sure it's unique and thereby potentially)
-    # modifying collection.name and calculate collection.size.
-
-    def getUniqueCollectionPath(collectionPath):
-        """This function ensures a unique collection path (without race conditions) by
-        attempting to create the collection using os.open.  If the collection exists, an OS
-        error is raised (or if the collection is too long, an IO error is raised), and
-        a new collection is generated until a unique one is found.
-        """
-        collectionPathParts = os.path.splitext(collectionPath) # returns ('/path/collection', '.ext')
-        while 1:
-            try:
-                collectionDescriptor = os.open(collectionPath, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-                return os.fdopen(collectionDescriptor, 'wb'), unicode(collectionPath)
-            except (OSError, IOError):
-                pass
-            collectionPath = u'%s_%s%s' % (collectionPathParts[0][:230],
-                        ''.join(sample(digits + letters, 8)), collectionPathParts[1])
-
-    collectionData = data['collection']     # Base64 decoded in the CollectionSchema
-    collectionPath = os.path.join(config['app_conf']['permanent_store'], collection.name)
-    collectionObject, collectionPath = getUniqueCollectionPath(collectionPath)
-    collection.name = os.path.split(collectionPath)[-1]
-    collectionObject.write(collectionData)
-    collectionObject.close()
-    collection.size = os.path.getsize(collectionPath)
 
     return collection
 
@@ -422,10 +499,14 @@ def updateCollection(collection, data):
             CHANGED = True
 
     # Unicode Data
+    setAttr(collection, 'title', h.normalize(data['title']))
+    setAttr(collection, 'type', h.normalize(data['type']))
+    setAttr(collection, 'url', h.normalize(data['url']))
     setAttr(collection, 'description', h.normalize(data['description']))
-    setAttr(collection, 'utteranceType', h.normalize(data['utteranceType']))
-    setAttr(collection, 'embeddedCollectionMarkup', h.normalize(data['embeddedCollectionMarkup']))
-    setAttr(collection, 'embeddedCollectionPassword', h.normalize(data['embeddedCollectionPassword']))
+    setAttr(collection, 'markupLanguage', h.normalize(data['markupLanguage']))
+    setAttr(collection, 'contents', h.normalize(data['contents']))
+    setAttr(collection, 'html', h.getHTMLFromCollectionContents(
+        collection.contents, collection.markupLanguage))
 
     # User-entered date: dateElicited
     if collection.dateElicited != data['dateElicited']:
@@ -439,19 +520,35 @@ def updateCollection(collection, data):
     if data['speaker'] != collection.speaker:
         collection.speaker = data['speaker']
         CHANGED = True
-
-    # Many-to-Many Data: tags & forms
-    # Update only if the user has made changes.
-    tagsToAdd = sorted([t.id for t in data['tags'] if t])
-    tagsWeHave = sorted([t.id for t in collection.tags])
-    if tagsToAdd != tagsWeHave:
-        collection.tags = [t for t in data['tags'] if t]
+    if data['source'] != collection.source:
+        collection.source = data['source']
         CHANGED = True
 
-    formsToAdd = sorted([f.id for f in data['forms'] if f])
-    formsWeHave = sorted([f.id for f in collection.forms])
-    if formsToAdd != formsWeHave:
-        collection.forms = [f for f in data['forms'] if f]
+    # Many-to-Many Data: files, forms & tags
+    # Update only if the user has made changes.
+    filesToAdd = [f for f in data['files'] if f]
+    formsToAdd = [f for f in data['forms'] if f]
+    tagsToAdd = [t for t in data['tags'] if t]
+
+    if set(filesToAdd) != set(collection.files):
+        collection.files = filesToAdd
+        CHANGED = True
+
+    if set(formsToAdd) != set(collection.forms):
+        collection.forms = formsToAdd
+        CHANGED = True
+
+    # Restrict the entire collection if it is associated to restricted forms or files.
+    tags = [f.tags for f in collection.files + collection.forms]
+    tags = [tag for tagList in tags for tag in tagList]
+    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+    if restrictedTags:
+        restrictedTag = restrictedTags[0]
+        if restrictedTag not in tagsToAdd:
+            tagsToAdd.append(restrictedTag)
+
+    if set(tagsToAdd) != set(collection.tags):
+        collection.tags = tagsToAdd
         CHANGED = True
 
     if CHANGED:

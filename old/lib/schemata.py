@@ -229,8 +229,11 @@ class ValidOLDModelObject(FancyValidator):
     object is returned.  Example usage: ValidOLDModelObject(modelName='User').
     """
 
-    messages = {u'invalid_model':
-        u'There is no %(modelNameEng)s with id %(id)d.'}
+    messages = {
+        'invalid_model': u'There is no %(modelNameEng)s with id %(id)d.',
+        'restricted_model':
+            u'You are not authorized to access the %(modelNameEng)s with id %(id)d.'
+    }
 
     def _to_python(self, value, state):
         if value in [u'', None]:
@@ -243,7 +246,17 @@ class ValidOLDModelObject(FancyValidator):
                     modelNameEng=h.camelCase2lowerSpace(self.modelName)),
                     value, state)
             else:
-                return modelObject
+                if self.modelName in ('Form', 'File', 'Collection') and \
+                getattr(state, 'user', None):
+                    unrestrictedUsers = h.getUnrestrictedUsers()
+                    if h.userIsAuthorizedToAccessModel(state.user, modelObject, unrestrictedUsers):
+                        return modelObject
+                    else:
+                        raise Invalid(self.message("restricted_model", state, id=id,
+                            modelNameEng=h.camelCase2lowerSpace(self.modelName)),
+                            value, state)
+                else:
+                    return modelObject
 
 
 class FormSchema(Schema):
@@ -347,20 +360,23 @@ class CollectionSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
 
-    title = UnicodeString(max=255)
-    type = UnicodeString(max=255)
-    url = UnicodeString(max=255)
+    title = UnicodeString(max=255, not_empty=True)
+    type = OneOf(h.collectionTypes)
+    url = Regex('^[a-zA-Z0-9_/-]{0,255}$')
     description = UnicodeString()
     markupLanguage = OneOf(h.markupLanguages)
     contents = UnicodeString()
-    html = Column(UnicodeText)      # allow for possibility that html is generated client-side
+    # html = UnicodeString()      # uncomment to permit saving of client-side-generated html
     speaker = ValidOLDModelObject(modelName='Speaker')
     source = ValidOLDModelObject(modelName='Source')
     elicitor = ValidOLDModelObject(modelName='User')
     enterer = ValidOLDModelObject(modelName='User')
     dateElicited = DateConverter(month_style='mm/dd/yyyy')
+    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
     files = ForEach(ValidOLDModelObject(modelName='File'))
 
+    # A forms attribute must be created using the contents attribute before validation occurs
+    forms = ForEach(ValidOLDModelObject(modelName='Form'))
 
 ################################################################################
 # ApplicationSettings Schemata

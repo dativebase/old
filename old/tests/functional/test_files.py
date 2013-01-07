@@ -56,6 +56,7 @@ class TestFilesController(TestController):
         }
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
+    extra_environ_contrib = {'test.authentication.role': u'contributor'}
     json_headers = {'Content-Type': 'application/json'}
 
     # Clear all models in the database except Language, recreate the default
@@ -437,6 +438,170 @@ class TestFilesController(TestController):
         assert resp['errors']['name'] == u'Please enter a value'
         assert resp['errors']['file']== u'Please enter a value'
         assert fileCount == 3
+
+    #@nottest
+    def test_relational_restrictions(self):
+        """Tests that the restricted tag works correctly with respect to relational attributes of files.
+
+        That is, tests that (a) file.forms does not return restricted forms to
+        restricted users and (b) a restricted user cannot append a restricted
+        form to file.forms."""
+
+        admin = self.extra_environ_admin.copy()
+        admin.update({'test.applicationSettings': True})
+        contrib = self.extra_environ_contrib.copy()
+        contrib.update({'test.applicationSettings': True})
+
+        # Create a test audio file.
+        wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
+        wavFileSize = os.path.getsize(wavFilePath)
+        params = self.createParams.copy()
+        params.update({
+            'name': u'old_test.wav',
+            'file': encodestring(open(wavFilePath).read())
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 admin)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert resp['name'] == u'old_test.wav'
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert fileCount == 1
+
+        # First create the restricted tag.
+        restrictedTag = h.generateRestrictedTag()
+        Session.add(restrictedTag)
+        Session.commit()
+        restrictedTagId = restrictedTag.id
+
+        # Then create two forms, one restricted and one not.
+        params = self.createFormParams.copy()
+        params.update({
+            'transcription': u'restricted',
+            'glosses': [{'gloss': u'restricted', 'glossGrammaticality': u''}],
+            'tags': [restrictedTagId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 admin)
+        resp = json.loads(response.body)
+        restrictedFormId = resp['id']
+
+        params = self.createFormParams.copy()
+        params.update({
+            'transcription': u'unrestricted',
+            'glosses': [{'gloss': u'unrestricted', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 admin)
+        resp = json.loads(response.body)
+        unrestrictedFormId = resp['id']
+
+        # Now, as a (restricted) contributor, attempt to create a file and
+        # associate it to a restricted form -- expect to fail.
+        jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
+        jpgFileSize = os.path.getsize(jpgFilePath)
+        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'name': u'old_test.jpg',
+            'file': jpgFileBase64,
+            'forms': [restrictedFormId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 contrib, status=400)
+        resp = json.loads(response.body)
+        assert u'You are not authorized to access the form with id %d.' % restrictedFormId in \
+            resp['errors']['forms']
+
+        # Now, as a (restricted) contributor, attempt to create a file and
+        # associate it to an unrestricted form -- expect to succeed.
+        jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
+        jpgFileSize = os.path.getsize(jpgFilePath)
+        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'name': u'old_test.jpg',
+            'file': jpgFileBase64,
+            'forms': [unrestrictedFormId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 contrib)
+        resp = json.loads(response.body)
+        unrestrictedFileId = resp['id']
+        assert resp['name'] == u'old_test.jpg'
+        assert resp['forms'][0]['transcription'] == u'unrestricted'
+
+        # Now, as a(n unrestricted) administrator, attempt to create a file and
+        # associate it to a restricted form -- expect (a) to succeed and (b) to
+        # find that the file is now restricted.
+        jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
+        jpgFileSize = os.path.getsize(jpgFilePath)
+        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'name': u'old_test.jpg',
+            'file': jpgFileBase64,
+            'forms': [restrictedFormId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, admin)
+        resp = json.loads(response.body)
+        indirectlyRestrictedFileId = resp['id']
+        assert resp['name'][:8] == u'old_test'
+        assert resp['forms'][0]['transcription'] == u'restricted'
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        # Now show that the indirectly restricted files are inaccessible to
+        # unrestricted users.
+        response = self.app.get(url('files'), headers=self.json_headers,
+                                extra_environ=contrib)
+        resp = json.loads(response.body)
+        assert indirectlyRestrictedFileId not in [f['id'] for f in resp]
+
+        # Now, as a(n unrestricted) administrator, create a file.
+        unrestrictedFileParams = self.createParams.copy()
+        unrestrictedFileParams.update({
+            'name': u'old_test.jpg',
+            'file': jpgFileBase64
+        })
+        params = json.dumps(unrestrictedFileParams)
+        response = self.app.post(url('files'), params, self.json_headers, admin)
+        resp = json.loads(response.body)
+        unrestrictedFileId = resp['id']
+        assert resp['name'][:8] == u'old_test'
+
+        # As a restricted contributor, attempt to update the unrestricted file
+        # just created by associating it to a restricted form -- expect to fail.
+        unrestrictedFileParams.update({'forms': [restrictedFormId]})
+        params = json.dumps(unrestrictedFileParams)
+        response = self.app.put(url('file', id=unrestrictedFileId), params,
+                                self.json_headers, contrib, status=400)
+        resp = json.loads(response.body)
+        assert u'You are not authorized to access the form with id %d.' % restrictedFormId in \
+            resp['errors']['forms']
+
+        # As an unrestricted administrator, attempt to update an unrestricted file
+        # by associating it to a restricted form -- expect to succeed.
+        response = self.app.put(url('file', id=unrestrictedFileId), params,
+                                self.json_headers, admin)
+        resp = json.loads(response.body)
+        assert resp['id'] == unrestrictedFileId
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        # Now show that the newly indirectly restricted file is also
+        # inaccessible to an unrestricted user.
+        response = self.app.get(url('file', id=unrestrictedFileId),
+                headers=self.json_headers, extra_environ=contrib, status=403)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'You are not authorized to access this resource.'
+
 
     #@nottest
     def test_create_large(self):

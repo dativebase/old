@@ -9,7 +9,8 @@ from sqlalchemy import Table, Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation, backref
 from old.model.meta import Base, now
-
+import simplejson as json
+import datetime
 
 class CollectionBackup(Base):
 
@@ -37,5 +38,62 @@ class CollectionBackup(Base):
     elicitor = Column(UnicodeText)
     enterer = Column(UnicodeText)
     backuper = Column(UnicodeText)
+    tags = Column(UnicodeText)
     files = Column(UnicodeText)
     forms = Column(UnicodeText)
+
+    def vivify(self, collectionDict, backuper, datetimeModified=None):
+        """The vivify method gives life to CollectionBackup by specifying its
+        attributes using the to-be-backed-up collection (collectionDict) and the
+        backuper (current user).  The relational attributes of the
+        to-be-backed-up collection are converted into (truncated) JSON objects.
+        """
+
+        self.collection_id = collectionDict['id']
+        self.UUID = collectionDict['UUID']
+        self.title = collectionDict['title']
+        self.type = collectionDict['type']
+        self.url = collectionDict['url']
+        self.description = collectionDict['description']
+        self.markupLanguage = collectionDict['markupLanguage']
+        self.contents = collectionDict['contents']
+        self.html = collectionDict['html']
+        self.dateElicited = collectionDict['dateElicited']
+        self.datetimeEntered = collectionDict['datetimeEntered']
+        if datetimeModified:
+            self.datetimeModified = datetimeModified
+        else:
+            self.datetimeModified = datetime.datetime.utcnow()
+        self.source = unicode(json.dumps(collectionDict['source']))
+        self.speaker = unicode(json.dumps(collectionDict['speaker']))
+        self.elicitor = unicode(json.dumps(collectionDict['elicitor']))
+        self.enterer = unicode(json.dumps(collectionDict['enterer']))
+        self.backuper = unicode(json.dumps(self.getMiniUserDict(backuper)))
+        self.tags = unicode(json.dumps(collectionDict['tags']))
+        self.files = unicode(json.dumps(collectionDict['files']))
+        self.forms = unicode(json.dumps([f['id'] for f in collectionDict['forms']]))
+
+    def getDict(self):
+        return {
+            'id': self.id,
+            'UUID': self.UUID,
+            'collection_id': self.collection_id,
+            'title': self.title,
+            'type': self.type,
+            'url': self.url,
+            'description': self.description,
+            'markupLanguage': self.markupLanguage,
+            'contents': self.contents,
+            'html': self.html,
+            'dateElicited': self.dateElicited,
+            'datetimeEntered': self.datetimeEntered,
+            'datetimeModified': self.datetimeModified,
+            'speaker': self.jsonLoads(self.speaker),
+            'source': self.jsonLoads(self.source),
+            'elicitor': self.jsonLoads(self.elicitor),
+            'enterer': self.jsonLoads(self.enterer),
+            'backuper': self.jsonLoads(self.backuper),
+            'tags': self.jsonLoads(self.tags),
+            'files': self.jsonLoads(self.files),
+            'forms': self.jsonLoads(self.forms)
+        }

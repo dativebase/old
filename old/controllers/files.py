@@ -89,7 +89,10 @@ class FilesController(BaseController):
         try:
             schema = FileCreateSchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
+            state = h.State()
+            state.full_dict = values
+            state.user = session['user']
+            result = schema.to_python(values, state)
         except h.JSONDecodeError:
             response.status_int = 400
             result = h.JSONDecodeErrorResponse
@@ -110,7 +113,7 @@ class FilesController(BaseController):
         """GET /new_file: Return the data necessary to create a new OLD file.
 
         Return a JSON object with the following properties: 'tags',
-        'utteranceTypes', 'speakers'and 'users', the value of each of which is
+        'utteranceTypes', 'speakers' and 'users', the value of each of which is
         an array that is either empty or contains the appropriate objects.
 
         See the getNewEditFileData function to understand how the GET params can
@@ -136,7 +139,10 @@ class FilesController(BaseController):
                 try:
                     schema = FileUpdateSchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    result = schema.to_python(values)
+                    state = h.State()
+                    state.full_dict = values
+                    state.user = user
+                    result = schema.to_python(values, state)
                 except h.JSONDecodeError:
                     response.status_int = 400
                     result = h.JSONDecodeErrorResponse
@@ -394,6 +400,15 @@ def createNewFile(data):
     fileObject.close()
     file.size = os.path.getsize(filePath)
 
+    # Restrict the entire file if it is associated to restricted forms.
+    tags = [f.tags for f in file.forms]
+    tags = [tag for tagList in tags for tag in tagList]
+    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+    if restrictedTags:
+        restrictedTag = restrictedTags[0]
+        if restrictedTag not in file.tags:
+            file.tags.append(restrictedTag)
+
     return file
 
 # Global CHANGED variable keeps track of whether an update request should
@@ -436,16 +451,25 @@ def updateFile(file, data):
 
     # Many-to-Many Data: tags & forms
     # Update only if the user has made changes.
-    tagsToAdd = sorted([t.id for t in data['tags'] if t])
-    tagsWeHave = sorted([t.id for t in file.tags])
-    if tagsToAdd != tagsWeHave:
-        file.tags = [t for t in data['tags'] if t]
+    formsToAdd = [f for f in data['forms'] if f]
+    tagsToAdd = [t for t in data['tags'] if t]
+
+    if set(formsToAdd) != set(file.forms):
+        file.forms = formsToAdd
         CHANGED = True
 
-    formsToAdd = sorted([f.id for f in data['forms'] if f])
-    formsWeHave = sorted([f.id for f in file.forms])
-    if formsToAdd != formsWeHave:
-        file.forms = [f for f in data['forms'] if f]
+        # Cause the entire file to be tagged as restricted if any one of its
+        # forms are so tagged.
+        tags = [f.tags for f in file.forms]
+        tags = [tag for tagList in tags for tag in tagList]
+        restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+        if restrictedTags:
+            restrictedTag = restrictedTags[0]
+            if restrictedTag not in tagsToAdd:
+                tagsToAdd.append(restrictedTag)
+
+    if set(tagsToAdd) != set(file.tags):
+        file.tags = tagsToAdd
         CHANGED = True
 
     if CHANGED:

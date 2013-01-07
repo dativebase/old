@@ -30,7 +30,7 @@ def make_map(config):
     # RESTful resoure mappings
     map.resource('orthography', 'orthographies')
     map.resource('applicationsetting', 'applicationsettings')
-    map.resource('collection', 'oldcollections')
+    map.resource('collection', 'collections', controller='oldcollections')
     map.resource('collectionbackup', 'collectionbackups')
     map.resource('collectionfile', 'collectionfiles')
     map.resource('collectionform', 'collectionforms')
