@@ -369,7 +369,8 @@ class SQLAQueryBuilder(object):
             'embeddedFileMarkup': {},
             'embeddedFilePassword': {},
             'tags': {'relations': equalityRelations},
-            'forms': {'relations': equalityRelations}
+            'forms': {'relations': equalityRelations},
+            'collections': {'relations': equalityRelations}
         },
         'Gloss': {
             'id': {},
@@ -385,9 +386,14 @@ class SQLAQueryBuilder(object):
         },
         'Collection': {
             'id': {},
+            'UUID': {},
             'title': {},
             'type': {},
             'url': {},
+            'description': {},
+            'markupLanguage': {},
+            'contents': {},
+            'html': {},
             'speaker': {'alias': 'speaker_id'},
             'speaker_id': {},
             'source': {'alias': 'source_id'},
@@ -399,8 +405,9 @@ class SQLAQueryBuilder(object):
             'dateElicited': {'valueConverter': '_getDateValue'},
             'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
             'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'description': {},
-            'contents': {}
+            'tags': {'relations': equalityRelations},
+            'forms': {'relations': equalityRelations},
+            'files': {'relations': equalityRelations}
         }
     }
 
@@ -500,11 +507,18 @@ class SQLAQueryBuilder(object):
         appropriate.  This allows regexp and like searches to be case-sensitive.
         An example SQLA query would be Session.query(model.Form).filter(
         collate(model.Form.transcription, 'utf8_bin').like(u'a%'))
+        
+        An additional condition on collation was that the relationName be in
+        ('like', 'regexp').  This condition was removed because MySQL does case-
+        insensitive equality searches too!
         """
-        if self.RDBMSName == 'mysql' and relationName in ('like', 'regexp') and \
-        isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes) and \
-        attribute is not None:
-            attribute = collate(attribute, 'utf8_bin')
+        if self.RDBMSName == 'mysql' and attribute is not None:
+            try:
+                attributeType = attribute.property.columns[0].type
+            except AttributeError:
+                attributeType = None
+            if isinstance(attributeType, self.SQLAlchemyStringTypes):
+                attribute = collate(attribute, 'utf8_bin')
         return attribute
 
     ############################################################################

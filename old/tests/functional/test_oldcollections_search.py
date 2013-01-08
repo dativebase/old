@@ -1,5 +1,5 @@
-"""This module tests the file search functionality, i.e., requests to SEARCH
-/files and POST /files/search.
+"""This module tests the collection search functionality, i.e., requests to SEARCH
+/collections and POST /collections/search.
 
 NOTE: getting the non-standard http SEARCH method to work in the tests required
 using the request method of TestController().app and specifying values for the
@@ -59,22 +59,57 @@ class TestFormsSearchController(TestController):
     testFilesPath = os.path.join(here, 'test_files')
 
     createParams = {
-        'name': u'',
+        'title': u'',
+        'type': u'',
+        'url': u'',
         'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
+        'markupLanguage': u'',
+        'contents': u'',
         'speaker': u'',
-        'utteranceType': u'',
-        'embeddedFileMarkup': u'',
-        'embeddedFilePassword': u'',
+        'source': u'',
+        'elicitor': u'',
+        'enterer': u'',
+        'dateElicited': u'',
         'tags': [],
-        'file': ''      # file data Base64 encoded
+        'files': []
     }
+
+    mdContents = u'\n'.join([
+        'Chapter',
+        '=======',
+        '',
+        'Section',
+        '-------',
+        '',
+        '* Item 1',
+        '* Item 2',
+        '',
+        'Section containing forms',
+        '------------------------',
+        ''
+    ])
+
+    rstContents = u'\n'.join([
+        'Chapter',
+        '=======',
+        '',
+        'Section',
+        '-------',
+        '',
+        '- Item 1',
+        '- Item 2',
+        '',
+        'Section containing forms',
+        '------------------------',
+        ''
+    ])
 
     def _createTestModels(self, n=20):
         self._addTestModelsToSession('Tag', n, ['name'])
         self._addTestModelsToSession('Speaker', n, ['firstName', 'lastName', 'dialect'])
+        self._addTestModelsToSession('Source', n, ['authorFirstName', 'authorLastName', 'title', 'year'])
         self._addTestModelsToSession('Form', n, ['transcription', 'datetimeEntered', 'datetimeModified'])
+        self._addTestModelsToSession('File', n, ['name', 'datetimeEntered', 'datetimeModified'])
         Session.commit()
 
     def _addTestModelsToSession(self, modelName, n, attrs):
@@ -83,60 +118,70 @@ class TestFormsSearchController(TestController):
             for attr in attrs:
                 if attr in ('datetimeModified, datetimeEntered'):
                     setattr(m, attr, datetime.now())
+                elif attr == 'year':
+                    setattr(m, attr, 2000)
                 else:
                     setattr(m, attr, u'%s %s' % (attr, i))
             Session.add(m)
 
     def _getTestModels(self):
-        defaultModels = {
+        return {
             'tags': [t.__dict__ for t in h.getTags()],
             'forms': [f.__dict__ for f in h.getForms()],
+            'files': [f.__dict__ for f in h.getFiles()],
+            'sources': [s.__dict__ for s in h.getSources()],
             'speakers': [s.__dict__ for s in h.getSpeakers()],
             'users': [u.__dict__ for u in h.getUsers()]
         }
-        return defaultModels
 
     def _createTestData(self, n=20):
         self._createTestModels(n)
-        self._createTestFiles(n)
+        self._createTestCollections(n)
 
-    def _createTestFiles(self, n=20):
-        """Create n files with various properties.  A testing ground for searches!
+    def _createTestCollections(self, n=20):
+        """Create n collections  with various properties.  A testing ground for searches!
         """
         testModels = self._getTestModels()
+        tags = dict([(t['name'], t) for t in testModels['tags']])
         viewer = [u for u in testModels['users'] if u['role'] == u'viewer'][0]
         contributor = [u for u in testModels['users'] if u['role'] == u'contributor'][0]
         administrator = [u for u in testModels['users'] if u['role'] == u'administrator'][0]
         for i in range(1, n + 1):
-            jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-            jpgFileSize = os.path.getsize(jpgFilePath)
 
             params = self.createParams.copy()
-            params.update({
-                'file': encodestring(open(jpgFilePath).read())
-            })
+            params.update({'speaker': testModels['speakers'][i - 1]['id']})
 
             if i > 10:
                 params.update({
-                    'name': u'Name_%d.jpg' % i,
+                    'title': u'Collection %d' % i,
                     'dateElicited': u'%02d/%02d/%d' % (jan1.month, jan1.day, jan1.year)
                 })
             else:
                 params.update({
-                    'name': u'name_%d.jpg' % i,
-                    'tags': [testModels['tags'][i - 1]['id']]
-                })
-            if i in [13, 15]:
-                params.update({
-                    'dateElicited': u'%02d/%02d/%d' % (jan3.month, jan3.day, jan3.year)
-                })
-            if i > 5 and i < 16:
-                params.update({
-                    'forms': [testModels['forms'][i - 1]['id']]
+                    'title': u'collection %d' % i,
+                    'tags': [tags['name %d' % i]['id']]
                 })
 
+            if i in [13, 15]:
+                params.update({
+                    'dateElicited': u'%02d/%02d/%d' % (jan3.month, jan3.day, jan3.year),
+                    'elicitor': contributor['id']
+                })
+
+            if i > 5 and i < 16:
+                params.update({
+                    'files': [testModels['files'][i - 1]['id']],
+                    'markupLanguage': u'markdown',
+                    'contents': u'%s\nform[%d]\n' % (self.mdContents, testModels['forms'][i - 1]['id'])
+                })
+            else:
+                params.update({
+                    'files': [testModels['files'][0]['id']],
+                    'markupLanguage': u'reStructuredText',
+                    'contents': u'%s\nform[%d]\n' % (self.rstContents, testModels['forms'][i - 1]['id'])
+                })
             params = json.dumps(params)
-            response = self.app.post(url('files'), params, self.json_headers,
+            response = self.app.post(url('collections'), params, self.json_headers,
                                      self.extra_environ_admin)
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
@@ -151,206 +196,208 @@ class TestFormsSearchController(TestController):
     # tests to succeed
     #@nottest
     def test_a_initialize(self):
-        """Tests POST /files/search: initialize database."""
+        """Tests POST /collections/search: initialize database."""
+        h.clearAllModels(['Language', 'User'])
+
         # Add a bunch of data to the db.
         self._createTestData(self.n)
         addSEARCHToWebTestValidMethods()
 
     #@nottest
     def test_search_b_equals(self):
-        """Tests POST /files/search: equals."""
+        """Tests POST /collections/search: equals."""
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', '=', 'name_10.jpg']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', '=', 'Collection 13']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
-        assert resp[0]['name'] == u'name_10.jpg'
+        assert resp[0]['title'] == u'Collection 13'
 
     #@nottest
     def test_search_c_not_equals(self):
-        """Tests SEARCH /files: not equals."""
+        """Tests SEARCH /collections: not equals."""
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'name', '=', u'name_10.jpg']]}})
-        response = self.app.request(url('files'), method='SEARCH',
+            {'query': {'filter': ['not', ['Collection', 'title', '=', u'collection 10']]}})
+        response = self.app.request(url('collections'), method='SEARCH',
             body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == self.n - 1
-        assert u'name_10.jpg' not in [f['name'] for f in resp]
+        assert u'Collection 10' not in [c['title'] for c in resp]
 
     #@nottest
     def test_search_d_like(self):
-        """Tests POST /files/search: like."""
+        """Tests POST /collections/search: like."""
 
-        files = [f.getDict() for f in h.getFiles()]
+        collections = [c.getDict() for c in h.getCollections()]
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'like', u'%1%']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'like', u'%1%']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'1' in f['name']]
+        resultSet = [c for c in collections if u'1' in c['title']]
         assert len(resp) == len(resultSet)
 
         # Case-sensitive like.  This shows that _collateAttribute is working
         # as expected in SQLAQueryBuilder.
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'like', u'%N%']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'like', u'%C%']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'N' in f['name']]
+        resultSet = [c for c in collections if u'C' in c['title']]
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps(
             {'query': {'filter': ['or', [
-                ['File', 'name', 'like', u'N%'],
-                ['File', 'name', 'like', u'n%']]]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                ['Collection', 'title', 'like', u'C%'],
+                ['Collection', 'title', 'like', u'c%']]]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'N' in f['name'] or u'n' in f['name']]
+        resultSet = [c for c in collections if u'C' in c['title'] or u'c' in c['title']]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_e_not_like(self):
-        """Tests SEARCH /files: not like."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests SEARCH /collections: not like."""
+        collections = [c.getDict() for c in h.getCollections()]
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'name', 'like', u'%1%']]}})
-        response = self.app.request(url('files'), method='SEARCH',
+            {'query': {'filter': ['not', ['Collection', 'title', 'like', u'%1%']]}})
+        response = self.app.request(url('collections'), method='SEARCH',
             body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'1' not in f['name']]
+        resultSet = [c for c in collections if u'1' not in c['title']]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_f_regexp(self):
-        """Tests POST /files/search: regular expression."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: regular expression."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'[345]2']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'[345]2']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if re.search('[345]2', f['name'])]
-        assert sorted([f['name'] for f in resp]) == sorted([f['name'] for f in resultSet])
+        resultSet = [c for c in collections if re.search('[345]2', c['title'])]
+        assert sorted([c['title'] for c in resp]) == sorted([c['title'] for c in resultSet])
         assert len(resp) == len(resultSet)
 
         # Case-sensitive regexp.  This shows that _collateAttribute is working
         # as expected in SQLAQueryBuilder.
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'^N']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'^C']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['name'][0] == u'N']
+        resultSet = [c for c in collections if c['title'][0] == u'C']
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'^[Nn]']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'^[Cc]']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['name'][0] in [u'N', 'n']]
+        resultSet = [c for c in collections if c['title'][0] in [u'C', u'c']]
         assert len(resp) == len(resultSet)
 
         # Beginning and end of string anchors
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'^[Nn]ame_1.jpg$']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'^[Cc]ollection 1$']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['name'] in [u'Name_1.jpg', u'name_1.jpg']]
+        resultSet = [c for c in collections if c['title'] in [u'Collection 1', u'collection 1']]
         assert len(resp) == len(resultSet)
 
         # Quantifiers
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'1{1,}']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'1{1,}']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if re.search('1{1,}', f['name'])]
+        resultSet = [c for c in collections if re.search('1{1,}', c['title'])]
         assert len(resp) == len(resultSet)
 
         # Quantifiers
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'[123]{2,}']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'[123]{2,}']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if re.search('[123]{2,}', f['name'])]
+        resultSet = [c for c in collections if re.search('[123]{2,}', c['title'])]
         assert len(resp) == len(resultSet)
 
         # Bad regex
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'regex', u'[123]{3,2}']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'regex', u'[123]{3,2}']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
     #@nottest
     def test_search_g_not_regexp(self):
-        """Tests SEARCH /files: not regular expression."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests SEARCH /collections: not regular expression."""
+        collections = [c.getDict() for c in h.getCollections()]
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'name', 'regexp', u'[345]2']]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['not', ['Collection', 'title', 'regexp', u'[345]2']]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if not re.search('[345]2', f['name'])]
+        resultSet = [c for c in collections if not re.search('[345]2', c['title'])]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_h_empty(self):
-        """Tests POST /files/search: is NULL."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: is NULL."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'description', '=', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'description', '=', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['description'] is None]
+        resultSet = [c for c in collections if c['description'] is None]
         assert len(resp) == len(resultSet)
 
         # Same as above but with a double negative
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'description', '!=', None]]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['not', ['Collection', 'description', '!=', None]]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_i_not_empty(self):
-        """Tests SEARCH /files: is not NULL."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests SEARCH /collections: is not NULL."""
+        collections = [c.getDict() for c in h.getCollections()]
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'description', '=', None]]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['not', ['Collection', 'description', '=', None]]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['description'] is not None]
+        resultSet = [c for c in collections if c['description'] is not None]
         assert len(resp) == len(resultSet)
 
         # Same as above, but with !=, i.e., __ne__
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'description', '!=', None]}})
-        response = self.app.request(url('files'), body=jsonQuery, method='SEARCH',
+            {'query': {'filter': ['Collection', 'description', '!=', None]}})
+        response = self.app.request(url('collections'), body=jsonQuery, method='SEARCH',
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_j_invalid_json(self):
-        """Tests POST /files/search: invalid JSON params."""
+        """Tests POST /collections/search: invalid JSON params."""
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'description', '=', None]]}})
+            {'query': {'filter': ['not', ['Collection', 'description', '=', None]]}})
         jsonQuery = jsonQuery[:-1]  # Cut off the end to make it bad!
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == \
@@ -358,15 +405,15 @@ class TestFormsSearchController(TestController):
 
     #@nottest
     def test_search_k_malformed_query(self):
-        """Tests SEARCH /files: malformed query."""
+        """Tests SEARCH /collections: malformed query."""
 
-        files = [f.getDict() for f in h.getFiles()]
+        collections = [c.getDict() for c in h.getCollections()]
 
         # TypeError - bad num args: 'NOT' will be treated as the first arg to
-        # _getSimpleFilterExpression and ['File', 'name', '=', 10] will be passed
+        # _getSimpleFilterExpression and ['Collection', 'title', '=', 10] will be passed
         # as the second -- two more are required.
-        jsonQuery = json.dumps({'query': {'filter': ['NOT', ['File', 'id', '=', 10]]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['NOT', ['Collection', 'id', '=', 10]]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
@@ -376,33 +423,33 @@ class TestFormsSearchController(TestController):
         jsonQuery = json.dumps(
             {'query': {'filter':
                 ['not',
-                    ['File', 'name', '=', 'name_10.jpg'], 
-                    ['File', 'name', '=', 'name_10.jpg'],
-                    ['File', 'name', '=', 'name_10.jpg']]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+                    ['Collection', 'title', '=', 'Collection 10'], 
+                    ['Collection', 'title', '=', 'Collection 10'],
+                    ['Collection', 'title', '=', 'Collection 10']]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['name'] != u'name_10.jpg']
+        resultSet = [c for c in collections if c['title'] != u'Collection 10']
         assert len(resp) == len(resultSet)
-        assert 'name 10' not in [f['name'] for f in resp]
+        assert 'Collection 10' not in [c['title'] for c in resp]
 
         # IndexError will be raised when python[1] is called.
         jsonQuery = json.dumps({'query': {'filter': ['not']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
         # IndexError will be raised when python[0] is called.
         jsonQuery = json.dumps({'query': {'filter': []}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
         # IndexError will be raised when python[1] is called.
         jsonQuery = json.dumps({'query': {'filter': ['and']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
@@ -410,8 +457,8 @@ class TestFormsSearchController(TestController):
 
         # TypeError bad num args will be triggered when _getSimpleFilterExpression is
         # called on a string whose len is not 4, i.e., 'id' or '='.
-        jsonQuery = json.dumps({'query': {'filter': ['and', ['File', 'id', '=', '1099']]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['and', ['Collection', 'id', '=', '1099']]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert 'TypeError' in resp['errors']
@@ -419,7 +466,7 @@ class TestFormsSearchController(TestController):
 
         # TypeError when asking whether [] is in a dict (lists are unhashable)
         jsonQuery = json.dumps({'query': {'filter': [[], 'a', 'a', 'a']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['TypeError'] == u"unhashable type: 'list'"
@@ -427,23 +474,23 @@ class TestFormsSearchController(TestController):
 
         # With no 'query' attribute, the SQLAQueryBuilder will be passed None and
         # will immediately raise an AttributeError.
-        jsonQuery = json.dumps({'filter': ['File', 'id', '=', 2]})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'filter': ['Collection', 'id', '=', 2]})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
         # With no 'filter' attribute, the SQLAQueryBuilder will be passed a list
         # will immediately raise an AttributeError when it tries to call [...].get('filter').
-        jsonQuery = json.dumps({'query': ['File', 'id', '=', 2]})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': ['Collection', 'id', '=', 2]})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
     #@nottest
     def test_search_l_lexical_semantic_error(self):
-        """Tests POST /files/search: lexical & semantic errors.
+        """Tests POST /collections/search: lexical & semantic errors.
 
         These are when SQLAQueryBuilder.py raises a OLDSearchParseError because a
         relation is not permitted, e.g., 'contains', or not permitted for a
@@ -452,221 +499,221 @@ class TestFormsSearchController(TestController):
 
         # searchParser.py does not allow the contains relation (OLDSearchParseError)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'name', 'contains', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'title', 'contains', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert 'File.name.contains' in resp['errors']
+        assert 'Collection.title.contains' in resp['errors']
 
-        # model.File.tags.__eq__('abcdefg') will raise a custom OLDSearchParseError
+        # model.Collection.tags.__eq__('abcdefg') will raise a custom OLDSearchParseError
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'tags', '=', u'abcdefg']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'tags', '=', u'abcdefg']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-        # model.File.tags.regexp('xyz') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'tags', 'regex', u'xyz']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        # model.Collection.tags.regexp('xyz') will raise a custom OLDSearchParseError
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'tags', 'regex', u'xyz']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
-        assert resp['errors']['File.tags.regex'] == u'The relation regex is not permitted for File.tags'
+        assert resp['errors']['Collection.tags.regex'] == u'The relation regex is not permitted for Collection.tags'
 
-        # model.File.tags.like('name') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'tags', 'like', u'abc']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        # model.Collection.tags.like('title') will raise a custom OLDSearchParseError
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'tags', 'like', u'abc']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.tags.like'] == \
-            u'The relation like is not permitted for File.tags'
+        assert resp['errors']['Collection.tags.like'] == \
+            u'The relation like is not permitted for Collection.tags'
 
-        # model.File.tags.__eq__('tag') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'tags', '__eq__', u'tag']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        # model.Collection.tags.__eq__('tag') will raise a custom OLDSearchParseError
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'tags', '__eq__', u'tag']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert u'InvalidRequestError' in resp['errors']
 
     #@nottest
     def test_search_m_conjunction(self):
-        """Tests SEARCH /files: conjunction."""
+        """Tests SEARCH /collections: conjunction."""
         users = h.getUsers()
         contributor = [u for u in users if u.role == u'contributor'][0]
         models = self._getTestModels()
-        files = [f.getDict() for f in h.getFiles()]
+        collections = [c.getDict() for c in h.getCollections()]
 
         # 1 conjunct -- pointless, but it works...
         query = {'query': {'filter': [
             'and', [
-                ['File', 'name', 'like', u'%2%']
+                ['Collection', 'title', 'like', u'%2%']
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'2' in f['name']]
+        resultSet = [c for c in collections if u'2' in c['title']]
         assert len(resp) == len(resultSet)
 
         # 2 conjuncts
         query = {'query': {'filter': [
             'and', [
-                ['File', 'name', 'like', u'%2%'],
-                ['File', 'name', 'like', u'%1%']
+                ['Collection', 'title', 'like', u'%2%'],
+                ['Collection', 'title', 'like', u'%1%']
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'2' in f['name'] and u'1' in f['name']]
+        resultSet = [c for c in collections if u'2' in c['title'] and u'1' in c['title']]
         assert len(resp) == len(resultSet)
-        assert sorted([f['name'] for f in resp]) == sorted([f['name'] for f in resultSet])
+        assert sorted([c['title'] for c in resp]) == sorted([c['title'] for c in resultSet])
 
         # More than 2 conjuncts
         query = {'query': {'filter': [
             'and', [
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'elicitor', '=', contributor.id],
-                ['File', 'speaker', '=', models['speakers'][3]['id']]
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'elicitor', '=', None],
+                ['Collection', 'speaker', '!=', None]
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'1' in f['name'] and
-                     (f['elicitor'] and f['elicitor']['id'] == contributor.id) and
-                     (f['speaker'] and f['speaker']['id'] == models['speakers'][3]['id'])]
+        resultSet = [c for c in collections if u'1' in c['title'] and
+                     c['elicitor'] is None and c['speaker'] is not None]
+        assert resp
         assert len(resp) == len(resultSet)
-        assert sorted([f['name'] for f in resp]) == sorted([f['name'] for f in resultSet])
+        assert sorted([c['title'] for c in resp]) == sorted([c['title'] for c in resultSet])
 
         # Multiple redundant conjuncts -- proof of possibility
         query = {'query': {'filter': [
             'and', [
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'name', 'like', u'%1%'],
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'title', 'like', u'%1%'],
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'1' in f['name']]
+        resultSet = [c for c in collections if u'1' in c['title']]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_n_disjunction(self):
-        """Tests POST /files/search: disjunction."""
+        """Tests POST /collections/search: disjunction."""
         users = h.getUsers()
         contributor = [u for u in users if u.role == u'contributor'][0]
-        files = [f.getDict() for f in h.getFiles()]
+        collections = [c.getDict() for c in h.getCollections()]
 
         # 1 disjunct -- pointless, but it works...
         query = {'query': {'filter': [
             'or', [
-                ['File', 'name', 'like', u'%2%']   # 19 total
+                ['Collection', 'title', 'like', u'%2%']   # 19 total
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'2' in f['name']]
+        resultSet = [c for c in collections if u'2' in c['title']]
         assert len(resp) == len(resultSet)
 
         # 2 disjuncts
         query = {'query': {'filter': [
             'or', [
-                ['File', 'name', 'like', u'%2%'],
-                ['File', 'name', 'like', u'%1%']
+                ['Collection', 'title', 'like', u'%2%'],
+                ['Collection', 'title', 'like', u'%1%']
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'2' in f['name'] or u'1' in f['name']]
+        resultSet = [c for c in collections if u'2' in c['title'] or u'1' in c['title']]
         assert len(resp) == len(resultSet)
 
         # 3 disjuncts
         query = {'query': {'filter': [
             'or', [
-                ['File', 'name', 'like', u'%2%'],
-                ['File', 'name', 'like', u'%1%'],
-                ['File', 'elicitor', '=', contributor.id]
+                ['Collection', 'title', 'like', u'%2%'],
+                ['Collection', 'title', 'like', u'%1%'],
+                ['Collection', 'elicitor', '=', contributor.id]
             ]
         ]}}
         jsonQuery = json.dumps(query)
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if u'2' in f['name'] or u'1' in f['name']
-                     or (f['elicitor'] and f['elicitor']['id'] == contributor.id)]
+        resultSet = [c for c in collections if u'2' in c['title'] or u'1' in c['title']
+                     or (c['elicitor'] and c['elicitor']['id'] == contributor.id)]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_o_int(self):
-        """Tests SEARCH /files: integer searches."""
+        """Tests SEARCH /collections: integer searches."""
 
-        files = [f.getDict() for f in h.getFiles()]
-        fileIds = [f['id'] for f in files]
+        collections = [c.getDict() for c in h.getCollections()]
+        collectionIds = [c['id'] for c in collections]
 
         # = int
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'id', '=', fileIds[1]]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'id', '=', collectionIds[1]]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
-        assert resp[0]['id'] == fileIds[1]
+        assert resp[0]['id'] == collectionIds[1]
 
         # < int (str)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'id', '<', str(fileIds[16])]}}) # Thanks to SQLAlchemy, a string will work here too
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'id', '<', str(collectionIds[16])]}}) # Thanks to SQLAlchemy, a string will work here too
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['id'] < fileIds[16]]
+        resultSet = [c for c in collections if c['id'] < collectionIds[16]]
         assert len(resp) == len(resultSet)
 
         # >= int
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'id', '>=', fileIds[9]]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'id', '>=', collectionIds[9]]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['id'] >= fileIds[9]]
+        resultSet = [c for c in collections if c['id'] >= collectionIds[9]]
         assert len(resp) == len(resultSet)
 
         # in array
         jsonQuery = json.dumps(
             {'query': {'filter':
-                ['File', 'id', 'in', [fileIds[1], fileIds[3], fileIds[8], fileIds[19]]]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+                ['Collection', 'id', 'in', [collectionIds[1], collectionIds[3], collectionIds[8], collectionIds[19]]]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 4
-        assert sorted([f['id'] for f in resp]) == [fileIds[1], fileIds[3], fileIds[8], fileIds[19]]
+        assert sorted([c['id'] for c in resp]) == [collectionIds[1], collectionIds[3], collectionIds[8], collectionIds[19]]
 
         # in None -- Error
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'id', 'in', None]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'id', 'in', None]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.id.in_'] == u"Invalid filter expression: File.id.in_(None)"
+        assert resp['errors']['Collection.id.in_'] == u"Invalid filter expression: Collection.id.in_(None)"
 
         # in int -- Error
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'id', 'in', 2]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'id', 'in', 2]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.id.in_'] == u"Invalid filter expression: File.id.in_(2)"
+        assert resp['errors']['Collection.id.in_'] == u"Invalid filter expression: Collection.id.in_(2)"
 
         # regex int - The OLD's Python-based regexp implementation for SQLite will
         # automatically convert a non-string field value to a string before doing
@@ -674,158 +721,158 @@ class TestFormsSearchController(TestController):
         # behaviour accurately.
         strPatt = u'[12][12]'
         patt = re.compile(strPatt)
-        expectedIdMatches = [f['id'] for f in files if patt.search(str(f['id']))]
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'id', 'regex', strPatt]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        expectedIdMatches = [c['id'] for c in collections if patt.search(str(c['id']))]
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'id', 'regex', strPatt]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len(expectedIdMatches)
-        assert sorted([f['id'] for f in resp]) == sorted(expectedIdMatches)
+        assert sorted([c['id'] for c in resp]) == sorted(expectedIdMatches)
 
         # like int - RDBMS treats ints as strings for LIKE search
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'id', 'like', u'%2%']}})
-        expectedMatches = [i for i in fileIds if u'2' in str(i)]
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'id', 'like', u'%2%']}})
+        expectedMatches = [i for i in collectionIds if u'2' in str(i)]
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len(expectedMatches)
 
     #@nottest
     def test_search_p_date(self):
-        """Tests POST /files/search: date searches."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: date searches."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         # = date
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '=', jan1.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '=', jan1.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if isofy(f['dateElicited']) == jan1.isoformat()]
+        resultSet = [c for c in collections if isofy(c['dateElicited']) == jan1.isoformat()]
         assert len(resp) == len(resultSet)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '=', jan3.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '=', jan3.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if isofy(f['dateElicited']) == jan3.isoformat()]
+        resultSet = [c for c in collections if isofy(c['dateElicited']) == jan3.isoformat()]
         assert len(resp) == len(resultSet)
 
         # != date -- *NOTE:* the NULL dateElicited values will not be counted.
         # The implicit query is 'is not null and != 2012-01-01'
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '!=', jan1.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '!=', jan1.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if isofy(f['dateElicited']) is not None and
-                     isofy(f['dateElicited']) != jan1.isoformat()]
+        resultSet = [c for c in collections if isofy(c['dateElicited']) is not None and
+                     isofy(c['dateElicited']) != jan1.isoformat()]
         assert len(resp) == len(resultSet)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '!=', jan3.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '!=', jan3.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if isofy(f['dateElicited']) is not None and
-                     isofy(f['dateElicited']) != jan3.isoformat()]
+        resultSet = [c for c in collections if isofy(c['dateElicited']) is not None and
+                     isofy(c['dateElicited']) != jan3.isoformat()]
         assert len(resp) == len(resultSet)
 
         # To get what one really wants (perhaps), test for NULL too:
         query = {'query': {'filter': [
-            'or', [['File', 'dateElicited', '!=', jan1.isoformat()],
-                ['File', 'dateElicited', '=', None]]]}}
+            'or', [['Collection', 'dateElicited', '!=', jan1.isoformat()],
+                ['Collection', 'dateElicited', '=', None]]]}}
         jsonQuery = json.dumps(query)
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if isofy(f['dateElicited']) != jan1.isoformat()]
+        resultSet = [c for c in collections if isofy(c['dateElicited']) != jan1.isoformat()]
         assert len(resp) == len(resultSet)
 
         # < date
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '<', jan1.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '<', jan1.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and f['dateElicited'] < jan1]
+        resultSet = [c for c in collections if c['dateElicited'] is not None and c['dateElicited'] < jan1]
         assert len(resp) == len(resultSet)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '<', jan3.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '<', jan3.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and f['dateElicited'] < jan3]
+        resultSet = [c for c in collections if c['dateElicited'] is not None and c['dateElicited'] < jan3]
         assert len(resp) == len(resultSet)
 
         # <= date
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '<=', jan3.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '<=', jan3.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and f['dateElicited'] <= jan3]
+        resultSet = [c for c in collections if c['dateElicited'] is not None and c['dateElicited'] <= jan3]
         assert len(resp) == len(resultSet)
 
         # > date
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '>', jan1.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '>', jan1.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and f['dateElicited'] > jan2]
+        resultSet = [c for c in collections if c['dateElicited'] is not None and c['dateElicited'] > jan2]
         assert len(resp) == len(resultSet)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '>', '0001-01-01']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '>', '0001-01-01']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and
-                     isofy(f['dateElicited']) > '0001-01-01']
+        resultSet = [c for c in collections if c['dateElicited'] is not None and
+                     isofy(c['dateElicited']) > '0001-01-01']
         assert len(resp) == len(resultSet)
 
         # >= date
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '>=', jan1.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '>=', jan1.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and f['dateElicited'] >= jan1]
+        resultSet = [c for c in collections if c['dateElicited'] is not None and c['dateElicited'] >= jan1]
         assert len(resp) == len(resultSet)
 
         # =/!= None
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'dateElicited', '=', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'dateElicited', '=', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is None]
+        resultSet = [c for c in collections if c['dateElicited'] is None]
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '__ne__', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '__ne__', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None]
+        resultSet = [c for c in collections if c['dateElicited'] is not None]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_q_date_invalid(self):
-        """Tests SEARCH /files: invalid date searches."""
+        """Tests SEARCH /collections: invalid date searches."""
 
-        files = [f.getDict() for f in h.getFiles()]
+        collections = [c.getDict() for c in h.getCollections()]
 
         # = invalid date
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '=', '12-01-01']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '=', '12-01-01']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['date 12-01-01'] == \
             u'Date search parameters must be valid ISO 8601 date strings.'
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', '=', '2012-01-32']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', '=', '2012-01-32']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['date 2012-01-32'] == \
@@ -834,8 +881,8 @@ class TestFormsSearchController(TestController):
         # regex on invalid date will fail because SQLA only allows Python datetime
         # objects as input on queries (though None is also allowed to test for nullness)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', 'regex', '01']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', 'regex', '01']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['date 01'] == \
@@ -843,18 +890,18 @@ class TestFormsSearchController(TestController):
 
         # regex on valid date will work and will act just like = -- no point
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', 'regex', '2012-01-01']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', 'regex', '2012-01-01']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and
-                     f['dateElicited'].isoformat() == '2012-01-01']
+        resultSet = [c for c in collections if c['dateElicited'] is not None and
+                     c['dateElicited'].isoformat() == '2012-01-01']
         assert len(resp) == len(resultSet)
 
         # Same thing for like, it works like = but what's the point?
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', 'like', '2012-01-01']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', 'like', '2012-01-01']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
@@ -862,170 +909,170 @@ class TestFormsSearchController(TestController):
         # in_ on a date.  This will raise a TypeError ('datetime.date' object is
         # not iterable) that is caught in _getFilterExpression
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', 'in', '2012-01-02']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', 'in', '2012-01-02']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.dateElicited.in_'] == u'Invalid filter expression: File.dateElicited.in_(datetime.date(2012, 1, 2))'
+        assert resp['errors']['Collection.dateElicited.in_'] == u'Invalid filter expression: Collection.dateElicited.in_(datetime.date(2012, 1, 2))'
 
         # in_ on a list of dates works (SQLAQueryBuilder generates a list of date objects)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'dateElicited', 'in', ['2012-01-01', '2012-01-03']]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'dateElicited', 'in', ['2012-01-01', '2012-01-03']]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['dateElicited'] is not None and
-                     f['dateElicited'].isoformat() in ['2012-01-01', '2012-01-03']]
+        resultSet = [c for c in collections if c['dateElicited'] is not None and
+                     c['dateElicited'].isoformat() in ['2012-01-01', '2012-01-03']]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_r_datetime(self):
-        """Tests POST /files/search: datetime searches."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: datetime searches."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         # = datetime
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '=', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '=', todayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] == todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] == todayTimestamp]
         assert len(resp) == len(resultSet)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '=', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '=', yesterdayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] == yesterdayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] == yesterdayTimestamp]
         assert len(resp) == len(resultSet)
 
         # != datetime -- *NOTE:* the NULL datetimeEntered values will not be counted.
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '!=', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '!=', todayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] != todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] != todayTimestamp]
         assert len(resp) == len(resultSet)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '!=', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '!=', yesterdayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] != yesterdayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] != yesterdayTimestamp]
         assert len(resp) == len(resultSet)
 
         # To get what one really wants (perhaps), test for NULL too:
         query = {'query': {'filter':
-            ['or', [['File', 'datetimeEntered', '!=', todayTimestamp.isoformat()],
-                ['File', 'datetimeEntered', '=', None]]]}}
+            ['or', [['Collection', 'datetimeEntered', '!=', todayTimestamp.isoformat()],
+                ['Collection', 'datetimeEntered', '=', None]]]}}
         jsonQuery = json.dumps(query)
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is None or
-                     f['datetimeEntered'] != todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is None or
+                     c['datetimeEntered'] != todayTimestamp]
         assert len(resp) == len(resultSet)
 
         # < datetime
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '<', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '<', todayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] < todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] < todayTimestamp]
         assert len(resp) == len(resultSet)
 
         # <= datetime
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '<=', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '<=', todayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] <= todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] <= todayTimestamp]
         assert len(resp) == len(resultSet)
 
         # > datetime
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '>', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '>', todayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] > todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] > todayTimestamp]
         assert len(resp) == len(resultSet)
         # Note: Python2.6/Debian(?) bug: using a year before 1900 will cause problems: 
         # ValueError: year=1 is before 1900; the datetime strftime() methods require year >= 1900
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '>', '1901-01-01T09:08:07']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '>', '1901-01-01T09:08:07']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'].isoformat() > '1901-01-01T09:08:07']
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'].isoformat() > '1901-01-01T09:08:07']
         assert len(resp) == len(resultSet)
 
         # >= datetime
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '>=', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '>=', yesterdayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] >= yesterdayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] >= yesterdayTimestamp]
         assert len(resp) == len(resultSet)
 
         # =/!= None
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '=', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '=', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is None]
+        resultSet = [c for c in collections if c['datetimeEntered'] is None]
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeEntered', '__ne__', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeEntered', '__ne__', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None]
         assert len(resp) == len(resultSet)
 
         # datetime in today
         midnightToday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         midnightTomorrow = midnightToday + dayDelta
         query = {'query': {'filter':
-            ['and', [['File', 'datetimeEntered', '>', midnightToday.isoformat()],
-                         ['File', 'datetimeEntered', '<', midnightTomorrow.isoformat()]]]}}
+            ['and', [['Collection', 'datetimeEntered', '>', midnightToday.isoformat()],
+                         ['Collection', 'datetimeEntered', '<', midnightTomorrow.isoformat()]]]}}
         jsonQuery = json.dumps(query)
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] > midnightToday and
-                     f['datetimeEntered'] < midnightTomorrow]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] > midnightToday and
+                     c['datetimeEntered'] < midnightTomorrow]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_s_datetime_invalid(self):
-        """Tests SEARCH /files: invalid datetime searches."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests SEARCH /collections: invalid datetime searches."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         # = invalid datetime
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeModified', '=', '12-01-01T09']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeModified', '=', '12-01-01T09']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['datetime 12-01-01T09'] == \
             u'Datetime search parameters must be valid ISO 8601 datetime strings.'
 
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeModified', '=', '2012-01-30T09:08:61']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeModified', '=', '2012-01-30T09:08:61']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['datetime 2012-01-30T09:08:61'] == \
@@ -1033,19 +1080,19 @@ class TestFormsSearchController(TestController):
 
         # Trailing period and too many microseconds will both succeed.
         jsonQuery = json.dumps({'query': {'filter':
-                ['File', 'datetimeModified', '=', '2012-01-30T09:08:59.123456789123456789123456789']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+                ['Collection', 'datetimeModified', '=', '2012-01-30T09:08:59.123456789123456789123456789']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'datetimeModified', '=', '2012-01-30T09:08:59.']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            ['Collection', 'datetimeModified', '=', '2012-01-30T09:08:59.']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
 
         # regex on invalid datetime will fail because SQLA only allows Python datetime
         # objects as input on queries (though None is also allowed to test for nullness)
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'datetimeModified', 'regex', '01']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            {'query': {'filter': ['Collection', 'datetimeModified', 'regex', '01']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['datetime 01'] == \
@@ -1053,49 +1100,49 @@ class TestFormsSearchController(TestController):
 
         # regex on valid datetime will work and will act just like = -- no point
         jsonQuery = json.dumps({'query': {'filter':
-                ['File', 'datetimeEntered', 'regex', todayTimestamp.isoformat()]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+                ['Collection', 'datetimeEntered', 'regex', todayTimestamp.isoformat()]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] == todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] == todayTimestamp]
         assert len(resp) == len(resultSet)
 
         # Same thing for like, it works like = but what's the point?
         jsonQuery = json.dumps({'query': {'filter':
-                ['File', 'datetimeModified', 'like', todayTimestamp.isoformat()]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+                ['Collection', 'datetimeModified', 'like', todayTimestamp.isoformat()]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeEntered'] is not None and
-                     f['datetimeEntered'] == todayTimestamp]
+        resultSet = [c for c in collections if c['datetimeEntered'] is not None and
+                     c['datetimeEntered'] == todayTimestamp]
         assert len(resp) == len(resultSet)
 
         # in_ on a datetime.  This will raise a TypeError ('datetime.datetime' object is
         # not iterable) that is caught in _getFilterExpression
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'datetimeModified', 'in', todayTimestamp.isoformat()]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            ['Collection', 'datetimeModified', 'in', todayTimestamp.isoformat()]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.datetimeModified.in_'] == \
-            u'Invalid filter expression: File.datetimeModified.in_(%s)' % repr(todayTimestamp)
+        assert resp['errors']['Collection.datetimeModified.in_'] == \
+            u'Invalid filter expression: Collection.datetimeModified.in_(%s)' % repr(todayTimestamp)
 
         # in_ on a list of datetimes works (SQLAQueryBuilder generates a list of datetime objects)
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'datetimeModified', 'in',
+            ['Collection', 'datetimeModified', 'in',
                 [todayTimestamp.isoformat(), yesterdayTimestamp.isoformat()]]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['datetimeModified'] is not None and
-                     f['datetimeModified'] in (todayTimestamp, yesterdayTimestamp)]
+        resultSet = [c for c in collections if c['datetimeModified'] is not None and
+                     c['datetimeModified'] in (todayTimestamp, yesterdayTimestamp)]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_t_many_to_one(self):
-        """Tests POST /files/search: searches on many-to-one attributes."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: searches on many-to-one attributes."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         testModels = self._getTestModels()
         users = h.getUsers()
@@ -1106,216 +1153,244 @@ class TestFormsSearchController(TestController):
 
         # = int
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'enterer', '=', contributor.id]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            {'query': {'filter': ['Collection', 'enterer', '=', contributor.id]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['enterer']['id'] == contributor.id]
+        resultSet = [c for c in collections if c['enterer']['id'] == contributor.id]
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', '=', testModels['speakers'][0]['id']]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'speaker', '=', testModels['speakers'][0]['id']]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['speaker'] and
-                     f['speaker']['id'] == testModels['speakers'][0]['id']]
+        resultSet = [c for c in collections if c['speaker'] and
+                     c['speaker']['id'] == testModels['speakers'][0]['id']]
         assert len(resp) == len(resultSet)
 
         # in array of ints
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'in', [s['id'] for s in testModels['speakers']]]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'speaker', 'in', [s['id'] for s in testModels['speakers']]]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['speaker'] and
-                     f['speaker']['id'] in [s['id'] for s in testModels['speakers']]]
+        resultSet = [c for c in collections if c['speaker'] and
+                     c['speaker']['id'] in [s['id'] for s in testModels['speakers']]]
         assert len(resp) == len(resultSet)
 
         # <
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', '<', 15]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'speaker', '<', 15]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['speaker'] and
-                     f['speaker']['id'] < 15]
+        resultSet = [c for c in collections if c['speaker'] and
+                     c['speaker']['id'] < 15]
         assert len(resp) == len(resultSet)
 
         # regex
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'regex', '5']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'speaker', 'regex', '5']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['speaker'] and
-                     u'5' in str(f['speaker']['id'])]
+        resultSet = [c for c in collections if c['speaker'] and
+                     u'5' in str(c['speaker']['id'])]
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'regex', '[56]']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'speaker', 'regex', '[56]']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['speaker'] and
-                     re.search('[56]', str(f['speaker']['id']))]
+        resultSet = [c for c in collections if c['speaker'] and
+                     re.search('[56]', str(c['speaker']['id']))]
         assert len(resp) == len(resultSet)
 
         # like
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'like', '%5%']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'speaker', 'like', '%5%']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['speaker'] and
-                     '5' in str(f['speaker']['id'])]
+        resultSet = [c for c in collections if c['speaker'] and
+                     '5' in str(c['speaker']['id'])]
         assert len(resp) == len(resultSet)
 
     #@nottest
     def test_search_v_many_to_many(self):
-        """Tests POST /files/search: searches on many-to-many attributes, i.e., Tag, Form."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: searches on many-to-many attributes, i.e., Tag, Form, File."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         # tag.name =
-        jsonQuery = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name_6.jpg']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name 6']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if 'name_6.jpg' in [t['name'] for t in f['tags']]]
+        resultSet = [c for c in collections if 'name 6' in [t['name'] for t in c['tags']]]
+        #log.debug(len(resp))
+        #log.debug([c['tags'] for c in collections])
+        assert resp
         assert len(resp) == len(resultSet)
 
         # form.transcription like
         jsonQuery = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'like', '%transcription 6%']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files
-                     if 'transcription 6' in ''.join([fo['transcription'] for fo in f['forms']])]
+        resultSet = [c for c in collections
+                     if 'transcription 6' in ''.join([fo['transcription'] for fo in c['forms']])]
+        assert resp
+        assert len(resp) == len(resultSet)
+
+        # file.name like
+        jsonQuery = json.dumps({'query': {'filter':
+            ['File', 'name', 'like', '%name 9%']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = [c for c in collections
+                     if 'name 6' in ''.join([fi['name'] for fi in c['files']])]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # form.transcription regexp
         jsonQuery = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regex', 'transcription [12]']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files
-                     if re.search('transcription [12]', ''.join([fo['transcription'] for fo in f['forms']]))]
+        resultSet = [c for c in collections
+                     if re.search('transcription [12]', ''.join([fo['transcription'] for fo in c['forms']]))]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # tag.name in_
-        names = [u'name 77', u'name 79', u'name 99']
+        names = [u'name 17', u'name 19', u'name 9']
         jsonQuery = json.dumps({'query': {'filter':
             ['Tag', 'name', 'in_', names]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if set(names) & set([t['name'] for t in f['tags']])]
+        resultSet = [c for c in collections if set(names) & set([t['name'] for t in c['tags']])]
+        #log.debug([c['tags'] for c in collections])
+        assert resp
         assert len(resp) == len(resultSet)
 
         # tag.name <
         jsonQuery = json.dumps({'query': {'filter':
             ['Tag', 'name', '<', u'name 2']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if [t for t in f['tags'] if t['name'] < u'name 2']]
+        resultSet = [c for c in collections if [t for t in c['tags'] if t['name'] < u'name 2']]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # form.datetimeEntered
         jsonQuery = json.dumps({'query': {'filter':
             ['Form', 'datetimeEntered', '>', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files
-                     if [fo for fo in f['forms'] if fo['datetimeEntered'] > yesterdayTimestamp]]
+        resultSet = [c for c in collections
+                     if [fo for fo in c['forms'] if fo['datetimeEntered'] > yesterdayTimestamp]]
+        assert resp
         assert len(resp) == len(resultSet)
 
+        files = Session.query(model.File).all()
+        files = dict([(f.id, f) for f in files])
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'datetimeEntered', '<', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['File', 'datetimeModified', '>', yesterdayTimestamp.isoformat()]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files
-                     if [fo for fo in f['forms'] if fo['datetimeEntered'] < yesterdayTimestamp]]
+        resultSet = [c for c in collections if [
+            fi for fi in c['files'] if files[fi['id']].datetimeEntered > yesterdayTimestamp]]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # To search for the presence/absence of tags/forms, one must use the
         # tags/forms attributes of the File model.
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'tags', '=', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'tags', '=', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if not f['tags']]
+        resultSet = [c for c in collections if not c['tags']]
         assert len(resp) == len(resultSet)
 
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'forms', '!=', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'forms', '!=', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['forms']]
+        resultSet = [c for c in collections if c['forms']]
+        assert resp
         assert len(resp) == len(resultSet)
 
-        # Using anything other than =/!= on Form.tags/files/collections will raise an error.
-        jsonQuery = json.dumps({'query': {'filter': ['File', 'tags', 'like', None]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        # Using anything other than =/!= on Form.tags/collections/collections will raise an error.
+        jsonQuery = json.dumps({'query': {'filter': ['Collection', 'tags', 'like', None]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.tags.like'] == u'The relation like is not permitted for File.tags'
+        assert resp
+        assert resp['errors']['Collection.tags.like'] == u'The relation like is not permitted for Collection.tags'
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'forms', '=', 'form 2']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+            ['Collection', 'forms', '=', 'form 2']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
+        assert resp
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
     #@nottest
     def test_search_w_in(self):
-        """Tests SEARCH /files: searches using the in_ relation."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests SEARCH /collections: searches using the in_ relation."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         # Array value -- all good.
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'name', 'in', ['name_1.jpg']]}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            ['Collection', 'title', 'in', ['collection 1', 'Collection 11']]}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['name'] in ['name_1.jpg']]
+        resultSet = [c for c in collections if c['title'] in ['collection 1', 'Collection 11']]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # String value -- no error because strings are iterable; but no results
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'name', 'in', 'name_1.jpg']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            ['Collection', 'title', 'in', 'Collection 1']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 0
 
     #@nottest
     def test_search_x_complex(self):
-        """Tests POST /files/search: complex searches."""
-        files = [f.getDict() for f in h.getFiles()]
+        """Tests POST /collections/search: complex searches."""
+        collections = [c.getDict() for c in h.getCollections()]
 
         # A fairly complex search
         jsonQuery = json.dumps({'query': {'filter': [
             'and', [
                 ['Tag', 'name', 'like', '%1%'],
-                ['not', ['File', 'name', 'regex', '[12][5-7]']],
+                ['not', ['Collection', 'title', 'regex', '[12][5-7]']],
                 ['or', [
-                    ['File', 'datetimeEntered', '>', todayTimestamp.isoformat()],
-                    ['File', 'dateElicited', '>', jan1.isoformat()]]]]]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                    ['Collection', 'datetimeEntered', '>', todayTimestamp.isoformat()],
+                    ['Collection', 'dateElicited', '=', jan1.isoformat()]]]]]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if
-            '1' in ' '.join([t['name'] for t in f['tags']]) and
-            not re.search('[12][5-7]', f['name']) and
-            (todayTimestamp < f['datetimeEntered'] or
-            (f['dateElicited'] and jan1 < f['dateElicited']))]
+        resultSet = [c for c in collections if
+            '1' in ' '.join([t['name'] for t in c['tags']]) and
+            not re.search('[12][5-7]', c['title']) and
+            (todayTimestamp < c['datetimeEntered'] or
+            (c['dateElicited'] and jan1 < c['dateElicited']))]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # A complex search entailing multiple joins
@@ -1326,16 +1401,17 @@ class TestFormsSearchController(TestController):
                 ['Form', 'transcription', 'like', '%1%'],
                 ['Tag', 'name', 'in', tagNames],
                 ['and', [
-                    ['not', ['File', 'name', 'regex', patt]],
-                    ['File', 'dateElicited', '!=', None]]]]]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                    ['not', ['Collection', 'title', 'regex', patt]],
+                    ['Collection', 'dateElicited', '!=', None]]]]]}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if
-            '1' in ' '.join([fo['transcription'] for fo in f['forms']]) or
-            set([t['name'] for t in f['tags']]) & set(tagNames) or
-            (not re.search(patt, f['name']) and
-             f['dateElicited'] is not None)]
+        resultSet = [c for c in collections if
+            '1' in ' '.join([fo['transcription'] for fo in c['forms']]) or
+            set([t['name'] for t in c['tags']]) & set(tagNames) or
+            (not re.search(patt, c['title']) and
+             c['dateElicited'] is not None)]
+        assert resp
         assert len(resp) == len(resultSet)
 
         # A complex search ...  The implicit assertion is that a 200 status
@@ -1343,37 +1419,37 @@ class TestFormsSearchController(TestController):
         # emulate this query in Python ...
         jsonQuery = json.dumps({'query': {'filter': [
             'and', [
-                ['File', 'name', 'like', '%5%'],
-                ['File', 'description', 'regex', '.'],
+                ['Collection', 'title', 'like', '%5%'],
+                ['Collection', 'description', 'regex', '.'],
                 ['not', ['Tag', 'name', 'like', '%6%']],
                 ['or', [
-                    ['File', 'datetimeEntered', '<', todayTimestamp.isoformat()],
-                    ['not', ['File', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
+                    ['Collection', 'datetimeEntered', '<', todayTimestamp.isoformat()],
+                    ['not', ['Collection', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
                     ['and', [
-                        ['File', 'enterer', 'regex', '[135680]'],
-                        ['File', 'id', '<', 90]
+                        ['Collection', 'enterer', 'regex', '[135680]'],
+                        ['Collection', 'id', '<', 90]
                     ]]
                 ]],
                 ['not', ['not', ['not', ['Tag', 'name', '=', 'name 7']]]]
             ]
         ]}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
     #@nottest
     def test_search_y_paginator(self):
-        """Tests SEARCH /files: paginator."""
-        files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
+        """Tests SEARCH /collections: paginator."""
+        collections = json.loads(json.dumps(h.getCollections(), cls=h.JSONOLDEncoder))
 
         # A basic search with a paginator provided.
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'like', '%N%']},
+                'filter': ['Collection', 'title', 'like', '%C%']},
             'paginator': {'page': 2, 'itemsPerPage': 3}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if 'N' in f['name']]
+        resultSet = [c for c in collections if u'C' in c['title']]
         assert resp['paginator']['count'] == len(resultSet)
         assert len(resp['items']) == 3
         assert resp['items'][0]['id'] == resultSet[3]['id']
@@ -1383,9 +1459,9 @@ class TestFormsSearchController(TestController):
         # being raised resulting in a response with a 400 status code and a JSON error msg.
         jsonQuery = json.dumps({
             'query': {
-                'filter': ['File', 'name', 'like', '%N%']},
+                'filter': ['Collection', 'title', 'like', '%C%']},
             'paginator': {'page': 0, 'itemsPerPage': 3}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
@@ -1395,12 +1471,12 @@ class TestFormsSearchController(TestController):
         # and all of the results will be returned.
         jsonQuery = json.dumps({
             'query': {
-                'filter': ['File', 'name', 'like', '%N%']},
+                'filter': ['Collection', 'title', 'like', '%C%']},
             'paginator': {'pages': 0, 'itemsPerPage': 3}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len([f for f in files if 'N' in f['name']])
+        assert len(resp) == len([c for c in collections if u'C' in c['title']])
 
         # Adding a 'count' key to the paginator object in the request will spare
         # the server from running query.count().  Note that the server will not
@@ -1408,9 +1484,9 @@ class TestFormsSearchController(TestController):
         # will simply pass it back.  The server trusts that the client is passing
         # in a factual count.  Here we pass in an inaccurate count for demonstration.
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'like', '%N%']},
+                'filter': ['Collection', 'title', 'like', '%C%']},
             'paginator': {'page': 2, 'itemsPerPage': 4, 'count': 750}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['paginator']['count'] == 750
@@ -1420,137 +1496,137 @@ class TestFormsSearchController(TestController):
 
     #@nottest
     def test_search_z_order_by(self):
-        """Tests POST /files/search: order by."""
-        files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
+        """Tests POST /collections/search: order by."""
+        collections = json.loads(json.dumps(h.getCollections(), cls=h.JSONOLDEncoder))
 
         # order by name ascending
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
-                'orderBy': ['File', 'name', 'asc']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                'filter': ['Collection', 'title', 'regex', '[cC]'],
+                'orderBy': ['Collection', 'title', 'asc']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(files)
-        assert resp[-1]['name'] == u'name_9.jpg'
-        assert resp[0]['name'] == u'name_1.jpg'
+        assert len(resp) == len(collections)
+        assert resp[-1]['title'] == u'collection 9'
+        assert resp[0]['title'] == u'collection 1'
 
         # order by name descending
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
-                'orderBy': ['File', 'name', 'desc']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                'filter': ['Collection', 'title', 'regex', '[nN]'],
+                'orderBy': ['Collection', 'title', 'desc']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(files)
-        assert resp[-1]['name'] == u'name_1.jpg'
-        assert resp[0]['name'] == u'name_9.jpg'
+        assert len(resp) == len(collections)
+        assert resp[-1]['title'] == u'collection 1'
+        assert resp[0]['title'] == u'collection 9'
 
         # order by with missing direction defaults to 'asc'
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
-                'orderBy': ['File', 'name']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                'filter': ['Collection', 'title', 'regex', '[nN]'],
+                'orderBy': ['Collection', 'title']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(files)
-        assert resp[-1]['name'] == u'name_9.jpg'
-        assert resp[0]['name'] == u'name_1.jpg'
+        assert len(resp) == len(collections)
+        assert resp[-1]['title'] == u'collection 9'
+        assert resp[0]['title'] == u'collection 1'
 
         # order by with unknown direction defaults to 'asc'
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
-                'orderBy': ['File', 'name', 'descending']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                'filter': ['Collection', 'title', 'regex', '[nN]'],
+                'orderBy': ['Collection', 'title', 'descending']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(files)
-        assert resp[-1]['name'] == u'name_9.jpg'
-        assert resp[0]['name'] == u'name_1.jpg'
+        assert len(resp) == len(collections)
+        assert resp[-1]['title'] == u'collection 9'
+        assert resp[0]['title'] == u'collection 1'
 
         # syntactically malformed order by
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
-                'orderBy': ['File']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                'filter': ['Collection', 'title', 'regex', '[nN]'],
+                'orderBy': ['Collection']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
         # searches with lexically malformed order bys
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
-                'orderBy': ['File', 'foo', 'desc']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+                'filter': ['Collection', 'title', 'regex', '[nN]'],
+                'orderBy': ['Collection', 'foo', 'desc']}})
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.foo'] == u'Searching on File.foo is not permitted'
+        assert resp['errors']['Collection.foo'] == u'Searching on Collection.foo is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
         jsonQuery = json.dumps({'query': {
-                'filter': ['File', 'name', 'regex', '[nN]'],
+                'filter': ['Collection', 'title', 'regex', '[nN]'],
                 'orderBy': ['Foo', 'id', 'desc']}})
-        response = self.app.post(url('/files/search'), jsonQuery,
+        response = self.app.post(url('/collections/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Foo'] == u'Searching the File model by joining on the Foo model is not possible'
+        assert resp['errors']['Foo'] == u'Searching the Collection model by joining on the Foo model is not possible'
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
     #@nottest
     def test_search_za_restricted(self):
-        """Tests SEARCH /files: restricted files."""
+        """Tests SEARCH /collections: restricted collections."""
 
-        # First restrict the even-numbered forms
+        # First restrict the even-numbered collections
         restrictedTag = h.generateRestrictedTag()
         Session.add(restrictedTag)
         Session.commit()
         restrictedTag = h.getRestrictedTag()
-        files = h.getFiles()
-        fileCount = len(files)
-        for file in files:
-            if int(file.name.split('_')[-1].split('.')[0]) % 2 == 0:
-                file.tags.append(restrictedTag)
+        collections = h.getCollections()
+        collectionCount = len(collections)
+        for collection in collections:
+            if int(collection.title.split(' ')[-1]) % 2 == 0:
+                collection.tags.append(restrictedTag)
         Session.commit()
-        restrictedFiles = Session.query(model.File).filter(
-            model.Tag.name==u'restricted').outerjoin(model.File.tags).all()
-        restrictedFileCount = len(restrictedFiles)
+        restrictedCollections = Session.query(model.Collection).filter(
+            model.Tag.name==u'restricted').outerjoin(model.Collection.tags).all()
+        restrictedCollectionCount = len(restrictedCollections)
 
-        # A viewer will only be able to see the unrestricted files
+        # A viewer will only be able to see the unrestricted collection
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'name', 'regex', '[nN]']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            ['Collection', 'title', 'regex', '[cC]']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_viewer)
         resp = json.loads(response.body)
-        assert len(resp) == restrictedFileCount
+        assert len(resp) == restrictedCollectionCount
         assert 'restricted' not in [
-            x['name'] for x in reduce(list.__add__, [f['tags'] for f in resp])]
+            x['name'] for x in reduce(list.__add__, [c['tags'] for c in resp])]
 
-        # An administrator will be able to access all files
+        # An administrator will be able to access all collections
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'name', 'regex', '[nN]']}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            ['Collection', 'title', 'regex', '[cC]']}})
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == fileCount
+        assert len(resp) == collectionCount
         assert 'restricted' in [
-            x['name'] for x in reduce(list.__add__, [f['tags'] for f in resp])]
+            x['name'] for x in reduce(list.__add__, [c['tags'] for c in resp])]
 
-        # Filter out restricted files and do pagination
+        # Filter out restricted collection and do pagination
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'name', 'regex', '[nN]']},
+            ['Collection', 'title', 'regex', '[cC]']},
             'paginator': {'page': 2, 'itemsPerPage': 3}})
-        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_viewer)
         resp = json.loads(response.body)
-        resultSet = [f for f in files
-                        if int(f.name.split('_')[-1].split('.')[0]) % 2 != 0]
-        assert resp['paginator']['count'] == restrictedFileCount
+        resultSet = [c for c in collections
+                     if int(c.title.split(' ')[-1]) % 2 != 0]
+        assert resp['paginator']['count'] == restrictedCollectionCount
         assert len(resp['items']) == 3
         assert resp['items'][0]['id'] == resultSet[3].id
 
     #@nottest
     def test_z_cleanup(self):
-        """Tests POST /files/search: clean up the database."""
+        """Tests POST /collections/search: clean up the database."""
 
         h.clearAllModels()
         administrator = h.generateDefaultAdministrator()
@@ -1563,7 +1639,7 @@ class TestFormsSearchController(TestController):
         # to clean up for subsequent tests.
         extra_environ = self.extra_environ_admin.copy()
         extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('files'), extra_environ=extra_environ)
+        response = self.app.get(url('collections'), extra_environ=extra_environ)
 
         # Remove all of the binary (file system) files created.
         h.clearDirectoryOfFiles(self.filesPath)

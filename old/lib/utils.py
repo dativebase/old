@@ -581,7 +581,8 @@ def getCollectionBackupsByCollectionId(collectionId):
         CollectionBackup.collection_id==collectionId).order_by(desc(
         CollectionBackup.id)).all()
 
-
+def getCollections():
+    return getModelsByName('Collection', True)
 
 def getTags():
     return getModelsByName('Tag')

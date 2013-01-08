@@ -1182,7 +1182,7 @@ class TestOldcollectionsController(TestController):
 
     #@nottest
     def test_delete(self):
-        """Tests that DELETE /forms/id deletes the collection with id=id and returns a JSON representation.
+        """Tests that DELETE /collections/id deletes the collection with id=id and returns a JSON representation.
 
         If the id is invalid or unspecified, then JSON null or a 404 status code
         are returned, respectively.
@@ -1449,7 +1449,7 @@ class TestOldcollectionsController(TestController):
 
     #@nottest
     def test_edit(self):
-        """Tests that GET /forms/id/edit returns a JSON object of data necessary to edit the collection with id=id.
+        """Tests that GET /collections/id/edit returns a JSON object of data necessary to edit the collection with id=id.
 
         The JSON object is of the form {'collection': {...}, 'data': {...}} or
         {'error': '...'} (with a 404 status code) depending on whether the id is

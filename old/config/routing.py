@@ -20,12 +20,17 @@ def make_map(config):
     map.connect('/error/{action}/{id}', controller='error')
 
     # CUSTOM ROUTES HERE
+    map.connect('/forms/update_morpheme_references', controller='forms',
+            action='update_morpheme_references', conditions=dict(method='PUT'))
+
+    # SEARCH routes
     map.connect('forms', '/forms', controller='forms',
                 action='search', conditions=dict(method='SEARCH'))
     map.connect('files', '/files', controller='files',
                 action='search', conditions=dict(method='SEARCH'))
-    map.connect('/forms/update_morpheme_references', controller='forms',
-            action='update_morpheme_references', conditions=dict(method='PUT'))
+    map.connect('collections', '/collections', controller='oldcollections',
+                action='search', conditions=dict(method='SEARCH'))
+    map.connect('/collections/search', controller='oldcollections', action='search')
 
     # RESTful resoure mappings
     map.resource('orthography', 'orthographies')
