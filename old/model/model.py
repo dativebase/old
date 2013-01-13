@@ -38,8 +38,9 @@ class Model(object):
         return self.getDictFromModel(syntacticCategory, ['id', 'name'])
 
     def getMiniSourceDict(self, source):
-        return self.getDictFromModel(source, ['id', 'authorFirstName',
-                                    'authorLastName', 'year', 'fullReference'])
+        return self.getDictFromModel(source, ['id', 'type', 'key', 'journal',
+                        'editor', 'chapter', 'pages', 'publisher', 'booktitle',
+                        'school', 'institution', 'year', 'author', 'title', 'note'])
 
     def getMiniGlossDict(self, gloss):
         return self.getDictFromModel(gloss, ['id', 'gloss', 'glossGrammaticality'])
@@ -48,8 +49,7 @@ class Model(object):
         return self.getDictFromModel(tag, ['id', 'name'])
 
     def getMiniFileDict(self, file):
-        return self.getDictFromModel(file, ['id', 'name', 'embeddedFileMarkup',
-                                       'embeddedFilePassword'])
+        return self.getDictFromModel(file, ['id', 'name', 'MIMEtype', 'size', 'embeddedFileMarkup'])
 
     def getMiniOrthographyDict(self, orthography):
         return self.getDictFromModel(orthography,

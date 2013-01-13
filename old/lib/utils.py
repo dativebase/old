@@ -607,8 +607,8 @@ def getSpeakers():
 def getUsers():
     return getModelsByName('User')
 
-def getSources():
-    return getModelsByName('Source')
+def getSources(sortByIdAsc=False):
+    return getModelsByName('Source', sortByIdAsc)
 
 def getModelNames():
     return [mn for mn in dir(model) if mn[0].isupper()
@@ -884,11 +884,12 @@ def generateDefaultUser():
 
 def generateDefaultSource():
     source = model.Source()
-    source.authorFirstName = u'test source author first name'
-    source.authorLastName = u'test source author last name'
-    source.title = u'test source title'
+    source.type = u'book'
+    source.key = unicode(uuid4())
+    source.author = u'test author'
+    source.title = u'test title'
+    source.publisher = u'Mouton'
     source.year = 1999
-    source.fullReference = u'test source full reference'
     return source
 
 

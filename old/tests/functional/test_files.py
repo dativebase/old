@@ -1197,7 +1197,16 @@ class TestFilesController(TestController):
         the permanent store, i.e., from old/files/.
         """
 
-        # Create a file.
+        extra_environ_admin = {'test.authentication.role': 'administrator',
+                         'test.applicationSettings': True}
+        extra_environ_contrib = {'test.authentication.role': 'contributor',
+                         'test.applicationSettings': True}
+
+        # Create a restricted file.
+        restrictedTag = h.generateRestrictedTag()
+        Session.add(restrictedTag)
+        Session.commit()
+        restrictedTagId = restrictedTag.id
         here = appconfig('config:development.ini', relative_to='.')['here']
         testFilesPath = os.path.join(here, 'test_files')
         wavFileName = u'old_test.wav'
@@ -1207,16 +1216,16 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': wavFileName,
-            'file': wavFileBase64
+            'file': wavFileBase64,
+            'tags': [restrictedTagId]
         })
         params = json.dumps(params)
-        response = self.app.post(url('files'), params, self.json_headers,
-                        self.extra_environ_admin)
+        response = self.app.post(url('files'), params, self.json_headers, extra_environ_admin)
         resp = json.loads(response.body)
 
-        # Retrieve the file data
+        # Retrieve the file data as the admin who entered it
         response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            headers=self.json_headers, extra_environ=extra_environ_admin)
         responseBase64 = encodestring(response.body)
         assert wavFileBase64 == responseBase64
         assert guess_type(wavFileName)[0] == response.headers['Content-Type']
@@ -1227,3 +1236,9 @@ class TestFilesController(TestController):
             headers=self.json_headers, status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+
+        # Attempt to retrieve the restricted file data as the contrib and expect to fail.
+        response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
+            headers=self.json_headers, extra_environ=extra_environ_contrib, status=403)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'You are not authorized to access this resource.'

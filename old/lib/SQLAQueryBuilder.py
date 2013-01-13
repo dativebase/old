@@ -43,6 +43,7 @@ added to the query returned by getSQLAQuery.  For example, the query expression
 in (5) above will cause getSQLAQuery to add an outer join on Form.glosses.
 """
 
+import logging
 import datetime
 from sqlalchemy.sql import or_, and_, not_, asc, desc
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -50,6 +51,9 @@ from sqlalchemy.sql.expression import collate
 from sqlalchemy.orm import aliased
 from sqlalchemy.types import Unicode, UnicodeText
 #alias = aliased(model.Tag)
+
+log = logging.getLogger(__name__)
+
 
 try:
     import simplejson as json
@@ -408,6 +412,52 @@ class SQLAQueryBuilder(object):
             'tags': {'relations': equalityRelations},
             'forms': {'relations': equalityRelations},
             'files': {'relations': equalityRelations}
+        },
+        'Source': {
+            'id': {},
+            'file_id': {},
+            'file': {'alias': 'file_id'},
+            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'type': {},
+            'key': {},
+            'address': {},
+            'annote': {},
+            'author': {},
+            'booktitle': {},
+            'chapter': {},
+            'crossref': {},
+            'edition': {},
+            'editor': {},
+            'howpublished': {},
+            'institution': {},
+            'journal': {},
+            'keyField': {},
+            'month': {},
+            'note': {},
+            'number': {},
+            'organization': {},
+            'pages': {},
+            'publisher': {},
+            'school': {},
+            'series': {},
+            'title': {},
+            'typeField': {},
+            'url': {},
+            'volume': {},
+            'year': {},
+            'affiliation': {},
+            'abstract': {},
+            'contents': {},
+            'copyright': {},
+            'ISBN': {},
+            'ISSN': {},
+            'keywords': {},
+            'language': {},
+            'location': {},
+            'LCCN': {},
+            'mrnumber': {},
+            'price': {},
+            'size': {}
         }
     }
 

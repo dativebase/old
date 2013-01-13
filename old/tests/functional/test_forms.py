@@ -586,6 +586,8 @@ class TestFormsController(TestController):
         source = h.generateDefaultSource()
         Session.add_all([elicitationMethod, S, speaker, source])
         Session.commit()
+        sourceId = source.id
+        sourceYear = source.year
         contributor = Session.query(model.User).filter(
             model.User.role==u'contributor').first()
         administrator = Session.query(model.User).filter(
@@ -600,7 +602,7 @@ class TestFormsController(TestController):
             'speaker': h.getSpeakers()[0].id,
             'elicitor': contributor.id,
             'verifier': administrator.id,
-            'source': h.getSources()[0].id
+            'source': sourceId
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -608,7 +610,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         newFormCount = Session.query(model.Form).count()
         assert resp['elicitationMethod']['name'] == elicitationMethod.name
-        assert resp['source']['year'] == source.year    # etc. ...
+        assert resp['source']['year'] == sourceYear    # etc. ...
         assert newFormCount == formCount + 1
 
     #@nottest

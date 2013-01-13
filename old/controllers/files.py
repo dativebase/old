@@ -8,6 +8,7 @@ from random import sample
 from paste.fileapp import FileApp
 from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
+from pylons.decorators import jsonify
 from pylons.controllers.util import forward
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -263,11 +264,25 @@ class FilesController(BaseController):
     @h.authenticate
     def retrieve(self, id):
         """Return the file data (binary stream) for the file in files/ with
-        name=id.
+        name=id or an error message if the file does not exist or the user is
+        not authorized to access it.
         """
-        filePath = os.path.join(config['app_conf']['permanent_store'], id)
-        app = FileApp(filePath)
-        return forward(app)
+
+        response.content_type = 'application/json'
+        file = Session.query(File).filter(File.name==id).first()
+        if file:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
+                filePath = os.path.join(config['app_conf']['permanent_store'], id)
+                result = forward(FileApp(filePath))
+            else:
+                response.status_int = 403
+                result = h.unauthorizedJSONMsg
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no file with name %s' % id})
+        return result
+
 
 ################################################################################
 # File Create & Update Functions

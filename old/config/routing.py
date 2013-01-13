@@ -31,6 +31,8 @@ def make_map(config):
     map.connect('collections', '/collections', controller='oldcollections',
                 action='search', conditions=dict(method='SEARCH'))
     map.connect('/collections/search', controller='oldcollections', action='search')
+    map.connect('sources', '/sources', controller='sources',
+                action='search', conditions=dict(method='SEARCH'))
 
     # RESTful resoure mappings
     map.resource('orthography', 'orthographies')
