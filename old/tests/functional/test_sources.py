@@ -914,7 +914,11 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted(sources, key=lambda k: k['title'], reverse=True)
         assert len(resp) == 100
-        assert [s['id'] for s in resultSet] == [s['id'] for s in resp]
+        rsIds = [s['id'] for s in resultSet]
+        rsTitles = [s['title'] for s in resultSet]
+        rIds = [s['id'] for s in resp]
+        rTitles = [s['title'] for s in resp]
+        assert [s['title'] for s in resultSet] == [s['title'] for s in resp]
         assert resp[-1]['title'] == None
         assert resp[0]['title'] == u'Title 90'
 

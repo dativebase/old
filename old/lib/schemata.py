@@ -538,7 +538,7 @@ class SourceSchema(Schema):
     chained_validators = [ValidBibTeXEntry()]
 
     type = ValidBibTeXEntryType(not_empty=True)   # OneOf lib.bibtex.entryTypes with any uppercase permutations
-    key = ValidBibTexKey(not_empty=True)  # any combination of letters, numerals and symbols (except commas)
+    key = ValidBibTexKey(not_empty=True, unique=True)  # any combination of letters, numerals and symbols (except commas)
 
     file = ValidOLDModelObject(modelName='File')
 
