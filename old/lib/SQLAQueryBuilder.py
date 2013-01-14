@@ -413,6 +413,28 @@ class SQLAQueryBuilder(object):
             'forms': {'relations': equalityRelations},
             'files': {'relations': equalityRelations}
         },
+        'CollectionBackup': {
+            'id': {},
+            'UUID': {},
+            'collection_id': {},
+            'title': {},
+            'type': {},
+            'url': {},
+            'description': {},
+            'markupLanguage': {},
+            'contents': {},
+            'html': {},
+            'speaker': {},
+            'source': {},
+            'elicitor': {},
+            'enterer': {},
+            'dateElicited': {'valueConverter': '_getDateValue'},
+            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
+            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'tags': {},
+            'forms': {},
+            'files': {}
+        },
         'Source': {
             'id': {},
             'file_id': {},

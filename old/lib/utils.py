@@ -21,6 +21,9 @@ from formencode.validators import Int, UnicodeString, OneOf
 from markdown import Markdown
 from docutils.core import publish_parts
 
+import logging
+log = logging.getLogger(__name__)
+
 ################################################################################
 # Get data for 'new' action
 ################################################################################
@@ -523,9 +526,13 @@ def filterRestrictedModels(modelName, query):
 
 def filterRestrictedModelsFromQuery(modelName, query, user):
     model_ = getattr(model, modelName)
-    entererCondition = model_.enterer == user
-    restrictedTag = getRestrictedTag()
-    unrestrictedCondition = not_(model_.tags.contains(restrictedTag))
+    if modelName in (u'FormBackup', u'CollectionBackup'):
+        entererCondition = model_.enterer.like(u'%' + u'"id": %d' % user.id + u'%')
+        unrestrictedCondition = not_(model_.tags.like(u'%"name": "restricted"%'))
+    else:
+        entererCondition = model_.enterer == user
+        restrictedTag = getRestrictedTag()
+        unrestrictedCondition = not_(model_.tags.contains(restrictedTag))
     return query.filter(or_(entererCondition, unrestrictedCondition))
 
 def getFormsUserCanAccess(user, paginator=None):

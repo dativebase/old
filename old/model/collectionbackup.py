@@ -27,7 +27,7 @@ class CollectionBackup(Base):
     type = Column(Unicode(255))
     url = Column(Unicode(255))
     description = Column(UnicodeText)
-    markupLanguage = Unicode(100)
+    markupLanguage = Column(Unicode(100))
     contents = Column(UnicodeText)
     html = Column(UnicodeText)
     dateElicited = Column(Date)
