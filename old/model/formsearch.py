@@ -14,7 +14,9 @@ class FormSearch(Base):
         return '<FormSearch (%s)>' % self.id
 
     id = Column(Integer, Sequence('formsearch_seq_id', optional=True), primary_key=True)
-    json = Column(UnicodeText)
+    name = Column(Unicode(255))
+    search = Column(UnicodeText)    # The search params as JSON
+    description = Column(UnicodeText)
     searcher_id = Column(Integer, ForeignKey('user.id'))
     searcher = relation('User')
     datetimeModified = Column(DateTime, default=now)

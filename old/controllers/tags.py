@@ -10,26 +10,26 @@ from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
 
 from old.lib.base import BaseController
-from old.lib.schemata import SpeakerSchema
+from old.lib.schemata import TagSchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session
-from old.model import Speaker
+from old.model import Tag
 
 log = logging.getLogger(__name__)
 
-class SpeakersController(BaseController):
+class TagsController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('Speaker')
+    queryBuilder = SQLAQueryBuilder('Tag')
 
     @restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /speakers: Return all speakers."""
+        """GET /tags: Return all tags."""
         response.content_type = 'application/json'
         try:
-            query = Session.query(Speaker)
+            query = Session.query(Tag)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             result = h.addPagination(query, dict(request.GET))
         except Invalid, e:
@@ -42,10 +42,10 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /speakers: Create a new speaker."""
+        """POST /tags: Create a new tag."""
         response.content_type = 'application/json'
         try:
-            schema = SpeakerSchema()
+            schema = TagSchema()
             values = json.loads(unicode(request.body, request.charset))
             result = schema.to_python(values)
         except h.JSONDecodeError:
@@ -55,18 +55,18 @@ class SpeakersController(BaseController):
             response.status_int = 400
             result = json.dumps({'errors': e.unpack_errors()})
         else:
-            speaker = createNewSpeaker(result)
-            Session.add(speaker)
+            tag = createNewTag(result)
+            Session.add(tag)
             Session.commit()
-            result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+            result = json.dumps(tag, cls=h.JSONOLDEncoder)
         return result
 
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /speakers/new: Return the data necessary to create a new OLD
-        speaker.  NOTHING TO RETURN HERE ...
+        """GET /tags/new: Return the data necessary to create a new OLD
+        tag.  NOTHING TO RETURN HERE ...
         """
 
         response.content_type = 'application/json'
@@ -76,15 +76,17 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /speakers/id: Update an existing speaker."""
+        """PUT /tags/id: Update an existing tag."""
 
         response.content_type = 'application/json'
-        speaker = Session.query(Speaker).get(int(id))
-        if speaker:
+        tag = Session.query(Tag).get(int(id))
+        if tag:
             try:
-                schema = SpeakerSchema()
+                schema = TagSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                result = schema.to_python(values)
+                state = h.getStateObject(values)
+                state.id = id
+                result = schema.to_python(values, state)
             except h.JSONDecodeError:
                 response.status_int = 400
                 result = h.JSONDecodeErrorResponse
@@ -92,12 +94,12 @@ class SpeakersController(BaseController):
                 response.status_int = 400
                 result = json.dumps({'errors': e.unpack_errors()})
             else:
-                speaker = updateSpeaker(speaker, result)
-                # speaker will be False if there are no changes (cf. updateSpeaker).
-                if speaker:
-                    Session.add(speaker)
+                tag = updateTag(tag, result)
+                # tag will be False if there are no changes (cf. updateTag).
+                if tag:
+                    Session.add(tag)
                     Session.commit()
-                    result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+                    result = json.dumps(tag, cls=h.JSONOLDEncoder)
                 else:
                     response.status_int = 400
                     result = json.dumps({'error': u''.join([
@@ -105,31 +107,30 @@ class SpeakersController(BaseController):
                         u'data were not new.'])})
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
+            result = json.dumps({'error': 'There is no tag with id %s' % id})
         return result
 
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /speakers/id: Delete an existing speaker."""
+        """DELETE /tags/id: Delete an existing tag."""
 
         response.content_type = 'application/json'
-        speaker = Session.query(Speaker).get(id)
-        if speaker:
-            Session.delete(speaker)
+        tag = Session.query(Tag).get(id)
+        if tag:
+            Session.delete(tag)
             Session.commit()
-            result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+            result = json.dumps(tag, cls=h.JSONOLDEncoder)
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
+            result = json.dumps({'error': 'There is no tag with id %s' % id})
         return result
 
     @restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /speakers/id: Return a JSON object representation of the speaker
-        with id=id.
+        """GET /tags/id: Return a JSON object representation of the tag with id=id.
 
         If the id is invalid, the header will contain a 404 status int and a
         JSON object will be returned.  If the id is unspecified, then Routes
@@ -138,57 +139,56 @@ class SpeakersController(BaseController):
         """
 
         response.content_type = 'application/json'
-        speaker = Session.query(Speaker).get(id)
-        if speaker:
-            result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+        tag = Session.query(Tag).get(id)
+        if tag:
+            result = json.dumps(tag, cls=h.JSONOLDEncoder)
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
+            result = json.dumps({'error': 'There is no tag with id %s' % id})
         return result
 
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /speakers/id/edit: Return the data necessary to update an existing
-        OLD speaker; here we return only the speaker and an empty JSON object.
+        """GET /tags/id/edit: Return the data necessary to update an existing
+        OLD tag; here we return only the tag and
+        an empty JSON object.
         """
 
         response.content_type = 'application/json'
-        speaker = Session.query(Speaker).get(id)
-        if speaker:
-            result = {'data': {}, 'speaker': speaker}
+        tag = Session.query(Tag).get(id)
+        if tag:
+            result = {'data': {}, 'tag': tag}
             result = json.dumps(result, cls=h.JSONOLDEncoder)
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
+            result = json.dumps({'error': 'There is no tag with id %s' % id})
         return result
 
 
 ################################################################################
-# Speaker Create & Update Functions
+# Tag Create & Update Functions
 ################################################################################
 
-def createNewSpeaker(data):
-    """Create a new speaker model object given a data dictionary provided by the
-    user (as a JSON object).
+def createNewTag(data):
+    """Create a new tag model object given a data dictionary
+    provided by the user (as a JSON object).
     """
 
-    speaker = Speaker()
-    speaker.firstName = h.normalize(data['firstName'])
-    speaker.lastName = h.normalize(data['lastName'])
-    speaker.dialect = h.normalize(data['dialect'])
-    speaker.pageContent = h.normalize(data['pageContent'])
-    speaker.datetimeModified = datetime.datetime.utcnow()
-    return speaker
+    tag = Tag()
+    tag.name = h.normalize(data['name'])
+    tag.description = h.normalize(data['description'])
+    tag.datetimeModified = datetime.datetime.utcnow()
+    return tag
 
 # Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateSpeaker function
+# succeed.  This global may only be used/changed in the updateTag function
 # below.
 CHANGED = None
 
-def updateSpeaker(speaker, data):
-    """Update the input speaker model object given a data dictionary
+def updateTag(tag, data):
+    """Update the input tag model object given a data dictionary
     provided by the user (as a JSON object).  If CHANGED is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
@@ -202,13 +202,11 @@ def updateSpeaker(speaker, data):
             CHANGED = True
 
     # Unicode Data
-    setAttr(speaker, 'firstName', h.normalize(data['firstName']))
-    setAttr(speaker, 'lastName', h.normalize(data['lastName']))
-    setAttr(speaker, 'dialect', h.normalize(data['dialect']))
-    setAttr(speaker, 'pageContent', h.normalize(data['pageContent']))
-
+    setAttr(tag, 'name', h.normalize(data['name']))
+    setAttr(tag, 'description', h.normalize(data['description']))
+    
     if CHANGED:
         CHANGED = None      # It's crucial to reset the CHANGED global!
-        speaker.datetimeModified = datetime.datetime.utcnow()
-        return speaker
+        tag.datetimeModified = datetime.datetime.utcnow()
+        return tag
     return CHANGED

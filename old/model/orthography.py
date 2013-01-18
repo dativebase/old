@@ -16,6 +16,6 @@ class Orthography(Base):
     id = Column(Integer, Sequence('orthography_seq_id', optional=True), primary_key=True)
     name = Column(Unicode(255))
     orthography = Column(UnicodeText)
-    lowercase = Column(Boolean)
-    initialGlottalStops = Column(Boolean)
+    lowercase = Column(Boolean, default=False)
+    initialGlottalStops = Column(Boolean, default=True)
     datetimeModified = Column(DateTime, default=now)

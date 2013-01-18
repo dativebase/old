@@ -28,7 +28,7 @@ def authenticate(target):
     return decorator(wrapper)(target)
 
 
-def authorize(roles, users=None, userIDIsArgs1=None):
+def authorize(roles, users=None, userIDIsArgs1=False):
     """Authorization decorator.  If user tries to request a controller action
     but has insufficient authorization, this decorator will respond with a
     header status of '403 Forbidden' and a JSON object explanation.
@@ -72,7 +72,7 @@ def authorize(roles, users=None, userIDIsArgs1=None):
             # target action.  This is useful, e.g., when a user can only edit
             # their own personal page.
             if userIDIsArgs1:
-                if role is not 'administrator' and int(id) is not int(args[1]):
+                if role != u'administrator' and int(id) != int(args[1]):
                     response.content_type = 'application/json'
                     response.status_int = 403
                     return unauthorizedJSONMsg

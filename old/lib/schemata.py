@@ -4,6 +4,7 @@ from formencode.validators import Invalid, FancyValidator, Int, DateConverter, \
     UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL
 from formencode.foreach import ForEach
 from formencode.api import NoDefault
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 import old.lib.helpers as h
 from sqlalchemy.sql import and_
 import old.lib.bibtex as bibtex
@@ -12,7 +13,8 @@ import old.model as model
 from old.model.meta import Session
 import logging
 from base64 import b64decode
-import os
+import os, re
+import simplejson as json
 
 log = logging.getLogger(__name__)
 
@@ -417,25 +419,7 @@ class ApplicationSettingsSchema(Schema):
 
 
 ################################################################################
-# Orthography Schemata
-################################################################################
-
-class OrthographySchema(Schema):
-    """OrthographySchema is a Schema for validating the data submitted to
-    OrthographyController (controllers/orthography.py).
-    """
-
-    allow_extra_fields = True
-    filter_extra_fields = True
-
-    name = UnicodeString(max=255)
-    orthography = UnicodeString()
-    lowercase = StringBoolean()
-    initialGlottalStops = StringBoolean()
-
-
-################################################################################
-# Source Schemata
+# Source Validators
 ################################################################################
 
 class ValidBibTeXEntryType(FancyValidator):
@@ -456,7 +440,9 @@ class ValidBibTeXEntryType(FancyValidator):
 
 class ValidBibTexKey(FancyValidator):
     """Validator for the source model's key field.  Value must be any unique
-    combination of ASCII letters, numerals and symbols (except the comma).
+    combination of ASCII letters, numerals and symbols (except the comma).  The
+    presence of an 'id' attribute on the state object indicates that we are
+    updating an existing source and we nuance our check for uniqueness.
     """
 
     messages = {
@@ -534,7 +520,7 @@ class SourceSchema(Schema):
     """
 
     allow_extra_fields = True
-    filter_extra_fields = False
+    filter_extra_fields = True
     chained_validators = [ValidBibTeXEntry()]
 
     type = ValidBibTeXEntryType(not_empty=True)   # OneOf lib.bibtex.entryTypes with any uppercase permutations
@@ -582,3 +568,251 @@ class SourceSchema(Schema):
     mrnumber = UnicodeString(max=25)
     price = UnicodeString(max=100)
     size = UnicodeString(max=255)
+
+
+################################################################################
+# Secondary Model Validators
+################################################################################
+
+class UniqueUnicodeValue(UnicodeString):
+    """Validator ensures that the unicode string value is unique in its column.
+    The validator must be initialized with modelName and attributeName attributes,
+    e.g., UniqueUnicodeValue(modelName='ElicitationMethod', attributeName='name').
+    An 'id' attribute on the state object indicates that we are updating and
+    should therefore nuance our test for uniqueness.
+    """
+
+    messages = {'not_unique':
+        'The submitted value for %(modelName)s.%(attributeName)s is not unique.'}
+
+    def validate_python(self, value, state):
+        model_ = getattr(model, self.modelName)
+        attribute = getattr(model_, self.attributeName)
+        id = getattr(state, 'id', None)
+        query = Session.query(model_)
+        if (id and query.filter(and_(attribute==value, getattr(model_, 'id')!=id)).first()) or \
+        (not id and query.filter(attribute==value).first()):
+            raise Invalid(self.message('not_unique', state,
+                                modelName=self.modelName, attributeName=self.attributeName),
+                          value, state)
+
+class ElicitationMethodSchema(Schema):
+    """ElicitationMethodSchema is a Schema for validating the data submitted to
+    ElicitationmethodsController (controllers/elicitationmethods.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='ElicitationMethod', attributeName='name')
+    description = UnicodeString()
+
+class ValidFormQuery(FancyValidator):
+    """Validates a form search query using a SQLAQueryBuilder instance.  Returns
+    the query as JSON."""
+
+    queryBuilder = SQLAQueryBuilder('Form')
+    messages = {'query_error': u'The submitted query was invalid'}
+    def _to_python(self, value, state):
+        try:
+            query = self.queryBuilder.getSQLAQuery(value)
+        except:
+            raise Invalid(self.message('query_error', state), value, state)
+        return unicode(json.dumps(value))
+
+class FormSearchSchema(Schema):
+    """FormSearchSchema is a Schema for validating the data submitted to
+    FormsearchesController (controllers/formsearches.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='FormSearch', attributeName='name')
+    search = ValidFormQuery()
+    description = UnicodeString
+
+class OrthographySchema(Schema):
+    """OrthographySchema is a Schema for validating the data submitted to
+    OrthographyController (controllers/orthography.py).
+    """
+
+    allow_extra_fields = True
+    filter_extra_fields = True
+
+    name = UnicodeString(max=255, not_empty=True)
+    orthography = UnicodeString(not_empty=True)
+    lowercase = StringBoolean()
+    initialGlottalStops = StringBoolean()
+
+class PageSchema(Schema):
+    """PageSchema is a Schema for validating the data submitted to
+    PagesController (controllers/pages.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UnicodeString(max=255, not_empty=True)
+    heading = UnicodeString(max=255)
+    markupLanguage = OneOf(h.markupLanguages)
+    content = UnicodeString()
+    html = UnicodeString()
+
+class SpeakerSchema(Schema):
+    """SpeakerSchema is a Schema for validating the data submitted to
+    SpeakersController (controllers/speakers.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    firstName = UnicodeString(max=255, not_empty=True)
+    lastName = UnicodeString(max=255, not_empty=True)
+    dialect = UnicodeString(max=255)
+    pageContent = UnicodeString()
+
+class SyntacticCategorySchema(Schema):
+    """SyntacticCategorySchema is a Schema for validating the data submitted to
+    SyntacticcategoriesController (controllers/syntacticcategories.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='SyntacticCategory', attributeName='name')
+    type = OneOf(h.syntacticCategoryTypes)
+    description = UnicodeString()
+
+class TagSchema(Schema):
+    """TagSchema is a Schema for validating the data submitted to
+    TagsController (controllers/tags.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Tag', attributeName='name')
+    description = UnicodeString()
+
+
+################################################################################
+# User Validators
+################################################################################
+
+class ValidUsernameAndPassword(FancyValidator):
+    """Validator for the username, password and password_confirm fields.  Unfortunately,
+    I do not know how to throw compound errors so these fields may contain multiple
+    errors yet only the first encountered will be returned.
+    """
+
+    messages = {
+        'bad_password': u' '.join([
+            u'The submitted password is invalid; valid passwords contain at least 8 characters',
+            u'and either contain at least one character that is not in the printable ASCII range',
+            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.']),
+        'no_password': u'A password is required when creating a new user.',
+        'not_confirmed': u'The password and password_confirm values do not match.',
+        'nonunique_username': u'The username %(username)s is already taken.',
+        'illegal_chars': u'The username %(username)s is invalid; only letters of the English alphabet, numbers and the underscore are permitted.',
+        'no_username': u'A username is required when creating a new user.',
+        'non_admin_username_update': u'Only administrators can update usernames.'
+    }
+
+    def _to_python(self, values, state):
+        userToUpdate = getattr(state, 'userToUpdate', {})
+        userAttemptingUpdate = getattr(state, 'user', {})
+        id = userToUpdate.get('id')
+        weAreCreating = id is None and True or False
+        username = values.get('username', None)
+        usernameIsANonEmptyString = type(username) in (str, unicode) and username != u''
+        password = values.get('password', None)
+        passwordIsANonEmptyString = type(password) in (str, unicode) and password != u''
+        password_confirm = values.get('password_confirm', None)
+
+        def containsNonASCIIChars(password):
+            return [c for c in password if ord(c) not in range(32, 127)] and True or False
+
+        def isHighEntropyASCII(password):
+            """Returns True if the password has a lowercase character, an uppercase
+            character, a digit and a symbol.
+            """
+            symbolPatt = re.compile(u'''[-!$%^&*()_+|~=`{}\[\]:";'<>?,./]''')
+            return re.search('[a-z]', password) is not None and \
+            re.search('[A-Z]', password) is not None and \
+            re.search('[0-9]', password) is not None and \
+            symbolPatt.search(password) is not None
+
+        if passwordIsANonEmptyString:
+            if len(password) < 8 or (
+                not containsNonASCIIChars(password) and not isHighEntropyASCII(password)):
+                raise Invalid(self.message('bad_password', state), 'password', state)
+            elif password != password_confirm:
+                raise Invalid(self.message('not_confirmed', state), 'password', state)
+            else:
+                values['password'] = password
+        else:
+            if weAreCreating:
+                raise Invalid(self.message('no_password', state), 'password', state)
+            else:
+                values['password'] = None
+
+        if usernameIsANonEmptyString:
+            User = model.User
+            query = Session.query(User)
+            if re.search('[^\w]+', username):
+                # Only word characters are allowed
+                raise Invalid(self.message('illegal_chars', state, username=username),
+                              'username', state)
+            elif (id and query.filter(and_(User.username==username, User.id!=id)).first()) or \
+            (not id and query.filter(User.username==username).first()):
+                # No duplicate usernames
+                raise Invalid(self.message('nonunique_username', state, username=username),
+                              'username', state)
+            elif userToUpdate and username != userToUpdate['username'] and \
+            userAttemptingUpdate['role'] != u'administrator':
+                # Non-admins cannot change their usernames
+                raise Invalid(self.message('non_admin_username_update', state, username=username),
+                              'username', state)
+            else:
+                values['username'] = username
+        else:
+            if weAreCreating:
+                raise Invalid(self.message('no_username', state), 'username', state)
+            else:
+                values['username'] = None
+
+        return values
+
+class LicitRoleChange(FancyValidator):
+    """Ensures that the role is not being changed by a non-administrator."""
+
+    messages = {'non_admin_role_update': u'Only administrators can update roles.'}
+
+    def validate_python(self, values, state):
+        role = values.get('role')
+        userToUpdate = getattr(state, 'userToUpdate', {})
+        userAttemptingUpdate = getattr(state, 'user', {})
+        if userToUpdate and userToUpdate['role'] != role and \
+        userAttemptingUpdate['role'] != u'administrator':
+            raise Invalid(self.message('non_admin_role_update', state), 'role', state)
+
+class UserSchema(Schema):
+    """UserSchema is a Schema for validating the data submitted to
+    UsersController (controllers/users.py).
+    
+    Note: non-admins should not be able to edit their usernames or roles
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    chained_validators = [ValidUsernameAndPassword(), LicitRoleChange()]
+    username = UnicodeString(max=255)
+    password = UnicodeString(max=255)
+    password_confirm = UnicodeString(max=255)
+    firstName = UnicodeString(max=255, not_empty=True)
+    lastName = UnicodeString(max=255, not_empty=True)
+    email = Email(max=255, not_empty=True)
+    affiliation = UnicodeString(max=255)
+    role = OneOf(h.userRoles, not_empty=True)
+    markupLanguage = OneOf(h.markupLanguages)
+    pageContent = UnicodeString(max=255)
+    inputOrthography = ValidOLDModelObject(modelName='Orthography')
+    outputOrthography = ValidOLDModelObject(modelName='Orthography')
+
+class PhonologySchema(Schema):
+    """PhonologySchema is a Schema for validating the data submitted to
+    PhonologiesController (controllers/phonologies.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Phonology', attributeName='name')
+    description = UnicodeString()
+    script = UnicodeString()

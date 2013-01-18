@@ -37,31 +37,30 @@ def make_map(config):
                 action='search', conditions=dict(method='SEARCH'))
     map.connect('formbackups', '/formbackups', controller='formbackups',
                 action='search', conditions=dict(method='SEARCH'))
+    map.connect('languages', '/languages', controller='languages',
+                action='search', conditions=dict(method='SEARCH'))
+    map.connect('formsearches', '/formsearches', controller='formsearches',
+                action='search', conditions=dict(method='SEARCH'))
 
     # RESTful resoure mappings
-    map.resource('orthography', 'orthographies')
     map.resource('applicationsetting', 'applicationsettings')
     map.resource('collection', 'collections', controller='oldcollections')
-    map.resource('collectionbackup', 'collectionbackups')
-    map.resource('collectionfile', 'collectionfiles')
-    map.resource('collectionform', 'collectionforms')
+    map.resource('collectionbackup', 'collectionbackups')       # read-only
     map.resource('elicitationmethod', 'elicitationmethods')
     map.resource('file', 'files')
     map.resource('form', 'forms')
     map.resource('formsearch', 'formsearches')
-    map.resource('formbackup', 'formbackups')
-    map.resource('formfile', 'formfiles')
-    map.resource('formkeyword', 'formkeywords')
-    map.resource('gloss', 'glosses')
-    map.resource('keyword', 'keywords')
-    map.resource('language', 'languages')
+    map.resource('formbackup', 'formbackups')       # read-only
+    map.resource('gloss', 'glosses')                # read-only
+    map.resource('language', 'languages')           # read-only
+    map.resource('orthography', 'orthographies')
     map.resource('page', 'pages')
     map.resource('phonology', 'phonologies')
     map.resource('source', 'sources')
     map.resource('speaker', 'speakers')
     map.resource('syntacticcategory', 'syntacticcategories')
+    map.resource('tag', 'tags')
     map.resource('user', 'users')
-    map.resource('userform', 'userforms')
 
     # Map '/collections' to oldcollections controller (conflict with Python
     # collections module).

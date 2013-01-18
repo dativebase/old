@@ -442,7 +442,7 @@ def createNewCollection(data):
     collection.description = h.normalize(data['description'])
     collection.markupLanguage = h.normalize(data['markupLanguage'])
     collection.contents = h.normalize(data['contents'])
-    collection.html = h.getHTMLFromCollectionContents(collection.contents,
+    collection.html = h.getHTMLFromContents(collection.contents,
                                                       collection.markupLanguage)
 
     # User-inputted date: dateElicited
@@ -505,7 +505,7 @@ def updateCollection(collection, data):
     setAttr(collection, 'description', h.normalize(data['description']))
     setAttr(collection, 'markupLanguage', h.normalize(data['markupLanguage']))
     setAttr(collection, 'contents', h.normalize(data['contents']))
-    setAttr(collection, 'html', h.getHTMLFromCollectionContents(
+    setAttr(collection, 'html', h.getHTMLFromContents(
         collection.contents, collection.markupLanguage))
 
     # User-entered date: dateElicited

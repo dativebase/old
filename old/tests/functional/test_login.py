@@ -31,7 +31,7 @@ class TestLoginController(TestController):
         assert resp['error'] == u'The username and password provided are not valid.'
 
         # Valid username & password
-        params = json.dumps({'username': 'admin', 'password': 'admin'})
+        params = json.dumps({'username': 'admin', 'password': 'adminA_1'})
         response = self.app.post(url(controller='login', action='authenticate'),
                                 params, self.json_headers)
         resp = json.loads(response.body)

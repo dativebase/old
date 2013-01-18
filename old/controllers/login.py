@@ -1,10 +1,6 @@
 import logging
-import hashlib
 import smtplib
 import socket
-import string
-from random import choice
-
 import simplejson as json
 
 from pylons import url, request, response, session, app_globals, tmpl_context as c
@@ -21,17 +17,6 @@ from old.model import Form, User
 from old.model.meta import Session
 
 log = logging.getLogger(__name__)
-
-
-
-def generatePassword(length=12, chars=string.letters + string.digits):
-    """Generate password function taken from
-    http://code.activestate.com/recipes/59873-random-password-generation/
-
-    """
-
-    return u''.join([choice(chars) for i in range(length)])
-
 
 class LoginController(BaseController):
 
@@ -58,17 +43,25 @@ class LoginController(BaseController):
             result = json.dumps({'errors': e.unpack_errors()})
         else:
             username = result['username']
-            password = unicode(hashlib.sha224(result['password']).hexdigest())
-            user = Session.query(User).filter(User.username==username).filter(
-                User.password==password).first()
-            if user:
-                session['user'] = user
-                session.save()
-                result = json.dumps({'authenticated': True})
+            userFromUsername = Session.query(User).filter(User.username==username).first()
+            if userFromUsername:
+                salt = userFromUsername.salt
+                password = unicode(h.encryptPassword(result['password'], str(salt)))
+                user = Session.query(User).filter(User.username==username).filter(
+                    User.password==password).first()
+                if user:
+                    session['user'] = user
+                    session.save()
+                    result = json.dumps({'authenticated': True})
+                else:
+                    response.status_int = 401
+                    result = json.dumps(
+                        {'error': u'The username and password provided are not valid.'})
             else:
                 response.status_int = 401
                 result = json.dumps(
                     {'error': u'The username and password provided are not valid.'})
+
         return result
 
     @restrict('GET')
@@ -104,7 +97,7 @@ class LoginController(BaseController):
                 User.username==result['username']).first()
             if user:
                 # Generate a new password.
-                newPassword = generatePassword()
+                newPassword = h.generatePassword()
                 # Sender email: e.g., bla@old.org, else old@old.org.
                 try:
                     lang = h.getApplicationSettings().objectLanguageId

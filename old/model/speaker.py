@@ -17,5 +17,5 @@ class Speaker(Base):
     firstName = Column(Unicode(255))
     lastName = Column(Unicode(255))
     dialect = Column(Unicode(255))
-    speakerPageContent = Column(UnicodeText)
+    pageContent = Column(UnicodeText)
     datetimeModified = Column(DateTime, default=now)

@@ -1,52 +1,124 @@
 import logging
+import datetime
+import re
+import simplejson as json
 
-from pylons import request, response, session, tmpl_context as c
-from pylons.controllers.util import abort, redirect_to
+from pylons import request, response, session, app_globals
+from pylons.decorators.rest import restrict
+from formencode.validators import Invalid
+from sqlalchemy.exc import OperationalError, InvalidRequestError
+from sqlalchemy.sql import asc
 
-from old.lib.base import BaseController, render
+from old.lib.base import BaseController
+import old.lib.helpers as h
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from old.model.meta import Session
+from old.model import Language
 
 log = logging.getLogger(__name__)
 
 class LanguagesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
-    # To properly map this controller, ensure your config/routing.py
-    # file has a resource setup:
-    #     map.resource('language', 'languages')
+    """REST Controller styled on the Atom Publishing Protocol
 
-    def index(self, format='html'):
-        """GET /languages: All items in the collection"""
-        # url('languages')
+    The language table is populated from an ISO 639-3 file upon application setup.
+    The Language resouces is read-only.  This controller facilitates searching
+    and getting of languages only.
+    """
+
+    queryBuilder = SQLAQueryBuilder('Language', 'Id')
+
+    @restrict('SEARCH', 'POST')
+    @h.authenticate
+    def search(self):
+        """SEARCH /languages: Return all languages matching the filter passed as JSON in the request body.
+        Note: POST /languages/search also routes to this action. The request body must be
+        a JSON object with a 'query' attribute; a 'paginator' attribute is
+        optional.  The 'query' object is passed to the getSQLAQuery() method of
+        an SQLAQueryBuilder instance and an SQLA query is returned or an error
+        is raised.  The 'query' object requires a 'filter' attribute; an
+        'orderBy' attribute is optional.
+        """
+
+        response.content_type = 'application/json'
+        try:
+            jsonSearchParams = unicode(request.body, request.charset)
+            pythonSearchParams = json.loads(jsonSearchParams)
+            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            result = h.addPagination(SQLAQuery, pythonSearchParams.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return json.dumps({'errors': e.unpack_errors()})
+        # SQLAQueryBuilder should have captured these exceptions (and packed
+        # them into an OLDSearchParseError) or sidestepped them, but here we'll
+        # handle any that got past -- just in case.
+        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+            response.status_int = 400
+            return json.dumps({'error':
+                u'The specified search parameters generated an invalid database query'})
+        else:
+            return json.dumps(result, cls=h.JSONOLDEncoder)
+
+    @restrict('GET')
+    @h.authenticate
+    def index(self):
+        """GET /languages: Return all languages."""
+
+        response.content_type = 'application/json'
+        try:
+            query = Session.query(Language)
+            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder, 'Id')
+            result = h.addPagination(query, dict(request.GET))
+        except Invalid, e:
+            response.status_int = 400
+            return json.dumps({'errors': e.unpack_errors()})
+        else:
+            return json.dumps(result, cls=h.JSONOLDEncoder)
 
     def create(self):
-        """POST /languages: Create a new item"""
-        # url('languages')
+        response.content_type = 'application/json'
+        response.status_int = 404
+        return json.dumps({'error': 'This resource is read-only.'})
 
     def new(self, format='html'):
-        """GET /languages/new: Form to create a new item"""
-        # url('new_language')
+        response.content_type = 'application/json'
+        response.status_int = 404
+        return json.dumps({'error': 'This resource is read-only.'})
 
     def update(self, id):
-        """PUT /languages/id: Update an existing item"""
-        # Forms posted to this method should contain a hidden field:
-        #    <input type="hidden" name="_method" value="PUT" />
-        # Or using helpers:
-        #    h.form(url('language', id=ID),
-        #           method='put')
-        # url('language', id=ID)
+        response.content_type = 'application/json'
+        response.status_int = 404
+        return json.dumps({'error': 'This resource is read-only.'})
 
     def delete(self, id):
-        """DELETE /languages/id: Delete an existing item"""
-        # Forms posted to this method should contain a hidden field:
-        #    <input type="hidden" name="_method" value="DELETE" />
-        # Or using helpers:
-        #    h.form(url('language', id=ID),
-        #           method='delete')
-        # url('language', id=ID)
+        response.content_type = 'application/json'
+        response.status_int = 404
+        return json.dumps({'error': 'This resource is read-only.'})
 
-    def show(self, id, format='html'):
-        """GET /languages/id: Show a specific item"""
-        # url('language', id=ID)
+    @restrict('GET')
+    @h.authenticate
+    def show(self, id):
+        """GET /languages/id: Return a JSON object representation of the
+        language with id=id.
+
+        If the id is invalid, the header will contain a 404 status int and a
+        JSON object will be returned.  If the id is unspecified, then Routes
+        will put a 404 status int into the header and the default 404 JSON
+        object defined in controllers/error.py will be returned.
+        """
+
+        response.content_type = 'application/json'
+        language = Session.query(Language).get(id)
+        if language:
+            result = json.dumps(language, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no language with Id %s' % id})
+        return result
 
     def edit(self, id, format='html'):
-        """GET /languages/id/edit: Form to edit an existing item"""
-        # url('edit_language', id=ID)
+        response.content_type = 'application/json'
+        response.status_int = 404
+        return json.dumps({'error': 'This resource is read-only.'})

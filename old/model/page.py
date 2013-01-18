@@ -15,9 +15,9 @@ class Page(Base):
 
     id = Column(Integer, Sequence('page_seq_id', optional=True), primary_key=True)
     name = Column(Unicode(255))
+    heading = Column(Unicode(255))
+    markupLanguage = Column(Unicode(100))
     content = Column(UnicodeText)
     html = Column(UnicodeText)
-    heading = Column(Unicode(255))
-    markup = Column(Unicode(255))
     datetimeModified = Column(DateTime, default=now)
 

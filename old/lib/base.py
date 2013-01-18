@@ -62,6 +62,9 @@ class BaseController(WSGIController):
         if request.environ.get('test.applicationSettings'):
             app_globals.applicationSettings = h.ApplicationSettings()
 
+        #if hasattr(self, 'queryBuilder'):
+        #    self.queryBuilder.clearErrors()
+
     def __after__(self):
         if request.environ.get('test.applicationSettings') and \
         not request.environ.get('test.retainApplicationSettings'):

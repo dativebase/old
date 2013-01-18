@@ -1347,8 +1347,6 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
 
         # Emulate the search Pythonically
-        #log.debug(str([[g['gloss'] for g in f['glosses']] for f in forms]))
-        #log.debug(str([[g for g in f['glosses']] for f in forms]))
         resultSet = [f for f in forms if
             '1' in ' '.join([g['gloss'] for g in f['glosses']]) and
             not re.search('[18][5-7]', f['morphemeBreak']) and

@@ -1,66 +1,53 @@
-"""The OLD reifies form searches.
-
-create a search:
-    {
-        'filterExpression': [...],
-        'orderBy': [<model>, <attribute>]
-
-Problems with searching:
-
-1. Standardly, SQLite provides no way of escaping the underscore and the percent
-   sign in LIKE queries.  Using the "ESCAPE clause" (e.g., SELECT * FROM form
-   WHERE transcription LIKE '%\_%' ESCAPE '\') works, but how can it be done
-   from SQLAlchemy?
-2. By default, SQLite LIKE searches are case-insensitive.  This can be fixed by
-   using a PRAGMA statement (e.g., PRAGMA case_sensitive_like = true;), but,
-   again, how can it be done from SQLAlchemy?
-3. By default, MySQL LIKE and REGEXP searches are case-insensitive ...
-
-"""
-
 import logging
 import datetime
 import re
 import simplejson as json
 
-from pylons import config, request, response, session, app_globals
+from pylons import request, response, session, app_globals
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
+from sqlalchemy.sql import asc
 
 from old.lib.base import BaseController
+from old.lib.schemata import FormSearchSchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from old.model.meta import Session
+from old.model import FormSearch
 
 log = logging.getLogger(__name__)
-
 
 class FormsearchesController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder()
+    queryBuilder = SQLAQueryBuilder('FormSearch')
 
-    def index(self):
-        """GET /formsearches: Retrieve all form searches in the collection."""
-        #return str(config['pylons.paths'])
-        return str('<br />'.join(config.keys()))
-        #return config['sqlalchemy.url']
-
-    @restrict('POST')
+    @restrict('SEARCH', 'POST')
     @h.authenticate
-    def create(self):
-        """POST /formsearches: Create a new form search."""
+    def search(self):
+        """SEARCH /formsearches: Return all form searches matching the filter passed as JSON in
+        the request body.  Note: POST /formsearches/search also routes to this action.
+        The request body must be a JSON object with a 'query' attribute; a
+        'paginator' attribute is optional.  The 'query' object is passed to the
+        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+        is returned or an error is raised.  The 'query' object requires a
+        'filter' attribute; an 'orderBy' attribute is optional.
+
+        Yes, that's right, you can search form searches.  Can you search searches
+        of form searches?  No, not yet...
+        """
 
         response.content_type = 'application/json'
         try:
-            jsonQuery = unicode(request.body, request.charset)
-            pythonQuery = json.loads(jsonQuery)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonQuery)
-            forms = SQLAQuery.all()
+            jsonSearchParams = unicode(request.body, request.charset)
+            pythonSearchParams = json.loads(jsonSearchParams)
+            query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            result = h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
-        except OLDSearchParseError, e:
+        except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
             return json.dumps({'errors': e.unpack_errors()})
         # SQLAQueryBuilder should have captured these exceptions (and packed
@@ -71,22 +58,196 @@ class FormsearchesController(BaseController):
             return json.dumps({'error':
                 u'The specified search parameters generated an invalid database query'})
         else:
-            return json.dumps(forms, cls=h.JSONOLDEncoder)
+            return json.dumps(result, cls=h.JSONOLDEncoder)
 
+    @restrict('GET')
+    @h.authenticate
+    def index(self):
+        """GET /formsearches: Return all form searches."""
+        response.content_type = 'application/json'
+        try:
+            query = Session.query(FormSearch)
+            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
+            result = h.addPagination(query, dict(request.GET))
+        except Invalid, e:
+            response.status_int = 400
+            return json.dumps({'errors': e.unpack_errors()})
+        else:
+            return json.dumps(result, cls=h.JSONOLDEncoder)
+
+    @restrict('POST')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def create(self):
+        """POST /formsearches: Create a new form search."""
+        response.content_type = 'application/json'
+        try:
+            schema = FormSearchSchema()
+            values = json.loads(unicode(request.body, request.charset))
+            result = schema.to_python(values)
+        except h.JSONDecodeError:
+            response.status_int = 400
+            result = h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            result = json.dumps({'errors': e.unpack_errors()})
+        else:
+            formSearch = createNewFormSearch(result)
+            Session.add(formSearch)
+            Session.commit()
+            result = json.dumps(formSearch, cls=h.JSONOLDEncoder)
+        return result
+
+    @restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /formsearches/new: Return the data needed to create a new form search."""
-        # url('new_formsearch')
-
-    def delete(self, id):
-        """DELETE /formsearches/id: Delete an existing form search."""
-        pass
-
-    def show(self, id):
-        """GET /formsearches/id: Show a specific form search."""
-        # url('formsearch', id=ID)
-
-    def edit(self, id):
-        """GET /formsearches/id/edit: Return the data needed to edit an existing
+        """GET /formsearches/new: Return the data necessary to create a new OLD
         form search.
         """
-        # url('edit_formsearch', id=ID)
+
+        response.content_type = 'application/json'
+        return json.dumps({'searchParameters': h.getSearchParameters(self.queryBuilder)})
+
+    @restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def update(self, id):
+        """PUT /formsearches/id: Update an existing form search."""
+
+        response.content_type = 'application/json'
+        formSearch = Session.query(FormSearch).get(int(id))
+        if formSearch:
+            try:
+                schema = FormSearchSchema()
+                values = json.loads(unicode(request.body, request.charset))
+                state = h.getStateObject(values)
+                state.id = id
+                result = schema.to_python(values, state)
+            except h.JSONDecodeError:
+                response.status_int = 400
+                result = h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                result = json.dumps({'errors': e.unpack_errors()})
+            else:
+                formSearch = updateFormSearch(formSearch, result)
+                # formSearch will be False if there are no changes (cf. updateFormSearch).
+                if formSearch:
+                    Session.add(formSearch)
+                    Session.commit()
+                    result = json.dumps(formSearch, cls=h.JSONOLDEncoder)
+                else:
+                    response.status_int = 400
+                    result = json.dumps({'error': u''.join([
+                        u'The update request failed because the submitted ',
+                        u'data were not new.'])})
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no form search with id %s' % id})
+        return result
+
+    @restrict('DELETE')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def delete(self, id):
+        """DELETE /formsearches/id: Delete an existing form search."""
+
+        response.content_type = 'application/json'
+        formSearch = Session.query(FormSearch).get(id)
+        if formSearch:
+            Session.delete(formSearch)
+            Session.commit()
+            result = json.dumps(formSearch, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no form search with id %s' % id})
+        return result
+
+    @restrict('GET')
+    @h.authenticate
+    def show(self, id):
+        """GET /formsearches/id: Return a JSON object representation of the formsearch with id=id.
+
+        If the id is invalid, the header will contain a 404 status int and a
+        JSON object will be returned.  If the id is unspecified, then Routes
+        will put a 404 status int into the header and the default 404 JSON
+        object defined in controllers/error.py will be returned.
+        """
+
+        response.content_type = 'application/json'
+        formSearch = Session.query(FormSearch).get(id)
+        if formSearch:
+            result = json.dumps(formSearch, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no form search with id %s' % id})
+        return result
+
+    @restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def edit(self, id):
+        """GET /formsearches/id/edit: Return the data necessary to update an existing
+        OLD form search.
+        """
+
+        response.content_type = 'application/json'
+        formSearch = Session.query(FormSearch).get(id)
+        if formSearch:
+            data = {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+            result = {'data': data, 'formSearch': formSearch}
+            result = json.dumps(result, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no form search with id %s' % id})
+        return result
+
+
+################################################################################
+# FormSearch Create & Update Functions
+################################################################################
+
+def createNewFormSearch(data):
+    """Create a new form search model object given a data dictionary
+    provided by the user (as a JSON object).
+    """
+
+    formSearch = FormSearch()
+    formSearch.name = h.normalize(data['name'])
+    formSearch.search = data['search']      # Note that this is purposefully not normalized (reconsider this? ...)
+    formSearch.description = h.normalize(data['description'])
+    #formSearch.enterer = Session.query(User).get(session['user'].id)
+    formSearch.enterer = session['user']
+    formSearch.datetimeModified = datetime.datetime.utcnow()
+    return formSearch
+
+# Global CHANGED variable keeps track of whether an update request should
+# succeed.  This global may only be used/changed in the updateFormSearch function
+# below.
+CHANGED = None
+
+def updateFormSearch(formSearch, data):
+    """Update the input form  search model object given a data dictionary
+    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    the course of attribute setting, then None is returned and no update occurs.
+    """
+
+    global CHANGED
+
+    def setAttr(obj, name, value):
+        if getattr(obj, name) != value:
+            setattr(obj, name, value)
+            global CHANGED
+            CHANGED = True
+
+    # Unicode Data
+    setAttr(formSearch, 'name', h.normalize(data['name']))
+    setAttr(formSearch, 'search', data['search'])
+    setAttr(formSearch, 'description', h.normalize(data['description']))
+
+    if CHANGED:
+        CHANGED = None      # It's crucial to reset the CHANGED global!
+        formSearch.datetimeModified = datetime.datetime.utcnow()
+        return formSearch
+    return CHANGED

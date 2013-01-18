@@ -1,52 +1,326 @@
 import logging
+import datetime
+import re
+import simplejson as json
 
-from pylons import request, response, session, tmpl_context as c
-from pylons.controllers.util import abort, redirect_to
+from pylons import request, response, session, app_globals
+from pylons.decorators.rest import restrict
+from formencode.validators import Invalid
+from sqlalchemy.exc import OperationalError, InvalidRequestError
+from sqlalchemy.sql import asc
 
-from old.lib.base import BaseController, render
+from old.lib.base import BaseController
+from old.lib.schemata import UserSchema
+import old.lib.helpers as h
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from old.model.meta import Session
+from old.model import User
 
 log = logging.getLogger(__name__)
 
 class UsersController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
-    # To properly map this controller, ensure your config/routing.py
-    # file has a resource setup:
-    #     map.resource('user', 'users')
 
-    def index(self, format='html'):
-        """GET /users: All items in the collection"""
-        # url('users')
+    queryBuilder = SQLAQueryBuilder('User')
 
+    @restrict('GET')
+    @h.authenticate
+    def index(self):
+        """GET /users: Return all users."""
+        response.content_type = 'application/json'
+        try:
+            query = Session.query(User)
+            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
+            result = h.addPagination(query, dict(request.GET))
+        except Invalid, e:
+            response.status_int = 400
+            return json.dumps({'errors': e.unpack_errors()})
+        else:
+            return json.dumps(result, cls=h.JSONOLDEncoder)
+
+    @restrict('POST')
+    @h.authenticate
+    @h.authorize(['administrator'])
     def create(self):
-        """POST /users: Create a new item"""
-        # url('users')
+        """POST /users: Create a new user."""
+        response.content_type = 'application/json'
+        try:
+            schema = UserSchema()
+            values = json.loads(unicode(request.body, request.charset))
+            result = schema.to_python(values)
+        except h.JSONDecodeError:
+            response.status_int = 400
+            result = h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            result = json.dumps({'errors': e.unpack_errors()})
+        else:
+            user = createNewUser(result)
+            Session.add(user)
+            Session.commit()
+            result = json.dumps(user.getFullDict(), cls=h.JSONOLDEncoder)
+        return result
 
-    def new(self, format='html'):
-        """GET /users/new: Form to create a new item"""
-        # url('new_user')
+    @restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator'])
+    def new(self):
+        """GET /users/new: Return the data necessary to create a new OLD user.
 
+        Return a JSON object with the following properties: roles, orthographies,
+        markupLanguages, the value of each of which is an array that
+        is either empty or contains the appropriate objects.
+
+        See the getNewUserData function to understand how the GET
+        params can affect the contents of the arrays.
+        """
+
+        response.content_type = 'application/json'
+        result = getNewUserData(request.GET)
+        return json.dumps(result, cls=h.JSONOLDEncoder)
+
+    @restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor', 'viewer'], None, True)
     def update(self, id):
-        """PUT /users/id: Update an existing item"""
-        # Forms posted to this method should contain a hidden field:
-        #    <input type="hidden" name="_method" value="PUT" />
-        # Or using helpers:
-        #    h.form(url('user', id=ID),
-        #           method='put')
-        # url('user', id=ID)
+        """PUT /users/id: Update an existing user."""
 
+        response.content_type = 'application/json'
+        user = Session.query(User).get(int(id))
+        if user:
+            try:
+                schema = UserSchema()
+                values = json.loads(unicode(request.body, request.charset))
+                state = h.getStateObject(values)
+                state.userToUpdate = user.getFullDict()
+                state.user = session['user'].getFullDict()
+                result = schema.to_python(values, state)
+            except h.JSONDecodeError:
+                response.status_int = 400
+                result = h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                result = json.dumps({'errors': e.unpack_errors()})
+            else:
+                user = updateUser(user, result)
+                # user will be False if there are no changes (cf. updateUser).
+                if user:
+                    Session.add(user)
+                    Session.commit()
+                    result = json.dumps(user.getFullDict(), cls=h.JSONOLDEncoder)
+                else:
+                    response.status_int = 400
+                    result = json.dumps({'error': u''.join([
+                        u'The update request failed because the submitted ',
+                        u'data were not new.'])})
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no user with id %s' % id})
+        return result
+
+    @restrict('DELETE')
+    @h.authenticate
+    @h.authorize(['administrator'])
     def delete(self, id):
-        """DELETE /users/id: Delete an existing item"""
-        # Forms posted to this method should contain a hidden field:
-        #    <input type="hidden" name="_method" value="DELETE" />
-        # Or using helpers:
-        #    h.form(url('user', id=ID),
-        #           method='delete')
-        # url('user', id=ID)
+        """DELETE /users/id: Delete an existing user."""
 
-    def show(self, id, format='html'):
-        """GET /users/id: Show a specific item"""
-        # url('user', id=ID)
+        response.content_type = 'application/json'
+        user = Session.query(User).get(id)
+        if user:
+            h.destroyResearcherDirectory(user)
+            Session.delete(user)
+            Session.commit()
+            result = json.dumps(user.getFullDict(), cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no user with id %s' % id})
+        return result
 
-    def edit(self, id, format='html'):
-        """GET /users/id/edit: Form to edit an existing item"""
-        # url('edit_user', id=ID)
+    @restrict('GET')
+    @h.authenticate
+    def show(self, id):
+        """GET /users/id: Return a JSON object representation of the user with id=id.
+
+        If the id is invalid, the header will contain a 404 status int and a
+        JSON object will be returned.  If the id is unspecified, then Routes
+        will put a 404 status int into the header and the default 404 JSON
+        object defined in controllers/error.py will be returned.
+        """
+
+        response.content_type = 'application/json'
+        user = Session.query(User).get(id)
+        if user:
+            result = json.dumps(user, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no user with id %s' % id})
+        return result
+
+    @restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor', 'viewer'], userIDIsArgs1=True)
+    def edit(self, id):
+        """GET /users/id/edit: Return the data necessary to update an existing
+        OLD user; here we return only the user and
+        an empty JSON object.
+        """
+
+        response.content_type = 'application/json'
+        user = Session.query(User).get(id)
+        if user:
+            data = getNewUserData(request.GET)
+            result = {'data': data, 'user': user.getFullDict()}
+            result = json.dumps(result, cls=h.JSONOLDEncoder)
+        else:
+            response.status_int = 404
+            result = json.dumps({'error': 'There is no user with id %s' % id})
+        return result
+
+
+################################################################################
+# User Create & Update Functions
+################################################################################
+
+def getNewUserData(GET_params):
+    """Return the data necessary to create a new user or update
+    an existing one.  The GET_params parameter is the request.GET dictionary-
+    like object generated by Pylons.
+
+    If no parameters are provided (i.e., GET_params is empty), then retrieve all
+    data (i.e., roles, orthographies and markupLanguages) and return them.
+
+    If parameters are specified, then for each parameter whose value is a
+    non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+    return the appropriate list of objects.
+
+    If the value of a parameter is a valid ISO 8601 datetime string,
+    retrieve and return the appropriate list of objects *only* if the
+    datetime param does *not* match the most recent datetimeModified value
+    of the relevant data store.  This makes sense because a non-match indicates
+    that the requester has out-of-date data.
+    """
+
+    # modelNameMap maps param names to the OLD model objects from which they are
+    # derived.
+    modelNameMap = {'orthographies': 'Orthography'}
+
+    # getterMap maps param names to getter functions that retrieve the
+    # appropriate data from the db.
+    getterMap = {'orthographies': h.getOrthographies}
+
+    # result is initialized as a dict with empty list values.
+    result = dict([(key, []) for key in getterMap])
+    result['roles'] = h.userRoles
+    result['markupLanguages'] = h.markupLanguages
+
+    # There are GET params, so we are selective in what we return.
+    if GET_params:
+        for key in getterMap:
+            val = GET_params.get(key)
+            # Proceed so long as val is not an empty string.
+            if val:
+                valAsDatetimeObj = h.datetimeString2datetime(val)
+                if valAsDatetimeObj:
+                    # Value of param is an ISO 8601 datetime string that
+                    # does not match the most recent datetimeModified of the
+                    # relevant model in the db: therefore we return a list
+                    # of objects/dicts.  If the datetimes do match, this
+                    # indicates that the requester's own stores are
+                    # up-to-date so we return nothing.
+                    if valAsDatetimeObj != h.getMostRecentModificationDatetime(
+                    modelNameMap[key]):
+                        result[key] = getterMap[key]()
+                else:
+                    result[key] = getterMap[key]()
+
+    # There are no GET params, so we get everything from the db and return it.
+    else:
+        for key in getterMap:
+            result[key] = getterMap[key]()
+
+    return result
+
+def createNewUser(data):
+    """Create a new user model object given a data dictionary
+    provided by the user (as a JSON object).
+    """
+
+    user = User()
+    user.salt = h.generateSalt()
+    user.password = unicode(h.encryptPassword(data['password'], str(user.salt)))
+    user.username = h.normalize(data['username'])
+    user.firstName = h.normalize(data['firstName'])
+    user.lastName = h.normalize(data['lastName'])
+    user.email = h.normalize(data['email'])
+    user.affiliation = h.normalize(data['affiliation'])
+    user.role = h.normalize(data['role'])
+    user.markupLanguage = h.normalize(data['markupLanguage'])
+    user.pageContent = h.normalize(data['pageContent'])
+    user.html = h.getHTMLFromContents(user.pageContent, user.markupLanguage)
+
+    # Many-to-One Data: input and output orthographies
+    if data['inputOrthography']:
+        user.inputOrthography= data['inputOrthography']
+    if data['outputOrthography']:
+        user.outputOrthography = data['outputOrthography']
+
+    # OLD-generated Data
+    user.datetimeModified = datetime.datetime.utcnow()
+
+    # Create the user's directory in /files/researchers/
+    h.createResearcherDirectory(user)
+
+    return user
+
+# Global CHANGED variable keeps track of whether an update request should
+# succeed.  This global may only be used/changed in the updateUser
+# function below.
+CHANGED = None
+
+def updateUser(user, data):
+    """Update the input user model object given a data dictionary
+    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    the course of attribute setting, then None is returned and no update occurs.
+    """
+
+    global CHANGED
+
+    def setAttr(obj, name, value):
+        if getattr(obj, name) != value:
+            setattr(obj, name, value)
+            global CHANGED
+            CHANGED = True
+
+    # Unicode Data
+    setAttr(user, 'firstName', h.normalize(data['firstName']))
+    setAttr(user, 'lastName', h.normalize(data['lastName']))
+    setAttr(user, 'email', h.normalize(data['email']))
+    setAttr(user, 'affiliation', h.normalize(data['affiliation']))
+    setAttr(user, 'role', h.normalize(data['role']))
+    setAttr(user, 'pageContent', h.normalize(data['pageContent']))
+    setAttr(user, 'markupLanguage', h.normalize(data['markupLanguage']))
+    setAttr(user, 'html', h.getHTMLFromContents(user.pageContent, user.markupLanguage))
+
+    # username and password need special treatment: a value of None means that
+    # these should not be updated.
+    if data['password'] is not None:
+        setAttr(user, 'password', unicode(h.encryptPassword(data['password'], str(user.salt))))
+    if data['username'] is not None:
+        username = h.normalize(data['username'])
+        if username != user.username:
+            h.renameResearcherDirectory(user.username, username)
+        setAttr(user, 'username', username)
+
+    # Many-to-One Data
+    if data['inputOrthography'] != user.inputOrthography:
+        user.inputOrthography = data['inputOrthography']
+        CHANGED = True
+    if data['outputOrthography'] != user.outputOrthography:
+        user.outputOrthography = data['outputOrthography']
+        CHANGED = True
+
+    if CHANGED:
+        CHANGED = None      # It's crucial to reset the CHANGED global!
+        user.datetimeModified = datetime.datetime.utcnow()
+        return user
+    return CHANGED

@@ -704,6 +704,8 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['tags'] == []
         assert resp['speakers'] == data['speakers']
+        #log.debug(resp['speakers'])
+        #log.debug(data['speakers'])
         assert resp['users'] == data['users']
         assert resp['utteranceTypes'] == data['utteranceTypes']
 

@@ -1,10 +1,12 @@
 import os
 import re
-import hashlib
 import errno
 import datetime
 import unicodedata
 import string
+from random import choice, shuffle
+from shutil import rmtree
+from passlib.hash import pbkdf2_sha512
 from uuid import uuid4, UUID
 from mimetypes import guess_type
 import simplejson as json
@@ -20,6 +22,9 @@ from formencode.schema import Schema
 from formencode.validators import Int, UnicodeString, OneOf
 from markdown import Markdown
 from docutils.core import publish_parts
+from decorator import decorator
+from pylons.decorators.util import get_pylons
+
 
 import logging
 log = logging.getLogger(__name__)
@@ -110,8 +115,6 @@ class JSONOLDEncoder(json.JSONEncoder):
         except TypeError:
             if isinstance(obj, (datetime.datetime, datetime.date)):
                 return obj.isoformat()
-            elif isinstance(obj, model.User):
-                return deleteKey(obj.__dict__, 'password')
             elif isinstance(obj, Model):
                 try:
                     return obj.getDict()
@@ -123,6 +126,23 @@ class JSONOLDEncoder(json.JSONEncoder):
 
 JSONDecodeErrorResponse = json.dumps({'error':
             'JSON decode error: the parameters provided were not valid JSON.'})
+
+
+@decorator
+def jsonify(func, *args, **kwargs):
+    """Action decorator that formats output for JSON
+
+    Given a function that will return content, this decorator will turn
+    the result into JSON, with a content-type of 'application/json' and
+    output it.
+
+    Adapted from pylons.decorators.
+
+    """
+    pylons = get_pylons(args)
+    pylons.response.headers['Content-Type'] = 'application/json'
+    data = func(*args, **kwargs)
+    return json.dumps(data, cls=JSONOLDEncoder)
 
 
 ################################################################################
@@ -143,6 +163,32 @@ def createResearcherDirectory(researcher):
     )
     makeDirectorySafely(directoryPath)
 
+def destroyResearcherDirectory(researcher):
+    """Destroys a directory named researcher.username in files/researchers/."""
+    config = appconfig('config:development.ini', relative_to='.')
+    directoryPath = os.path.join(
+        config['permanent_store'], 'researchers',
+        researcher.username
+    )
+    rmtree(directoryPath)
+
+def destroyAllResearcherDirectories():
+    """Removes all directories from files/researchers/."""
+    config = appconfig('config:development.ini', relative_to='.')
+    researchersPath = os.path.join(config['permanent_store'], 'researchers')
+    for name in os.listdir(researchersPath):
+        path = os.path.join(researchersPath, name)
+        if os.path.isdir(path):
+            rmtree(path)
+
+def renameResearcherDirectory(oldName, newName):
+    config = appconfig('config:development.ini', relative_to='.')
+    oldPath = os.path.join(config['permanent_store'], 'researchers', oldName)
+    newPath = os.path.join(config['permanent_store'], 'researchers', newName)
+    try:
+        os.rename(oldPath, newPath)
+    except OSError:
+        makeDirectorySafely(newPath)
 
 def makeDirectorySafely(path):
     """Create a directory and avoid race conditions.  Taken from 
@@ -502,14 +548,23 @@ def getApplicationSettings():
     return Session.query(model.ApplicationSettings).order_by(
         desc(model.ApplicationSettings.id)).first()
 
-def getOrthographies():
-    return getModelsByName('Orthography')
+def getOrthographies(sortByIdAsc=False):
+    return getModelsByName('Orthography', sortByIdAsc)
 
-def getLanguages():
-    return getModelsByName('Language')
+def getFormSearches(sortByIdAsc=False):
+    return getModelsByName('FormSearch', sortByIdAsc)
 
-def getElicitationMethods():
-    return getModelsByName('ElicitationMethod')
+def getPages(sortByIdAsc=False):
+    return getModelsByName('Page', sortByIdAsc)
+
+def getPhonologies(sortByIdAsc=False):
+    return getModelsByName('Phonology', sortByIdAsc)
+
+def getLanguages(sortByIdAsc=False):
+    return getModelsByName('Language', sortByIdAsc)
+
+def getElicitationMethods(sortByIdAsc=False):
+    return getModelsByName('ElicitationMethod', sortByIdAsc)
 
 def getStartAndEndFromPaginator(paginator):
     start = (paginator['page'] - 1) * paginator['itemsPerPage']
@@ -591,8 +646,8 @@ def getCollectionBackupsByCollectionId(collectionId):
 def getCollections():
     return getModelsByName('Collection', True)
 
-def getTags():
-    return getModelsByName('Tag')
+def getTags(sortByIdAsc=False):
+    return getModelsByName('Tag', sortByIdAsc)
 
 def getFiles():
     return getModelsByName('File', True)
@@ -605,14 +660,14 @@ def getRestrictedTag():
     return Session.query(model.Tag).filter(
         model.Tag.name == u'restricted').first()
 
-def getSyntacticCategories():
-    return getModelsByName('SyntacticCategory')
+def getSyntacticCategories(sortByIdAsc=False):
+    return getModelsByName('SyntacticCategory', sortByIdAsc)
 
-def getSpeakers():
-    return getModelsByName('Speaker')
+def getSpeakers(sortByIdAsc=False):
+    return getModelsByName('Speaker', sortByIdAsc)
 
-def getUsers():
-    return getModelsByName('User')
+def getUsers(sortByIdAsc=False):
+    return getModelsByName('User', sortByIdAsc)
 
 def getSources(sortByIdAsc=False):
     return getModelsByName('Source', sortByIdAsc)
@@ -661,18 +716,21 @@ def addPagination(query, paginator):
     else:
         return query.all()
 
-def addOrderBy(query, orderByParams, queryBuilder):
+def addOrderBy(query, orderByParams, queryBuilder, primaryKey='id'):
+    """Add an ORDER BY clause to the query using the getSQLAOrderBy method of
+    the supplied queryBuilder (if possible) or using a default ORDER BY <primaryKey> ASC.
+    """
     if orderByParams and orderByParams.get('orderByModel') and \
     orderByParams.get('orderByAttribute') and orderByParams.get('orderByDirection'):
         orderByParams = OrderBySchema.to_python(orderByParams)
         orderByParams = [orderByParams['orderByModel'],
             orderByParams['orderByAttribute'], orderByParams['orderByDirection']]
-        orderByExpression = queryBuilder.getSQLAOrderBy(orderByParams)
+        orderByExpression = queryBuilder.getSQLAOrderBy(orderByParams, primaryKey)
         queryBuilder.clearErrors()
         return query.order_by(orderByExpression)
     else:
         model_ = getattr(model, queryBuilder.modelName)
-        return query.order_by(asc(model_.id))
+        return query.order_by(asc(getattr(model_, primaryKey)))
 
 
 ################################################################################
@@ -685,12 +743,12 @@ def generateDefaultAdministrator():
     admin.lastName = u'Admin'
     admin.username = u'admin'
     admin.email = u'admin@example.com'
-    admin.password = unicode(hashlib.sha224(u'admin').hexdigest())
+    admin.salt = generateSalt()
+    admin.password = unicode(encryptPassword(u'adminA_1', str(admin.salt)))
     admin.role = u'administrator'
-    admin.collectionViewType = u'long'
     admin.inputOrthography = None
     admin.outputOrthography = None
-    admin.personalPageContent = u''
+    admin.pageContent = u''
     createResearcherDirectory(admin)
     return admin
 
@@ -700,12 +758,12 @@ def generateDefaultContributor():
     contributor.lastName = u'Contributor'
     contributor.username = u'contributor'
     contributor.email = u'contributor@example.com'
-    contributor.password = unicode(hashlib.sha224(u'contributor').hexdigest())
+    contributor.salt = generateSalt()
+    contributor.password = unicode(encryptPassword(u'contributorC_1', str(contributor.salt)))
     contributor.role = u'contributor'
-    contributor.collectionViewType = u'long'
     contributor.inputOrthography = None
     contributor.outputOrthography = None
-    contributor.personalPageContent = u''
+    contributor.pageContent = u''
     createResearcherDirectory(contributor)
     return contributor
 
@@ -715,12 +773,12 @@ def generateDefaultViewer():
     viewer.lastName = u'Viewer'
     viewer.username = u'viewer'
     viewer.email = u'viewer@example.com'
-    viewer.password = unicode(hashlib.sha224(u'viewer').hexdigest())
+    viewer.salt = generateSalt()
+    viewer.password = unicode(encryptPassword(u'viewerV_1', str(viewer.salt)))
     viewer.role = u'viewer'
-    viewer.collectionViewType = u'long'
     viewer.inputOrthography = None
     viewer.outputOrthography = None
-    viewer.personalPageContent = u''
+    viewer.pageContent = u''
     createResearcherDirectory(viewer)
     return viewer
 
@@ -875,7 +933,7 @@ def generateDefaultSpeaker():
     speaker.firstName = u'test speaker first name'
     speaker.lastName = u'test speaker last name'
     speaker.dialect = u'test speaker dialect'
-    speaker.speakerPageContent = u'test speaker page content'
+    speaker.pageContent = u'test speaker page content'
     return speaker
 
 def generateDefaultUser():
@@ -886,7 +944,7 @@ def generateDefaultUser():
     user.email = u'test user email'
     user.affiliation = u'test user affiliation'
     user.role = u'contributor'
-    user.personalPageContent = u'test user page content'
+    user.pageContent = u'test user page content'
     return user
 
 def generateDefaultSource():
@@ -1118,5 +1176,51 @@ markupLanguageToFunc = {
 
 markupLanguages = markupLanguageToFunc.keys()
 
-def getHTMLFromCollectionContents(contents, markupLanguage):
+def getHTMLFromContents(contents, markupLanguage):
     return markupLanguageToFunc.get(markupLanguage, rst2html)(contents)
+
+
+# Subject to change!  Or maybe these should be user-definable ...
+syntacticCategoryTypes = (
+    u'lexical',
+    u'phrasal',
+    u'sentential'
+)
+
+userRoles = (
+    u'viewer',
+    u'contributor',
+    u'administrator'
+)
+
+def generateSalt():
+    return unicode(uuid4().hex)
+
+def encryptPassword(password, salt):
+    """Use PassLib's pbkdf2 implementation to generate a hash from a password.
+    Cf. http://packages.python.org/passlib/lib/passlib.hash.pbkdf2_digest.html#passlib.hash.pbkdf2_sha512
+    """
+    return pbkdf2_sha512.encrypt(password, salt=salt)
+
+def generatePassword(length=12):
+    lcLetters = string.letters[:26]
+    ucLetters = string.letters[26:]
+    digits = string.digits
+    symbols = string.punctuation.replace('\\', '')
+    password = [choice(lcLetters) for i in range(3)] + \
+               [choice(ucLetters) for i in range(3)] + \
+               [choice(digits) for i in range(3)] + \
+               [choice(symbols) for i in range(3)]
+    shuffle(password)
+    return u''.join(password)
+
+
+def getSearchParameters(queryBuilder):
+    """Given an SQLAQueryBuilder instance, return (relative to the model being
+    searched) the list of attributes and their aliases and licit relations
+    relevant to searching.
+    """
+    return {
+        'attributes': queryBuilder.models2attributes[queryBuilder.modelName],
+        'relations': queryBuilder.relations
+    }
