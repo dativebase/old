@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 class TestFormsController(TestController):
 
-    here = appconfig('config:development.ini', relative_to='.')['here']
+    here = appconfig('config:test.ini', relative_to='.')['here']
     filesPath = os.path.join(here, 'files')
     testFilesPath = os.path.join(here, 'test_files')
 
@@ -293,6 +293,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('forms'), orderByParams, status=400,
             headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
@@ -348,7 +349,7 @@ class TestFormsController(TestController):
         assert resp['morphemeBreakIDs'] == [[[]]]
         assert resp['enterer']['firstName'] == u'Admin'
         assert formCount == 1
-        
+        assert response.content_type == 'application/json'
 
         # Add an empty application settings and two syntactic categories.
         N = h.generateNSyntacticCategory()
@@ -567,6 +568,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         formCount = newFormCount
         newFormCount = Session.query(model.Form).count()
+        assert response.content_type == 'application/json'
         assert resp['errors']['elicitationMethod'] == \
             u'There is no elicitation method with id %d.' % badId
         assert resp['errors']['speaker'] == \
@@ -1052,6 +1054,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('form', id=unrestrictedFormId),
                 headers=self.json_headers, extra_environ=contrib, status=403)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
         h.clearDirectoryOfFiles(self.filesPath)
@@ -1071,6 +1074,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('new_form'), extra_environ=extra_environ,
                                 status=403)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
         # Add some test data to the database.
@@ -1113,6 +1117,7 @@ class TestFormsController(TestController):
         assert resp['speakers'] == data['speakers']
         assert resp['users'] == data['users']
         assert resp['sources'] == data['sources']
+        assert response.content_type == 'application/json'
 
         # GET /new_form with params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -1226,6 +1231,7 @@ class TestFormsController(TestController):
             desc(model.FormBackup.id)).first()
         assert backup.datetimeModified.isoformat() == resp['datetimeModified']
         assert backup.transcription == originalTranscription
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new data.  Expect a 400 error
         # and response['errors'] = {'no change': The update request failed
@@ -1444,6 +1450,7 @@ class TestFormsController(TestController):
         assert isinstance(speakerOfDeletedForm, model.Speaker)
         assert newFormCount == formCount
         assert newFormBackupCount == formBackupCount + 1
+        assert response.content_type == 'application/json'
 
         # The deleted form will be returned to us, so the assertions from above
         # should still hold true.
@@ -1470,6 +1477,7 @@ class TestFormsController(TestController):
         response = self.app.delete(url('form', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
+        assert response.content_type == 'application/json'
         assert u'There is no form with id %s' % id in json.loads(response.body)[
             'error']
 
@@ -1563,6 +1571,7 @@ class TestFormsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert u'There is no form with id %s' % id in json.loads(response.body)[
             'error']
 
@@ -1578,6 +1587,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['transcription'] == u'test transcription'
         assert resp['glosses'][0]['gloss'] == u'test gloss'
+        assert response.content_type == 'application/json'
 
         # Now test that the restricted tag is working correctly.
         # First get the default contributor's id.
@@ -1699,6 +1709,7 @@ class TestFormsController(TestController):
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_form', id=restrictedFormId), status=401)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['error'] == u'Authentication is required to access this resource.'
 
         # Invalid id
@@ -1714,6 +1725,7 @@ class TestFormsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit_form', id=restrictedFormId),
@@ -1721,6 +1733,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['form']['transcription'] == u'test transcription'
         assert resp['form']['glosses'][0]['gloss'] == u'test gloss'
+        assert response.content_type == 'application/json'
 
         # Valid id with GET params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -1908,6 +1921,7 @@ class TestFormsController(TestController):
             url(controller='forms', action='history', id=formId),
             headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert 'form' in resp
         assert 'previousVersions' in resp
         firstVersion = resp['previousVersions'][1]
@@ -1965,6 +1979,7 @@ class TestFormsController(TestController):
             headers=self.json_headers, extra_environ=extra_environ_viewer,
             status=403)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
         # Attempt to call history with an invalid id and an invalid UUID and
@@ -2148,6 +2163,7 @@ class TestFormsController(TestController):
             params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert len(resp) == len(formIds)
         assert formIdsSet == set(resp)
         administrator = Session.query(model.User).filter(
@@ -2373,6 +2389,7 @@ class TestFormsController(TestController):
         # Request PUT /forms/update_morpheme_references
         response = self.app.put(url('/forms/update_morpheme_references'),
             headers=self.json_headers, extra_environ=extra_environ)
+        assert response.content_type == 'application/json'
 
         # Search for our two original morphologically complex forms
         jsonQuery = json.dumps({'query': {'filter':

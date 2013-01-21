@@ -54,7 +54,7 @@ def addSEARCHToWebTestValidMethods():
 
 class TestFormsSearchController(TestController):
 
-    here = appconfig('config:development.ini', relative_to='.')['here']
+    here = appconfig('config:test.ini', relative_to='.')['here']
     filesPath = os.path.join(here, 'files')
     testFilesPath = os.path.join(here, 'test_files')
 

@@ -3,7 +3,7 @@ import datetime
 import re
 import simplejson as json
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -21,46 +21,43 @@ log = logging.getLogger(__name__)
 class SpeakersController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('Speaker')
+    queryBuilder = SQLAQueryBuilder('Speaker', config=config)
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /speakers: Return all speakers."""
-        response.content_type = 'application/json'
         try:
             query = Session.query(Speaker)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /speakers: Create a new speaker."""
-        response.content_type = 'application/json'
         try:
             schema = SpeakerSchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            speaker = createNewSpeaker(result)
+            data = schema.to_python(values)
+            speaker = createNewSpeaker(data)
             Session.add(speaker)
             Session.commit()
-            result = json.dumps(speaker, cls=h.JSONOLDEncoder)
-        return result
+            return speaker
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -68,63 +65,56 @@ class SpeakersController(BaseController):
         """GET /speakers/new: Return the data necessary to create a new OLD
         speaker.  NOTHING TO RETURN HERE ...
         """
+        return {}
 
-        response.content_type = 'application/json'
-        return json.dumps({})
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /speakers/id: Update an existing speaker."""
-
-        response.content_type = 'application/json'
         speaker = Session.query(Speaker).get(int(id))
         if speaker:
             try:
                 schema = SpeakerSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                result = schema.to_python(values)
-            except h.JSONDecodeError:
-                response.status_int = 400
-                result = h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                result = json.dumps({'errors': e.unpack_errors()})
-            else:
-                speaker = updateSpeaker(speaker, result)
+                data = schema.to_python(values)
+                speaker = updateSpeaker(speaker, data)
                 # speaker will be False if there are no changes (cf. updateSpeaker).
                 if speaker:
                     Session.add(speaker)
                     Session.commit()
-                    result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+                    return speaker
                 else:
                     response.status_int = 400
-                    result = json.dumps({'error': u''.join([
-                        u'The update request failed because the submitted ',
-                        u'data were not new.'])})
+                    return {'error':
+                        u'The update request failed because the submitted data were not new.'}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
-        return result
+            return {'error': 'There is no speaker with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /speakers/id: Delete an existing speaker."""
-
-        response.content_type = 'application/json'
         speaker = Session.query(Speaker).get(id)
         if speaker:
             Session.delete(speaker)
             Session.commit()
-            result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+            return speaker
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
-        return result
+            return {'error': 'There is no speaker with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -136,16 +126,14 @@ class SpeakersController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         speaker = Session.query(Speaker).get(id)
         if speaker:
-            result = json.dumps(speaker, cls=h.JSONOLDEncoder)
+            return speaker
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
-        return result
+            return {'error': 'There is no speaker with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -153,16 +141,12 @@ class SpeakersController(BaseController):
         """GET /speakers/id/edit: Return the data necessary to update an existing
         OLD speaker; here we return only the speaker and an empty JSON object.
         """
-
-        response.content_type = 'application/json'
         speaker = Session.query(Speaker).get(id)
         if speaker:
-            result = {'data': {}, 'speaker': speaker}
-            result = json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'data': {}, 'speaker': speaker}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no speaker with id %s' % id})
-        return result
+            return {'error': 'There is no speaker with id %s' % id}
 
 
 ################################################################################

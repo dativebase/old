@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class TestUsersController(TestController):
 
-    here = appconfig('config:development.ini', relative_to='.')['here']
+    here = appconfig('config:test.ini', relative_to='.')['here']
     researchersPath = os.path.join(here, 'files', 'researchers')
 
     createParams = {
@@ -81,6 +81,7 @@ class TestUsersController(TestController):
         assert resp[0]['id'] == users[0].id
         assert 'password' not in resp[3]
         assert 'username' not in resp[3]
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -89,6 +90,7 @@ class TestUsersController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['firstName'] == users[46].firstName
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'User', 'orderByAttribute': 'username',
@@ -98,6 +100,7 @@ class TestUsersController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted(users, key=lambda u: u.username, reverse=True)
         assert [u.id for u in resultSet] == [u['id'] for u in resp]
+        assert response.content_type == 'application/json'
 
         # Test the orderBy *with* paginator.
         params = {'orderByModel': 'User', 'orderByAttribute': 'username',
@@ -114,6 +117,7 @@ class TestUsersController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -132,6 +136,7 @@ class TestUsersController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('users'), paginator, headers=self.json_headers,
@@ -139,6 +144,7 @@ class TestUsersController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -162,6 +168,7 @@ class TestUsersController(TestController):
                                  self.extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Create a valid one
         originalResearchersDirectory = os.listdir(self.researchersPath)
@@ -188,6 +195,7 @@ class TestUsersController(TestController):
         assert 'password' not in resp
         assert newResearchersDirectory != originalResearchersDirectory
         assert u'johndoe' in newResearchersDirectory
+        assert response.content_type == 'application/json'
 
         # Invalid because username is not unique
         params = self.createParams.copy()
@@ -213,6 +221,7 @@ class TestUsersController(TestController):
         assert researchersDirectoryMTime == newResearchersDirectoryMTime
         assert newUserCount == userCount
         assert resp['errors'] == u'The username johndoe is already taken.'
+        assert response.content_type == 'application/json'
 
         # Invalid because username contains illicit characters
         params = self.createParams.copy()
@@ -233,6 +242,7 @@ class TestUsersController(TestController):
         newUserCount = Session.query(User).count()
         assert newUserCount == userCount
         assert resp['errors'] == u'The username johannes dough is invalid; only letters of the English alphabet, numbers and the underscore are permitted.'
+        assert response.content_type == 'application/json'
 
         # Invalid because username must be a non-empty string
         params = self.createParams.copy()
@@ -253,6 +263,7 @@ class TestUsersController(TestController):
         newUserCount = Session.query(User).count()
         assert newUserCount == userCount
         assert resp['errors'] == u'A username is required when creating a new user.'
+        assert response.content_type == 'application/json'
 
         params = self.createParams.copy()
         params.update({
@@ -272,6 +283,7 @@ class TestUsersController(TestController):
         newUserCount = Session.query(User).count()
         assert newUserCount == userCount
         assert resp['errors'] == u'A username is required when creating a new user.'
+        assert response.content_type == 'application/json'
 
         # Invalid because username and password are both too long.  Notice how the space in the
         # username does not raise an error because the chained validators are not
@@ -295,6 +307,7 @@ class TestUsersController(TestController):
         assert newUserCount == userCount
         assert resp['errors']['username'] == u'Enter a value not more than 255 characters long'
         assert resp['errors']['password'] == u'Enter a value not more than 255 characters long'
+        assert response.content_type == 'application/json'
 
         # Invalid because password and password_confirm do not match.
         params = self.createParams.copy()
@@ -315,6 +328,7 @@ class TestUsersController(TestController):
         newUserCount = Session.query(User).count()
         assert newUserCount == userCount
         assert resp['errors'] == u'The password and password_confirm values do not match.'
+        assert response.content_type == 'application/json'
 
         # Invalid because no password was provided.
         params = self.createParams.copy()
@@ -335,6 +349,7 @@ class TestUsersController(TestController):
         newUserCount = Session.query(User).count()
         assert newUserCount == userCount
         assert resp['errors'] == u'A password is required when creating a new user.'
+        assert response.content_type == 'application/json'
 
         # Invalid because no password was provided.
         params = self.createParams.copy()
@@ -355,6 +370,7 @@ class TestUsersController(TestController):
         newUserCount = Session.query(User).count()
         assert newUserCount == userCount
         assert resp['errors'] == u'A password is required when creating a new user.'
+        assert response.content_type == 'application/json'
 
         # Invalid because the password is too short
         params = self.createParams.copy()
@@ -378,6 +394,7 @@ class TestUsersController(TestController):
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
             u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+        assert response.content_type == 'application/json'
 
         # Invalid because the password does not contain an uppercase printable ASCII character
         params = self.createParams.copy()
@@ -447,6 +464,7 @@ class TestUsersController(TestController):
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
             u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+        assert response.content_type == 'application/json'
 
         # Invalid because the password does not contain a digit
         params = self.createParams.copy()
@@ -470,6 +488,7 @@ class TestUsersController(TestController):
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
             u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+        assert response.content_type == 'application/json'
 
         # Valid user: the password contains a unicode character
         researchersDirectory = os.listdir(self.researchersPath)
@@ -498,6 +517,7 @@ class TestUsersController(TestController):
         assert newUserCount == userCount + 1
         assert resp['firstName'] == u'Alexander'
         assert u'password' not in resp
+        assert response.content_type == 'application/json'
 
         # Invalid user: firstName is empty, email is invalid, affilication is too
         # long, role is unrecognized, inputOrthography is nonexistent, markupLanguage is unrecognized.
@@ -528,6 +548,7 @@ class TestUsersController(TestController):
         assert resp['errors']['role'] == u"Value must be one of: viewer; contributor; administrator (not u'master')"
         assert resp['errors']['inputOrthography'] == u'There is no orthography with id 1234.'
         assert resp['errors']['markupLanguage'] == u"Value must be one of: markdown; reStructuredText (not u'markdownandupanddown')"
+        assert response.content_type == 'application/json'
 
         # Valid user: all fields have valid values
         orthography1 = h.generateDefaultOrthography1()
@@ -569,6 +590,7 @@ class TestUsersController(TestController):
         assert resp['html'] == h.getHTMLFromContents(resp['pageContent'], 'markdown')
         assert resp['inputOrthography']['id'] == orthography1Id
         assert resp['outputOrthography']['id'] == orthography2Id
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -584,6 +606,7 @@ class TestUsersController(TestController):
                                 status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Add some test data to the database.
         applicationSettings = h.generateDefaultApplicationSettings()
@@ -610,6 +633,7 @@ class TestUsersController(TestController):
         assert resp['orthographies'] == data['orthographies']
         assert resp['roles'] == data['roles']
         assert resp['markupLanguages'] == data['markupLanguages']
+        assert response.content_type == 'application/json'
 
         # GET /new_file with params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -630,6 +654,7 @@ class TestUsersController(TestController):
         assert resp['orthographies'] == data['orthographies']
         assert resp['roles'] == data['roles']
         assert resp['markupLanguages'] == data['markupLanguages']
+        assert response.content_type == 'application/json'
 
         params = {
             # Value is ISO 8601 UTC datetime string that does not match the most
@@ -643,6 +668,7 @@ class TestUsersController(TestController):
         assert resp['orthographies'] == data['orthographies']
         assert resp['roles'] == data['roles']
         assert resp['markupLanguages'] == data['markupLanguages']
+        assert response.content_type == 'application/json'
 
         params = {
             # Value is ISO 8601 UTC datetime string that does match the most
@@ -655,6 +681,7 @@ class TestUsersController(TestController):
         assert resp['orthographies'] == []
         assert resp['roles'] == data['roles']
         assert resp['markupLanguages'] == data['markupLanguages']
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -690,6 +717,7 @@ class TestUsersController(TestController):
         assert 'password' not in resp
         assert newResearchersDirectory != originalResearchersDirectory
         assert u'johndoe' in newResearchersDirectory
+        assert response.content_type == 'application/json'
 
         # Update the user
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
@@ -720,6 +748,7 @@ class TestUsersController(TestController):
         assert researchersDirectory != newResearchersDirectory
         assert u'johndoe' in researchersDirectory and u'johndoe' not in newResearchersDirectory
         assert u'johnbuck' in newResearchersDirectory and u'johnbuck' not in researchersDirectory
+        assert response.content_type == 'application/json'
 
         # Attempt to update the user as a contributor and expect to fail
         params = self.createParams.copy()
@@ -737,6 +766,7 @@ class TestUsersController(TestController):
                                  def_contrib_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Attempt to update the user as the user and expect to succeed
         user_environ = {'test.authentication.id': userId}
@@ -758,6 +788,7 @@ class TestUsersController(TestController):
         assert resp['username'] == u'johnbuck'
         assert resp['lastName'] == u'Buck'
         assert h.encryptPassword(u'Zzzzzz.9', str(userJustUpdated.salt)) == userJustUpdated.password
+        assert response.content_type == 'application/json'
 
         # Simulate a user attempting to update his username.  Expect to fail.
         params = self.createParams.copy()
@@ -775,6 +806,7 @@ class TestUsersController(TestController):
                                  user_environ, status=400)
         resp = json.loads(response.body)
         assert resp['errors'] == u'Only administrators can update usernames.'
+        assert response.content_type == 'application/json'
 
         # Simulate a user attempting to update his role.  Expect to fail.
         params = self.createParams.copy()
@@ -792,6 +824,7 @@ class TestUsersController(TestController):
                                  user_environ, status=400)
         resp = json.loads(response.body)
         assert resp['errors'] == u'Only administrators can update roles.'
+        assert response.content_type == 'application/json'
 
         # Update the user with empty values for username and password and expect
         # these fields to retain their original values.
@@ -823,6 +856,7 @@ class TestUsersController(TestController):
         assert resp['lastName'] == u'Buckley'
         assert h.encryptPassword(u'Zzzzzz.9', str(userJustUpdated.salt)) == userJustUpdated.password
         assert resp['html'] == h.getHTMLFromContents(mdContents, u'markdown')
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         params = self.createParams.copy()
@@ -838,6 +872,7 @@ class TestUsersController(TestController):
         response = self.app.put(url('user', id=userId), params, self.json_headers, user_environ, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -894,6 +929,7 @@ class TestUsersController(TestController):
         assert resp['username'] == u'johndoe'
         assert researchersDirectory != newResearchersDirectory
         assert u'johndoe' not in newResearchersDirectory and u'johndoe' in researchersDirectory
+        assert response.content_type == 'application/json'
 
         # Again create a user to (attempt to) delete.
         originalResearchersDirectory = os.listdir(self.researchersPath)
@@ -922,6 +958,7 @@ class TestUsersController(TestController):
         assert 'password' not in resp
         assert newResearchersDirectory != originalResearchersDirectory
         assert u'johndoe' in newResearchersDirectory
+        assert response.content_type == 'application/json'
 
         # Show that a user cannot delete his own user object
         user_environ = {'test.authentication.id': userId}
@@ -931,17 +968,20 @@ class TestUsersController(TestController):
         userCount = newUserCount
         newUserCount = Session.query(User).count()
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Delete with an invalid id
         id = 9999999999999
         response = self.app.delete(url('user', id=id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=404)
         assert u'There is no user with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('user', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -981,11 +1021,13 @@ class TestUsersController(TestController):
                             extra_environ=self.extra_environ_admin, status=404)
         resp = json.loads(response.body)
         assert u'There is no user with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('user', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id (show that a viewer can GET a user too)
         response = self.app.get(url('user', id=userId), headers=self.json_headers,
@@ -994,6 +1036,7 @@ class TestUsersController(TestController):
         assert 'username' not in resp
         assert 'password' not in resp
         assert resp['email'] == u'john.doe@gmail.com'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -1047,22 +1090,26 @@ class TestUsersController(TestController):
         assert 'password' not in resp
         assert newResearchersDirectory != originalResearchersDirectory
         assert u'johndoe' in newResearchersDirectory
+        assert response.content_type == 'application/json'
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_user', id=userId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_user', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin, status=404)
         assert u'There is no user with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_user', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == u'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id, admin
         response = self.app.get(url('edit_user', id=userId),
@@ -1072,6 +1119,7 @@ class TestUsersController(TestController):
         assert resp['data']['orthographies'] == data['orthographies']
         assert resp['data']['roles'] == data['roles']
         assert resp['data']['markupLanguages'] == data['markupLanguages']
+        assert response.content_type == 'application/json'
 
         # Valid id, user self-editing, GET params
         user_environ = {'test.authentication.id': userId}
@@ -1087,9 +1135,11 @@ class TestUsersController(TestController):
         assert resp['data']['orthographies'] == []
         assert resp['data']['roles'] == data['roles']
         assert resp['data']['markupLanguages'] == data['markupLanguages']
+        assert response.content_type == 'application/json'
 
         # Valid id but contributor -- expect to fail
         response = self.app.get(url('edit_user', id=userId),
             headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'

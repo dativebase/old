@@ -62,6 +62,7 @@ class TestSyntacticcategoriesController(TestController):
         assert len(resp) == syntacticCategoriesCount
         assert resp[0]['name'] == u'sc1'
         assert resp[0]['id'] == syntacticCategories[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -70,6 +71,7 @@ class TestSyntacticcategoriesController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['name'] == syntacticCategories[46].name
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'SyntacticCategory', 'orderByAttribute': 'name',
@@ -87,6 +89,7 @@ class TestSyntacticcategoriesController(TestController):
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resultSet[46] == resp['items'][0]['name']
+        assert response.content_type == 'application/json'
 
         # Expect a 400 error when the orderByDirection param is invalid
         orderByParams = {'orderByModel': 'SyntacticCategory', 'orderByAttribute': 'name',
@@ -95,6 +98,7 @@ class TestSyntacticcategoriesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -104,6 +108,7 @@ class TestSyntacticcategoriesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp[0]['id'] == syntacticCategories[0].id
+        assert response.content_type == 'application/json'
 
         # Expect a 400 error when the paginator GET params are empty
         # or are integers less than 1
@@ -120,6 +125,7 @@ class TestSyntacticcategoriesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -137,12 +143,14 @@ class TestSyntacticcategoriesController(TestController):
         assert newSCCount == originalSCCount + 1
         assert resp['name'] == u'sc'
         assert resp['description'] == u'Described.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
         params = json.dumps({'name': u'sc', 'type': u'lexical', 'description': u'Described.'})
         response = self.app.post(url('syntacticcategories'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'The submitted value for SyntacticCategory.name is not unique.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is empty
         params = json.dumps({'name': u'', 'type': u'lexical', 'description': u'Described.'})
@@ -161,6 +169,7 @@ class TestSyntacticcategoriesController(TestController):
         response = self.app.post(url('syntacticcategories'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['type'] == u"Value must be one of: lexical; phrasal; sentential (not u'spatial')"
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -169,6 +178,7 @@ class TestSyntacticcategoriesController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp['syntacticCategoryTypes'] == list(h.syntacticCategoryTypes)
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -193,6 +203,7 @@ class TestSyntacticcategoriesController(TestController):
         newSyntacticCategoryCount = Session.query(SyntacticCategory).count()
         assert syntacticCategoryCount == newSyntacticCategoryCount
         assert datetimeModified != originalDatetimeModified
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -205,6 +216,7 @@ class TestSyntacticcategoriesController(TestController):
         assert ourSCDatetimeModified.isoformat() == datetimeModified
         assert syntacticCategoryCount == newSyntacticCategoryCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -226,6 +238,7 @@ class TestSyntacticcategoriesController(TestController):
         newSyntacticCategoryCount = Session.query(SyntacticCategory).count()
         assert newSyntacticCategoryCount == syntacticCategoryCount - 1
         assert resp['id'] == syntacticCategoryId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted syntactic category from the db should return None
         deletedSyntacticCategory = Session.query(SyntacticCategory).get(syntacticCategoryId)
@@ -236,13 +249,14 @@ class TestSyntacticcategoriesController(TestController):
         response = self.app.delete(url('syntacticcategory', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no syntactic category with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no syntactic category with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('syntacticcategory', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -264,11 +278,13 @@ class TestSyntacticcategoriesController(TestController):
             status=404)
         resp = json.loads(response.body)
         assert u'There is no syntactic category with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('syntacticcategory', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('syntacticcategory', id=syntacticCategoryId), headers=self.json_headers,
@@ -276,6 +292,7 @@ class TestSyntacticcategoriesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'name'
         assert resp['description'] == u'description'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -299,6 +316,7 @@ class TestSyntacticcategoriesController(TestController):
         response = self.app.get(url('edit_syntacticcategory', id=syntacticCategoryId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
@@ -306,12 +324,13 @@ class TestSyntacticcategoriesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no syntactic category with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_syntacticcategory', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit_syntacticcategory', id=syntacticCategoryId),
@@ -319,3 +338,4 @@ class TestSyntacticcategoriesController(TestController):
         resp = json.loads(response.body)
         assert resp['syntacticCategory']['name'] == u'name'
         assert resp['data']['syntacticCategoryTypes'] == list(h.syntacticCategoryTypes)
+        assert response.content_type == 'application/json'

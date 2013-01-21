@@ -39,9 +39,9 @@ def setup_app(command, conf, vars):
 
     # Get default users.
     log.info("Creating a default administrator, contributor and viewer.")
-    administrator = h.generateDefaultAdministrator()
-    contributor = h.generateDefaultContributor()
-    viewer = h.generateDefaultViewer()
+    administrator = h.generateDefaultAdministrator(configFilename=filename)
+    contributor = h.generateDefaultContributor(configFilename=filename)
+    viewer = h.generateDefaultViewer(configFilename=filename)
 
     # If we are running tests, make sure the test db contains only language data.
     if filename == 'test.ini':

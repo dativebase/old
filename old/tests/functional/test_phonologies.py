@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class TestPhonologiesController(TestController):
 
-    here = appconfig('config:development.ini', relative_to='.')['here']
+    here = appconfig('config:test.ini', relative_to='.')['here']
     researchersPath = os.path.join(here, 'files', 'researchers')
 
     createParams = {
@@ -67,6 +67,7 @@ class TestPhonologiesController(TestController):
         assert len(resp) == phonologiesCount
         assert resp[0]['name'] == u'Phonology 1'
         assert resp[0]['id'] == phonologies[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -75,6 +76,7 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['name'] == phonologies[46].name
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'Phonology', 'orderByAttribute': 'name',
@@ -84,6 +86,7 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted(phonologies, key=lambda p: p.name, reverse=True)
         assert [p.id for p in resultSet] == [p['id'] for p in resp]
+        assert response.content_type == 'application/json'
 
         # Test the orderBy *with* paginator.
         params = {'orderByModel': 'Phonology', 'orderByAttribute': 'name',
@@ -100,6 +103,7 @@ class TestPhonologiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -118,6 +122,7 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('phonologies'), paginator, headers=self.json_headers,
@@ -125,6 +130,7 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -144,6 +150,7 @@ class TestPhonologiesController(TestController):
                                  self.extra_environ_view, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Create a valid one
         originalPhonologyCount = Session.query(Phonology).count()
@@ -153,6 +160,7 @@ class TestPhonologiesController(TestController):
         assert newPhonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
         params = self.createParams.copy()
@@ -169,6 +177,7 @@ class TestPhonologiesController(TestController):
         newPhonologyCount = Session.query(Phonology).count()
         assert newPhonologyCount == phonologyCount
         assert resp['errors']['name'] == u'The submitted value for Phonology.name is not unique.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
         params = self.createParams.copy()
@@ -185,6 +194,7 @@ class TestPhonologiesController(TestController):
         newPhonologyCount = Session.query(Phonology).count()
         assert newPhonologyCount == phonologyCount
         assert resp['errors']['name'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
         params = self.createParams.copy()
@@ -201,6 +211,7 @@ class TestPhonologiesController(TestController):
         newPhonologyCount = Session.query(Phonology).count()
         assert newPhonologyCount == phonologyCount
         assert resp['errors']['name'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is too long.
         params = self.createParams.copy()
@@ -217,6 +228,7 @@ class TestPhonologiesController(TestController):
         newPhonologyCount = Session.query(Phonology).count()
         assert newPhonologyCount == phonologyCount
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -225,6 +237,7 @@ class TestPhonologiesController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp == {}
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -265,6 +278,7 @@ class TestPhonologiesController(TestController):
         assert phonologyCount == newPhonologyCount
         assert datetimeModified != originalDatetimeModified
         assert resp['description'] == u'Covers a lot of the data.  Best yet!'
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -277,6 +291,7 @@ class TestPhonologiesController(TestController):
         assert ourPhonologyDatetimeModified.isoformat() == datetimeModified
         assert phonologyCount == newPhonologyCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -307,6 +322,7 @@ class TestPhonologiesController(TestController):
         newPhonologyCount = Session.query(Phonology).count()
         assert newPhonologyCount == phonologyCount - 1
         assert resp['id'] == phonologyId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted phonology from the db should return None
         deletedPhonology = Session.query(Phonology).get(phonologyId)
@@ -318,11 +334,13 @@ class TestPhonologiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no phonology with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('phonology', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -353,11 +371,13 @@ class TestPhonologiesController(TestController):
             status=404)
         resp = json.loads(response.body)
         assert u'There is no phonology with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('phonology', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('phonology', id=phonologyId), headers=self.json_headers,
@@ -366,6 +386,7 @@ class TestPhonologiesController(TestController):
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
         assert resp['script'] == u'# The rules will begin after this comment.\n\n'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -398,6 +419,7 @@ class TestPhonologiesController(TestController):
         response = self.app.get(url('edit_phonology', id=phonologyId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
@@ -405,11 +427,13 @@ class TestPhonologiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no phonology with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_phonology', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit_phonology', id=phonologyId),
@@ -417,3 +441,4 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['phonology']['name'] == u'Phonology'
         assert resp['data'] == {}
+        assert response.content_type == 'application/json'

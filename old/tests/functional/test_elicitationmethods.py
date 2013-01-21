@@ -61,6 +61,7 @@ class TestElicitationMethodsController(TestController):
         assert len(resp) == elicitationMethodsCount
         assert resp[0]['name'] == u'em1'
         assert resp[0]['id'] == elicitationMethods[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -94,6 +95,7 @@ class TestElicitationMethodsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -136,12 +138,14 @@ class TestElicitationMethodsController(TestController):
         assert newEMCount == originalEMCount + 1
         assert resp['name'] == u'em'
         assert resp['description'] == u'Described.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
         params = json.dumps({'name': u'em', 'description': u'Described.'})
         response = self.app.post(url('elicitationmethods'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'The submitted value for ElicitationMethod.name is not unique.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is empty
         params = json.dumps({'name': u'', 'description': u'Described.'})
@@ -162,6 +166,7 @@ class TestElicitationMethodsController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp == {}
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -186,6 +191,7 @@ class TestElicitationMethodsController(TestController):
         newElicitationMethodCount = Session.query(ElicitationMethod).count()
         assert elicitationMethodCount == newElicitationMethodCount
         assert datetimeModified != originalDatetimeModified
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -198,6 +204,7 @@ class TestElicitationMethodsController(TestController):
         assert ourEMDatetimeModified.isoformat() == datetimeModified
         assert elicitationMethodCount == newElicitationMethodCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -219,6 +226,7 @@ class TestElicitationMethodsController(TestController):
         newElicitationMethodCount = Session.query(ElicitationMethod).count()
         assert newElicitationMethodCount == elicitationMethodCount - 1
         assert resp['id'] == elicitationMethodId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted elicitation method from the db should return None
         deletedElicitationMethod = Session.query(ElicitationMethod).get(elicitationMethodId)
@@ -229,8 +237,8 @@ class TestElicitationMethodsController(TestController):
         response = self.app.delete(url('elicitationmethod', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no elicitation method with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no elicitation method with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('elicitationmethod', id=''), status=404,
@@ -256,8 +264,8 @@ class TestElicitationMethodsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
-        assert u'There is no elicitation method with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no elicitation method with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('elicitationmethod', id=''), status=404,
@@ -270,6 +278,7 @@ class TestElicitationMethodsController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'name'
         assert resp['description'] == u'description'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -293,14 +302,15 @@ class TestElicitationMethodsController(TestController):
         response = self.app.get(url('edit_elicitationmethod', id=elicitationMethodId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_elicitationmethod', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no elicitation method with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no elicitation method with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_elicitationmethod', id=''), status=404,
@@ -314,3 +324,4 @@ class TestElicitationMethodsController(TestController):
         resp = json.loads(response.body)
         assert resp['elicitationMethod']['name'] == u'name'
         assert resp['data'] == {}
+        assert response.content_type == 'application/json'

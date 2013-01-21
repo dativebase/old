@@ -10,7 +10,28 @@ from routes.middleware import RoutesMiddleware
 
 from old.config.environment import load_environment
 
-def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
+import logging
+log = logging.getLogger(__name__)
+
+class HTML2JSONContentType(object):
+    """Brute force text/html Content-Type in response to application/json.
+    Take that Pylons!
+    """
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        def custom_start_response(status, headers, exc_info=None):
+            if dict(headers).get('Content-Type') == 'text/html; charset=utf-8':
+                newHeaders = dict(headers)
+                newHeaders['Content-Type'] = 'application/json'
+                headers = newHeaders.items()
+            return start_response(status, headers, exc_info)
+
+        return self.app(environ, custom_start_response)
+
+
+def make_app(global_conf, full_stack=False, static_files=True, **app_conf):
     """Create a Pylons WSGI application and return it
 
     ``global_conf``
@@ -43,7 +64,11 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
     app = RoutesMiddleware(app, config['routes.map'], singleton=False)
     app = SessionMiddleware(app, config)
 
-    # CUSTOM MIDDLEWARE HERE (filtered by error handling middlewares)
+    # At some point it seems that Pylons converts the Content-Type of any
+    # response without a 200 OK status to 'text/html; charset=utf-8'.  Well
+    # no more motherfucker!  The HTML2JSONContentType middleware zaps those
+    # nasty text/html content types and converts them to application/json!
+    app = HTML2JSONContentType(app)
 
     if asbool(full_stack):
         # Handle Python exceptions
@@ -65,3 +90,5 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
         app = Cascade([static_app, app])
     app.config = config
     return app
+
+

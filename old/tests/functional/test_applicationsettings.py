@@ -4,7 +4,7 @@ import simplejson as json
 from nose.tools import nottest
 
 from old.tests import *
-from old.model import ApplicationSettings, User
+from old.model import ApplicationSettings, User, Orthography
 from old.model.meta import Session
 import old.lib.helpers as h
 
@@ -15,10 +15,8 @@ def addDefaultApplicationSettings():
     """Add the default application settings to the database."""
     orthography1 = h.generateDefaultOrthography1()
     orthography2 = h.generateDefaultOrthography2()
-    contributor = Session.query(User).filter(
-        User.role==u'contributor').first()
-    applicationSettings = h.generateDefaultApplicationSettings(
-        [orthography1, orthography2], [contributor])
+    contributor = Session.query(User).filter(User.role==u'contributor').first()
+    applicationSettings = h.generateDefaultApplicationSettings([orthography1, orthography2], [contributor])
     Session.add(applicationSettings)
     Session.commit()
     return applicationSettings
@@ -44,10 +42,9 @@ class TestApplicationsettingsController(TestController):
         'punctuation': u'',
         'grammaticalities': u'',
         'unrestrictedUsers': [],        # A list of user ids
-        'orthographies': [],            # A list of orthography ids
-        'storageOrthography': 0,        # An orthography id
-        'inputOrthography': 0,          # An orthography id
-        'outputOrthography': 0,         # An orthography id
+        'storageOrthography': u'',        # An orthography id
+        'inputOrthography': u'',          # An orthography id
+        'outputOrthography': u'',         # An orthography id
     }
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
@@ -79,6 +76,7 @@ class TestApplicationsettingsController(TestController):
         assert resp[0]['objectLanguageName'] == None
         assert resp[0]['storageOrthography'] == None
         assert resp[0]['unrestrictedUsers'] == []
+        assert response.content_type == 'application/json'
 
         # Add the default application settings.
         applicationSettings = addDefaultApplicationSettings()
@@ -89,7 +87,6 @@ class TestApplicationsettingsController(TestController):
         assert len(resp) == 2
         assert resp[1]['objectLanguageName'] == applicationSettings.objectLanguageName
         assert resp[1]['storageOrthography']['name'] == applicationSettings.storageOrthography.name
-        assert len(resp[1]['orthographies']) == len(applicationSettings.orthographies)
         assert resp[1]['unrestrictedUsers'][0]['role'] == applicationSettings.unrestrictedUsers[0].role
 
 
@@ -103,6 +100,9 @@ class TestApplicationsettingsController(TestController):
         Session.add_all([orthography1, orthography2])
         Session.commit()
         orthographies = [orthography1.id, orthography2.id]
+        orthography1Id = orthography1.id
+        orthography2Id = orthography2.id
+        orthography2Orthography = orthography2.orthography
 
         params = self.createParams.copy()
         params.update({
@@ -118,10 +118,9 @@ class TestApplicationsettingsController(TestController):
             'grammaticalities': u'*,**,***,?,??,???,#,##,###',
             'unrestrictedUsers': [Session.query(User).filter(
                 User.role==u'viewer').first().id],
-            'orthographies': orthographies,
-            'storageOrthography': orthographies[1],
-            'inputOrthography': orthographies[1],
-            'outputOrthography': orthographies[1]
+            'storageOrthography': orthography2Id,
+            'inputOrthography': orthography2Id,
+            'outputOrthography': orthography2Id
         })
         params = json.dumps(params)
 
@@ -130,10 +129,10 @@ class TestApplicationsettingsController(TestController):
         resp = json.loads(response.body)
         assert resp['objectLanguageName'] == u'test_create object language name'
         assert resp['morphemeBreakIsOrthographic'] is False
-        assert u'p,t,k,m,s,[i,i_],[a,a_],[o,o_]' in [
-            o['orthography'] for o in resp['orthographies']]
+        assert resp['storageOrthography']['orthography'] == orthography2Orthography
         assert resp['unrestrictedUsers'][0]['email'] == u'viewer@example.com'
         assert 'password' not in resp['unrestrictedUsers'][0]
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create_invalid(self):
@@ -154,6 +153,7 @@ class TestApplicationsettingsController(TestController):
         response = self.app.post(url('applicationsettings'), params,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['errors']['objectLanguageId'] == \
             u'Enter a value not more than 3 characters long'
         assert resp['errors']['objectLanguageName'] == \
@@ -195,9 +195,11 @@ class TestApplicationsettingsController(TestController):
         response = self.app.get(url('new_applicationsetting'),
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert resp['languages'] == data['languages']
         assert resp['users'] == data['users']
         assert resp['orthographies'] == data['orthographies']
+        assert response.content_type == 'application/json'
 
         # GET /applicationsettings/new with params.  Param values are treated as
         # strings, not JSON.  If any params are specified, the default is to
@@ -231,6 +233,7 @@ class TestApplicationsettingsController(TestController):
 
         applicationSettingsCount = Session.query(
             ApplicationSettings).count()
+        contributorId = Session.query(User).filter(User.role==u'contributor').first().id
 
         # Create an application settings to update.
         params = self.createParams.copy()
@@ -245,37 +248,52 @@ class TestApplicationsettingsController(TestController):
             'morphemeDelimiters': u'+',
             'punctuation': u'!.;:',
             'grammaticalities': u'*,**,?,??,#,##',
-            'unrestrictedUsers': [Session.query(User).filter(
-                User.role==u'contributor').first().id]
+            'unrestrictedUsers': [contributorId]
         })
         params = json.dumps(params)
         response = self.app.post(url('applicationsettings'), params,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         id = int(resp['id'])
-        newApplicationSettingsCount = Session.query(
-            ApplicationSettings).count()
+        newApplicationSettingsCount = Session.query(ApplicationSettings).count()
         assert resp['objectLanguageName'] == u'test_update object language name'
         assert resp['unrestrictedUsers'][0]['role'] == u'contributor'
         assert newApplicationSettingsCount == applicationSettingsCount + 1
 
-        # Update the application settings we just created.
+        # Update the application settings we just created but expect to fail
+        # because the unrestricted users ids are invalid.
         params = self.createParams.copy()
         params.update({
             'objectLanguageName': u'Updated!',
-            # Invalid unrestrictedUsers ids should result in
-            # applicationSettings.unrestrictedUsers = [].
             'unrestrictedUsers': [2000, 5000],
             'morphemeDelimiters': u'-,='
         })
         params = json.dumps(params)
         response = self.app.put(url('applicationsetting', id=id), params,
-                                self.json_headers, self.extra_environ_admin)
+                        self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        newApplicationSettingsCount = Session.query(
-            ApplicationSettings).count()
+        applicationSettingsCount = newApplicationSettingsCount
+        newApplicationSettingsCount = Session.query(ApplicationSettings).count()
+        assert resp['errors']['unrestrictedUsers'] == [u"There is no user with id 2000.", u"There is no user with id 5000."]
+        assert newApplicationSettingsCount == applicationSettingsCount
+        assert response.content_type == 'application/json'
+
+        # Update the application settings.
+        params = self.createParams.copy()
+        params.update({
+            'objectLanguageName': u'Updated!',
+            'unrestrictedUsers': [contributorId],
+            'morphemeDelimiters': u'-,='
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('applicationsetting', id=id), params,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        applicationSettingsCount = newApplicationSettingsCount
+        newApplicationSettingsCount = Session.query(ApplicationSettings).count()
         assert resp['objectLanguageName'] == u'Updated!'
-        assert newApplicationSettingsCount == applicationSettingsCount + 1
+        assert newApplicationSettingsCount == applicationSettingsCount
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new data -- expect a 400 status code where
         # the response body is a JSON object with an appropriate 'error'
@@ -303,6 +321,7 @@ class TestApplicationsettingsController(TestController):
         Session.commit()
         orthography1 = h.getOrthographies()[0]
         orthography1Id = orthography1.id
+        orthography1 = Session.query(Orthography).get(orthography1Id)
         orthography1Orthography = orthography1.orthography
 
         # First create an application settings to delete.
@@ -313,8 +332,7 @@ class TestApplicationsettingsController(TestController):
             'metalanguageName': u'test_delete metalanguage name',
             'metalanguageId': u'tdm',
             'storageOrthography': orthography1Id,
-            'morphemeDelimiters': u'-',
-            'orthographies': [orthography1Id]
+            'morphemeDelimiters': u'-'
         })
         params = json.dumps(params)
         response = self.app.post(url('applicationsettings'), params,
@@ -323,7 +341,6 @@ class TestApplicationsettingsController(TestController):
         newApplicationSettingsCount = Session.query(
             ApplicationSettings).count()
         assert resp['objectLanguageName'] == u'test_delete object language name'
-        assert resp['orthographies'][0]['orthography'] == orthography1Orthography
         assert newApplicationSettingsCount == applicationSettingsCount + 1
 
         # Delete the application settings we just created
@@ -331,13 +348,12 @@ class TestApplicationsettingsController(TestController):
             url('applicationsetting', id=resp['id']),
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        newApplicationSettingsCount = Session.query(
-            ApplicationSettings).count()
+        newApplicationSettingsCount = Session.query(ApplicationSettings).count()
         assert newApplicationSettingsCount == applicationSettingsCount
+        assert response.content_type == 'application/json'
         # The deleted application settings will be returned to us, so the
         # assertions from above should still hold true.
         assert resp['objectLanguageName'] == u'test_delete object language name'
-        assert resp['orthographies'][0]['orthography'] == orthography1Orthography
 
         # Trying to get the deleted form from the db should return None.
         deletedApplicationSettings = Session.query(
@@ -350,6 +366,7 @@ class TestApplicationsettingsController(TestController):
                             extra_environ=self.extra_environ_admin, status=404)
         assert json.loads(response.body)['error'] == \
             u'There is no application settings with id %s' % id
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('applicationsetting', id=''), status=404,
@@ -368,8 +385,8 @@ class TestApplicationsettingsController(TestController):
         id = 100000000000
         response = self.app.get(url('applicationsetting', id=id),
                             extra_environ=self.extra_environ_admin, status=404)
-        assert json.loads(response.body)['error'] == \
-            u'There is no application settings with id %s' % id
+        assert json.loads(response.body)['error'] == u'There is no application settings with id %s' % id
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('applicationsetting', id=''), status=404,
@@ -386,6 +403,7 @@ class TestApplicationsettingsController(TestController):
         response = self.app.get(url('applicationsetting', id=applicationSettingsId),
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert type(resp) == type({})
         assert resp['objectLanguageName'] == \
             applicationSettings.objectLanguageName
@@ -406,6 +424,7 @@ class TestApplicationsettingsController(TestController):
             url('edit_applicationsetting', id=100000000000), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id: expect 404 Not Found
         id = 100000000000
@@ -413,6 +432,7 @@ class TestApplicationsettingsController(TestController):
                             extra_environ=self.extra_environ_admin, status=404)
         assert json.loads(response.body)['error'] == \
             u'There is no application settings with id %s' % id
+        assert response.content_type == 'application/json'
 
         # No id: expect 404 Not Found
         response = self.app.get(url('edit_applicationsetting', id=''),
@@ -429,11 +449,10 @@ class TestApplicationsettingsController(TestController):
         response = self.app.get(url('edit_applicationsetting', id=applicationSettingsId),
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
         assert type(resp) == type({})
         assert resp['applicationSettings']['objectLanguageName'] == \
             applicationSettings.objectLanguageName
-        assert applicationSettings.orthographies[0].orthography in [
-            o['orthography'] for o in resp['data']['orthographies']]
 
         # Valid id with GET params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON

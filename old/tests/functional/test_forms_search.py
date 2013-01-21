@@ -178,6 +178,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 1
         assert resp[0]['transcription'] == u'transcription 10'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_search_c_not_equals(self):
@@ -263,6 +264,7 @@ class TestFormsSearchController(TestController):
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 10
+        assert response.content_type == 'application/json'
 
         # Quantifiers
         jsonQuery = json.dumps(
@@ -587,6 +589,7 @@ class TestFormsSearchController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 76
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_search_o_int(self):
@@ -634,6 +637,7 @@ class TestFormsSearchController(TestController):
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.id.in_'] == u"Invalid filter expression: Form.id.in_(None)"
+        assert response.content_type == 'application/json'
 
         # in int -- Error
         jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', 'in', 2]}})
@@ -641,6 +645,7 @@ class TestFormsSearchController(TestController):
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.id.in_'] == u"Invalid filter expression: Form.id.in_(2)"
+        assert response.content_type == 'application/json'
 
         # regex int - The OLD's Python-based regexp implementation for SQLite will
         # automatically convert a non-string field value to a string before doing

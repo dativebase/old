@@ -61,6 +61,7 @@ class TestTagsController(TestController):
         assert len(resp) == tagsCount
         assert resp[0]['name'] == u'tag1'
         assert resp[0]['id'] == tags[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -69,6 +70,7 @@ class TestTagsController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['name'] == tags[46].name
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'Tag', 'orderByAttribute': 'name',
@@ -86,6 +88,7 @@ class TestTagsController(TestController):
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resultSet[46] == resp['items'][0]['name']
+        assert response.content_type == 'application/json'
 
         # Expect a 400 error when the orderByDirection param is invalid
         orderByParams = {'orderByModel': 'Tag', 'orderByAttribute': 'name',
@@ -94,6 +97,7 @@ class TestTagsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -112,6 +116,7 @@ class TestTagsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('tags'), paginator, headers=self.json_headers,
@@ -119,6 +124,7 @@ class TestTagsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -136,6 +142,7 @@ class TestTagsController(TestController):
         assert newTagCount == originalTagCount + 1
         assert resp['name'] == u'tag'
         assert resp['description'] == u'Described.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
         params = json.dumps({'name': u'tag', 'description': u'Described.'})
@@ -148,12 +155,14 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is too long
         params = json.dumps({'name': u'name' * 400, 'description': u'Described.'})
         response = self.app.post(url('tags'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -162,6 +171,7 @@ class TestTagsController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp == {}
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -186,6 +196,7 @@ class TestTagsController(TestController):
         newTagCount = Session.query(Tag).count()
         assert tagCount == newTagCount
         assert datetimeModified != originalDatetimeModified
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -198,6 +209,7 @@ class TestTagsController(TestController):
         assert ourTagDatetimeModified.isoformat() == datetimeModified
         assert tagCount == newTagCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -219,6 +231,7 @@ class TestTagsController(TestController):
         newTagCount = Session.query(Tag).count()
         assert newTagCount == tagCount - 1
         assert resp['id'] == tagId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted tag from the db should return None
         deletedTag = Session.query(Tag).get(tagId)
@@ -229,13 +242,14 @@ class TestTagsController(TestController):
         response = self.app.delete(url('tag', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no tag with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no tag with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('tag', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -256,13 +270,14 @@ class TestTagsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
-        assert u'There is no tag with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no tag with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('tag', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('tag', id=tagId), headers=self.json_headers,
@@ -270,6 +285,7 @@ class TestTagsController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'name'
         assert resp['description'] == u'description'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -293,20 +309,21 @@ class TestTagsController(TestController):
         response = self.app.get(url('edit_tag', id=tagId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_tag', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no tag with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no tag with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_tag', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit_tag', id=tagId),
@@ -314,3 +331,4 @@ class TestTagsController(TestController):
         resp = json.loads(response.body)
         assert resp['tag']['name'] == u'name'
         assert resp['data'] == {}
+        assert response.content_type == 'application/json'

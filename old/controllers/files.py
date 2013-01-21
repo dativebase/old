@@ -13,7 +13,6 @@ from pylons.controllers.util import forward
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
-
 from old.lib.base import BaseController
 from old.lib.schemata import FileCreateSchema, FileUpdateSchema
 import old.lib.helpers as h
@@ -26,8 +25,9 @@ log = logging.getLogger(__name__)
 class FilesController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('File')
+    queryBuilder = SQLAQueryBuilder('File', config=config)
 
+    @h.OLDjsonify
     @restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
@@ -39,74 +39,63 @@ class FilesController(BaseController):
         is returned or an error is raised.  The 'query' object requires a
         'filter' attribute; an 'orderBy' attribute is optional.
         """
-
-        response.content_type = 'application/json'
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
             query = h.filterRestrictedModels('File', SQLAQuery)
-            result = h.addPagination(query, pythonSearchParams.get('paginator'))
+            return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
+            return {'errors': e.unpack_errors()}
         # SQLAQueryBuilder should have captured these exceptions (and packed
         # them into an OLDSearchParseError) or sidestepped them, but here we'll
         # handle any that got past -- just in case.
         except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
             response.status_int = 400
-            return json.dumps({'error':
-                u'The specified search parameters generated an invalid database query'})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'error': u'The specified search parameters generated an invalid database query'}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /files: Return all files."""
-        # url('files')
-        response.content_type = 'application/json'
         try:
             query = Session.query(File)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             query = h.filterRestrictedModels('File', query)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /files: Create a new file."""
-        # url('files')
-        response.content_type = 'application/json'
         try:
             schema = FileCreateSchema()
             values = json.loads(unicode(request.body, request.charset))
             state = h.State()
             state.full_dict = values
             state.user = session['user']
-            result = schema.to_python(values, state)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            file = createNewFile(result)
+            file = createNewFile(schema.to_python(values, state))
             Session.add(file)
             Session.commit()
-            result = json.dumps(file, cls=h.JSONOLDEncoder)
-        return result
+            return file
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -120,18 +109,14 @@ class FilesController(BaseController):
         See the getNewEditFileData function to understand how the GET params can
         affect the contents of the arrays.
         """
+        return getNewEditFileData(request.GET)
 
-        response.content_type = 'application/json'
-        result = getNewEditFileData(request.GET)
-        return json.dumps(result, cls=h.JSONOLDEncoder)
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /files/id: Update an existing file."""
-
-        response.content_type = 'application/json'
         file = Session.query(File).get(int(id))
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
@@ -143,33 +128,30 @@ class FilesController(BaseController):
                     state = h.State()
                     state.full_dict = values
                     state.user = user
-                    result = schema.to_python(values, state)
-                except h.JSONDecodeError:
-                    response.status_int = 400
-                    result = h.JSONDecodeErrorResponse
-                except Invalid, e:
-                    response.status_int = 400
-                    result = json.dumps({'errors': e.unpack_errors()})
-                else:
-                    file = updateFile(file, result)
+                    file = updateFile(file, schema.to_python(values, state))
                     # file will be False if there are no changes (cf. updateFile).
                     if file:
                         Session.add(file)
                         Session.commit()
-                        result = json.dumps(file, cls=h.JSONOLDEncoder)
+                        return file
                     else:
                         response.status_int = 400
-                        result = json.dumps({'error': u''.join([
-                            u'The update request failed because the submitted ',
-                            u'data were not new.'])})
+                        return {'error':
+                            u'The update request failed because the submitted data were not new.'}
+                except h.JSONDecodeError:
+                    response.status_int = 400
+                    return h.JSONDecodeErrorResponse
+                except Invalid, e:
+                    response.status_int = 400
+                    return {'errors': e.unpack_errors()}
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no file with id %s' % id})
-        return result
+            return {'error': 'There is no file with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -177,22 +159,20 @@ class FilesController(BaseController):
         """DELETE /files/id: Delete an existing file.  Only the enterer and
         administrators can delete a file.
         """
-
-        response.content_type = 'application/json'
         file = Session.query(File).get(id)
         if file:
             if session['user'].role == u'administrator' or \
             file.enterer is session['user']:
                 deleteFile(file)
-                result = json.dumps(file, cls=h.JSONOLDEncoder)
+                return file
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no file with id %s' % id})
-        return result
+            return {'error': 'There is no file with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -204,22 +184,20 @@ class FilesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         file = Session.query(File).get(id)
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
             if h.userIsAuthorizedToAccessModel(user, file, unrestrictedUsers):
-                result = json.dumps(file, cls=h.JSONOLDEncoder)
+                return file
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no file with id %s' % id})
-        return result
+            return {'error': 'There is no file with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -242,46 +220,38 @@ class FilesController(BaseController):
         output.data being retrieved from the db while specified params will
         result in selective retrieval (see getNewEditFileData for details).
         """
-
         response.content_type = 'application/json'
         file = Session.query(File).get(id)
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
-            if not h.userIsAuthorizedToAccessModel(
-                                    session['user'], file, unrestrictedUsers):
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
+            if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
+                return {'data': getNewEditFileData(request.GET), 'file': file}
             else:
-                data = getNewEditFileData(request.GET)
-                result = {'data': data, 'file': file}
-                result = json.dumps(result, cls=h.JSONOLDEncoder)
+                response.status_int = 403
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no file with id %s' % id})
-        return result
+            return {'error': 'There is no file with id %s' % id}
 
     @restrict('GET')
-    @h.authenticate
+    @h.authenticateWithJSON
     def retrieve(self, id):
         """Return the file data (binary stream) for the file in files/ with
         name=id or an error message if the file does not exist or the user is
         not authorized to access it.
         """
-
-        response.content_type = 'application/json'
         file = Session.query(File).filter(File.name==id).first()
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
             if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
                 filePath = os.path.join(config['app_conf']['permanent_store'], id)
-                result = forward(FileApp(filePath))
+                return forward(FileApp(filePath))
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return json.dumps(h.unauthorizedMsg)
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no file with name %s' % id})
-        return result
+            return json.dumps({'error': 'There is no file with name %s' % id})
 
 
 ################################################################################

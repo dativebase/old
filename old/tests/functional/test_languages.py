@@ -44,6 +44,7 @@ class TestLanguagesController(TestController):
         response = self.app.get(url('languages'), headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert len(resp) == len(languages)
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 2, 'page': 2}
@@ -52,6 +53,7 @@ class TestLanguagesController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 2
         assert resp['items'][0]['Part2B'] == languages[2].Part2B
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'Language', 'orderByAttribute': 'Ref_Name',
@@ -69,6 +71,7 @@ class TestLanguagesController(TestController):
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resultSet[2].Ref_Name == resp['items'][0]['Ref_Name']
+        assert response.content_type == 'application/json'
 
         # Now test the show action:
 
@@ -76,12 +79,14 @@ class TestLanguagesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['Ref_Name'] == languages[4].Ref_Name
+        assert response.content_type == 'application/json'
 
         # A nonexistent language Id will return a 404 error
         response = self.app.get(url('language', id=100987),
             headers=self.json_headers, extra_environ=self.extra_environ_view, status=404)
         resp = json.loads(response.body)
         assert resp['error'] == u'There is no language with Id 100987'
+        assert response.content_type == 'application/json'
 
         # Test the search action
         addSEARCHToWebTestValidMethods()
@@ -95,6 +100,7 @@ class TestLanguagesController(TestController):
         resultSet = [l for l in languages if u'm' in l.Ref_Name]
         assert resp
         assert set([l['Id'] for l in resp]) == set([l.Id for l in resultSet])
+        assert response.content_type == 'application/json'
 
         # A search on language Ref_Name using SEARCH /languages
         jsonQuery = json.dumps({'query': {'filter':
@@ -115,11 +121,16 @@ class TestLanguagesController(TestController):
         # will return a 404 response
         response = self.app.get(url('edit_language', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'
         response = self.app.get(url('new_language', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'
         response = self.app.post(url('languages'), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'
         response = self.app.put(url('language', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'
         response = self.app.delete(url('language', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'

@@ -10,13 +10,14 @@ from old.tests import *
 import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
+from pylons import config
 
 log = logging.getLogger(__name__)
 
 
 class TestFilesController(TestController):
 
-    here = appconfig('config:development.ini', relative_to='.')['here']
+    here = appconfig('config:test.ini', relative_to='.')['here']
     filesPath = os.path.join(here, 'files')
     testFilesPath = os.path.join(here, 'test_files')
 
@@ -79,7 +80,6 @@ class TestFilesController(TestController):
     #@nottest
     def test_index(self):
         """Tests that GET /files returns a JSON array of files with expected values."""
-
         # Test that the restricted tag is working correctly.
         # First get the users.
         users = h.getUsers()
@@ -158,6 +158,7 @@ class TestFilesController(TestController):
         assert len(resp) == 2
         assert resp[0]['name'] == u'test_restricted_file.wav'
         assert resp[1]['name'] == u'test_unrestricted_file.jpg'
+        assert response.content_type == 'application/json'
 
         # The default contributor (qua enterer) should also be able to view both
         # files.
@@ -263,6 +264,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted([f.name for f in files], reverse=True)
         assert resultSet == [f['name'] for f in resp]
+        assert response.content_type == 'application/json'
 
         # Test the orderBy *with* paginator.
         params = {'orderByModel': 'File', 'orderByAttribute': 'name',
@@ -318,6 +320,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -348,6 +351,7 @@ class TestFilesController(TestController):
         assert resp['size'] == wavFileSize
         assert resp['enterer']['firstName'] == u'Admin'
         assert fileCount == 1
+        assert response.content_type == 'application/json'
 
         # Create a test image file.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
@@ -438,6 +442,7 @@ class TestFilesController(TestController):
         assert resp['errors']['name'] == u'Please enter a value'
         assert resp['errors']['file']== u'Please enter a value'
         assert fileCount == 3
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_relational_restrictions(self):
@@ -470,6 +475,7 @@ class TestFilesController(TestController):
         assert resp['size'] == wavFileSize
         assert resp['enterer']['firstName'] == u'Admin'
         assert fileCount == 1
+        assert response.content_type == 'application/json'
 
         # First create the restricted tag.
         restrictedTag = h.generateRestrictedTag()
@@ -576,6 +582,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         unrestrictedFileId = resp['id']
         assert resp['name'][:8] == u'old_test'
+        assert response.content_type == 'application/json'
 
         # As a restricted contributor, attempt to update the unrestricted file
         # just created by associating it to a restricted form -- expect to fail.
@@ -586,6 +593,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert u'You are not authorized to access the form with id %d.' % restrictedFormId in \
             resp['errors']['forms']
+        assert response.content_type == 'application/json'
 
         # As an unrestricted administrator, attempt to update an unrestricted file
         # by associating it to a restricted form -- expect to succeed.
@@ -601,7 +609,7 @@ class TestFilesController(TestController):
                 headers=self.json_headers, extra_environ=contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
-
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create_large(self):
@@ -634,6 +642,7 @@ class TestFilesController(TestController):
             assert resp['size'] == wavFileSize
             assert resp['enterer']['firstName'] == u'Admin'
             assert fileCount == 1
+            assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -650,6 +659,7 @@ class TestFilesController(TestController):
                                 status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Add some test data to the database.
         applicationSettings = h.generateDefaultApplicationSettings()
@@ -678,6 +688,7 @@ class TestFilesController(TestController):
         assert resp['speakers'] == data['speakers']
         assert resp['users'] == data['users']
         assert resp['utteranceTypes'] == data['utteranceTypes']
+        assert response.content_type == 'application/json'
 
         # GET /new_file with params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -704,10 +715,9 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['tags'] == []
         assert resp['speakers'] == data['speakers']
-        #log.debug(resp['speakers'])
-        #log.debug(data['speakers'])
         assert resp['users'] == data['users']
         assert resp['utteranceTypes'] == data['utteranceTypes']
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -755,6 +765,7 @@ class TestFilesController(TestController):
             self.json_headers, extra_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # As an administrator now, update the file just created and expect to
         # succeed.
@@ -769,6 +780,7 @@ class TestFilesController(TestController):
         newFileCount = Session.query(model.File).count()
         assert resp['description'] == u'A file that has been updated.'
         assert newFileCount == fileCount + 1
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new data.  Expect a 400 error
         # and response['errors'] = {'no change': The update request failed
@@ -872,6 +884,7 @@ class TestFilesController(TestController):
         assert os.path.exists(filePath)
         assert fileThatWasNotDeleted is not None
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # As myContributor, attempt to delete the file we just created and
         # expect to succeed.
@@ -903,8 +916,8 @@ class TestFilesController(TestController):
         response = self.app.delete(url('file', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no file with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no file with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('file', id=''), status=404,
@@ -964,6 +977,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['forms'][0]['transcription'] == u'test'
         assert resp['name'] == u'old_test.jpg'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 100000000000
@@ -971,8 +985,8 @@ class TestFilesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
-        assert u'There is no file with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no file with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('file', id=''), status=404,
@@ -1066,6 +1080,7 @@ class TestFilesController(TestController):
                          'test.applicationSettings': True}
         response = self.app.get(url('file', id=restrictedFileId),
                         headers=self.json_headers, extra_environ=extra_environ)
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -1110,6 +1125,7 @@ class TestFilesController(TestController):
                                 extra_environ=extra_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_file', id=restrictedFileId), status=401)
@@ -1121,8 +1137,8 @@ class TestFilesController(TestController):
         response = self.app.get(url('edit_file', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no file with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no file with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_file', id=''), status=404,
@@ -1135,6 +1151,7 @@ class TestFilesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['file']['name'] == u'old_test.wav'
+        assert response.content_type == 'application/json'
 
         # Valid id with GET params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -1181,6 +1198,7 @@ class TestFilesController(TestController):
         assert resp['data']['speakers'] == []
         assert resp['data']['users'] == data['users']
         assert resp['data']['utteranceTypes'] == data['utteranceTypes']
+        assert response.content_type == 'application/json'
 
         # Invalid id with GET params.  It should still return 'null'.
         params = {
@@ -1190,8 +1208,7 @@ class TestFilesController(TestController):
         }
         response = self.app.get(url('edit_file', id=id), params,
                             extra_environ=self.extra_environ_admin, status=404)
-        assert u'There is no file with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no file with id %s' % id in json.loads(response.body)['error']
 
     #@nottest
     def test_retrieve(self):
@@ -1209,7 +1226,7 @@ class TestFilesController(TestController):
         Session.add(restrictedTag)
         Session.commit()
         restrictedTagId = restrictedTag.id
-        here = appconfig('config:development.ini', relative_to='.')['here']
+        here = self.here
         testFilesPath = os.path.join(here, 'test_files')
         wavFileName = u'old_test.wav'
         wavFilePath = os.path.join(testFilesPath, wavFileName)
@@ -1229,6 +1246,9 @@ class TestFilesController(TestController):
         response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         responseBase64 = encodestring(response.body)
+        #log.debug('len wavFileBase64: %d' % len(wavFileBase64))
+        #log.debug('len responseBase64: %d' % len(responseBase64))
+        #log.debug('response.body: %s' % response.body)
         assert wavFileBase64 == responseBase64
         assert guess_type(wavFileName)[0] == response.headers['Content-Type']
         assert wavFileSize == int(response.headers['Content-Length'])
@@ -1238,9 +1258,11 @@ class TestFilesController(TestController):
             headers=self.json_headers, status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Attempt to retrieve the restricted file data as the contrib and expect to fail.
         response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
             headers=self.json_headers, extra_environ=extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'

@@ -10,6 +10,9 @@ from old.model import User
 from pylons import request, response, session, app_globals
 import old.lib.helpers as h
 
+import logging
+log = logging.getLogger(__name__)
+
 class BaseController(WSGIController):
 
     def __call__(self, environ, start_response):
@@ -17,7 +20,7 @@ class BaseController(WSGIController):
         # WSGIController.__call__ dispatches to the Controller method
         # the request is routed to. This routing information is
         # available in environ['pylons.routes_dict']
-        environ['past.content_type'] = 'application/json'
+        # environ['paste.content_type'] = 'application/json'
         try:
             return WSGIController.__call__(self, environ, start_response)
         finally:

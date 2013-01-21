@@ -99,6 +99,7 @@ class TestCollectionbackupsController(TestController):
         resp = json.loads(response.body)
         collectionId = resp['id']
         collectionUUID = resp['UUID']
+        assert response.content_type == 'application/json'
         assert collectionCount == 1
 
         # Update our collection (via request) as the default administrator; this
@@ -116,6 +117,7 @@ class TestCollectionbackupsController(TestController):
                         self.json_headers, admin)
         resp = json.loads(response.body)
         collectionCount = Session.query(model.Collection).count()
+        assert response.content_type == 'application/json'
         assert collectionCount == 1
 
         # Finally, update our collection (via request) as the default contributor.
@@ -139,6 +141,7 @@ class TestCollectionbackupsController(TestController):
         response = self.app.get(url('collectionbackups'), headers=self.json_headers, extra_environ=contrib)
         resp = json.loads(response.body)
         assert len(resp) == 2
+        assert response.content_type == 'application/json'
 
         # The admin should get them all too.
         response = self.app.get(url('collectionbackups'), headers=self.json_headers, extra_environ=admin)
@@ -176,6 +179,7 @@ class TestCollectionbackupsController(TestController):
         response = self.app.get(url('collectionbackups'), headers=self.json_headers, extra_environ=view)
         resp = json.loads(response.body)
         assert len(resp) == 0
+        assert response.content_type == 'application/json'
 
         # Finally, update our collection in some trivial way.
         params = self.createParams.copy()
@@ -217,6 +221,7 @@ class TestCollectionbackupsController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 1
         assert resp['items'][0]['title'] == allCollectionBackups[1]['title']
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'CollectionBackup', 'orderByAttribute': 'datetimeModified',
@@ -242,12 +247,14 @@ class TestCollectionbackupsController(TestController):
                                 headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
         assert resp['title'] == restrictedCollectionBackups[0]['title']
+        assert response.content_type == 'application/json'
 
         # Viewer should receive a 403 error when attempting to do so.
         response = self.app.get(url('collectionbackup', id=restrictedCollectionBackups[0]['id']),
                                 headers=self.json_headers, extra_environ=view, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Viewer should be able to GET the unrestricted collection backup
         response = self.app.get(url('collectionbackup', id=unrestrictedCollectionBackup['id']),
@@ -260,6 +267,7 @@ class TestCollectionbackupsController(TestController):
                     headers=self.json_headers, extra_environ=view, status=404)
         resp = json.loads(response.body)
         assert resp['error'] == u'There is no collection backup with id 100987'
+        assert response.content_type == 'application/json'
 
         # Test the search action
         addSEARCHToWebTestValidMethods()
@@ -273,6 +281,7 @@ class TestCollectionbackupsController(TestController):
         resultSet = [cb for cb in allCollectionBackups if u'Contributor' in cb['title']]
         assert len(resp) == len(resultSet) == 3
         assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in resultSet])
+        assert response.content_type == 'application/json'
 
         # A search on collection backup titles using SEARCH /collectionbackups
         jsonQuery = json.dumps({'query': {'filter':
@@ -321,3 +330,4 @@ class TestCollectionbackupsController(TestController):
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         response = self.app.delete(url('collectionbackup', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'

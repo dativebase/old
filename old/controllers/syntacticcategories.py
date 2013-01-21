@@ -3,7 +3,7 @@ import datetime
 import re
 import simplejson as json
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -22,46 +22,43 @@ class SyntacticcategoriesController(BaseController):
 
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('SyntacticCategory')
+    queryBuilder = SQLAQueryBuilder('SyntacticCategory', config=config)
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /syntacticcategories: Return all syntactic categories."""
-        response.content_type = 'application/json'
         try:
             query = Session.query(SyntacticCategory)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /syntacticcategories: Create a new syntactic category."""
-        response.content_type = 'application/json'
         try:
             schema = SyntacticCategorySchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            syntacticCategory = createNewSyntacticCategory(result)
+            data = schema.to_python(values)
+            syntacticCategory = createNewSyntacticCategory(data)
             Session.add(syntacticCategory)
             Session.commit()
-            result = json.dumps(syntacticCategory, cls=h.JSONOLDEncoder)
-        return result
+            return syntacticCategory
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -70,17 +67,14 @@ class SyntacticcategoriesController(BaseController):
         syntactic category.  Here we simply return the list of syntactic category
         types defined in lib/utils.
         """
+        return {'syntacticCategoryTypes': h.syntacticCategoryTypes}
 
-        response.content_type = 'application/json'
-        return json.dumps({'syntacticCategoryTypes': h.syntacticCategoryTypes})
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /syntacticcategories/id: Update an existing syntactic category."""
-
-        response.content_type = 'application/json'
         syntacticCategory = Session.query(SyntacticCategory).get(int(id))
         if syntacticCategory:
             try:
@@ -88,47 +82,43 @@ class SyntacticcategoriesController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.getStateObject(values)
                 state.id = id
-                result = schema.to_python(values, state)
-            except h.JSONDecodeError:
-                response.status_int = 400
-                result = h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                result = json.dumps({'errors': e.unpack_errors()})
-            else:
-                syntacticCategory = updateSyntacticCategory(syntacticCategory, result)
+                data = schema.to_python(values, state)
+                syntacticCategory = updateSyntacticCategory(syntacticCategory, data)
                 # syntacticCategory will be False if there are no changes (cf. updateSyntacticCategory).
                 if syntacticCategory:
                     Session.add(syntacticCategory)
                     Session.commit()
-                    result = json.dumps(syntacticCategory, cls=h.JSONOLDEncoder)
+                    return syntacticCategory
                 else:
                     response.status_int = 400
-                    result = json.dumps({'error': u''.join([
-                        u'The update request failed because the submitted ',
-                        u'data were not new.'])})
+                    return {'error':
+                        u'The update request failed because the submitted data were not new.'}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no syntactic category with id %s' % id})
-        return result
+            return {'error': 'There is no syntactic category with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /syntacticcategories/id: Delete an existing syntactic category."""
-
-        response.content_type = 'application/json'
         syntacticCategory = Session.query(SyntacticCategory).get(id)
         if syntacticCategory:
             Session.delete(syntacticCategory)
             Session.commit()
-            result = json.dumps(syntacticCategory, cls=h.JSONOLDEncoder)
+            return syntacticCategory
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no syntactic category with id %s' % id})
-        return result
+            return {'error': 'There is no syntactic category with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -140,16 +130,14 @@ class SyntacticcategoriesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         syntacticCategory = Session.query(SyntacticCategory).get(id)
         if syntacticCategory:
-            result = json.dumps(syntacticCategory, cls=h.JSONOLDEncoder)
+            return syntacticCategory
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no syntactic category with id %s' % id})
-        return result
+            return {'error': 'There is no syntactic category with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -158,19 +146,15 @@ class SyntacticcategoriesController(BaseController):
         OLD syntactic category; here we return only the syntactic category and
         the list of syntactic category types defined in lib/utils.
         """
-
-        response.content_type = 'application/json'
         syntacticCategory = Session.query(SyntacticCategory).get(id)
         if syntacticCategory:
-            result = {
+            return {
                 'data': {'syntacticCategoryTypes': h.syntacticCategoryTypes},
                 'syntacticCategory': syntacticCategory
             }
-            result = json.dumps(result, cls=h.JSONOLDEncoder)
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no syntactic category with id %s' % id})
-        return result
+            return {'error': 'There is no syntactic category with id %s' % id}
 
 
 ################################################################################

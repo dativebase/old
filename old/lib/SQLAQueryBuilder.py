@@ -127,11 +127,11 @@ class SQLAQueryBuilder(object):
         > forms = query.all()
     """
 
-    def __init__(self, modelName='Form', primaryKey='id', mode='production'):
+    def __init__(self, modelName='Form', primaryKey='id', mode='production', **kwargs):
         self.modelName = modelName  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
         self.primaryKey = primaryKey    # Some models have a primary key other than 'id' ...
         self.mode = mode            # i.e., production or development
-        self.RDBMSName = getRDBMSName() # i.e., mysql or sqlite
+        self.RDBMSName = getRDBMSName(**kwargs) # i.e., mysql or sqlite
 
     def getSQLAQuery(self, python):
         self.clearErrors()

@@ -1,9 +1,7 @@
 import simplejson as json
 from decorator import decorator
-from pylons import session, request, url, response
-from pylons.controllers.util import redirect
-from utils import unauthorizedJSONMsg
-
+from pylons import session, response
+from utils import unauthorizedMsg
 import logging
 
 log = logging.getLogger(__name__)
@@ -12,21 +10,31 @@ log = logging.getLogger(__name__)
 def authenticate(target):
     """Authentication decorator.  If user is not logged in and tries to call
     a controller action with this decorator, then the response header status
-    will be '401 Unauthorized' and the response body will be the JSON object
+    will be '401 Unauthorized' and the response body will be
     {error: '401 Unauthorized'}.
-
     """
 
     def wrapper(target, *args, **kwargs):
         if getattr(session.get('user'), 'username', None):
             return target(*args, **kwargs)
-        response.content_type = 'application/json'
         response.status_int = 401
-        return json.dumps({'error':
-            'Authentication is required to access this resource.'})
+        return {'error': 'Authentication is required to access this resource.'}
 
     return decorator(wrapper)(target)
 
+def authenticateWithJSON(target):
+    """Identical to the authenticate decorator except that the response body is
+    json.dumped beforehand.  This is decorator is only needed in the retrieve
+    action of controllers/files.py
+    """
+
+    def wrapper(target, *args, **kwargs):
+        if getattr(session.get('user'), 'username', None):
+            return target(*args, **kwargs)
+        response.status_int = 401
+        return json.dumps({'error': 'Authentication is required to access this resource.'})
+
+    return decorator(wrapper)(target)
 
 def authorize(roles, users=None, userIDIsArgs1=False):
     """Authorization decorator.  If user tries to request a controller action
@@ -65,20 +73,17 @@ def authorize(roles, users=None, userIDIsArgs1=False):
             # Check for authorization via user.
             if users:
                 if role is not 'administrator' and id not in users:
-                    response.content_type = 'application/json'
                     response.status_int = 403
-                    return unauthorizedJSONMsg
+                    return unauthorizedMsg
             # Check whether the user id equals the id argument given to the
             # target action.  This is useful, e.g., when a user can only edit
             # their own personal page.
             if userIDIsArgs1:
                 if role != u'administrator' and int(id) != int(args[1]):
-                    response.content_type = 'application/json'
                     response.status_int = 403
-                    return unauthorizedJSONMsg
+                    return unauthorizedMsg
             return target(*args, **kwargs)
         else:
-            response.content_type = 'application/json'
             response.status_int = 403
-            return unauthorizedJSONMsg
+            return unauthorizedMsg
     return decorator(wrapper)

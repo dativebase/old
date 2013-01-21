@@ -63,6 +63,7 @@ class TestSpeakersController(TestController):
         assert len(resp) == speakersCount
         assert resp[0]['firstName'] == u'John1'
         assert resp[0]['id'] == speakers[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -96,6 +97,7 @@ class TestSpeakersController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -114,6 +116,7 @@ class TestSpeakersController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('speakers'), paginator, headers=self.json_headers,
@@ -121,6 +124,7 @@ class TestSpeakersController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -138,12 +142,14 @@ class TestSpeakersController(TestController):
         assert newSpeakerCount == originalSpeakerCount + 1
         assert resp['firstName'] == u'John'
         assert resp['dialect'] == u'dialect'
+        assert response.content_type == 'application/json'
 
         # Invalid because firstName is too long
         params = json.dumps({'firstName': u'John' * 400, 'lastName': u'Doe', 'pageContent': u'pageContent', 'dialect': u'dialect'})
         response = self.app.post(url('speakers'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['firstName'] == u'Enter a value not more than 255 characters long'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -152,6 +158,7 @@ class TestSpeakersController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp == {}
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -176,6 +183,7 @@ class TestSpeakersController(TestController):
         newSpeakerCount = Session.query(Speaker).count()
         assert speakerCount == newSpeakerCount
         assert datetimeModified != originalDatetimeModified
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -188,6 +196,7 @@ class TestSpeakersController(TestController):
         assert ourSpeakerDatetimeModified.isoformat() == datetimeModified
         assert speakerCount == newSpeakerCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -209,23 +218,26 @@ class TestSpeakersController(TestController):
         newSpeakerCount = Session.query(Speaker).count()
         assert newSpeakerCount == speakerCount - 1
         assert resp['id'] == speakerId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted speaker from the db should return None
         deletedSpeaker = Session.query(Speaker).get(speakerId)
         assert deletedSpeaker == None
+        assert response.content_type == 'application/json'
 
         # Delete with an invalid id
         id = 9999999999999
         response = self.app.delete(url('speaker', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no speaker with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no speaker with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('speaker', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -246,13 +258,14 @@ class TestSpeakersController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
-        assert u'There is no speaker with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no speaker with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('speaker', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('speaker', id=speakerId), headers=self.json_headers,
@@ -260,6 +273,7 @@ class TestSpeakersController(TestController):
         resp = json.loads(response.body)
         assert resp['firstName'] == u'firstName'
         assert resp['dialect'] == u'dialect'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -283,20 +297,21 @@ class TestSpeakersController(TestController):
         response = self.app.get(url('edit_speaker', id=speakerId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_speaker', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no speaker with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no speaker with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_speaker', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit_speaker', id=speakerId),
@@ -304,3 +319,4 @@ class TestSpeakersController(TestController):
         resp = json.loads(response.body)
         assert resp['speaker']['firstName'] == u'firstName'
         assert resp['data'] == {}
+        assert response.content_type == 'application/json'

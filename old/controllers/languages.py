@@ -3,7 +3,7 @@ import datetime
 import re
 import simplejson as json
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -25,8 +25,9 @@ class LanguagesController(BaseController):
     and getting of languages only.
     """
 
-    queryBuilder = SQLAQueryBuilder('Language', 'Id')
+    queryBuilder = SQLAQueryBuilder('Language', 'Id', config=config)
 
+    @h.OLDjsonify
     @restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
@@ -38,65 +39,58 @@ class LanguagesController(BaseController):
         is raised.  The 'query' object requires a 'filter' attribute; an
         'orderBy' attribute is optional.
         """
-
-        response.content_type = 'application/json'
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            result = h.addPagination(SQLAQuery, pythonSearchParams.get('paginator'))
+            return h.addPagination(SQLAQuery, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
+            return {'errors': e.unpack_errors()}
         # SQLAQueryBuilder should have captured these exceptions (and packed
         # them into an OLDSearchParseError) or sidestepped them, but here we'll
         # handle any that got past -- just in case.
         except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
             response.status_int = 400
-            return json.dumps({'error':
-                u'The specified search parameters generated an invalid database query'})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'error': u'The specified search parameters generated an invalid database query'}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /languages: Return all languages."""
-
-        response.content_type = 'application/json'
         try:
             query = Session.query(Language)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder, 'Id')
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     def create(self):
-        response.content_type = 'application/json'
         response.status_int = 404
-        return json.dumps({'error': 'This resource is read-only.'})
+        return {'error': 'This resource is read-only.'}
 
-    def new(self, format='html'):
-        response.content_type = 'application/json'
+    @h.OLDjsonify
+    def new(self):
         response.status_int = 404
-        return json.dumps({'error': 'This resource is read-only.'})
+        return {'error': 'This resource is read-only.'}
 
+    @h.OLDjsonify
     def update(self, id):
-        response.content_type = 'application/json'
         response.status_int = 404
-        return json.dumps({'error': 'This resource is read-only.'})
+        return {'error': 'This resource is read-only.'}
 
+    @h.OLDjsonify
     def delete(self, id):
-        response.content_type = 'application/json'
         response.status_int = 404
-        return json.dumps({'error': 'This resource is read-only.'})
+        return {'error': 'This resource is read-only.'}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -108,17 +102,14 @@ class LanguagesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         language = Session.query(Language).get(id)
         if language:
-            result = json.dumps(language, cls=h.JSONOLDEncoder)
+            return language
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no language with Id %s' % id})
-        return result
+            return {'error': 'There is no language with Id %s' % id}
 
+    @h.OLDjsonify
     def edit(self, id, format='html'):
-        response.content_type = 'application/json'
         response.status_int = 404
-        return json.dumps({'error': 'This resource is read-only.'})
+        return {'error': 'This resource is read-only.'}

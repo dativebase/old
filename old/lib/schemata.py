@@ -411,11 +411,11 @@ class ApplicationSettingsSchema(Schema):
     morphemeDelimiters = UnicodeString(max=255)
     punctuation = UnicodeString()
     grammaticalities = UnicodeString(max=255)
-    unrestrictedUsers = ForEach(Int())
-    orthographies = ForEach(Int())
-    storageOrthography = Int()
-    inputOrthography = Int()
-    outputOrthography = Int()
+    unrestrictedUsers = ForEach(ValidOLDModelObject(modelName='User'))
+    orthographies = ForEach(ValidOLDModelObject(modelName='Orthography'))
+    storageOrthography = ValidOLDModelObject(modelName='Orthography')
+    inputOrthography = ValidOLDModelObject(modelName='Orthography')
+    outputOrthography = ValidOLDModelObject(modelName='Orthography')
 
 
 ################################################################################

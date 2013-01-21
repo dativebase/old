@@ -82,6 +82,7 @@ class TestPagesController(TestController):
         assert len(resp) == pagesCount
         assert resp[0]['name'] == u'page1'
         assert resp[0]['id'] == pages[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -90,6 +91,7 @@ class TestPagesController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['name'] == pages[46].name
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'Page', 'orderByAttribute': 'name',
@@ -115,6 +117,7 @@ class TestPagesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -140,6 +143,7 @@ class TestPagesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -164,6 +168,7 @@ class TestPagesController(TestController):
         assert resp['name'] == u'page'
         assert resp['content'] == self.mdContents
         assert resp['html'] == h.getHTMLFromContents(self.mdContents, 'markdown')
+        assert response.content_type == 'application/json'
 
         # Invalid because name is empty and markup language is invalid
         params = self.createParams.copy()
@@ -178,6 +183,7 @@ class TestPagesController(TestController):
         assert resp['errors']['name'] == u'Please enter a value'
         assert resp['errors']['markupLanguage'] == \
             u"Value must be one of: markdown; reStructuredText (not u'markdownable')"
+        assert response.content_type == 'application/json'
 
         # Invalid because name is too long
         params = self.createParams.copy()
@@ -190,6 +196,7 @@ class TestPagesController(TestController):
         response = self.app.post(url('pages'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -198,6 +205,7 @@ class TestPagesController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp == {'markupLanguages': list(h.markupLanguages)}
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -234,6 +242,7 @@ class TestPagesController(TestController):
         assert pageCount == newPageCount
         assert datetimeModified != originalDatetimeModified
         assert resp['name'] == u'Awesome Page'
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -246,6 +255,7 @@ class TestPagesController(TestController):
         assert ourPageDatetimeModified.isoformat() == datetimeModified
         assert pageCount == newPageCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -272,10 +282,12 @@ class TestPagesController(TestController):
         newPageCount = Session.query(Page).count()
         assert newPageCount == pageCount - 1
         assert resp['id'] == pageId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted page from the db should return None
         deletedPage = Session.query(Page).get(pageId)
         assert deletedPage == None
+        assert response.content_type == 'application/json'
 
         # Delete with an invalid id
         id = 9999999999999
@@ -283,6 +295,7 @@ class TestPagesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no page with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('page', id=''), status=404,
@@ -314,11 +327,13 @@ class TestPagesController(TestController):
             status=404)
         resp = json.loads(response.body)
         assert u'There is no page with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('page', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('page', id=pageId), headers=self.json_headers,
@@ -326,6 +341,7 @@ class TestPagesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'page'
         assert resp['content'] == self.mdContents
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -354,12 +370,14 @@ class TestPagesController(TestController):
         response = self.app.get(url('edit_page', id=pageId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_page', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin, status=404)
         assert u'There is no page with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_page', id=''), status=404,
@@ -372,3 +390,4 @@ class TestPagesController(TestController):
         resp = json.loads(response.body)
         assert resp['page']['name'] == u'page'
         assert resp['data'] == {'markupLanguages': list(h.markupLanguages)}
+        assert response.content_type == 'application/json'

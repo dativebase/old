@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 class TestOldcollectionsController(TestController):
 
-    here = appconfig('config:development.ini', relative_to='.')['here']
+    here = appconfig('config:test.ini', relative_to='.')['here']
     filesPath = os.path.join(here, 'files')
     testFilesPath = os.path.join(here, 'test_files')
 
@@ -281,6 +281,7 @@ class TestOldcollectionsController(TestController):
                         headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert resultSet[46] == resp['items'][0]['title']
+        assert response.content_type == 'application/json'
 
         # The default viewer should only be able to see the odd numbered collections,
         # even with a paginator.
@@ -321,6 +322,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('collections'), paginator, headers=self.json_headers,
@@ -439,6 +441,7 @@ class TestOldcollectionsController(TestController):
         assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1Id, tag2Id])
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id])
         assert collectionCount == 1
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create_invalid(self):
@@ -470,6 +473,7 @@ class TestOldcollectionsController(TestController):
         assert resp['errors']['title'] == tooLongError
         assert resp['errors']['url'] == u'The input is not valid'
         assert newCollectionCount == collectionCount
+        assert response.content_type == 'application/json'
 
         # Add some default application settings and set
         # app_globals.applicationSettings.
@@ -501,6 +505,7 @@ class TestOldcollectionsController(TestController):
         assert resp['errors']['type'] == \
             u"Value must be one of: story; elicitation; paper; discourse; other (not u'novella')"
         assert newCollectionCount == collectionCount
+        assert response.content_type == 'application/json'
 
         # Create a collection with a valid type, markupLanguage and url
         params = self.createParams.copy()
@@ -542,6 +547,7 @@ class TestOldcollectionsController(TestController):
         assert resp['errors']['elicitor'] == u'Please enter an integer value'
         assert resp['errors']['source'] == u'Please enter an integer value'
         assert newCollectionCount == collectionCount
+        assert response.content_type == 'application/json'
 
         # Now create a collection with some *valid* many-to-one data, i.e.,
         # speaker, elicitor, source.
@@ -665,6 +671,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         assert u'You are not authorized to access the file with id %d.' % restrictedFileId in \
             resp['errors']['files']
+        assert response.content_type == 'application/json'
 
         # Now, as a (restricted) contributor, attempt to create a collection
         # that embeds via reference a restricted form -- expect to fail here also.
@@ -709,6 +716,7 @@ class TestOldcollectionsController(TestController):
         unrestrictedCollectionId = resp['id']
         assert resp['title'] == u'test'
         assert resp['files'][0]['name'] == u'unrestrictedFile.wav'
+        assert response.content_type == 'application/json'
 
         # Now, as a (restricted) contributor, attempt to create a collection that
         # embeds via reference an unrestricted file -- expect to succeed.
@@ -753,6 +761,7 @@ class TestOldcollectionsController(TestController):
         assert resp['title'] == u'test'
         assert resp['files'][0]['name'] == u'restrictedFile.wav'
         assert u'restricted' in [t['name'] for t in resp['tags']]
+        assert response.content_type == 'application/json'
 
         # Now, as a(n unrestricted) administrator, attempt to create a collection
         # that embeds via reference a restricted form -- expect to succeed here also.
@@ -784,6 +793,7 @@ class TestOldcollectionsController(TestController):
         assert resp['title'] == u'test'
         assert resp['forms'][0]['transcription'] == u'restricted'
         assert u'restricted' in [t['name'] for t in resp['tags']]
+        assert response.content_type == 'application/json'
 
         # Now show that the indirectly restricted collections are inaccessible to
         # unrestricted users.
@@ -819,6 +829,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         assert resp['id'] == unrestrictedCollectionId
         assert u'restricted' in [t['name'] for t in resp['tags']]
+        assert response.content_type == 'application/json'
 
         # Now show that the newly indirectly restricted collection is also
         # inaccessible to an unrestricted user.
@@ -845,6 +856,7 @@ class TestOldcollectionsController(TestController):
                                 status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Add some test data to the database.
         applicationSettings = h.generateDefaultApplicationSettings()
@@ -879,6 +891,7 @@ class TestOldcollectionsController(TestController):
         assert resp['sources'] == data['sources']
         assert set(resp['collectionTypes']) == set(h.collectionTypes)
         assert set(resp['markupLanguages']) == set(h.markupLanguages)
+        assert response.content_type == 'application/json'
 
         # GET /new_collection with params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -910,6 +923,7 @@ class TestOldcollectionsController(TestController):
         assert resp['sources'] == data['sources']
         assert resp['tags'] == data['tags']
         assert resp['users'] == []
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -964,6 +978,7 @@ class TestOldcollectionsController(TestController):
             self.json_headers, extra_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # As an administrator now, update the collection just created and expect to
         # succeed.
@@ -985,6 +1000,7 @@ class TestOldcollectionsController(TestController):
             desc(model.CollectionBackup.id)).first()
         assert backup.datetimeModified.isoformat() == resp['datetimeModified']
         assert backup.title == originalTitle
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new data.  Expect a 400 error
         # and response['errors'] = {'no change': The update request failed
@@ -996,6 +1012,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         assert origBackupCount == newBackupCount
         assert u'the submitted data were not new' in resp['error']
+        assert response.content_type == 'application/json'
 
         # Now update our form by adding a many-to-one datum, viz. a speaker
         speaker = h.generateDefaultSpeaker()
@@ -1014,6 +1031,7 @@ class TestOldcollectionsController(TestController):
                                  extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert resp['speaker']['firstName'] == speakerFirstName
+        assert response.content_type == 'application/json'
 
         # Test the updating of many-to-many data.
 
@@ -1118,6 +1136,7 @@ class TestOldcollectionsController(TestController):
         assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1Id, tag2Id, restrictedTagId])
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id])
         assert collectionCount == collectionCountAtStart + 1
+        assert response.content_type == 'application/json'
 
         # Attempt to update the collection we just created by merely changing the
         # order of the ids for the many-to-many attributes -- expect to fail.
@@ -1139,6 +1158,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == \
             u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
         # Now update by removing one of the files and expect success.
         params = self.createParams.copy()
@@ -1157,6 +1177,7 @@ class TestOldcollectionsController(TestController):
         assert newCollectionCount == collectionCount
         assert len(resp['files']) == 1
         assert restrictedTag.name in [t['name'] for t in resp['tags']]
+        assert response.content_type == 'application/json'
 
         # Attempt to create a form with some *invalid* files and tags and fail.
         params = self.createParams.copy()
@@ -1179,6 +1200,7 @@ class TestOldcollectionsController(TestController):
         assert u'There is no tag with id 1000.' in resp['errors']['tags']
         assert u'There is no tag with id 9875.' in resp['errors']['tags']
         assert u'Please enter an integer value' in resp['errors']['tags']
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -1275,6 +1297,7 @@ class TestOldcollectionsController(TestController):
                                    extra_environ=extra_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # As myContributor, attempt to delete the collection we just created and
         # expect to succeed.  Show that models related via many-to-many relations
@@ -1298,6 +1321,7 @@ class TestOldcollectionsController(TestController):
         assert isinstance(speakerOfDeletedCollection, model.Speaker)
         assert newCollectionCount == collectionCount
         assert newCollectionBackupCount == collectionBackupCount + 1
+        assert response.content_type == 'application/json'
 
         # The deleted collection will be returned to us, so the assertions from above
         # should still hold true.
@@ -1317,20 +1341,21 @@ class TestOldcollectionsController(TestController):
         assert backedUpSpeaker['firstName'] == speakerFirstName
         assert backedUpCollection.datetimeEntered.isoformat() == resp['datetimeEntered']
         assert backedUpCollection.UUID == resp['UUID']
+        assert response.content_type == 'application/json'
 
         # Delete with an invalid id
         id = 9999999999999
         response = self.app.delete(url('collection', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no collection with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no collection with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('collection', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -1351,20 +1376,22 @@ class TestOldcollectionsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
-        assert u'There is no collection with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no collection with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('collection', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('collection', id=collectionId), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['title'] == u'Title'
+        assert response.content_type == 'application/json'
 
         # Now test that the restricted tag is working correctly.
         # First get the default contributor's id.
@@ -1436,6 +1463,8 @@ class TestOldcollectionsController(TestController):
                          'test.applicationSettings': True}
         response = self.app.get(url('collection', id=restrictedCollectionId),
             headers=self.json_headers, extra_environ=extra_environ, status=403)
+        assert response.content_type == 'application/json'
+
         # Remove the restricted tag from the collection and the viewer should now be
         # able to view it too.
         restrictedCollection = Session.query(model.Collection).get(restrictedCollectionId)
@@ -1446,6 +1475,7 @@ class TestOldcollectionsController(TestController):
                          'test.applicationSettings': True}
         response = self.app.get(url('collection', id=restrictedCollectionId),
                         headers=self.json_headers, extra_environ=extra_environ)
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -1478,31 +1508,34 @@ class TestOldcollectionsController(TestController):
                                 extra_environ=extra_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_collection', id=restrictedCollectionId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_collection', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no collection with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no collection with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_collection', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit_collection', id=restrictedCollectionId),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['collection']['title'] == u'Test'
+        assert response.content_type == 'application/json'
 
         # Valid id with GET params.  Param values are treated as strings, not
         # JSON.  If any params are specified, the default is to return a JSON
@@ -1555,6 +1588,7 @@ class TestOldcollectionsController(TestController):
         assert resp['data']['sources'] == data['sources']
         assert set(resp['data']['collectionTypes']) == set(h.collectionTypes)
         assert set(resp['data']['markupLanguages']) == set(h.markupLanguages)
+        assert response.content_type == 'application/json'
 
         # Invalid id with GET params.  It should still return 'null'.
         params = {
@@ -1564,8 +1598,7 @@ class TestOldcollectionsController(TestController):
         }
         response = self.app.get(url('edit_collection', id=id), params,
                             extra_environ=self.extra_environ_admin, status=404)
-        assert u'There is no collection with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no collection with id %s' % id in json.loads(response.body)['error']
 
     #@nottest
     def test_history(self):
@@ -1615,6 +1648,7 @@ class TestOldcollectionsController(TestController):
         collectionId = resp['id']
         collectionUUID = resp['UUID']
         assert collectionCount == 1
+        assert response.content_type == 'application/json'
 
         # Update our collection (via request) as the default administrator
         extra_environ = {'test.authentication.role': u'administrator',
@@ -1633,6 +1667,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         collectionCount = Session.query(model.Collection).count()
         assert collectionCount == 1
+        assert response.content_type == 'application/json'
 
         # Finally, update our collection (via request) as the default contributor.
         extra_environ = {'test.authentication.role': u'contributor',
@@ -1650,6 +1685,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         collectionCount = Session.query(model.Collection).count()
         assert collectionCount == 1
+        assert response.content_type == 'application/json'
 
         # Now get the history of this collection.
         extra_environ = {'test.authentication.role': u'contributor',
@@ -1673,6 +1709,7 @@ class TestOldcollectionsController(TestController):
         assert firstVersion['speaker'] == None
         assert [t['id'] for t in firstVersion['tags']] == [restrictedTagId]
         assert firstVersion['files'] == []
+        assert response.content_type == 'application/json'
 
         assert secondVersion['title'] == u'Updated by the Administrator'
         assert secondVersion['elicitor'] == None
@@ -1819,6 +1856,7 @@ class TestOldcollectionsController(TestController):
         assert resp['previousVersions'][0]['title'] == \
             u'2nd collection unrestricted'
         assert resp['collection']['title'] == u'2nd collection unrestricted updated'
+        assert response.content_type == 'application/json'
 
         # Now get the history of the just-entered restricted collection as an
         # administrator and expect to receive both backups.
@@ -1832,4 +1870,4 @@ class TestOldcollectionsController(TestController):
         assert resp['previousVersions'][1]['title'] == \
             u'2nd collection restricted'
         assert resp['collection']['title'] == u'2nd collection unrestricted updated'
-
+        assert response.content_type == 'application/json'

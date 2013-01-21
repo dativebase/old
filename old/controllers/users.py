@@ -3,7 +3,7 @@ import datetime
 import re
 import simplejson as json
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -21,46 +21,43 @@ log = logging.getLogger(__name__)
 class UsersController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('User')
+    queryBuilder = SQLAQueryBuilder('User', config=config)
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /users: Return all users."""
-        response.content_type = 'application/json'
         try:
             query = Session.query(User)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator'])
     def create(self):
         """POST /users: Create a new user."""
-        response.content_type = 'application/json'
         try:
             schema = UserSchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            user = createNewUser(result)
+            data = schema.to_python(values)
+            user = createNewUser(data)
             Session.add(user)
             Session.commit()
-            result = json.dumps(user.getFullDict(), cls=h.JSONOLDEncoder)
-        return result
+            return user.getFullDict()
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator'])
@@ -74,18 +71,14 @@ class UsersController(BaseController):
         See the getNewUserData function to understand how the GET
         params can affect the contents of the arrays.
         """
+        return getNewUserData(request.GET)
 
-        response.content_type = 'application/json'
-        result = getNewUserData(request.GET)
-        return json.dumps(result, cls=h.JSONOLDEncoder)
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor', 'viewer'], None, True)
     def update(self, id):
         """PUT /users/id: Update an existing user."""
-
-        response.content_type = 'application/json'
         user = Session.query(User).get(int(id))
         if user:
             try:
@@ -94,48 +87,44 @@ class UsersController(BaseController):
                 state = h.getStateObject(values)
                 state.userToUpdate = user.getFullDict()
                 state.user = session['user'].getFullDict()
-                result = schema.to_python(values, state)
-            except h.JSONDecodeError:
-                response.status_int = 400
-                result = h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                result = json.dumps({'errors': e.unpack_errors()})
-            else:
-                user = updateUser(user, result)
+                data = schema.to_python(values, state)
+                user = updateUser(user, data)
                 # user will be False if there are no changes (cf. updateUser).
                 if user:
                     Session.add(user)
                     Session.commit()
-                    result = json.dumps(user.getFullDict(), cls=h.JSONOLDEncoder)
+                    return user.getFullDict()
                 else:
                     response.status_int = 400
-                    result = json.dumps({'error': u''.join([
-                        u'The update request failed because the submitted ',
-                        u'data were not new.'])})
+                    return {'error':
+                        u'The update request failed because the submitted data were not new.'}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no user with id %s' % id})
-        return result
+            return {'error': 'There is no user with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator'])
     def delete(self, id):
         """DELETE /users/id: Delete an existing user."""
-
-        response.content_type = 'application/json'
         user = Session.query(User).get(id)
         if user:
             h.destroyResearcherDirectory(user)
             Session.delete(user)
             Session.commit()
-            result = json.dumps(user.getFullDict(), cls=h.JSONOLDEncoder)
+            return user.getFullDict()
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no user with id %s' % id})
-        return result
+            return {'error': 'There is no user with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -146,16 +135,14 @@ class UsersController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         user = Session.query(User).get(id)
         if user:
-            result = json.dumps(user, cls=h.JSONOLDEncoder)
+            return user
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no user with id %s' % id})
-        return result
+            return {'error': 'There is no user with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor', 'viewer'], userIDIsArgs1=True)
@@ -164,17 +151,13 @@ class UsersController(BaseController):
         OLD user; here we return only the user and
         an empty JSON object.
         """
-
-        response.content_type = 'application/json'
         user = Session.query(User).get(id)
         if user:
             data = getNewUserData(request.GET)
-            result = {'data': data, 'user': user.getFullDict()}
-            result = json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'data': data, 'user': user.getFullDict()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no user with id %s' % id})
-        return result
+            return {'error': 'There is no user with id %s' % id}
 
 
 ################################################################################

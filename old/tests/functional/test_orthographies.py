@@ -70,6 +70,7 @@ class TestOrthographiesController(TestController):
         assert len(resp) == orthographiesCount
         assert resp[0]['name'] == u'orthography1'
         assert resp[0]['id'] == orthographies[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -78,6 +79,7 @@ class TestOrthographiesController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['name'] == orthographies[46].name
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'Orthography', 'orderByAttribute': 'name',
@@ -95,6 +97,7 @@ class TestOrthographiesController(TestController):
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resultSet[46] == resp['items'][0]['name']
+        assert response.content_type == 'application/json'
 
         # Expect a 400 error when the orderByDirection param is invalid
         orderByParams = {'orderByModel': 'Orthography', 'orderByAttribute': 'name',
@@ -103,6 +106,7 @@ class TestOrthographiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -128,6 +132,7 @@ class TestOrthographiesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -149,6 +154,7 @@ class TestOrthographiesController(TestController):
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
         assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
+        assert response.content_type == 'application/json'
 
         # Invalid because name and orthography are empty
         params = self.createParams.copy()
@@ -158,6 +164,7 @@ class TestOrthographiesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'Please enter a value'
         assert resp['errors']['orthography'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is too long
         params = self.createParams.copy()
@@ -230,6 +237,7 @@ class TestOrthographiesController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp == {}
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -246,6 +254,7 @@ class TestOrthographiesController(TestController):
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
         assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
+        assert response.content_type == 'application/json'
         orthographyId = resp['id']
         originalDatetimeModified = resp['datetimeModified']
 
@@ -262,6 +271,7 @@ class TestOrthographiesController(TestController):
         assert orthographyCount == newOrthographyCount
         assert datetimeModified != originalDatetimeModified
         assert resp['orthography'] == u'a, b, c, d'
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -274,6 +284,7 @@ class TestOrthographiesController(TestController):
         assert ourOrthographyDatetimeModified.isoformat() == datetimeModified
         assert orthographyCount == newOrthographyCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -300,6 +311,7 @@ class TestOrthographiesController(TestController):
         newOrthographyCount = Session.query(Orthography).count()
         assert newOrthographyCount == orthographyCount - 1
         assert resp['id'] == orthographyId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted orthography from the db should return None
         deletedOrthography = Session.query(Orthography).get(orthographyId)
@@ -311,11 +323,13 @@ class TestOrthographiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no orthography with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('orthography', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -342,11 +356,13 @@ class TestOrthographiesController(TestController):
             status=404)
         resp = json.loads(response.body)
         assert u'There is no orthography with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('orthography', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('orthography', id=orthographyId), headers=self.json_headers,
@@ -354,6 +370,7 @@ class TestOrthographiesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -382,6 +399,7 @@ class TestOrthographiesController(TestController):
         response = self.app.get(url('edit_orthography', id=orthographyId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
@@ -389,6 +407,7 @@ class TestOrthographiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no orthography with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_orthography', id=''), status=404,
@@ -402,3 +421,4 @@ class TestOrthographiesController(TestController):
         assert resp['orthography']['name'] == u'orthography'
         assert resp['orthography']['orthography'] == u'a, b, c'
         assert resp['data'] == {}
+        assert response.content_type == 'application/json'

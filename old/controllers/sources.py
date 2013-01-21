@@ -2,13 +2,11 @@ import logging
 import datetime
 import re
 import simplejson as json
-
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
-
 from old.lib.base import BaseController
 from old.lib.schemata import SourceSchema
 import old.lib.helpers as h
@@ -22,8 +20,9 @@ log = logging.getLogger(__name__)
 class SourcesController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('Source')
+    queryBuilder = SQLAQueryBuilder('Source', config=config)
 
+    @h.OLDjsonify
     @restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
@@ -35,68 +34,60 @@ class SourcesController(BaseController):
         is returned or an error is raised.  The 'query' object requires a
         'filter' attribute; an 'orderBy' attribute is optional.
         """
-
-        response.content_type = 'application/json'
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            result = h.addPagination(query, pythonSearchParams.get('paginator'))
+            return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
+            return {'errors': e.unpack_errors()}
         # SQLAQueryBuilder should have captured these exceptions (and packed
         # them into an OLDSearchParseError) or sidestepped them, but here we'll
         # handle any that got past -- just in case.
         except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
             response.status_int = 400
-            return json.dumps({'error':
-                u'The specified search parameters generated an invalid database query'})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'error': u'The specified search parameters generated an invalid database query'}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /sources: Return all sources."""
-        response.content_type = 'application/json'
         try:
             query = Session.query(Source)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /sources: Create a new source."""
-        response.content_type = 'application/json'
         try:
             schema = SourceSchema()
             values = json.loads(unicode(request.body, request.charset))
             state = h.getStateObject(values)
-            result = schema.to_python(values, state)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            source = createNewSource(result)
+            data = schema.to_python(values, state)
+            source = createNewSource(data)
             Session.add(source)
             Session.commit()
-            result = json.dumps(source, cls=h.JSONOLDEncoder)
-        return result
+            return source
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -105,17 +96,14 @@ class SourcesController(BaseController):
         All that is returned here is the list of valid BibTeX entry types.  GET
         params are ignored.
         """
+        return {'types': sorted(entryTypes.keys())}
 
-        response.content_type = 'application/json'
-        return json.dumps({'types': sorted(entryTypes.keys())})
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /sources/id: Update an existing source."""
-
-        response.content_type = 'application/json'
         source = Session.query(Source).get(int(id))
         if source:
             try:
@@ -123,47 +111,43 @@ class SourcesController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.getStateObject(values)
                 state.id = id
-                result = schema.to_python(values, state)
-            except h.JSONDecodeError:
-                response.status_int = 400
-                result = h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                result = json.dumps({'errors': e.unpack_errors()})
-            else:
-                source = updateSource(source, result)
+                data = schema.to_python(values, state)
+                source = updateSource(source, data)
                 # source will be False if there are no changes (cf. updateSource).
                 if source:
                     Session.add(source)
                     Session.commit()
-                    result = json.dumps(source, cls=h.JSONOLDEncoder)
+                    return source
                 else:
                     response.status_int = 400
-                    result = json.dumps({'error': u''.join([
-                        u'The update request failed because the submitted ',
-                        u'data were not new.'])})
+                    return {'error':
+                        u'The update request failed because the submitted data were not new.'}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no source with id %s' % id})
-        return result
+            return {'error': 'There is no source with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /sources/id: Delete an existing source."""
-
-        response.content_type = 'application/json'
         source = Session.query(Source).get(id)
         if source:
             Session.delete(source)
             Session.commit()
-            result = json.dumps(source, cls=h.JSONOLDEncoder)
+            return source
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no source with id %s' % id})
-        return result
+            return {'error': 'There is no source with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -180,16 +164,14 @@ class SourcesController(BaseController):
         retrieve the binary content of the file because of the authorization logic
         the retrieve action of the files controller.
         """
-
-        response.content_type = 'application/json'
         source = Session.query(Source).get(id)
         if source:
-            result = json.dumps(source, cls=h.JSONOLDEncoder)
+            return source
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no source with id %s' % id})
-        return result
+            return {'error': 'There is no source with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -197,16 +179,12 @@ class SourcesController(BaseController):
         """GET /sources/id/edit: Return the data necessary to update an existing
         OLD source, i.e., the source's properties and the list of entry types.
         """
-
-        response.content_type = 'application/json'
         source = Session.query(Source).get(id)
         if source:
-            result = {'data': {'types': sorted(entryTypes.keys())}, 'source': source}
-            result = json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'data': {'types': sorted(entryTypes.keys())}, 'source': source}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no source with id %s' % id})
-        return result
+            return {'error': 'There is no source with id %s' % id}
 
 
 ################################################################################

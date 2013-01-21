@@ -3,7 +3,7 @@ import datetime
 import re
 import simplejson as json
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -21,46 +21,43 @@ log = logging.getLogger(__name__)
 class PhonologiesController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('Phonology')
+    queryBuilder = SQLAQueryBuilder('Phonology', config=config)
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /phonologies: Return all phonologies."""
-        response.content_type = 'application/json'
         try:
             query = Session.query(Phonology)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /phonologies: Create a new phonology."""
-        response.content_type = 'application/json'
         try:
             schema = PhonologySchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            phonology = createNewPhonology(result)
+            data = schema.to_python(values)
+            phonology = createNewPhonology(data)
             Session.add(phonology)
             Session.commit()
-            result = json.dumps(phonology, cls=h.JSONOLDEncoder)
-        return result
+            return phonology
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -68,17 +65,14 @@ class PhonologiesController(BaseController):
         """GET /phonologies/new: Return the data necessary to create a new OLD
         phonology.  NOTHING TO RETURN HERE ...
         """
+        return {}
 
-        response.content_type = 'application/json'
-        return json.dumps({})
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /phonologies/id: Update an existing phonology."""
-
-        response.content_type = 'application/json'
         phonology = Session.query(Phonology).get(int(id))
         if phonology:
             try:
@@ -86,47 +80,43 @@ class PhonologiesController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.getStateObject(values)
                 state.id = id
-                result = schema.to_python(values, state)
-            except h.JSONDecodeError:
-                response.status_int = 400
-                result = h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                result = json.dumps({'errors': e.unpack_errors()})
-            else:
-                phonology = updatePhonology(phonology, result)
+                data = schema.to_python(values, state)
+                phonology = updatePhonology(phonology, data)
                 # phonology will be False if there are no changes (cf. updatePhonology).
                 if phonology:
                     Session.add(phonology)
                     Session.commit()
-                    result = json.dumps(phonology, cls=h.JSONOLDEncoder)
+                    return phonology
                 else:
                     response.status_int = 400
-                    result = json.dumps({'error': u''.join([
-                        u'The update request failed because the submitted ',
-                        u'data were not new.'])})
+                    return {'error':
+                        u'The update request failed because the submitted data were not new.'}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no phonology with id %s' % id})
-        return result
+            return {'error': 'There is no phonology with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /phonologies/id: Delete an existing phonology."""
-
-        response.content_type = 'application/json'
         phonology = Session.query(Phonology).get(id)
         if phonology:
             Session.delete(phonology)
             Session.commit()
-            result = json.dumps(phonology, cls=h.JSONOLDEncoder)
+            return phonology
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no phonology with id %s' % id})
-        return result
+            return {'error': 'There is no phonology with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -137,16 +127,14 @@ class PhonologiesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         phonology = Session.query(Phonology).get(id)
         if phonology:
-            result = json.dumps(phonology, cls=h.JSONOLDEncoder)
+            return phonology
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no phonology with id %s' % id})
-        return result
+            return {'error': 'There is no phonology with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -155,16 +143,12 @@ class PhonologiesController(BaseController):
         OLD phonology; here we return only the phonology and
         an empty JSON object.
         """
-
-        response.content_type = 'application/json'
         phonology = Session.query(Phonology).get(id)
         if phonology:
-            result = {'data': {}, 'phonology': phonology}
-            result = json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'data': {}, 'phonology': phonology}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no phonology with id %s' % id})
-        return result
+            return {'error': 'There is no phonology with id %s' % id}
 
 
 ################################################################################

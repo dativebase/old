@@ -4,7 +4,7 @@ import re
 import simplejson as json
 from uuid import uuid4
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -18,6 +18,330 @@ from old.model.meta import Session
 from old.model import Form, FormBackup, Gloss, User
 
 log = logging.getLogger(__name__)
+
+class FormsController(BaseController):
+    """REST Controller styled on the Atom Publishing Protocol."""
+
+    queryBuilder = SQLAQueryBuilder(config=config)
+
+    @h.OLDjsonify
+    @restrict('SEARCH', 'POST')
+    @h.authenticate
+    def search(self):
+        """SEARCH /forms: Return all forms matching the filter passed as JSON in
+        the request body.  Note: POST /forms/search also routes to this action.
+        The request body must be a JSON object with a 'query' attribute; a
+        'paginator' attribute is optional.  The 'query' object is passed to the
+        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+        is returned or an error is raised.  The 'query' object requires a
+        'filter' attribute; an 'orderBy' attribute is optional.
+        """
+        try:
+            jsonSearchParams = unicode(request.body, request.charset)
+            pythonSearchParams = json.loads(jsonSearchParams)
+            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            query = h.filterRestrictedModels('Form', SQLAQuery)
+            return h.addPagination(query, pythonSearchParams.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        # SQLAQueryBuilder should have captured these exceptions (and packed
+        # them into an OLDSearchParseError) or sidestepped them, but here we'll
+        # handle any that got past -- just in case.
+        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+            response.status_int = 400
+            return {'error': u'The specified search parameters generated an invalid database query'}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
+    def index(self):
+        """GET /forms: Return all forms."""
+        try:
+            query = Session.query(Form)
+            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
+            query = h.filterRestrictedModels('Form', query)
+            return h.addPagination(query, dict(request.GET))
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+
+    @h.OLDjsonify
+    @restrict('POST')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def create(self):
+        """POST /forms: Create a new form."""
+        try:
+            schema = FormSchema()
+            values = json.loads(unicode(request.body, request.charset))
+            state = h.getStateObject(values)
+            data = schema.to_python(values, state)
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        else:
+            form = createNewForm(data)
+            Session.add(form)
+            Session.commit()
+            updateApplicationSettingsIfFormIsForeignWord(form)
+            return form
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def new(self):
+        """GET /new_form: Return the data necessary to create a new OLD form.
+
+        Return a JSON object with the following properties: 'grammaticalities',
+        'elicitationMethods', 'tags', 'syntacticCategories', 'speakers',
+        'users' and 'sources', the value of each of which is an array that is
+        either empty or contains the appropriate objects.
+
+        See the getNewEditFormData function to understand how the GET params can
+        affect the contents of the arrays.
+        """
+        return getNewEditFormData(request.GET)
+
+    @h.OLDjsonify
+    @restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def update(self, id):
+        """PUT /forms/id: Update an existing form."""
+        form = Session.query(Form).get(int(id))
+        if form:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            user = session['user']
+            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
+                try:
+                    schema = FormSchema()
+                    values = json.loads(unicode(request.body, request.charset))
+                    state = h.getStateObject(values)
+                    data = schema.to_python(values, state)
+                except h.JSONDecodeError:
+                    response.status_int = 400
+                    return h.JSONDecodeErrorResponse
+                except Invalid, e:
+                    response.status_int = 400
+                    return {'errors': e.unpack_errors()}
+                else:
+                    formDict = form.getDict()
+                    form = updateForm(form, data)
+                    # form will be False if there are no changes (cf. updateForm).
+                    if form:
+                        backupForm(formDict, form.datetimeModified)
+                        Session.add(form)
+                        Session.commit()
+                        updateApplicationSettingsIfFormIsForeignWord(form)
+                        return form
+                    else:
+                        response.status_int = 400
+                        return {'error':
+                            u'The update request failed because the submitted data were not new.'}
+            else:
+                response.status_int = 403
+                return h.unauthorizedMsg
+        else:
+            response.status_int = 404
+            return {'error': 'There is no form with id %s' % id}
+
+    @h.OLDjsonify
+    @restrict('DELETE')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def delete(self, id):
+        """DELETE /forms/id: Delete an existing form.  Only the enterer and
+        administrators can delete a form.
+        """
+        form = Session.query(Form).get(id)
+        if form:
+            if session['user'].role == u'administrator' or \
+            form.enterer is session['user']:
+                formDict = form.getDict()
+                backupForm(formDict)
+                Session.delete(form)
+                Session.commit()
+                updateApplicationSettingsIfFormIsForeignWord(form)
+                return form
+            else:
+                response.status_int = 403
+                return h.unauthorizedMsg
+        else:
+            response.status_int = 404
+            return {'error': 'There is no form with id %s' % id}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
+    def show(self, id):
+        """GET /forms/id: Return a JSON object representation of the form with
+        id=id.
+
+        If the id is invalid, the header will contain a 404 status int and a
+        JSON object will be returned.  If the id is unspecified, then Routes
+        will put a 404 status int into the header and the default 404 JSON
+        object defined in controllers/error.py will be returned.
+        """
+        form = Session.query(Form).get(id)
+        if form:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            user = session['user']
+            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
+                return form
+            else:
+                response.status_int = 403
+                return h.unauthorizedMsg
+        else:
+            response.status_int = 404
+            return {'error': 'There is no form with id %s' % id}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def edit(self, id):
+        """GET /forms/id/edit: Return the data necessary to update an existing
+        OLD form, i.e., the form's properties and the necessary additional data,
+        i.e., grammaticalities, speakers, etc.
+
+        This action can be thought of as a combination of the 'show' and 'new'
+        actions.  The output will be a JSON object of the form
+
+            {form: {...}, data: {...}},
+
+        where output.form is an object containing the form's properties (cf. the
+        output of show) and output.data is an object containing the data
+        required to add a new form (cf. the output of new).
+
+        GET parameters will affect the value of output.data in the same way as
+        for the new action, i.e., no params will result in all the necessary
+        output.data being retrieved from the db while specified params will
+        result in selective retrieval (see getNewEditFormData for details).
+        """
+        form = Session.query(Form).get(id)
+        if form:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            if h.userIsAuthorizedToAccessModel(session['user'], form, unrestrictedUsers):
+                return {'data': getNewEditFormData(request.GET), 'form': form}
+            else:
+                response.status_int = 403
+                return h.unauthorizedMsg
+        else:
+            response.status_int = 404
+            return {'error': 'There is no form with id %s' % id}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
+    def history(self, id):
+        """GET /forms/history/id: Return a JSON object representation of the form and its previous versions.
+
+        The id parameter can be either an integer id or a UUID.  If no form and
+        no form backups match id, then a 404 is returned.  Otherwise a 200 is
+        returned (or a 403 if the restricted keyword is relevant).  See below:
+
+        form                None    None          form       form
+        previousVersions    []      [1, 2,...]    []         [1, 2,...]
+        response            404     200/403       200/403    200/403
+        """
+        form, previousVersions = getFormAndPreviousVersions(id)
+        if form or previousVersions:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            user = session['user']
+            accessible = h.userIsAuthorizedToAccessModel
+            unrestrictedPreviousVersions = [fb for fb in previousVersions
+                                    if accessible(user, fb, unrestrictedUsers)]
+            formIsRestricted = form and not accessible(user, form, unrestrictedUsers)
+            previousVersionsAreRestricted = previousVersions and not \
+                unrestrictedPreviousVersions
+            if formIsRestricted or previousVersionsAreRestricted :
+                response.status_int = 403
+                return h.unauthorizedMsg
+            else :
+                return {'form': form,
+                        'previousVersions': unrestrictedPreviousVersions}
+        else:
+            response.status_int = 404
+            return {'error': 'No forms or form backups match %s' % id}
+
+    @h.OLDjsonify
+    @restrict('POST')
+    @h.authenticate
+    def remember(self):
+        """Store references to the forms passed as input (via id) in the logged
+        in user's rememberedForms array.  The input is a JSON object of the form
+        {'forms': [id1, id2, ...]}.
+        """
+        try:
+            schema = FormIdsSchema
+            values = json.loads(unicode(request.body, request.charset))
+            data = schema.to_python(values)
+            forms = [f for f in data['forms'] if f]
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        else:
+            if forms:
+                accessible = h.userIsAuthorizedToAccessModel
+                unrestrictedUsers = h.getUnrestrictedUsers()
+                user = session['user']
+                unrestrictedForms = [f for f in forms
+                                     if accessible(user, f, unrestrictedUsers)]
+                if unrestrictedForms:
+                    session['user'].rememberedForms += unrestrictedForms
+                    Session.commit()
+                    return [f.id for f in unrestrictedForms]
+                else:
+                    response.status_int = 403
+                    return h.unauthorizedMsg
+            else:
+                response.status_int = 404
+                return {'error': u'No valid form ids were provided.'}
+
+    @h.OLDjsonify
+    @restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator'])
+    def update_morpheme_references(self):
+        """Update all of the morpheme references (i.e., the morphemeBreakIDs,
+        morphemeGlossIDs and syntacticCategoryString fields) by calling
+        updateForm on each form in the database.  Return a list of ids
+        corresponding to the forms that were updated.
+
+        Note 1: this functionality should probably be replaced by client-side
+        logic that makes multiple requests to PUT /forms/id since the current
+        implementation may overtax memory resources when the database is quite
+        large.
+
+        Note 2: if this function is to be executed as a scheduled task, we need
+        to decide what to do about the backuper attribute.
+        """
+        validDelimiters = h.getMorphemeDelimiters()
+        forms = h.getForms()
+        updatedFormIds = []
+        for form in forms:
+            formDict = form.getDict()
+            form = updateMorphemeReferencesOfForm(form, validDelimiters)
+            # form will be False if there are no changes.
+            if form:
+                backupForm(formDict, form.datetimeModified)
+                Session.add(form)
+                Session.commit()
+                updateApplicationSettingsIfFormIsForeignWord(form)
+                updatedFormIds.append(form.id)
+        return updatedFormIds
+
 
 def updateApplicationSettingsIfFormIsForeignWord(form):
     """If the input form is a foreign word, attempt to update the attributes in
@@ -245,356 +569,6 @@ def getFormAndPreviousVersions(id):
             pass    # id is neither an integer nor a UUID
     return (form, previousVersions)
 
-
-class FormsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol."""
-
-    queryBuilder = SQLAQueryBuilder()
-
-    @restrict('SEARCH', 'POST')
-    @h.authenticate
-    def search(self):
-        """SEARCH /forms: Return all forms matching the filter passed as JSON in
-        the request body.  Note: POST /forms/search also routes to this action.
-        The request body must be a JSON object with a 'query' attribute; a
-        'paginator' attribute is optional.  The 'query' object is passed to the
-        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
-        is returned or an error is raised.  The 'query' object requires a
-        'filter' attribute; an 'orderBy' attribute is optional.
-        """
-
-        response.content_type = 'application/json'
-        try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            query = h.filterRestrictedModels('Form', SQLAQuery)
-            result = h.addPagination(query, pythonSearchParams.get('paginator'))
-        except h.JSONDecodeError:
-            response.status_int = 400
-            return h.JSONDecodeErrorResponse
-        except (OLDSearchParseError, Invalid), e:
-            response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        # SQLAQueryBuilder should have captured these exceptions (and packed
-        # them into an OLDSearchParseError) or sidestepped them, but here we'll
-        # handle any that got past -- just in case.
-        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
-            response.status_int = 400
-            return json.dumps({'error':
-                u'The specified search parameters generated an invalid database query'})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
-
-    @restrict('GET')
-    @h.authenticate
-    def index(self):
-        """GET /forms: Return all forms."""
-        # url('forms')
-        response.content_type = 'application/json'
-        try:
-            query = Session.query(Form)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = h.filterRestrictedModels('Form', query)
-            result = h.addPagination(query, dict(request.GET))
-        except Invalid, e:
-            response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
-
-    @restrict('POST')
-    @h.authenticate
-    @h.authorize(['administrator', 'contributor'])
-    def create(self):
-        """POST /forms: Create a new form."""
-        # url('forms')
-        response.content_type = 'application/json'
-        try:
-            schema = FormSchema()
-            values = json.loads(unicode(request.body, request.charset))
-            state = h.getStateObject(values)
-            result = schema.to_python(values, state)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            form = createNewForm(result)
-            Session.add(form)
-            Session.commit()
-            updateApplicationSettingsIfFormIsForeignWord(form)
-            result = json.dumps(form, cls=h.JSONOLDEncoder)
-        return result
-
-    @restrict('GET')
-    @h.authenticate
-    @h.authorize(['administrator', 'contributor'])
-    def new(self):
-        """GET /new_form: Return the data necessary to create a new OLD form.
-
-        Return a JSON object with the following properties: 'grammaticalities',
-        'elicitationMethods', 'tags', 'syntacticCategories', 'speakers',
-        'users' and 'sources', the value of each of which is an array that is
-        either empty or contains the appropriate objects.
-
-        See the getNewEditFormData function to understand how the GET params can
-        affect the contents of the arrays.
-        """
-
-        response.content_type = 'application/json'
-        result = getNewEditFormData(request.GET)
-        return json.dumps(result, cls=h.JSONOLDEncoder)
-
-    @restrict('PUT')
-    @h.authenticate
-    @h.authorize(['administrator', 'contributor'])
-    def update(self, id):
-        """PUT /forms/id: Update an existing form."""
-
-        response.content_type = 'application/json'
-        form = Session.query(Form).get(int(id))
-        if form:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
-                try:
-                    schema = FormSchema()
-                    values = json.loads(unicode(request.body, request.charset))
-                    state = h.getStateObject(values)
-                    result = schema.to_python(values, state)
-                except h.JSONDecodeError:
-                    response.status_int = 400
-                    result = h.JSONDecodeErrorResponse
-                except Invalid, e:
-                    response.status_int = 400
-                    result = json.dumps({'errors': e.unpack_errors()})
-                else:
-                    formDict = form.getDict()
-                    form = updateForm(form, result)
-                    # form will be False if there are no changes (cf. updateForm).
-                    if form:
-                        backupForm(formDict, form.datetimeModified)
-                        Session.add(form)
-                        Session.commit()
-                        updateApplicationSettingsIfFormIsForeignWord(form)
-                        result = json.dumps(form, cls=h.JSONOLDEncoder)
-                    else:
-                        response.status_int = 400
-                        result = json.dumps({'error': u''.join([
-                            u'The update request failed because the submitted ',
-                            u'data were not new.'])})
-            else:
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
-        else:
-            response.status_int = 404
-            result = json.dumps({'error': 'There is no form with id %s' % id})
-        return result
-
-    @restrict('DELETE')
-    @h.authenticate
-    @h.authorize(['administrator', 'contributor'])
-    def delete(self, id):
-        """DELETE /forms/id: Delete an existing form.  Only the enterer and
-        administrators can delete a form.
-        """
-
-        response.content_type = 'application/json'
-        form = Session.query(Form).get(id)
-        if form:
-            if session['user'].role == u'administrator' or \
-            form.enterer is session['user']:
-                formDict = form.getDict()
-                backupForm(formDict)
-                Session.delete(form)
-                Session.commit()
-                updateApplicationSettingsIfFormIsForeignWord(form)
-                result = json.dumps(form, cls=h.JSONOLDEncoder)
-            else:
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
-        else:
-            response.status_int = 404
-            result = json.dumps({'error': 'There is no form with id %s' % id})
-        return result
-
-    @restrict('GET')
-    @h.authenticate
-    def show(self, id):
-        """GET /forms/id: Return a JSON object representation of the form with
-        id=id.
-
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
-        """
-
-        response.content_type = 'application/json'
-        form = Session.query(Form).get(id)
-        if form:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
-                result = json.dumps(form, cls=h.JSONOLDEncoder)
-            else:
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
-        else:
-            response.status_int = 404
-            result = json.dumps({'error': 'There is no form with id %s' % id})
-        return result
-
-    @restrict('GET')
-    @h.authenticate
-    @h.authorize(['administrator', 'contributor'])
-    def edit(self, id):
-        """GET /forms/id/edit: Return the data necessary to update an existing
-        OLD form, i.e., the form's properties and the necessary additional data,
-        i.e., grammaticalities, speakers, etc.
-
-        This action can be thought of as a combination of the 'show' and 'new'
-        actions.  The output will be a JSON object of the form
-
-            {form: {...}, data: {...}},
-
-        where output.form is an object containing the form's properties (cf. the
-        output of show) and output.data is an object containing the data
-        required to add a new form (cf. the output of new).
-
-        GET parameters will affect the value of output.data in the same way as
-        for the new action, i.e., no params will result in all the necessary
-        output.data being retrieved from the db while specified params will
-        result in selective retrieval (see getNewEditFormData for details).
-        """
-
-        response.content_type = 'application/json'
-        form = Session.query(Form).get(id)
-        if form:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            if not h.userIsAuthorizedToAccessModel(
-                                    session['user'], form, unrestrictedUsers):
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
-            else:
-                data = getNewEditFormData(request.GET)
-                result = {'data': data, 'form': form}
-                result = json.dumps(result, cls=h.JSONOLDEncoder)
-        else:
-            response.status_int = 404
-            result = json.dumps({'error': 'There is no form with id %s' % id})
-        return result
-
-    @restrict('GET')
-    @h.authenticate
-    def history(self, id):
-        """GET /forms/history/id: Return a JSON object representation of the form and its previous versions.
-
-        The id parameter can be either an integer id or a UUID.  If no form and
-        no form backups match id, then a 404 is returned.  Otherwise a 200 is
-        returned (or a 403 if the restricted keyword is relevant).  See below:
-
-        form                None    None          form       form
-        previousVersions    []      [1, 2,...]    []         [1, 2,...]
-        response            404     200/403       200/403    200/403
-        """
-
-        response.content_type = 'application/json'
-        form, previousVersions = getFormAndPreviousVersions(id)
-        if form or previousVersions:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            user = session['user']
-            accessible = h.userIsAuthorizedToAccessModel
-            unrestrictedPreviousVersions = [fb for fb in previousVersions
-                                    if accessible(user, fb, unrestrictedUsers)]
-            formIsRestricted = form and not accessible(user, form, unrestrictedUsers)
-            previousVersionsAreRestricted = previousVersions and not \
-                unrestrictedPreviousVersions
-            if formIsRestricted or previousVersionsAreRestricted :
-                response.status_int = 403
-                result = h.unauthorizedJSONMsg
-            else :
-                result = {'form': form,
-                          'previousVersions': unrestrictedPreviousVersions}
-                result = json.dumps(result, cls=h.JSONOLDEncoder)
-        else:
-            response.status_int = 404
-            result = json.dumps({'error': 'No forms or form backups match %s' % id})
-        return result
-
-    @restrict('POST')
-    @h.authenticate
-    def remember(self):
-        """Store references to the forms passed as input (via id) in the logged
-        in user's rememberedForms array.  The input is a JSON object of the form
-        {'forms': [id1, id2, ...]}.
-        """
-
-        response.content_type = 'application/json'
-        try:
-            schema = FormIdsSchema
-            values = json.loads(unicode(request.body, request.charset))
-            data = schema.to_python(values)
-            forms = [f for f in data['forms'] if f]
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            if forms:
-                accessible = h.userIsAuthorizedToAccessModel
-                unrestrictedUsers = h.getUnrestrictedUsers()
-                user = session['user']
-                unrestrictedForms = [f for f in forms
-                                     if accessible(user, f, unrestrictedUsers)]
-                if unrestrictedForms:
-                    session['user'].rememberedForms += unrestrictedForms
-                    Session.commit()
-                    result = json.dumps([f.id for f in unrestrictedForms])
-                else:
-                    response.status_int = 403
-                    result = h.unauthorizedJSONMsg
-            else:
-                response.status_int = 404
-                result = json.dumps({'error': u'No valid form ids were provided.'})
-        return result
-
-    @restrict('PUT')
-    @h.authenticate
-    @h.authorize(['administrator'])
-    def update_morpheme_references(self):
-        """Update all of the morpheme references (i.e., the morphemeBreakIDs,
-        morphemeGlossIDs and syntacticCategoryString fields) by calling
-        updateForm on each form in the database.  Return a list of ids
-        corresponding to the forms that were updated.
-
-        Note 1: this functionality should probably be replaced by client-side
-        logic that makes multiple requests to PUT /forms/id since the current
-        implementation may overtax memory resources when the database is quite
-        large.
-
-        Note 2: if this function is to be executed as a scheduled task, we need
-        to decide what to do about the backuper attribute.
-        """
-        validDelimiters = h.getMorphemeDelimiters()
-        forms = h.getForms()
-        updatedFormIds = []
-        for form in forms:
-            formDict = form.getDict()
-            form = updateMorphemeReferencesOfForm(form, validDelimiters)
-            # form will be False if there are no changes.
-            if form:
-                backupForm(formDict, form.datetimeModified)
-                Session.add(form)
-                Session.commit()
-                updateApplicationSettingsIfFormIsForeignWord(form)
-                updatedFormIds.append(form.id)
-        return json.dumps(updatedFormIds)
 
 ################################################################################
 # Backup form

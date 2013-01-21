@@ -143,6 +143,7 @@ class TestFormbackupsController(TestController):
         response = self.app.get(url('formbackups'), headers=self.json_headers, extra_environ=contrib)
         resp = json.loads(response.body)
         assert len(resp) == 2
+        assert response.content_type == 'application/json'
 
         # The admin should get them all too.
         response = self.app.get(url('formbackups'), headers=self.json_headers, extra_environ=admin)
@@ -223,6 +224,7 @@ class TestFormbackupsController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 1
         assert resp['items'][0]['transcription'] == allFormBackups[1]['transcription']
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'FormBackup', 'orderByAttribute': 'datetimeModified',
@@ -248,12 +250,14 @@ class TestFormbackupsController(TestController):
                                 headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
         assert resp['transcription'] == restrictedFormBackups[0]['transcription']
+        assert response.content_type == 'application/json'
 
         # Viewer should receive a 403 error when attempting to do so.
         response = self.app.get(url('formbackup', id=restrictedFormBackups[0]['id']),
                                 headers=self.json_headers, extra_environ=view, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Viewer should be able to GET the unrestricted form backup
         response = self.app.get(url('formbackup', id=unrestrictedFormBackup['id']),
@@ -266,6 +270,7 @@ class TestFormbackupsController(TestController):
                     headers=self.json_headers, extra_environ=view, status=404)
         resp = json.loads(response.body)
         assert resp['error'] == u'There is no form backup with id 100987'
+        assert response.content_type == 'application/json'
 
         # Test the search action
         addSEARCHToWebTestValidMethods()
@@ -279,6 +284,7 @@ class TestFormbackupsController(TestController):
         resultSet = [cb for cb in allFormBackups if u'Contributor' in cb['transcription']]
         assert len(resp) == len(resultSet) == 3
         assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in resultSet])
+        assert response.content_type == 'application/json'
 
         # A search on form backup transcriptions using SEARCH /formbackups
         jsonQuery = json.dumps({'query': {'filter':
@@ -301,6 +307,7 @@ class TestFormbackupsController(TestController):
                      if u'Contributor' in cb['transcription']]
         assert len(resp) == len(resultSet) == 1
         assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in resultSet])
+        assert response.content_type == 'application/json'
 
         jsonQuery = json.dumps({'query': {'filter':
                         ['FormBackup', 'transcription', 'like', u'%Administrator%']}})
@@ -327,3 +334,4 @@ class TestFormbackupsController(TestController):
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         response = self.app.delete(url('formbackup', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
+        assert response.content_type == 'application/json'

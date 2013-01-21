@@ -3,7 +3,7 @@ import datetime
 import re
 import simplejson as json
 
-from pylons import request, response, session, app_globals
+from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
@@ -21,46 +21,43 @@ log = logging.getLogger(__name__)
 class TagsController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('Tag')
+    queryBuilder = SQLAQueryBuilder('Tag', config=config)
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /tags: Return all tags."""
-        response.content_type = 'application/json'
         try:
             query = Session.query(Tag)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /tags: Create a new tag."""
-        response.content_type = 'application/json'
         try:
             schema = TagSchema()
             values = json.loads(unicode(request.body, request.charset))
-            result = schema.to_python(values)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            tag = createNewTag(result)
+            data = schema.to_python(values)
+            tag = createNewTag(data)
             Session.add(tag)
             Session.commit()
-            result = json.dumps(tag, cls=h.JSONOLDEncoder)
-        return result
+            return tag
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -68,17 +65,14 @@ class TagsController(BaseController):
         """GET /tags/new: Return the data necessary to create a new OLD
         tag.  NOTHING TO RETURN HERE ...
         """
+        return {}
 
-        response.content_type = 'application/json'
-        return json.dumps({})
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /tags/id: Update an existing tag."""
-
-        response.content_type = 'application/json'
         tag = Session.query(Tag).get(int(id))
         if tag:
             try:
@@ -86,47 +80,43 @@ class TagsController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.getStateObject(values)
                 state.id = id
-                result = schema.to_python(values, state)
-            except h.JSONDecodeError:
-                response.status_int = 400
-                result = h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                result = json.dumps({'errors': e.unpack_errors()})
-            else:
-                tag = updateTag(tag, result)
+                data = schema.to_python(values, state)
+                tag = updateTag(tag, data)
                 # tag will be False if there are no changes (cf. updateTag).
                 if tag:
                     Session.add(tag)
                     Session.commit()
-                    result = json.dumps(tag, cls=h.JSONOLDEncoder)
+                    return tag
                 else:
                     response.status_int = 400
-                    result = json.dumps({'error': u''.join([
-                        u'The update request failed because the submitted ',
-                        u'data were not new.'])})
+                    return {'error':
+                        u'The update request failed because the submitted data were not new.'}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no tag with id %s' % id})
-        return result
+            return {'error': 'There is no tag with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /tags/id: Delete an existing tag."""
-
-        response.content_type = 'application/json'
         tag = Session.query(Tag).get(id)
         if tag:
             Session.delete(tag)
             Session.commit()
-            result = json.dumps(tag, cls=h.JSONOLDEncoder)
+            return tag
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no tag with id %s' % id})
-        return result
+            return {'error': 'There is no tag with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -137,16 +127,14 @@ class TagsController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         tag = Session.query(Tag).get(id)
         if tag:
-            result = json.dumps(tag, cls=h.JSONOLDEncoder)
+            return tag
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no tag with id %s' % id})
-        return result
+            return {'error': 'There is no tag with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -155,16 +143,12 @@ class TagsController(BaseController):
         OLD tag; here we return only the tag and
         an empty JSON object.
         """
-
-        response.content_type = 'application/json'
         tag = Session.query(Tag).get(id)
         if tag:
-            result = {'data': {}, 'tag': tag}
-            result = json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'data': {}, 'tag': tag}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no tag with id %s' % id})
-        return result
+            return {'error': 'There is no tag with id %s' % id}
 
 
 ################################################################################

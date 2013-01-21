@@ -22,3 +22,6 @@ test_files/old_test_long.wav
 
 # The client-side JavaScript application should be kept separate, at least for now
 old/public/
+
+# Ignore the GMail .ini file
+gmail.ini

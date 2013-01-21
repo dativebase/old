@@ -13,18 +13,6 @@ def deleteKey(dict_, key_):
         pass
     return dict_
 
-
-applicationsettingsorthography_table = Table(
-    'applicationsettingsorthography', Base.metadata,
-    Column('id', Integer,
-        Sequence('applicationsettingsorthography_seq_id', optional=True),
-        primary_key=True),
-    Column('applicationsettings_id', Integer, ForeignKey('applicationsettings.id')),
-    Column('orthography_id', Integer, ForeignKey('orthography.id')),
-    Column('datetimeModified', DateTime, default=now),
-    mysql_charset='utf8'
-)
-
 applicationsettingsuser_table = Table(
     'applicationsettingsuser', Base.metadata,
     Column('id', Integer,
@@ -72,44 +60,36 @@ class ApplicationSettings(Base):
     outputOrthography = relation('Orthography',
         primaryjoin='ApplicationSettings.outputOrthography_id==Orthography.id')
     datetimeModified = Column(DateTime, default=now)
-    orthographies = relation('Orthography',
-                             secondary=applicationsettingsorthography_table)
     unrestrictedUsers = relation('User', secondary=applicationsettingsuser_table)
 
     def getDict(self):
         """Return a Python dictionary representation of the ApplicationSettings.
         This facilitates JSON-stringification, cf. utils.JSONOLDEncoder.
-        Relational data are truncated, e.g., applicationSettingsDict['storageOrthography']
+        Relational data are truncated, e.g., applicationSettings.getDict()['storageOrthography']
         is a dict with keys that are a subset of an orthography's attributes.
         """
 
-        applicationSettingsDict = {}
-        applicationSettingsDict['id'] = self.id
-        applicationSettingsDict['objectLanguageName'] = self.objectLanguageName
-        applicationSettingsDict['objectLanguageId'] = self.objectLanguageId
-        applicationSettingsDict['metalanguageName'] = self.metalanguageName
-        applicationSettingsDict['metalanguageId'] = self.metalanguageId
-        applicationSettingsDict['metalanguageInventory'] = self.metalanguageInventory
-        applicationSettingsDict['orthographicValidation'] = self.orthographicValidation
-        applicationSettingsDict['narrowPhoneticInventory'] = self.narrowPhoneticInventory
-        applicationSettingsDict['narrowPhoneticValidation'] = self.narrowPhoneticValidation
-        applicationSettingsDict['broadPhoneticInventory'] = self.broadPhoneticInventory
-        applicationSettingsDict['broadPhoneticValidation'] = self.broadPhoneticValidation
-        applicationSettingsDict['morphemeBreakIsOrthographic'] = self.morphemeBreakIsOrthographic
-        applicationSettingsDict['morphemeBreakValidation'] = self.morphemeBreakValidation
-        applicationSettingsDict['phonemicInventory'] = self.phonemicInventory
-        applicationSettingsDict['morphemeDelimiters'] = self.morphemeDelimiters
-        applicationSettingsDict['punctuation'] = self.punctuation
-        applicationSettingsDict['grammaticalities'] = self.grammaticalities
-        applicationSettingsDict['datetimeModified'] = self.datetimeModified
-        applicationSettingsDict['storageOrthography'] = self.getMiniOrthographyDict(
-            self.storageOrthography)
-        applicationSettingsDict['inputOrthography'] = self.getMiniOrthographyDict(
-            self.inputOrthography)
-        applicationSettingsDict['outputOrthography'] = self.getMiniOrthographyDict(
-            self.outputOrthography)
-        applicationSettingsDict['orthographies'] = self.getOrthographiesList(
-            self.orthographies)
-        applicationSettingsDict['unrestrictedUsers'] = [
-            deleteKey(user.__dict__, 'password') for user in self.unrestrictedUsers]
-        return applicationSettingsDict
+        return {
+            'id': self.id,
+            'objectLanguageName': self.objectLanguageName,
+            'objectLanguageId': self.objectLanguageId,
+            'metalanguageName': self.metalanguageName,
+            'metalanguageId': self.metalanguageId,
+            'metalanguageInventory': self.metalanguageInventory,
+            'orthographicValidation': self.orthographicValidation,
+            'narrowPhoneticInventory': self.narrowPhoneticInventory,
+            'narrowPhoneticValidation': self.narrowPhoneticValidation,
+            'broadPhoneticInventory': self.broadPhoneticInventory,
+            'broadPhoneticValidation': self.broadPhoneticValidation,
+            'morphemeBreakIsOrthographic': self.morphemeBreakIsOrthographic,
+            'morphemeBreakValidation': self.morphemeBreakValidation,
+            'phonemicInventory': self.phonemicInventory,
+            'morphemeDelimiters': self.morphemeDelimiters,
+            'punctuation': self.punctuation,
+            'grammaticalities': self.grammaticalities,
+            'datetimeModified': self.datetimeModified,
+            'storageOrthography': self.getMiniOrthographyDict(self.storageOrthography),
+            'inputOrthography': self.getMiniOrthographyDict(self.inputOrthography),
+            'outputOrthography': self.getMiniOrthographyDict(self.outputOrthography),
+            'unrestrictedUsers': [deleteKey(user.__dict__, 'password') for user in self.unrestrictedUsers]
+        }

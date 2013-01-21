@@ -217,6 +217,7 @@ class TestSourcesController(TestController):
         assert len(resp) == sourcesCount
         assert resp[0]['title'] == u'Syntactic Structures 1'
         assert resp[0]['id'] == sources[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -225,6 +226,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
         assert resp['items'][0]['title'] == sources[46].title
+        assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
         orderByParams = {'orderByModel': 'Source', 'orderByAttribute': 'title',
@@ -234,6 +236,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted([s.title for s in sources], reverse=True)
         assert resultSet == [s['title'] for s in resp]
+        assert response.content_type == 'application/json'
 
         # Test the orderBy *with* paginator.
         params = {'orderByModel': 'Source', 'orderByAttribute': 'title',
@@ -250,6 +253,7 @@ class TestSourcesController(TestController):
             headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -268,6 +272,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('sources'), paginator, headers=self.json_headers,
@@ -275,6 +280,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_create(self):
@@ -300,6 +306,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['type'] == u'novella is not a valid BibTeX entry type'
         assert resp['errors']['author'] == u'Enter a value not more than 255 characters long'
+        assert response.content_type == 'application/json'
 
         # Create a book; required: author or editor, title, publisher and year
         params = self.createParams.copy()
@@ -323,6 +330,7 @@ class TestSourcesController(TestController):
         assert resp['edition'] == u'second'
         assert resp['booktitle'] == u''
         assert resp['author'] == u'Noam Chomsky'
+        assert response.content_type == 'application/json'
 
         # Attempt to create another book with the same key and expect to fail.
         params = self.createParams.copy()
@@ -341,6 +349,7 @@ class TestSourcesController(TestController):
         newSourcesCount = Session.query(Source).count()
         assert sourcesCount == newSourcesCount
         assert resp['errors']['key'] == u'The submitted source key is not unique'
+        assert response.content_type == 'application/json'
 
         # Attempt to create another book with an invalid key and expect to fail.
         params = self.createParams.copy()
@@ -379,6 +388,7 @@ class TestSourcesController(TestController):
         assert resp['errors'] == \
             u'Sources of type book require values for title, publisher and year as well as a value for at least one of author and editor.'
         assert sourcesCount == newSourcesCount
+        assert response.content_type == 'application/json'
 
         # Attempt to create a book source that is invalid because it lacks both
         # author and editor 
@@ -399,6 +409,7 @@ class TestSourcesController(TestController):
         assert resp['errors'] == \
             u'Sources of type book require values for title, publisher and year as well as a value for at least one of author and editor.'
         assert sourcesCount == newSourcesCount
+        assert response.content_type == 'application/json'
 
         ########################################################################
         # ARTICLE
@@ -428,6 +439,7 @@ class TestSourcesController(TestController):
         assert resp['pages'] == u'85--129'
         assert resp['year'] == 1946
         assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
 
         # Attempt to create an article without a year and expect to fail
         params = self.createParams.copy()
@@ -449,6 +461,7 @@ class TestSourcesController(TestController):
         assert sourcesCount == newSourcesCount
         assert resp['errors'] == \
             u'Sources of type article require values for author, title, journal and year.'
+        assert response.content_type == 'application/json'
 
         ########################################################################
         # BOOKLET
@@ -470,6 +483,7 @@ class TestSourcesController(TestController):
         assert resp['type'] == u'booklet'      # the OLD converts type to lowercase
         assert resp['title'] == u'My Poetry (unpublished)'
         assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
 
         # Attempt to create a booklet without a title and expect to fail
         params = self.createParams.copy()
@@ -488,7 +502,7 @@ class TestSourcesController(TestController):
         assert sourcesCount == newSourcesCount
         assert resp['errors'] == \
             u'Sources of type booklet require a value for title.'
-
+        assert response.content_type == 'application/json'
 
         ########################################################################
         # INBOOK
@@ -520,6 +534,7 @@ class TestSourcesController(TestController):
         assert resp['chapter'] == u'4'
         assert resp['pages'] == u''
         assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
 
         # Attempt to create an inbook without a chapter or pages and expect to fail
         params = self.createParams.copy()
@@ -541,6 +556,7 @@ class TestSourcesController(TestController):
         assert sourcesCount == newSourcesCount
         assert resp['errors'] == \
             u'Sources of type inbook require values for title, publisher and year as well as a value for at least one of author and editor and at least one of chapter and pages.'
+        assert response.content_type == 'application/json'
 
         ########################################################################
         # MISC
@@ -560,6 +576,7 @@ class TestSourcesController(TestController):
         newSourcesCount = Session.query(Source).count()
         assert resp['type'] == u'misc'      # the OLD converts type to lowercase
         assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_new(self):
@@ -568,6 +585,7 @@ class TestSourcesController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp['types'] == sorted(entryTypes.keys())
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -610,6 +628,7 @@ class TestSourcesController(TestController):
         newSourceCount = Session.query(Source).count()
         assert sourceCount == newSourceCount
         assert datetimeModified != originalDatetimeModified
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -632,6 +651,7 @@ class TestSourcesController(TestController):
         assert ourBookDatetimeModified.isoformat() == datetimeModified
         assert sourceCount == newSourceCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
         # Update by adding a file to the source
         file_ = h.generateDefaultFile()
@@ -661,6 +681,7 @@ class TestSourcesController(TestController):
         assert newDatetimeModified != datetimeModified
         assert sourceCount == newSourceCount
         assert resp['file']['name'] == fileName
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -691,6 +712,7 @@ class TestSourcesController(TestController):
         newSourceCount = Session.query(Source).count()
         assert newSourceCount == sourceCount - 1
         assert resp['id'] == bookId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted source from the db should return None
         deletedSource = Session.query(Source).get(bookId)
@@ -701,14 +723,14 @@ class TestSourcesController(TestController):
         response = self.app.delete(url('source', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no source with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no source with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('source', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_show(self):
@@ -738,14 +760,14 @@ class TestSourcesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         resp = json.loads(response.body)
-        assert u'There is no source with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no source with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('source', id=''), status=404,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == \
-            'The resource could not be found.'
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('source', id=bookId), headers=self.json_headers,
@@ -753,6 +775,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert resp['author'] == u'Noam Chomsky'
         assert resp['year'] == 1957
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -784,14 +807,15 @@ class TestSourcesController(TestController):
         response = self.app.get(url('edit_source', id=bookId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_source', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
-        assert u'There is no source with id %s' % id in json.loads(response.body)[
-            'error']
+        assert u'There is no source with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_source', id=''), status=404,
@@ -805,6 +829,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert resp['source']['title'] == u'Syntactic Structures'
         assert resp['data']['types'] == sorted(entryTypes.keys())
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_search(self):
@@ -825,6 +850,8 @@ class TestSourcesController(TestController):
         assert resp
         assert len(resp) == len(resultSet)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in resultSet])
+        assert response.content_type == 'application/json'
+
         jsonQuery = json.dumps({'query': {'filter': ['Source', 'publisher', 'like', u'%P%']}})
         response = self.app.post(url('/sources/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
@@ -833,6 +860,7 @@ class TestSourcesController(TestController):
         assert resp
         assert len(resp) == len(resultSet)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in resultSet])
+        assert response.content_type == 'application/json'
 
         # A fairly complex search
         jsonQuery = json.dumps({'query': {'filter': [
@@ -852,6 +880,7 @@ class TestSourcesController(TestController):
         assert resp
         assert len(resp) == len(resultSet)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in resultSet])
+        assert response.content_type == 'application/json'
 
         # A basic search with a paginator provided.
         jsonQuery = json.dumps({'query': {
@@ -865,6 +894,7 @@ class TestSourcesController(TestController):
         assert len(resp['items']) == 5
         assert resp['items'][0]['id'] == resultSet[5]['id']
         assert resp['items'][-1]['id'] == resultSet[9]['id']
+        assert response.content_type == 'application/json'
 
         # An invalid paginator (here 'page' is less than 1) will result in formencode.Invalid
         # being raised resulting in a response with a 400 status code and a JSON error msg.
@@ -876,6 +906,7 @@ class TestSourcesController(TestController):
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
         # Some "invalid" paginators will silently fail.  For example, if there is
         # no 'pages' key, then SEARCH /sources will just assume there is no paginator
@@ -921,6 +952,7 @@ class TestSourcesController(TestController):
         assert [s['title'] for s in resultSet] == [s['title'] for s in resp]
         assert resp[-1]['title'] == None
         assert resp[0]['title'] == u'Title 90'
+        assert response.content_type == 'application/json'
 
         # order by with missing direction defaults to 'asc'
         jsonQuery = json.dumps({'query': {
@@ -952,6 +984,7 @@ class TestSourcesController(TestController):
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
+        assert response.content_type == 'application/json'
 
         # searches with lexically malformed order bys
         jsonQuery = json.dumps({'query': {
@@ -962,6 +995,7 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['Source.foo'] == u'Searching on Source.foo is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
+        assert response.content_type == 'application/json'
 
         jsonQuery = json.dumps({'query': {
                 'filter': ['Source', 'key', 'regex', '.'],
@@ -972,3 +1006,4 @@ class TestSourcesController(TestController):
         assert resp['errors']['Foo'] == u'Searching the Source model by joining on the Foo model is not possible'
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
+        assert response.content_type == 'application/json'

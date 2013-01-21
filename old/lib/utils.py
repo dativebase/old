@@ -4,6 +4,8 @@ import errno
 import datetime
 import unicodedata
 import string
+import smtplib
+import ConfigParser
 from random import choice, shuffle
 from shutil import rmtree
 from passlib.hash import pbkdf2_sha512
@@ -17,16 +19,16 @@ from old.model.meta import Session, Model
 import orthography
 from simplejson.decoder import JSONDecodeError
 from paste.deploy import appconfig
-from pylons import app_globals, session
+from paste.deploy.converters import asbool
+from pylons import app_globals, session, url
 from formencode.schema import Schema
 from formencode.validators import Int, UnicodeString, OneOf
 from markdown import Markdown
 from docutils.core import publish_parts
 from decorator import decorator
 from pylons.decorators.util import get_pylons
-
-
 import logging
+
 log = logging.getLogger(__name__)
 
 ################################################################################
@@ -124,12 +126,11 @@ class JSONOLDEncoder(json.JSONEncoder):
                 return None
 
 
-JSONDecodeErrorResponse = json.dumps({'error':
-            'JSON decode error: the parameters provided were not valid JSON.'})
+JSONDecodeErrorResponse = {'error': 'JSON decode error: the parameters provided were not valid JSON.'}
 
 
 @decorator
-def jsonify(func, *args, **kwargs):
+def OLDjsonify(func, *args, **kwargs):
     """Action decorator that formats output for JSON
 
     Given a function that will return content, this decorator will turn
@@ -149,46 +150,72 @@ def jsonify(func, *args, **kwargs):
 # File system functions
 ################################################################################
 
-def createResearcherDirectory(researcher):
+def getConfig(**kwargs):
+    """Try desperately to get a Pylons config object.  The best thing is if a
+    config object is passed in kwargs['config'].
+    """
+    config = kwargs.get('config')
+    configFilename = kwargs.get('configFilename')
+    if config:
+        return config
+    elif configFilename:
+        return appconfig('config:%s' % configFilename, relative_to='.')
+    else:
+        try:
+            return appconfig('config:production.ini', relative_to='.')
+        except:
+            try:
+                return appconfig('config:development.ini', relative_to='.')
+            except:
+                try:
+                    return appconfig('config:test.ini', relative_to='.')
+                except:
+                    from pylons import config
+                    return config
+
+def createResearcherDirectory(researcher, **kwargs):
     """Creates a directory named researcher.username in files/researchers/."""
-    # I am not entirely sure why pylons.config lacks a 'permanent_store' key
-    # when this function is called.  In the getRDBMSName func below I use
-    # pylons.config to get 'sqlalchemy.url' ...  WARNING: if test.ini needs a
-    # distinct researcher directory (it shouldn't), then the 'config:test.ini'
-    # should be passed to appconfig here.
-    config = appconfig('config:development.ini', relative_to='.')
-    directoryPath = os.path.join(
-        config['permanent_store'], 'researchers',
-        researcher.username
-    )
-    makeDirectorySafely(directoryPath)
-
-def destroyResearcherDirectory(researcher):
-    """Destroys a directory named researcher.username in files/researchers/."""
-    config = appconfig('config:development.ini', relative_to='.')
-    directoryPath = os.path.join(
-        config['permanent_store'], 'researchers',
-        researcher.username
-    )
-    rmtree(directoryPath)
-
-def destroyAllResearcherDirectories():
-    """Removes all directories from files/researchers/."""
-    config = appconfig('config:development.ini', relative_to='.')
-    researchersPath = os.path.join(config['permanent_store'], 'researchers')
-    for name in os.listdir(researchersPath):
-        path = os.path.join(researchersPath, name)
-        if os.path.isdir(path):
-            rmtree(path)
-
-def renameResearcherDirectory(oldName, newName):
-    config = appconfig('config:development.ini', relative_to='.')
-    oldPath = os.path.join(config['permanent_store'], 'researchers', oldName)
-    newPath = os.path.join(config['permanent_store'], 'researchers', newName)
+    config = getConfig(**kwargs)
     try:
-        os.rename(oldPath, newPath)
-    except OSError:
-        makeDirectorySafely(newPath)
+        permanent_store = config['permanent_store']
+        directoryPath = os.path.join(permanent_store, 'researchers', researcher.username)
+        makeDirectorySafely(directoryPath)
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
+
+def destroyResearcherDirectory(researcher, **kwargs):
+    """Destroys a directory named researcher.username in files/researchers/."""
+    config = getConfig(**kwargs)
+    try:
+        permanent_store = config['permanent_store']
+        directoryPath = os.path.join(permanent_store, 'researchers', researcher.username)
+        rmtree(directoryPath)
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
+
+def destroyAllResearcherDirectories(**kwargs):
+    """Removes all directories from files/researchers/."""
+    config = getConfig(**kwargs)
+    try:
+        researchersPath = os.path.join(config['permanent_store'], 'researchers')
+        for name in os.listdir(researchersPath):
+            path = os.path.join(researchersPath, name)
+            if os.path.isdir(path):
+                rmtree(path)
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
+
+def renameResearcherDirectory(oldName, newName, **kwargs):
+    config = getConfig(**kwargs)
+    try:
+        oldPath = os.path.join(config['permanent_store'], 'researchers', oldName)
+        newPath = os.path.join(config['permanent_store'], 'researchers', newName)
+        try:
+            os.rename(oldPath, newPath)
+        except OSError:
+            makeDirectorySafely(newPath)
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
 
 def makeDirectorySafely(path):
     """Create a directory and avoid race conditions.  Taken from 
@@ -737,7 +764,7 @@ def addOrderBy(query, orderByParams, queryBuilder, primaryKey='id'):
 # OLD model objects getters: for defaults and testing
 ################################################################################
 
-def generateDefaultAdministrator():
+def generateDefaultAdministrator(**kwargs):
     admin = model.User()
     admin.firstName = u'Admin'
     admin.lastName = u'Admin'
@@ -749,10 +776,10 @@ def generateDefaultAdministrator():
     admin.inputOrthography = None
     admin.outputOrthography = None
     admin.pageContent = u''
-    createResearcherDirectory(admin)
+    createResearcherDirectory(admin, **kwargs)
     return admin
 
-def generateDefaultContributor():
+def generateDefaultContributor(**kwargs):
     contributor = model.User()
     contributor.firstName = u'Contributor'
     contributor.lastName = u'Contributor'
@@ -764,10 +791,10 @@ def generateDefaultContributor():
     contributor.inputOrthography = None
     contributor.outputOrthography = None
     contributor.pageContent = u''
-    createResearcherDirectory(contributor)
+    createResearcherDirectory(contributor, **kwargs)
     return contributor
 
-def generateDefaultViewer():
+def generateDefaultViewer(**kwargs):
     viewer = model.User()
     viewer.firstName = u'Viewer'
     viewer.lastName = u'Viewer'
@@ -779,7 +806,7 @@ def generateDefaultViewer():
     viewer.inputOrthography = None
     viewer.outputOrthography = None
     viewer.pageContent = u''
-    createResearcherDirectory(viewer)
+    createResearcherDirectory(viewer, **kwargs)
     return viewer
 
 def generateDefaultHomePage():
@@ -848,7 +875,6 @@ def generateDefaultApplicationSettings(orthographies=[], unrestrictedUsers=[]):
     applicationSettings.inputOrthography = orthographies[0] if 0 < len(orthographies) else None
     applicationSettings.outputOrthography = orthographies[0] if 0 < len(orthographies) else None
     applicationSettings.unrestrictedUsers = unrestrictedUsers
-    applicationSettings.orthographies = orthographies
     return applicationSettings
 
 def generateRestrictedTag():
@@ -1082,15 +1108,16 @@ def getUnrestrictedUsers():
                    'applicationSettings', None), 'unrestrictedUsers', [])
 
 
-unauthorizedJSONMsg = json.dumps(
-    {'error': 'You are not authorized to access this resource.'})
+unauthorizedMsg = {'error': 'You are not authorized to access this resource.'}
 
 
-def getRDBMSName():
-    #config = appconfig('config:development.ini', relative_to='.')
-    from pylons import config as config_
-    SQLAlchemyURL = config_['sqlalchemy.url']
-    return SQLAlchemyURL.split(':')[0]
+def getRDBMSName(**kwargs):
+    config = getConfig(**kwargs)
+    try:
+        SQLAlchemyURL = config['sqlalchemy.url']
+        return SQLAlchemyURL.split(':')[0]
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
 
 
 ################################################################################
@@ -1224,3 +1251,74 @@ def getSearchParameters(queryBuilder):
         'attributes': queryBuilder.models2attributes[queryBuilder.modelName],
         'relations': queryBuilder.relations
     }
+
+
+################################################################################
+# Email Functionality
+################################################################################
+
+def getValueFromGmailConfig(gmailConfig, key, default=None):
+    try:
+        return gmailConfig.get('DEFAULT', key)
+    except:
+        return default
+
+def getGmailConfig(**kwargs):
+    config = getConfig(**kwargs)
+    try:
+        here = config['here']
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
+    gmailConfigPath = os.path.join(here, 'gmail.ini')
+    gmailConfig = ConfigParser.ConfigParser()
+    try:
+        gmailConfig.read(gmailConfigPath)
+        return gmailConfig
+    except ConfigParser.Error:
+        return None
+
+def getObjectLanguageId():
+    return getattr(getApplicationSettings(), 'objectLanguageId', 'old')
+
+def sendPasswordResetEmailTo(user, newPassword, **kwargs):
+    """Send the "password reset" email to the user.  **kwargs should contain a
+    config object or a config file name (e.g., 'production.ini').  If
+    password_reset_smtp_server is set to smtp.gmail.com in the config file, then
+    the email will be sent using smtp.gmail.com and the system will expect a
+    gmail.ini file with valid gmail_from_address and gmail_from_password values.
+    If the config file is test.ini and there is a test_email_to value, then that
+    value will be the target of the email -- this allows testers to verify that
+    an email is in fact being received.
+    """
+
+    to_address = user.email
+    config = getConfig(**kwargs)
+    if os.path.split(config['__file__'])[-1] == u'test.ini' and config.get('test_email_to'):
+        to_address = config.get('test_email_to')
+    password_reset_smtp_server = config.get('password_reset_smtp_server')
+    languageId = getObjectLanguageId()
+    from_address = '%s@old.org' % languageId
+    appName = languageId.upper() + ' OLD' if languageId != 'old' else 'OLD'
+    appURL = url('/', qualified=True)
+    if password_reset_smtp_server == 'smtp.gmail.com':
+        gmailConfig = getGmailConfig(config=config)
+        from_address = getValueFromGmailConfig(gmailConfig, 'gmail_from_address')
+        from_password = getValueFromGmailConfig(gmailConfig, 'gmail_from_password')
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.ehlo()
+        server.starttls()
+        server.login(from_address, from_password)
+    else:
+        server = smtplib.SMTP('localhost')
+    to_addresses = [to_address]
+    message = u''.join([
+        'From: %s <%s>\n' % (appName, from_address),
+        'To: %s %s <%s>\n' % (user.firstName, user.lastName, to_address),
+        'Subject: %s Password Reset\n\n' % appName,
+        'Your password at %s has been reset to:\n\n    %s\n\n' % (appURL, newPassword),
+        'Please change it once you have logged in.\n\n',
+        '(Do not reply to this email.)'
+    ])
+    failures = server.sendmail(from_address, to_addresses, message)
+    server.quit()
+    return failures

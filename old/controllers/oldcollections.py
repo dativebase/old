@@ -25,8 +25,9 @@ log = logging.getLogger(__name__)
 class OldcollectionsController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol"""
 
-    queryBuilder = SQLAQueryBuilder('Collection')
+    queryBuilder = SQLAQueryBuilder('Collection', config=config)
 
+    @h.OLDjsonify
     @restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
@@ -38,73 +39,63 @@ class OldcollectionsController(BaseController):
         is returned or an error is raised.  The 'query' object requires a
         'filter' attribute; an 'orderBy' attribute is optional.
         """
-
-        response.content_type = 'application/json'
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
             query = h.filterRestrictedModels('Collection', SQLAQuery)
-            result = h.addPagination(query, pythonSearchParams.get('paginator'))
+            return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
+            return {'errors': e.unpack_errors()}
         # SQLAQueryBuilder should have captured these exceptions (and packed
         # them into an OLDSearchParseError) or sidestepped them, but here we'll
         # handle any that got past -- just in case.
         except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
             response.status_int = 400
-            return json.dumps({'error':
-                u'The specified search parameters generated an invalid database query'})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'error': u'The specified search parameters generated an invalid database query'}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def index(self):
         """GET /collections: Return all collections."""
-        # url('collections')
-        response.content_type = 'application/json'
         try:
             query = Session.query(Collection)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             query = h.filterRestrictedModels('Collection', query)
-            result = h.addPagination(query, dict(request.GET))
+            return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
-            return json.dumps({'errors': e.unpack_errors()})
-        else:
-            return json.dumps(result, cls=h.JSONOLDEncoder)
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
         """POST /collections: Create a new collection."""
-        # url('collections')
-        response.content_type = 'application/json'
         try:
             schema = CollectionSchema()
             values = json.loads(unicode(request.body, request.charset))
             values = addFormIdsListToValues(values)
             state = h.getStateObject(values)
-            result = schema.to_python(values, state)
-        except h.JSONDecodeError:
-            response.status_int = 400
-            result = h.JSONDecodeErrorResponse
-        except Invalid, e:
-            response.status_int = 400
-            result = json.dumps({'errors': e.unpack_errors()})
-        else:
-            collection = createNewCollection(result)
+            data = schema.to_python(values, state)
+            collection = createNewCollection(data)
             Session.add(collection)
             Session.commit()
-            result = json.dumps(collection, cls=h.JSONOLDEncoder)
-        return result
+            return collection
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -119,18 +110,14 @@ class OldcollectionsController(BaseController):
         See the getNewEditCollectionData function to understand how the GET params can
         affect the contents of the arrays.
         """
+        return getNewEditCollectionData(request.GET)
 
-        response.content_type = 'application/json'
-        result = getNewEditCollectionData(request.GET)
-        return json.dumps(result, cls=h.JSONOLDEncoder)
-
+    @h.OLDjsonify
     @restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /collections/id: Update an existing collection."""
-
-        response.content_type = 'application/json'
         collection = Session.query(Collection).get(int(id))
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
@@ -141,35 +128,33 @@ class OldcollectionsController(BaseController):
                     values = json.loads(unicode(request.body, request.charset))
                     values = addFormIdsListToValues(values)
                     state = h.getStateObject(values)
-                    result = schema.to_python(values, state)
-                except h.JSONDecodeError:
-                    response.status_int = 400
-                    result = h.JSONDecodeErrorResponse
-                except Invalid, e:
-                    response.status_int = 400
-                    result = json.dumps({'errors': e.unpack_errors()})
-                else:
+                    data = schema.to_python(values, state)
                     collectionDict = collection.getDict()
-                    collection = updateCollection(collection, result)
+                    collection = updateCollection(collection, data)
                     # collection will be False if there are no changes (cf. updateCollection).
                     if collection:
                         backupCollection(collectionDict, collection.datetimeModified)
                         Session.add(collection)
                         Session.commit()
-                        result = json.dumps(collection, cls=h.JSONOLDEncoder)
+                        return collection
                     else:
                         response.status_int = 400
-                        result = json.dumps({'error': u''.join([
-                            u'The update request failed because the submitted ',
-                            u'data were not new.'])})
+                        return {'error':
+                            u'The update request failed because the submitted data were not new.'}
+                except h.JSONDecodeError:
+                    response.status_int = 400
+                    return h.JSONDecodeErrorResponse
+                except Invalid, e:
+                    response.status_int = 400
+                    return {'errors': e.unpack_errors()}
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no collection with id %s' % id})
-        return result
+            return {'error': 'There is no collection with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -177,8 +162,6 @@ class OldcollectionsController(BaseController):
         """DELETE /collections/id: Delete an existing collection.  Only the
         enterer and administrators can delete a collection.
         """
-
-        response.content_type = 'application/json'
         collection = Session.query(Collection).get(id)
         if collection:
             if session['user'].role == u'administrator' or \
@@ -187,15 +170,15 @@ class OldcollectionsController(BaseController):
                 backupCollection(collectionDict)
                 Session.delete(collection)
                 Session.commit()
-                result = json.dumps(collection, cls=h.JSONOLDEncoder)
+                return collection
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no collection with id %s' % id})
-        return result
+            return {'error': 'There is no collection with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def show(self, id):
@@ -207,22 +190,20 @@ class OldcollectionsController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-
-        response.content_type = 'application/json'
         collection = Session.query(Collection).get(id)
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
             if h.userIsAuthorizedToAccessModel(user, collection, unrestrictedUsers):
-                result = json.dumps(collection, cls=h.JSONOLDEncoder)
+                return collection
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no collection with id %s' % id})
-        return result
+            return {'error': 'There is no collection with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -246,24 +227,21 @@ class OldcollectionsController(BaseController):
         output.data being retrieved from the db while specified params will
         result in selective retrieval (see getNewEditCollectionData for details).
         """
-
-        response.content_type = 'application/json'
         collection = Session.query(Collection).get(id)
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
             if h.userIsAuthorizedToAccessModel(
                                 session['user'], collection, unrestrictedUsers):
                 data = getNewEditCollectionData(request.GET)
-                result = {'data': data, 'collection': collection}
-                result = json.dumps(result, cls=h.JSONOLDEncoder)
+                return {'data': data, 'collection': collection}
             else:
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'There is no collection with id %s' % id})
-        return result
+            return {'error': 'There is no collection with id %s' % id}
 
+    @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
     def history(self, id):
@@ -277,8 +255,6 @@ class OldcollectionsController(BaseController):
         previousVersions    []      [1, 2,...]    []         [1, 2,...]
         response            404     200/403       200/403    200/403
         """
-
-        response.content_type = 'application/json'
         collection, previousVersions = getCollectionAndPreviousVersions(id)
         if collection or previousVersions:
             unrestrictedUsers = h.getUnrestrictedUsers()
@@ -290,15 +266,13 @@ class OldcollectionsController(BaseController):
             previousVersionsAreRestricted = previousVersions and not unrestrictedPreviousVersions
             if collectionIsRestricted or previousVersionsAreRestricted :
                 response.status_int = 403
-                result = h.unauthorizedJSONMsg
+                return h.unauthorizedMsg
             else :
-                result = {'collection': collection,
-                          'previousVersions': unrestrictedPreviousVersions}
-                result = json.dumps(result, cls=h.JSONOLDEncoder)
+                return {'collection': collection,
+                        'previousVersions': unrestrictedPreviousVersions}
         else:
             response.status_int = 404
-            result = json.dumps({'error': 'No collections or collection backups match %s' % id})
-        return result
+            return {'error': 'No collections or collection backups match %s' % id}
 
 
 def getCollectionAndPreviousVersions(id):

@@ -114,6 +114,7 @@ class TestFormsearchesController(TestController):
         assert len(resp) == formSearchesCount
         assert resp[0]['name'] == u'formSearch1'
         assert resp[0]['id'] == formSearches[0].id
+        assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 23, 'page': 3}
@@ -147,6 +148,7 @@ class TestFormsearchesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
 
         # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
         # param is invalid.
@@ -165,6 +167,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
+        assert response.content_type == 'application/json'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url('formsearches'), paginator, headers=self.json_headers,
@@ -197,6 +200,7 @@ class TestFormsearchesController(TestController):
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
         assert json.loads(resp['search']) == query
+        assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
         params = self.createParams.copy()
@@ -209,6 +213,7 @@ class TestFormsearchesController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'The submitted value for FormSearch.name is not unique.'
+        assert response.content_type == 'application/json'
 
         # Invalid because name is empty
         params = self.createParams.copy()
@@ -268,6 +273,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert 'attributes' in resp['searchParameters']
         assert 'relations' in resp['searchParameters']
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_update(self):
@@ -307,6 +313,7 @@ class TestFormsearchesController(TestController):
         newFormSearchCount = Session.query(FormSearch).count()
         assert formSearchCount == newFormSearchCount
         assert datetimeModified != originalDatetimeModified
+        assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
@@ -319,6 +326,7 @@ class TestFormsearchesController(TestController):
         assert ourFormSearchDatetimeModified.isoformat() == datetimeModified
         assert formSearchCount == newFormSearchCount
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_delete(self):
@@ -349,6 +357,7 @@ class TestFormsearchesController(TestController):
         newFormSearchCount = Session.query(FormSearch).count()
         assert newFormSearchCount == formSearchCount - 1
         assert resp['id'] == formSearchId
+        assert response.content_type == 'application/json'
 
         # Trying to get the deleted formSearch from the db should return None
         deletedFormSearch = Session.query(FormSearch).get(formSearchId)
@@ -360,6 +369,7 @@ class TestFormsearchesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert u'There is no form search with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # Delete without an id
         response = self.app.delete(url('formsearch', id=''), status=404,
@@ -394,6 +404,7 @@ class TestFormsearchesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin, status=404)
         resp = json.loads(response.body)
         assert u'There is no form search with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('formsearch', id=''), status=404,
@@ -406,6 +417,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_edit(self):
@@ -438,12 +450,14 @@ class TestFormsearchesController(TestController):
         response = self.app.get(url('edit_formsearch', id=formSearchId), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
 
         # Invalid id
         id = 9876544
         response = self.app.get(url('edit_formsearch', id=id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin, status=404)
         assert u'There is no form search with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
 
         # No id
         response = self.app.get(url('edit_formsearch', id=''), status=404,
@@ -457,6 +471,7 @@ class TestFormsearchesController(TestController):
         assert resp['formSearch']['name'] == u'form search'
         assert 'attributes' in resp['data']['searchParameters']
         assert 'relations' in resp['data']['searchParameters']
+        assert response.content_type == 'application/json'
 
     #@nottest
     def test_search(self):
@@ -477,6 +492,7 @@ class TestFormsearchesController(TestController):
         assert resp
         assert len(resp) == len(resultSet)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in resultSet])
+        assert response.content_type == 'application/json'
 
         # A fairly complex search
         jsonQuery = json.dumps({'query': {'filter': [
@@ -519,6 +535,7 @@ class TestFormsearchesController(TestController):
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
+        assert response.content_type == 'application/json'
 
         # Some "invalid" paginators will silently fail.  For example, if there is
         # no 'pages' key, then SEARCH /formsearches will just assume there is no paginator
@@ -575,6 +592,7 @@ class TestFormsearchesController(TestController):
         assert len(resp) == 100
         assert resp[0]['name'] == u'form search 1'
         assert resp[-1]['name'] == u'form search 99'
+        assert response.content_type == 'application/json'
 
         # order by with unknown direction defaults to 'asc'
         jsonQuery = json.dumps({'query': {
@@ -595,6 +613,7 @@ class TestFormsearchesController(TestController):
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
+        assert response.content_type == 'application/json'
 
         # searches with lexically malformed order bys
         jsonQuery = json.dumps({'query': {
