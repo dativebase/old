@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 class TestFilesController(TestController):
 
     here = appconfig('config:test.ini', relative_to='.')['here']
-    filesPath = os.path.join(here, 'files')
+    filesPath = os.path.join(here, u'files')
     testFilesPath = os.path.join(here, 'test_files')
 
     createParams = {
@@ -445,6 +445,29 @@ class TestFilesController(TestController):
         assert fileCount == 3
         assert response.content_type == 'application/json'
 
+        # Create an audio file with unicode characters.  Show that spaces are
+        # replaced with underscores and that apostrophes and quotation marks are
+        # removed.
+        wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
+        wavFileSize = os.path.getsize(wavFilePath)
+        params = self.createParams.copy()
+        params.update({
+            'name': u'\u201Cold te\u0301st\u201D.wav',
+            'file': encodestring(open(wavFilePath).read())
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert u'\u201Cold_te\u0301st\u201D.wav' in os.listdir(self.filesPath)
+        assert resp['name'] == u'\u201Cold_te\u0301st\u201D.wav'
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert fileCount == 4
+        assert response.content_type == 'application/json'
+
     #@nottest
     def test_relational_restrictions(self):
         """Tests that the restricted tag works correctly with respect to relational attributes of files.
@@ -780,6 +803,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         newFileCount = Session.query(model.File).count()
         assert resp['description'] == u'A file that has been updated.'
+        assert resp['tags'] == []
         assert newFileCount == fileCount + 1
         assert response.content_type == 'application/json'
 
@@ -925,6 +949,28 @@ class TestFilesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
+
+        # Create and delete a file with unicode characters in the file name
+        extra_environ = {'test.authentication.id': myContributorId,
+                         'test.applicationSettings': True}
+        params = self.createParams.copy()
+        params.update({
+            'name': u'\u201Cte\u0301st delete\u201D.wav',
+            'file': encodestring(open(jpgFilePath).read()),
+            'speaker': speakerId,
+            'tags': [tagId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        toDeleteId = resp['id']
+        toDeleteName = resp['name']
+        assert resp['name'] == u'\u201Cte\u0301st_delete\u201D.wav'
+        assert resp['tags'][0]['name'] == u'default tag'
+        assert u'\u201Cte\u0301st_delete\u201D.wav' in os.listdir(self.filesPath)
+        response = self.app.delete(url('file', id=toDeleteId), extra_environ=extra_environ)
+        resp = json.loads(response.body)
+        assert u'\u201Cte\u0301st_delete\u201D.wav' not in os.listdir(self.filesPath)
 
     #@nottest
     def test_show(self):
