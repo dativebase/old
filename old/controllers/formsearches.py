@@ -78,7 +78,9 @@ class FormsearchesController(BaseController):
         try:
             schema = FormSearchSchema()
             values = json.loads(unicode(request.body, request.charset))
-            data = schema.to_python(values)
+            state = h.getStateObject(values)
+            state.config = config
+            data = schema.to_python(values, state)
             formSearch = createNewFormSearch(data)
             Session.add(formSearch)
             Session.commit()
@@ -114,6 +116,7 @@ class FormsearchesController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.getStateObject(values)
                 state.id = id
+                state.config = config
                 data = schema.to_python(values, state)
                 formSearch = updateFormSearch(formSearch, data)
                 # formSearch will be False if there are no changes (cf. updateFormSearch).

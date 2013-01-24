@@ -34,10 +34,13 @@ class SourcesController(BaseController):
         is returned or an error is raised.  The 'query' object requires a
         'filter' attribute; an 'orderBy' attribute is optional.
         """
+        #for attr in dir(self.queryBuilder):
+        #    log.warn('self.queryBuilder.%s = %s' % (attr, getattr(self.queryBuilder, attr)))
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            #log.warn(h.compile_query(query))
             return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400

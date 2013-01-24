@@ -42,6 +42,17 @@ def make_map(config):
     map.connect('formsearches', '/formsearches', controller='formsearches',
                 action='search', conditions=dict(method='SEARCH'))
 
+    # rememberedforms "resource"
+    map.connect("rememberedforms", "/rememberedforms/{id}",
+        controller="rememberedforms", action="show",
+        conditions=dict(method=["GET"]))
+    map.connect("/rememberedforms/{id}",
+        controller="rememberedforms", action="update",
+        conditions=dict(method=["PUT"]))
+    map.connect("rememberedforms", "/rememberedforms/{id}",
+        controller='rememberedforms', action='search',
+        conditions=dict(method='SEARCH'))
+
     # RESTful resoure mappings
     map.resource('applicationsetting', 'applicationsettings')
     map.resource('collection', 'collections', controller='oldcollections')

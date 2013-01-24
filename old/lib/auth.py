@@ -72,7 +72,7 @@ def authorize(roles, users=None, userIDIsArgs1=False):
             id = getattr(session.get('user'), 'id', None)
             # Check for authorization via user.
             if users:
-                if role is not 'administrator' and id not in users:
+                if role != 'administrator' and id not in users:
                     response.status_int = 403
                     return unauthorizedMsg
             # Check whether the user id equals the id argument given to the

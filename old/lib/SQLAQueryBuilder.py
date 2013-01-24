@@ -128,6 +128,8 @@ class SQLAQueryBuilder(object):
     """
 
     def __init__(self, modelName='Form', primaryKey='id', mode='production', **kwargs):
+        self.errors = {}
+        self.joins = []
         self.modelName = modelName  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
         self.primaryKey = primaryKey    # Some models have a primary key other than 'id' ...
         self.mode = mode            # i.e., production or development
@@ -246,13 +248,8 @@ class SQLAQueryBuilder(object):
 
     SQLAlchemyStringTypes = (Unicode, UnicodeText)
 
-    errors = {}
-
     def _addToErrors(self, key, msg):
         self.errors[str(key)] = msg
-
-    joins = [] # holds tuples of aliased models and their collection attributes
-    # on the target model, e.g., (aliased(model.Tag), model.Form.tags)
 
     ############################################################################
     # Value converters

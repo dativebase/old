@@ -597,8 +597,8 @@ def getStartAndEndFromPaginator(paginator):
     start = (paginator['page'] - 1) * paginator['itemsPerPage']
     return (start, start + paginator['itemsPerPage'])
 
-def filterRestrictedModels(modelName, query):
-    user = session['user']
+def filterRestrictedModels(modelName, query, user=None):
+    user = user or session['user']
     unrestrictedUsers = getUnrestrictedUsers()
     userIsUnrestricted_ = userIsUnrestricted(user, unrestrictedUsers)
     if userIsUnrestricted_:
@@ -1322,3 +1322,27 @@ def sendPasswordResetEmailTo(user, newPassword, **kwargs):
     failures = server.sendmail(from_address, to_addresses, message)
     server.quit()
     return failures
+
+
+def compile_query(query, **kwargs):
+    """Return the SQLAlchemy query as a bona fide MySQL query.  Taken from
+    http://stackoverflow.com/questions/4617291/how-do-i-get-a-raw-compiled-sql-query-from-a-sqlalchemy-expression.
+    """
+
+    RDBMSName = getRDBMSName(**kwargs)
+    if RDBMSName == 'mysql':
+        from sqlalchemy.sql import compiler
+        from MySQLdb.converters import conversions, escape
+        dialect = query.session.bind.dialect    # an object representing the dialect; dialect.name will be 'sqlite' or 'mysql'
+        statement = query.statement     # The query as SQL with variable names instead of values, e.g., 'WHERE form.transcription like :transcription_1'
+        comp = compiler.SQLCompiler(dialect, statement)
+        enc = dialect.encoding
+        params = []
+        for k in comp.positiontup:
+            v = comp.params[k]
+            if isinstance(v, unicode):
+                v = v.encode(enc)
+            params.append( escape(v, conversions) )
+        return (comp.string.encode(enc) % tuple(params)).decode(enc)
+    else:
+        return str(query)

@@ -291,10 +291,23 @@ class FormSchema(Schema):
 
 
 class FormIdsSchema(Schema):
+    """Schema used to validate a JSON object of the form {'forms': [1, 2, 3]}
+    where value['forms'] can NOT be an empty array.  Used in the remember method
+    of controllers.forms.
+    """
     allow_extra_fields = True
     filter_extra_fields = True
     forms = ForEach(ValidOLDModelObject(modelName='Form'), not_empty=True)
 
+
+class FormIdsSchemaNullable(Schema):
+    """Schema used to validate a JSON object of the form {'forms': [1, 2, 3]}
+    where value['forms'] can be an empty array.  Used in the update method of
+    controllers.rememberedforms.
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    forms = ForEach(ValidOLDModelObject(modelName='Form'))
 
 ################################################################################
 # File Schemata
@@ -609,11 +622,11 @@ class ValidFormQuery(FancyValidator):
     """Validates a form search query using a SQLAQueryBuilder instance.  Returns
     the query as JSON."""
 
-    queryBuilder = SQLAQueryBuilder('Form')
     messages = {'query_error': u'The submitted query was invalid'}
     def _to_python(self, value, state):
         try:
-            query = self.queryBuilder.getSQLAQuery(value)
+            queryBuilder = SQLAQueryBuilder('Form', config=state.config)
+            query = queryBuilder.getSQLAQuery(value)
         except:
             raise Invalid(self.message('query_error', state), value, state)
         return unicode(json.dumps(value))
