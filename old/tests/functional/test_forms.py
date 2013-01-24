@@ -156,8 +156,8 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 2
         assert resp[0]['transcription'] == u'test restricted tag transcription'
-        assert resp[0]['morphemeBreakIDs'] == [[[]]]
-        assert resp[0]['morphemeGlossIDs'] == [[[]]]
+        assert resp[0]['morphemeBreakIDs'] == None
+        assert resp[0]['morphemeBreakIDs'] == None
         assert resp[0]['glosses'][0]['gloss'] == u'test restricted tag gloss'
         assert type(resp[0]['glosses'][0]['id']) == type(1)
         assert type(resp[0]['id']) == type(1)
@@ -347,7 +347,7 @@ class TestFormsController(TestController):
         assert type(resp) == type({})
         assert resp['transcription'] == u'test_create_transcription'
         assert resp['glosses'][0]['gloss'] == u'test_create_gloss'
-        assert resp['morphemeBreakIDs'] == [[[]]]
+        assert resp['morphemeBreakIDs'] == None
         assert resp['enterer']['firstName'] == u'Admin'
         assert formCount == 1
         assert response.content_type == 'application/json'
@@ -356,39 +356,61 @@ class TestFormsController(TestController):
         N = h.generateNSyntacticCategory()
         Num = h.generateNumSyntacticCategory()
         S = h.generateSSyntacticCategory()
+        Agr = model.SyntacticCategory()
+        Agr.name = u'Agr'
         applicationSettings = model.ApplicationSettings()
-        Session.add_all([S, N, Num, applicationSettings])
+        Session.add_all([S, N, Num, Agr, applicationSettings])
         Session.commit()
+        NId = N.id
+        NumId = Num.id
+        AgrId = Agr.id
 
-        # Create two lexical forms.
+        # Create three lexical forms, two of which are disambiguated only by their
+        # category
+
+        # chien/dog/N
         params = self.createParams.copy()
         params.update({
             'transcription': u'chien',
             'morphemeBreak': u'chien',
             'morphemeGloss': u'dog',
             'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
-            'syntacticCategory': Session.query(
-                model.SyntacticCategory).filter(
-                model.SyntacticCategory.name==u'N').first().id
+            'syntacticCategory': NId
         })
         params = json.dumps(params)
-        response = self.app.post(url('forms'), params, self.json_headers,
-                                 self.extra_environ_admin)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        dogId = resp['id']
+
+        # s/PL/Num
         params = self.createParams.copy()
         params.update({
             'transcription': u's',
             'morphemeBreak': u's',
             'morphemeGloss': u'PL',
             'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
-            'syntacticCategory': Session.query(
-                model.SyntacticCategory).filter(
-                model.SyntacticCategory.name==u'Num').first().id
+            'syntacticCategory': NumId
         })
         params = json.dumps(params)
-        response = self.app.post(url('forms'), params, self.json_headers,
-                                 self.extra_environ_admin)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        pluralNumId = resp['id']
         formCount = Session.query(model.Form).count()
         assert formCount == 3
+
+        # s/PL/Agr
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u's',
+            'morphemeBreak': u's',
+            'morphemeGloss': u'PL',
+            'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
+            'syntacticCategory': AgrId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        pluralAgrId = resp['id']
 
         # Create another form whose morphemic analysis will reference the
         # lexical items created above.  Here we expect the morphemeBreakIDs,
@@ -413,10 +435,10 @@ class TestFormsController(TestController):
         assert resp['transcription'] == u'Les chiens aboient.'
         assert resp['glosses'][0]['gloss'] == u'The dogs are barking.'
         assert resp['syntacticCategory']['name'] == u'S'
-        assert resp['morphemeBreakIDs'] == [[[]]]
+        assert resp['morphemeBreakIDs'] == None
         assert resp['syntacticCategoryString'] == u''
         assert resp['syntacticCategory']['name'] == u'S'
-        assert formCount == 4
+        assert formCount == 5
 
         # Re-create the form from above but this time add a non-empty
         # application settings.  Now we should expect the morphemeBreakIDs,
@@ -425,18 +447,35 @@ class TestFormsController(TestController):
         applicationSettings = h.generateDefaultApplicationSettings()
         Session.add(applicationSettings)
         Session.commit()
-        response = self.app.post(url('forms'), params, self.json_headers,
-                                 self.extra_environ_admin)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         formCount = Session.query(model.Form).count()
-        assert resp['morphemeBreakIDs'] != [[[]]]
-        assert resp['syntacticCategoryString'] != u''
-        # The syntactic category string should contain 'N-Num' for 'chien-s'.
-        assert u'N-Num' in resp['syntacticCategoryString']
-        # The syntactic category (third value) of the first lexical match of the
-        # first morpheme of the second word should be N (since 'chien' is a noun).
         assert resp['morphemeBreakIDs'][1][0][0][2] == u'N'
-        assert formCount == 5
+        assert formCount == 6
+        assert resp['morphemeBreakIDs'][0] == [[]]
+        assert resp['morphemeBreakIDs'][1][0][0][0] == dogId
+        assert resp['morphemeBreakIDs'][1][0][0][1] == u'dog'
+        assert resp['morphemeBreakIDs'][1][0][0][2] == u'N'
+        assert resp['morphemeBreakIDs'][1][1][0][0] == pluralNumId
+        assert resp['morphemeBreakIDs'][1][1][0][1] == u'PL'
+        assert resp['morphemeBreakIDs'][1][1][0][2] == u'Num'
+        assert resp['morphemeBreakIDs'][1][1][1][0] == pluralAgrId
+        assert resp['morphemeBreakIDs'][1][1][1][1] == u'PL'
+        assert resp['morphemeBreakIDs'][1][1][1][2] == u'Agr'
+        assert resp['morphemeBreakIDs'][2] == [[]]
+        assert resp['morphemeGlossIDs'][0] == [[]]
+        assert resp['morphemeGlossIDs'][1][0][0][0] == dogId
+        assert resp['morphemeGlossIDs'][1][0][0][1] == u'chien'
+        assert resp['morphemeGlossIDs'][1][0][0][2] == u'N'
+        assert resp['morphemeGlossIDs'][1][1][0][0] == pluralNumId
+        assert resp['morphemeGlossIDs'][1][1][0][1] == u's'
+        assert resp['morphemeGlossIDs'][1][1][0][2] == u'Num'
+        assert resp['morphemeGlossIDs'][1][1][1][0] == pluralAgrId
+        assert resp['morphemeGlossIDs'][1][1][1][1] == u's'
+        assert resp['morphemeGlossIDs'][1][1][1][2] == u'Agr'
+        assert resp['morphemeGlossIDs'][2] == [[]]
+        assert resp['syntacticCategoryString'] == u'? N-Num ?'
+        assert resp['breakGlossCategory'] == u'les|the|? chien|dog|N-s|PL|Num aboient|bark|?'
 
         # Recreate the above form but put morpheme delimiters in unexpected
         # places.
@@ -1942,7 +1981,7 @@ class TestFormsController(TestController):
         assert firstVersion['verifier'] == None
         assert [t['id'] for t in firstVersion['tags']] == [restrictedTagId]
         assert firstVersion['files'] == []
-        assert firstVersion['morphemeBreakIDs'] == [[[]]]
+        assert firstVersion['morphemeBreakIDs'] == None
 
         assert secondVersion['transcription'] == u'updated by the administrator'
         assert secondVersion['morphemeBreak'] == u'up-dat-ed by the ad-ministr-ator'
@@ -2028,7 +2067,7 @@ class TestFormsController(TestController):
         assert firstVersion['verifier'] == None
         assert [t['id'] for t in firstVersion['tags']] == [restrictedTagId]
         assert firstVersion['files'] == []
-        assert firstVersion['morphemeBreakIDs'] == [[[]]]
+        assert firstVersion['morphemeBreakIDs'] == None
 
         assert secondVersion['transcription'] == u'updated by the administrator'
         assert secondVersion['morphemeBreak'] == u'up-dat-ed by the ad-ministr-ator'
@@ -2409,7 +2448,6 @@ class TestFormsController(TestController):
         assert resp3[0]['morphemeBreakIDs'][0][1][0][2] == u'N'
         assert resp3[0]['morphemeBreakIDs'][0][2][0][1] == u'3'
         assert resp3[0]['morphemeBreakIDs'][0][2][0][2] == u'Num'
-
         assert resp3[0]['morphemeGlossIDs'][0][0][0][1] == u'a'
         assert resp3[0]['morphemeGlossIDs'][0][0][0][2] == u'Num'
         assert resp3[0]['morphemeGlossIDs'][0][1][0][1] == u'b'

@@ -89,18 +89,17 @@ class FormsController(BaseController):
             values = json.loads(unicode(request.body, request.charset))
             state = h.getStateObject(values)
             data = schema.to_python(values, state)
+            form = createNewForm(data)
+            Session.add(form)
+            Session.commit()
+            updateApplicationSettingsIfFormIsForeignWord(form)
+            return form
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        else:
-            form = createNewForm(data)
-            Session.add(form)
-            Session.commit()
-            updateApplicationSettingsIfFormIsForeignWord(form)
-            return form
 
     @h.OLDjsonify
     @restrict('GET')
@@ -135,13 +134,6 @@ class FormsController(BaseController):
                     values = json.loads(unicode(request.body, request.charset))
                     state = h.getStateObject(values)
                     data = schema.to_python(values, state)
-                except h.JSONDecodeError:
-                    response.status_int = 400
-                    return h.JSONDecodeErrorResponse
-                except Invalid, e:
-                    response.status_int = 400
-                    return {'errors': e.unpack_errors()}
-                else:
                     formDict = form.getDict()
                     form = updateForm(form, data)
                     # form will be False if there are no changes (cf. updateForm).
@@ -155,6 +147,12 @@ class FormsController(BaseController):
                         response.status_int = 400
                         return {'error':
                             u'The update request failed because the submitted data were not new.'}
+                except h.JSONDecodeError:
+                    response.status_int = 400
+                    return h.JSONDecodeErrorResponse
+                except Invalid, e:
+                    response.status_int = 400
+                    return {'errors': e.unpack_errors()}
             else:
                 response.status_int = 403
                 return h.unauthorizedMsg
@@ -442,32 +440,45 @@ def getNewEditFormData(GET_params):
     return result
 
 
-def getMorphemeIDLists(form, validDelimiters=None):
+def getMorphemeIDLists(form, validDelimiters=None, delimiter=u'|'):
     """This function generates values for the morphemeBreakIDs,
-    morphemeGlossIDs and syntacticCategoryString attributes of the input form.
-    It takes the morphemes and morpheme glosses of the Form and looks for
-    matches in other (lexical) Forms.
+    morphemeGlossIDs, syntacticCategoryString and breakGlossCategory attributes
+    of the input form.  It takes the morphemes and morpheme glosses of the Form
+    and looks for matches in other (lexical) Forms.
 
-    Specifically, it looks for Forms whose transcription matches the morpheme
-    string and whose morphemeGloss matches the gloss string.  First it looks
-    for perfect matches (i.e., a Form whose morphemeBreak matches the
-    morpheme and whose morphemeGloss matches the gloss) and if none are
-    found it looks for "half-matches" and if none of those are found, then
-    form.morhemeBreakIDs and form.morhemeGlossIDs are empty lists.
+    For each morpheme (i.e., each (phonemic_form, gloss) tuple) detected in the
+    target form, the database is searched for forms whose morpheme break field
+    matches the phonemic form and whose morpheme gloss matches the gloss.  If
+    such a perfect match is not found, the database is searched for forms
+    matching just the phonemic form or just the gloss.
 
-    If any kind of match is found, the id, morpheme/gloss and syntactic
-    category of the matching Forms are stored in a list of tuples:
-    (id, mb/gl, sc).
+    Matches are stored as triples of the form (id, mb/gl, sc).  For example,
+    consider a form with morphemeBreak value u'chien-s' and morphemeGloss value
+    u'dog-PL' and assume the lexical entries 'chien/dog/N/33', 's/PL/AGR/103' and
+    's/PL/PHI/111' (where, for /a/b/c/d, a is the morpheme break, b is the
+    morpheme gloss, c is the syntactic category and d is the database id.
+    Running getMorphemeIDLists on the target form will return
+    
+    (
+    )
     """
 
     morphemeBreakIDs = []
     morphemeGlossIDs = []
     syncatStr = []
 
+    def join(bgc, delimiters):
+        if bgc not in [(d, d, d) for d in delimiters]:
+            return '|'.join(bgc)
+        return bgc[0]
+
     # Get the valid morpheme/gloss delimiters, e.g., '-', '=', ' ', as a
     #  disjunctive regex
     if not validDelimiters:
         validDelimiters = h.getMorphemeDelimiters()
+    if u'-' in validDelimiters:
+        validDelimiters = [x for x in validDelimiters if x != u'-']
+        validDelimiters.append(u'-')
     if validDelimiters:
         patt = u'[%s]' % ''.join([h.escREMetaChars(d) for d in validDelimiters])
     else:
@@ -489,7 +500,7 @@ def getMorphemeIDLists(form, validDelimiters=None):
             mgWord = mgWords[i]
             scWord = scWords[i]
             patt = '([%s])' % ''.join(validDelimiters)
-            mbWordMorphemesList = re.split(patt, mbWord)[::2] 
+            mbWordMorphemesList = re.split(patt, mbWord)[::2]
             mgWordMorphemesList = re.split(patt, mgWord)[::2]
             scWordMorphemesList = re.split(patt, scWord)
             for ii in range(len(mbWordMorphemesList)):
@@ -499,7 +510,8 @@ def getMorphemeIDLists(form, validDelimiters=None):
                 if morpheme and gloss:
                     matches = Session.query(Form).filter(
                         Form.morphemeBreak==morpheme).filter(
-                        Form.morphemeGloss==gloss).all()
+                        Form.morphemeGloss==gloss).order_by(asc(
+                        Form.id)).all()
                 # If one or more Forms match both gloss and morpheme, append a
                 #  list of the IDs of those Forms in morphemeBreakIDs and
                 #  morphemeGlossIDs
@@ -518,7 +530,8 @@ def getMorphemeIDLists(form, validDelimiters=None):
                     morphemeMatches = []
                     if morpheme:
                         morphemeMatches = Session.query(Form).filter(
-                            Form.morphemeBreak==morpheme).all()
+                            Form.morphemeBreak==morpheme).order_by(asc(
+                            Form.id)).all()
                     if morphemeMatches:
                         mbWordIDList.append([f.syntacticCategory and
                             (f.id, f.morphemeGloss, f.syntacticCategory.name) 
@@ -529,7 +542,8 @@ def getMorphemeIDLists(form, validDelimiters=None):
                     glossMatches = []
                     if gloss:
                         glossMatches = Session.query(Form).filter(
-                            Form.morphemeGloss==gloss).all()
+                            Form.morphemeGloss==gloss).order_by(asc(
+                            Form.id)).all()
                     if glossMatches:
                         mgWordIDList.append([f.syntacticCategory and
                             (f.id, f.morphemeBreak, f.syntacticCategory.name)
@@ -541,15 +555,29 @@ def getMorphemeIDLists(form, validDelimiters=None):
             morphemeBreakIDs.append(mbWordIDList)
             morphemeGlossIDs.append(mgWordIDList)
             syncatStr.append(''.join(scWordMorphemesList))
+        syncatStr = u' '.join(syncatStr)
+        # Generate the breakGlossCategory value
+        try:
+            delimiters = [u' '] + validDelimiters
+            patt = '([%s])' % ''.join(delimiters)
+            mbSplit = re.split(patt, morphemeBreak)
+            mgSplit = re.split(patt, morphemeGloss)
+            scSplit = re.split(patt, syncatStr)
+            breakGlossCategory = zip(mbSplit, mgSplit, scSplit)
+            breakGlossCategory = u''.join([join(bgc, delimiters) for bgc in breakGlossCategory])
+        except TypeError:
+            breakGlossCategory = u''
     else:
-        morphemeBreakIDs = [[[]]]
-        morphemeGlossIDs = [[[]]]
-        syncatStr = []
+        morphemeBreakIDs = None
+        morphemeGlossIDs = None
+        syncatStr = u''
+        breakGlossCategory = u''
     # Convert the data structure into JSON for storage as a string in the DB
     return (
         unicode(json.dumps(morphemeBreakIDs)),
         unicode(json.dumps(morphemeGlossIDs)),
-        unicode(' '.join(syncatStr))
+        syncatStr,
+        breakGlossCategory
     )
 
 
@@ -668,7 +696,7 @@ def createNewForm(data):
     # We add the form first to get an ID so that monomorphemic Forms can be
     # self-referential.
     Session.add(form)
-    form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString = \
+    form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString, form.breakGlossCategory = \
                                                         getMorphemeIDLists(form)
     return form
 
@@ -770,7 +798,7 @@ def updateForm(form, data):
         CHANGED = True
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
-    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString = \
+    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory = \
                                                         getMorphemeIDLists(form)
     if morphemeBreakIDs != form.morphemeBreakIDs:
         form.morphemeBreakIDs = morphemeBreakIDs
@@ -780,6 +808,9 @@ def updateForm(form, data):
         CHANGED = True
     if syntacticCategoryString != form.syntacticCategoryString:
         form.syntacticCategoryString = syntacticCategoryString
+        CHANGED = True
+    if breakGlossCategory != form.breakGlossCategory:
+        form.breakGlossCategory = breakGlossCategory
         CHANGED = True
 
     if CHANGED:
@@ -799,7 +830,7 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None):
 
     # Attempt to recreate the morphemeBreakIDs, morphemeGlossIDs and
     # syntacticCategoryString attributes.
-    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString = \
+    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory = \
                                     getMorphemeIDLists(form, validDelimiters)
     if morphemeBreakIDs != form.morphemeBreakIDs:
         form.morphemeBreakIDs = morphemeBreakIDs
@@ -809,6 +840,9 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None):
         CHANGED = True
     if syntacticCategoryString != form.syntacticCategoryString:
         form.syntacticCategoryString = syntacticCategoryString
+        CHANGED = True
+    if breakGlossCategory != form.breakGlossCategory:
+        form.breakGlossCategory = breakGlossCategory
         CHANGED = True
 
     if CHANGED:

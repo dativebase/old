@@ -1014,7 +1014,7 @@ class TestFilesController(TestController):
         assert type(resp) == type({})
         assert resp['transcription'] == u'test'
         assert resp['glosses'][0]['gloss'] == u'test'
-        assert resp['morphemeBreakIDs'] == [[[]]]
+        assert resp['morphemeBreakIDs'] == None
         assert resp['enterer']['firstName'] == u'Admin'
         assert resp['files'][0]['name'] == u'old_test.jpg'
 
