@@ -11,9 +11,9 @@ import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
 from pylons import config
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
-
 
 class TestFilesController(TestController):
 
@@ -58,6 +58,7 @@ class TestFilesController(TestController):
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
+    extra_environ_view = {'test.authentication.role': u'viewer'}
     json_headers = {'Content-Type': 'application/json'}
 
     # Clear all models in the database except Language, recreate the default
@@ -1266,3 +1267,12 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /files/new_search returns the search parameters for searching the files resource."""
+        queryBuilder = SQLAQueryBuilder('File')
+        response = self.app.get(url('/files/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

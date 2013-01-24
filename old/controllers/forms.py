@@ -58,6 +58,15 @@ class FormsController(BaseController):
     @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
+    def new_search(self):
+        """GET /forms/new_search: Return the data necessary to inform a search
+        on the forms resource.
+        """
+        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
     def index(self):
         """GET /forms: Return all forms."""
         try:

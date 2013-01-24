@@ -14,6 +14,7 @@ from old.model.meta import Session
 import old.lib.helpers as h
 from old.model import Source
 from old.lib.bibtex import entryTypes
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
@@ -1007,3 +1008,12 @@ class TestSourcesController(TestController):
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /sources/new_search returns the search parameters for searching the sources resource."""
+        queryBuilder = SQLAQueryBuilder('Source')
+        response = self.app.get(url('/sources/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

@@ -61,6 +61,15 @@ class FilesController(BaseController):
     @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
+    def new_search(self):
+        """GET /files/new_search: Return the data necessary to inform a search
+        on the files resource.
+        """
+        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
     def index(self):
         """GET /files: Return all files."""
         try:

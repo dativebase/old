@@ -13,6 +13,7 @@ import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
 from old.model import FormSearch
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
@@ -634,3 +635,12 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['Foo'] == u'Searching the FormSearch model by joining on the Foo model is not possible'
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /formsearches/new_search returns the search parameters for searching the form searches resource."""
+        queryBuilder = SQLAQueryBuilder('FormSearch')
+        response = self.app.get(url('/formsearches/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

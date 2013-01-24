@@ -7,7 +7,7 @@ from base64 import encodestring
 from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
-
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from old.tests import *
 import old.model as model
 from old.model.meta import Session
@@ -72,6 +72,7 @@ class TestOldcollectionsController(TestController):
         'file': ''      # file data Base64 encoded
     }
 
+    extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     json_headers = {'Content-Type': 'application/json'}
@@ -1871,3 +1872,12 @@ class TestOldcollectionsController(TestController):
             u'2nd collection restricted'
         assert resp['collection']['title'] == u'2nd collection unrestricted updated'
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /collections/new_search returns the search parameters for searching the collections resource."""
+        queryBuilder = SQLAQueryBuilder('Collection')
+        response = self.app.get(url('/collections/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

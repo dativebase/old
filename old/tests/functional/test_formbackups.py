@@ -12,6 +12,7 @@ from old.tests import *
 import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class TestFormbackupsController(TestController):
         'dateElicited': u''     # mm/dd/yyyy
     }
 
+    extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     json_headers = {'Content-Type': 'application/json'}
@@ -335,3 +337,12 @@ class TestFormbackupsController(TestController):
         response = self.app.delete(url('formbackup', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /formbackups/new_search returns the search parameters for searching the form backups resource."""
+        queryBuilder = SQLAQueryBuilder('FormBackup')
+        response = self.app.get(url('/formbackups/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

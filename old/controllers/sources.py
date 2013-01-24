@@ -58,6 +58,15 @@ class SourcesController(BaseController):
     @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
+    def new_search(self):
+        """GET /sources/new_search: Return the data necessary to inform a search
+        on the sources resource.
+        """
+        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
     def index(self):
         """GET /sources: Return all sources."""
         try:

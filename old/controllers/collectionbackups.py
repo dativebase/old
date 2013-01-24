@@ -61,6 +61,15 @@ class CollectionbackupsController(BaseController):
     @h.OLDjsonify
     @restrict('GET')
     @h.authenticate
+    def new_search(self):
+        """GET /collectionbackups/new_search: Return the data necessary to inform a search
+        on the collection backups resource.
+        """
+        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+
+    @h.OLDjsonify
+    @restrict('GET')
+    @h.authenticate
     def index(self):
         """GET /collectionbackups: Return all collection backups."""
         try:

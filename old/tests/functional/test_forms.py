@@ -7,7 +7,7 @@ from base64 import encodestring
 from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
-
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from old.tests import *
 import old.model as model
 from old.model.meta import Session
@@ -56,6 +56,7 @@ class TestFormsController(TestController):
         'file': ''      # file data Base64 encoded
     }
 
+    extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     json_headers = {'Content-Type': 'application/json'}
@@ -2440,3 +2441,12 @@ class TestFormsController(TestController):
             [[[[], [], []]], [[[], [], []]]]
         assert [json.loads(f.backuper)['role'] for f in formBackups] == [
             u'administrator', u'administrator']
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /forms/new_search returns the search parameters for searching the forms resource."""
+        queryBuilder = SQLAQueryBuilder('Form')
+        response = self.app.get(url('/forms/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

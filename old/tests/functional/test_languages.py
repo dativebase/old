@@ -11,6 +11,7 @@ from old.tests import *
 import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
@@ -134,3 +135,12 @@ class TestLanguagesController(TestController):
         response = self.app.delete(url('language', id=2232), status=404)
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_new_search(self):
+        """Tests that GET /languages/new_search returns the search parameters for searching the languages resource."""
+        queryBuilder = SQLAQueryBuilder('Language')
+        response = self.app.get(url('/languages/new_search'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)

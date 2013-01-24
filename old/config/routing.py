@@ -7,6 +7,14 @@ refer to the routes manual at http://routes.groovie.org/docs/
 
 from routes import Mapper
 
+def searchConnect(map, name, controller=None):
+    controller = controller or name
+    map.connect(name, '/%s' % name, controller=controller,
+        action='search', conditions=dict(method='SEARCH'))
+    map.connect('/%s/new_search' % name, controller=controller,
+                action='new_search', conditions=dict(method='GET'))
+    return map
+
 def make_map(config):
     """Create, configure and return the routes Mapper"""
     map = Mapper(directory=config['pylons.paths']['controllers'],
@@ -24,23 +32,15 @@ def make_map(config):
             action='update_morpheme_references', conditions=dict(method='PUT'))
 
     # SEARCH routes
-    map.connect('forms', '/forms', controller='forms',
-                action='search', conditions=dict(method='SEARCH'))
-    map.connect('files', '/files', controller='files',
-                action='search', conditions=dict(method='SEARCH'))
-    map.connect('collections', '/collections', controller='oldcollections',
-                action='search', conditions=dict(method='SEARCH'))
+    map = searchConnect(map, 'forms')
+    map = searchConnect(map, 'files')
+    map = searchConnect(map, 'collections', 'oldcollections')
     map.connect('/collections/search', controller='oldcollections', action='search')
-    map.connect('sources', '/sources', controller='sources',
-                action='search', conditions=dict(method='SEARCH'))
-    map.connect('collectionbackups', '/collectionbackups', controller='collectionbackups',
-                action='search', conditions=dict(method='SEARCH'))
-    map.connect('formbackups', '/formbackups', controller='formbackups',
-                action='search', conditions=dict(method='SEARCH'))
-    map.connect('languages', '/languages', controller='languages',
-                action='search', conditions=dict(method='SEARCH'))
-    map.connect('formsearches', '/formsearches', controller='formsearches',
-                action='search', conditions=dict(method='SEARCH'))
+    map = searchConnect(map, 'sources')
+    map = searchConnect(map, 'collectionbackups')
+    map = searchConnect(map, 'formbackups')
+    map = searchConnect(map, 'languages')
+    map = searchConnect(map, 'formsearches')
 
     # rememberedforms "resource"
     map.connect("rememberedforms", "/rememberedforms/{id}",
