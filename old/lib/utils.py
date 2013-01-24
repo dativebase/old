@@ -882,7 +882,10 @@ def generateRestrictedTag():
     restrictedTag.name = u'restricted'
     restrictedTag.description = u'''Forms tagged with the tag 'restricted'
 can only be viewed by administrators, unrestricted users and the users they were
-entered by.'''
+entered by.
+
+Note: the restricted tag cannot be deleted and its name cannot be changed.
+'''
     return restrictedTag
 
 def generateForeignWordTag():
@@ -894,7 +897,10 @@ form as lexical entry for a proper noun like "John".  Such a form should be
 tagged as a "foreign word". This will allow forms containing "John" to have
 gapless syntactic category string values. Additionally, the system ignores
 foreign word transcriptions when validating user input against orthographic,
-phonetic and phonemic inventories.'''
+phonetic and phonemic inventories.
+
+Note: the foreign word tag cannot be deleted and its name cannot be changed.
+'''
     return foreignWordTag
 
 def generateDefaultForm():

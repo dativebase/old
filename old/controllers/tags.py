@@ -109,9 +109,13 @@ class TagsController(BaseController):
         """DELETE /tags/id: Delete an existing tag."""
         tag = Session.query(Tag).get(id)
         if tag:
-            Session.delete(tag)
-            Session.commit()
-            return tag
+            if tag.name not in (u'restricted', u'foreign word'):
+                Session.delete(tag)
+                Session.commit()
+                return tag
+            else:
+                response.status_int = 403
+                return {'error': 'The restricted and foreign word tags cannot be deleted.'}
         else:
             response.status_int = 404
             return {'error': 'There is no tag with id %s' % id}

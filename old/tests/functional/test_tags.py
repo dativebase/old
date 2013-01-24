@@ -251,6 +251,25 @@ class TestTagsController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
+        # Create a form, tag it, delete the tag and show that the form no longer
+        # has the tag.
+        tag = model.Tag()
+        tag.name = u'tag'
+        form = model.Form()
+        form.transcription = u'test'
+        form.tags.append(tag)
+        Session.add_all([form, tag])
+        Session.commit()
+        formId = form.id
+        tagId = tag.id
+        response = self.app.delete(url('tag', id=tagId),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        deletedTag = Session.query(Tag).get(tagId)
+        form = Session.query(model.Form).get(formId)
+        assert response.content_type == 'application/json'
+        assert deletedTag == None
+        assert form.tags == []
+
     #@nottest
     def test_show(self):
         """Tests that GET /tags/id returns the tag with id=id or an appropriate error."""

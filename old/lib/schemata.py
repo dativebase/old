@@ -687,12 +687,26 @@ class SyntacticCategorySchema(Schema):
     type = OneOf(h.syntacticCategoryTypes)
     description = UnicodeString()
 
+class ValidTagName(FancyValidator):
+    """Validator ensures that tag names are unique and prevents the names
+    'restricted' and 'foreign word' from being updated.
+    """
+
+    messages = {'unchangeable':
+        'The names of the restricted and foreign word tags cannot be changed.'}
+
+    def validate_python(self, value, state):
+        tag = getattr(state, 'tag', None)
+        if tag and tag.name in ('restricted', 'foreign word'):
+            raise Invalid(self.message('unchangeable', state), value, state)
+
 class TagSchema(Schema):
     """TagSchema is a Schema for validating the data submitted to
     TagsController (controllers/tags.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
+    chained_validators = [ValidTagName()]
     name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Tag', attributeName='name')
     description = UnicodeString()
 
