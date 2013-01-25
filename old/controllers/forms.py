@@ -566,12 +566,12 @@ def getMorphemeIDLists(form, validDelimiters=None, delimiter=u'|'):
             breakGlossCategory = zip(mbSplit, mgSplit, scSplit)
             breakGlossCategory = u''.join([join(bgc, delimiters) for bgc in breakGlossCategory])
         except TypeError:
-            breakGlossCategory = u''
+            breakGlossCategory = None
     else:
         morphemeBreakIDs = None
         morphemeGlossIDs = None
-        syncatStr = u''
-        breakGlossCategory = u''
+        syncatStr = None
+        breakGlossCategory = None
     # Convert the data structure into JSON for storage as a string in the DB
     return (
         unicode(json.dumps(morphemeBreakIDs)),

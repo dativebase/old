@@ -436,7 +436,7 @@ class TestFormsController(TestController):
         assert resp['glosses'][0]['gloss'] == u'The dogs are barking.'
         assert resp['syntacticCategory']['name'] == u'S'
         assert resp['morphemeBreakIDs'] == None
-        assert resp['syntacticCategoryString'] == u''
+        assert resp['syntacticCategoryString'] == None
         assert resp['syntacticCategory']['name'] == u'S'
         assert formCount == 5
 
