@@ -12,8 +12,16 @@ from old.tests import *
 import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
+import webtest
 
 log = logging.getLogger(__name__)
+
+
+def addSEARCHToWebTestValidMethods():
+    new_valid_methods = list(webtest.lint.valid_methods)
+    new_valid_methods.append('SEARCH')
+    new_valid_methods = tuple(new_valid_methods)
+    webtest.lint.valid_methods = new_valid_methods
 
 
 class TestFormsController(TestController):
@@ -2548,3 +2556,55 @@ class TestFormsController(TestController):
                                 extra_environ=extra_environ, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
+
+    #@nottest
+    def test_normalization(self):
+        """Tests that unicode input data are normalized and so too are search patterns."""
+
+        addSEARCHToWebTestValidMethods()
+        eAcuteCombining = u'e\u0301'  # LATIN SMALL LETTER E, COMBINING ACUTE ACCENT
+        eAcutePrecomposed = u'\u00E9'   # LATIN SMALL LETTER E WITH ACUTE
+
+        # Create a form with a unicode combining character in its transcription
+        params = self.createParams.copy()
+        params.update({
+            'transcription': eAcuteCombining,
+            'glosses': [{'gloss': u'test normalization', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        combiningFormId = resp['id']
+        combiningTranscription = resp['transcription']
+
+        # Create a form with a unicode precomposed character in its transcription
+        params = self.createParams.copy()
+        params.update({
+            'transcription': eAcutePrecomposed,
+            'glosses': [{'gloss': u'test normalization', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        precomposedFormId = resp['id']
+        precomposedTranscription = resp['transcription']
+        assert combiningTranscription == precomposedTranscription   # h.normalize converts these both to u'e\u0301'
+
+        # Now search for the precomposed character and expect to find two matches
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'like', u'%\u00E9%']}})
+        response = self.app.request(url('forms'), method='SEARCH',
+            body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 2
+        assert sorted([f['id'] for f in resp]) == sorted([combiningFormId, precomposedFormId])
+
+        # Search for the e + combining accute and expect to find the same two matches
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'like', u'%e\u0301%']}})
+        response = self.app.request(url('forms'), method='SEARCH',
+            body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 2
+        assert sorted([f['id'] for f in resp]) == sorted([combiningFormId, precomposedFormId])
+

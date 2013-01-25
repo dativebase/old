@@ -50,7 +50,7 @@ from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql.expression import collate
 from sqlalchemy.orm import aliased
 from sqlalchemy.types import Unicode, UnicodeText
-#alias = aliased(model.Tag)
+from old.lib.utils import normalize
 
 log = logging.getLogger(__name__)
 
@@ -713,6 +713,16 @@ class SQLAQueryBuilder(object):
     # Value getters
     ############################################################################
 
+    def _normalize(self, value):
+        def normalizeIfString(value):
+            if type(value) in (str, unicode):
+                return normalize(value)
+            return value
+        value = normalizeIfString(value)
+        if type(value) is list:
+            value = [normalizeIfString(i) for i in value]
+        return value
+
     def _getValueConverter(self, attributeName, modelName):
         attributeDict = self._getAttributeDict(attributeName, modelName)
         try:
@@ -722,9 +732,8 @@ class SQLAQueryBuilder(object):
             return None
 
     def _getValue(self, value, modelName, attributeName, relationName):
-        """Modify for the value using a valueConverter (if specified) and/or for
-        the 'like' relation (if necessary).
-        """
+        """Unicode normalize & modify the value using a valueConverter (if necessary)."""
+        value = self._normalize(value)    # unicode normalize (NFD) search patterns; we might want to parameterize this
         valueConverter = self._getValueConverter(attributeName, modelName)
         if valueConverter is not None:
             if type(value) is type([]):
