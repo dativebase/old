@@ -77,6 +77,7 @@ def createTestForms(n=100):
         f.transcription = u'transcription %d' % i
         if i > 50:
             f.transcription = f.transcription.upper()
+            administrator.rememberedForms.append(f)
         f.morphemeBreak = u'morphemeBreak %d' % i
         f.morphemeGloss = u'morphemeGloss %d' % i
         f.comments = u'comments %d' % i
@@ -93,9 +94,11 @@ def createTestForms(n=100):
             t = testModels['tags'][i - 1]
             f.tags.append(t)
             g.glossGrammaticality = u'*'
+            viewer.rememberedForms.append(f)
         if i > 65 and i < 86:
             fi = testModels['files'][i - 1]
             f.files.append(fi)
+            contributor.rememberedForms.append(f)
         if i > 50:
             f.elicitor = contributor
             if i != 100:
@@ -1203,7 +1206,7 @@ class TestFormsSearchController(TestController):
 
     #@nottest
     def test_search_v_many_to_many(self):
-        """Tests POST /forms/search: searches on many-to-many attributes, i.e., Tag, File, Collection."""
+        """Tests POST /forms/search: searches on many-to-many attributes, i.e., Tag, File, Collection, User."""
 
         # tag.name =
         jsonQuery = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name 76']}})
@@ -1313,6 +1316,64 @@ class TestFormsSearchController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
+
+        # Form #79 has Tags #78 and #79
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [
+                ['Tag', 'name', '=', u'name 78'],
+                ['Tag', 'name', '=', u'name 79']]]}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+
+        # Search forms by memorizer
+
+        # Get some pertinent data
+        forms = h.getForms()
+        users = h.getUsers()
+        viewer = [u for u in users if u.role == u'viewer'][0]   # i > 75
+        viewerRememberedForms = [f for f in forms
+                                 if int(f.transcription.split(' ')[-1]) > 75]
+        viewerId = viewer.id
+
+        contributor = [u for u in users if u.role == u'contributor'][0] # i > 65, i < 86
+        contributorRememberedForms = [f for f in forms
+                                 if int(f.transcription.split(' ')[-1]) > 65 and
+                                 int(f.transcription.split(' ')[-1]) < 86]
+        contributorId = contributor.id
+
+        administrator = [u for u in users if u.role == u'administrator'][0] # i > 50
+        administratorRememberedForms = [f for f in forms
+                                 if int(f.transcription.split(' ')[-1]) > 50]
+        administratorId = administrator.id
+
+        # Everything memorized by admins and viewers
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Memorizer', 'role', 'in', [u'administrator', u'viewer']]}})
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = list(set(viewerRememberedForms) | set(administratorRememberedForms))
+        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+
+        # Everything memorized by the contributor matching a regex
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [['Memorizer', 'id', '=', contributorId],
+                     ['Form', 'transcription', 'regex', '[13580]']]]}})
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = [f for f in contributorRememberedForms
+                     if re.search('[13580]', f.transcription)]
+        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+        assert response.content_type == 'application/json'
+
+        # Invalid memorizer search
+        jsonQuery = json.dumps({'query': {'filter': ['Memorizer', 'username', 'like', u'%e%']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert resp['errors']['Memorizer.username'] == u'Searching on Memorizer.username is not permitted'
 
     #@nottest
     def test_search_w_in(self):
@@ -1614,6 +1675,17 @@ class TestFormsSearchController(TestController):
     def test_z_cleanup(self):
         """Tests POST /forms/search: clean up the database."""
 
+        # Clear the remembered forms of all the users
+        users = h.getUsers()
+        viewer = [u for u in users if u.role == u'viewer'][0]
+        contributor = [u for u in users if u.role == u'contributor'][0]
+        administrator = [u for u in users if u.role == u'administrator'][0]
+        viewer.rememberedForms = []
+        contributor.rememberedForms = []
+        administrator.rememberedForms = []
+        Session.commit()
+
+        # Remove all models and recreate the users
         h.clearAllModels()
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()

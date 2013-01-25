@@ -182,7 +182,7 @@ class TestRememberedformsController(TestController):
     # The update test needs to run before the show and search tests.
     def test_b_update(self):
         """Tests that PUT /rememberedforms/id correctly updates the set of forms remembered by the user with id=id."""
-        forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
+        forms = sorted(json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder)), key=lambda f: f['id'])
         viewer, contributor, administrator = getUsers()
         viewerId = viewer.id
         contributorId = contributor.id
@@ -199,7 +199,7 @@ class TestRememberedformsController(TestController):
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
                                 params, self.json_headers, self.extra_environ_view)
         resp = json.loads(response.body)
-        viewerRememberedForms = resp
+        viewerRememberedForms = sorted(resp, key=lambda f: f['id'])
         resultSet = [f for f in forms if u'restricted' not in [t['name'] for t in f['tags']]]
         assert set([f['id'] for f in resultSet]) == set([f['id'] for f in resp])
         assert response.content_type == 'application/json'
@@ -217,7 +217,7 @@ class TestRememberedformsController(TestController):
         # to show that resetting a user's rememberedForms attribute via SQLAlchemy
         # does not wastefully recreate all relations.  See below
         userForms = Session.query(model.UserForm).filter(model.UserForm.user_id==viewerId).all()
-        originalUserFormIds = [uf.id for uf in userForms]
+        originalUserFormIds = sorted([uf.id for uf in userForms])
         expectedNewUserFormIds = [uf.id for uf in userForms
                                   if uf.form_id != viewerRememberedForms[-1]['id']]
 
@@ -234,7 +234,7 @@ class TestRememberedformsController(TestController):
         # are all the relations destroyed and recreated?
         # Get the list of ids from the userforms relational table
         userForms = Session.query(model.UserForm).filter(model.UserForm.user_id==viewerId).all()
-        currentUserFormIds = [uf.id for uf in userForms]
+        currentUserFormIds = sorted([uf.id for uf in userForms])
         assert set(expectedNewUserFormIds) == set(currentUserFormIds)
 
         # Attempted update fails: bad user id
@@ -366,7 +366,6 @@ class TestRememberedformsController(TestController):
         resultSet = [f for f in forms if u'restricted' not in [t['name'] for t in f['tags']]]
         assert response.content_type == 'application/json'
         assert set([f['id'] for f in resultSet]) == set([f['id'] for f in resp])
-
         # Test the pagination and order by
 
         # Test the paginator GET params.
@@ -533,8 +532,6 @@ class TestRememberedformsController(TestController):
                         method='SEARCH', body=jsonQuery, headers=self.json_headers,
                         environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
-        #log.debug([f['id'] for f in resultSetContributor])
-        #log.debug([f['id'] for f in resp])
         assert [f['id'] for f in resultSetContributor] == [f['id'] for f in resp]
         assert response.content_type == 'application/json'
         assert resp

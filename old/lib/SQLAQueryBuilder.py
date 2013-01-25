@@ -539,7 +539,17 @@ class SQLAQueryBuilder(object):
             'enterer_id': {},
             'enterer': {'alias': 'enterer_id'},
             'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+        },
+        'Memorizer': {
+            'id': {},
+            'firstName': {},
+            'lastName': {},
+            'role': {}
         }
+    }
+
+    modelAliases = {
+        'Memorizer': 'User'
     }
 
     # Maps model names to the names of other models they can be joined to for
@@ -550,7 +560,8 @@ class SQLAQueryBuilder(object):
             'File': 'files',
             'Gloss': 'glosses',
             'Tag': 'tags',
-            'Collection': 'collections'
+            'Collection': 'collections',
+            'Memorizer': 'memorizers'
         },
         'File': {
             'Tag': 'tags',
@@ -576,7 +587,7 @@ class SQLAQueryBuilder(object):
 
     def _getModel(self, modelName):
         try:
-            model = getattr(old_model, modelName)
+            model = getattr(old_model, self.modelAliases.get(modelName, modelName))
         except AttributeError:
             model = None
             self._addToErrors(modelName, u"The OLD has no model %s" % modelName)
