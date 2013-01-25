@@ -2488,3 +2488,63 @@ class TestFormsController(TestController):
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)
+
+    #@nottest
+    def test_create_restricted(self):
+        """Tests what happens when a restricted user restricts a form.
+
+        This should be possible since restricted users are able to access the
+        restricted forms IF they are the enterer.
+        """
+
+        users = h.getUsers()
+        contributor = [u for u in users if u.role == u'contributor'][0]
+        contributorId = contributor.id
+        administrator = [u for u in users if u.role == u'administrator'][0]
+        administratorId = administrator.id
+        restrictedTag = h.generateRestrictedTag()
+        applicationSettings = h.generateDefaultApplicationSettings()
+        applicationSettings.unrestrictedUsers = []
+        Session.add_all([applicationSettings, restrictedTag])
+        Session.commit()
+        restrictedTagId = restrictedTag.id
+
+        # Create a restricted form as a restricted user (the contributor).
+        extra_environ = {'test.authentication.id': contributorId,
+                         'test.applicationSettings': True}
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'test restricted tag transcription',
+            'glosses': [{'gloss': u'test restricted tag gloss',
+                         'glossGrammaticality': u''}],
+            'tags': [restrictedTagId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        restrictedFormId = resp['id']
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        # Create a restricted form as an unrestricted user (administrator).
+        extra_environ = {'test.authentication.id': administratorId,
+                         'test.applicationSettings': True}
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'test restricted tag transcription',
+            'glosses': [{'gloss': u'test restricted tag gloss',
+                         'glossGrammaticality': u''}],
+            'tags': [restrictedTagId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        restrictedFormId = resp['id']
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        # Try to get the restricted tag as the viewer and expect to fail
+        extra_environ = {'test.authentication.id': contributorId,
+                         'test.applicationSettings': True}
+        response = self.app.get(url('form', id=restrictedFormId), headers=self.json_headers,
+                                extra_environ=extra_environ, status=403)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'You are not authorized to access this resource.'
