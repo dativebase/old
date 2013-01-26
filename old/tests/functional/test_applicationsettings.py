@@ -323,7 +323,7 @@ class TestApplicationsettingsController(TestController):
                         self.json_headers, self.extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
-        assert resp['error'] == u'You are not authorized to access this resource'
+        assert resp['error'] == u'You are not authorized to access this resource.'
 
     #@nottest
     def test_delete(self):
@@ -408,7 +408,7 @@ class TestApplicationsettingsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
-        assert resp['error'] == u'You are not authorized to access this resource'
+        assert resp['error'] == u'You are not authorized to access this resource.'
 
     #@nottest
     def test_show(self):

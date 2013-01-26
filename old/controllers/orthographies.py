@@ -72,29 +72,39 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /orthographies/id: Update an existing orthography."""
+        """PUT /orthographies/id: Update an existing orthography.  Note that
+        contributors can only update orthographies that are not used in the
+        active application settings.
+        """
         orthography = Session.query(Orthography).get(int(id))
+        user = session['user']
         if orthography:
-            try:
-                schema = OrthographySchema()
-                values = json.loads(unicode(request.body, request.charset))
-                result = schema.to_python(values)
-                orthography = updateOrthography(orthography, result)
-                # orthography will be False if there are no changes (cf. updateOrthography).
-                if orthography:
-                    Session.add(orthography)
-                    Session.commit()
-                    return orthography
-                else:
+            appSet = h.getApplicationSettings()
+            if user.role == u'administrator' or orthography not in (
+            appSet.storageOrthography, appSet.inputOrthography, appSet.outputOrthography):
+                try:
+                    schema = OrthographySchema()
+                    values = json.loads(unicode(request.body, request.charset))
+                    result = schema.to_python(values)
+                    orthography = updateOrthography(orthography, result)
+                    # orthography will be False if there are no changes (cf. updateOrthography).
+                    if orthography:
+                        Session.add(orthography)
+                        Session.commit()
+                        return orthography
+                    else:
+                        response.status_int = 400
+                        return {'error':
+                            u'The update request failed because the submitted data were not new.'}
+                except h.JSONDecodeError:
                     response.status_int = 400
-                    return {'error':
-                        u'The update request failed because the submitted data were not new.'}
-            except h.JSONDecodeError:
-                response.status_int = 400
-                return h.JSONDecodeErrorResponse
-            except Invalid, e:
-                response.status_int = 400
-                return {'errors': e.unpack_errors()}
+                    return h.JSONDecodeErrorResponse
+                except Invalid, e:
+                    response.status_int = 400
+                    return {'errors': e.unpack_errors()}
+            else:
+                response.status = 403
+                return {'error': u'Only administrators are permitted to update orthographies that are used in the active application settings.'}
         else:
             response.status_int = 404
             return {'error': 'There is no orthography with id %s' % id}
@@ -104,12 +114,21 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /orthographies/id: Delete an existing orthography."""
+        """DELETE /orthographies/id: Delete an existing orthography.  Note that
+        contributors can only update orthographies that are not used in the
+        active application settings.
+        """
         orthography = Session.query(Orthography).get(id)
         if orthography:
-            Session.delete(orthography)
-            Session.commit()
-            return orthography
+            appSet = h.getApplicationSettings()
+            if session['user'].role == u'administrator' or orthography not in (
+            appSet.storageOrthography, appSet.inputOrthography, appSet.outputOrthography):
+                Session.delete(orthography)
+                Session.commit()
+                return orthography
+            else:
+                response.status = 403
+                return {'error': u'Only administrators are permitted to delete orthographies that are used in the active application settings.'}
         else:
             response.status_int = 404
             return {'error': 'There is no orthography with id %s' % id}

@@ -286,6 +286,49 @@ class TestOrthographiesController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
+        # Observe how updates are restricted when an orthography is part of an
+        # active application settings ...
+        appSet = h.generateDefaultApplicationSettings()
+        appSet.storageOrthography = Session.query(Orthography).get(orthographyId)
+        Session.add(appSet)
+        Session.commit()
+
+        # Now attempting a valid update as a contributor should fail
+        params = self.createParams.copy()
+        params.update({'name': u'orthography', 'orthography': u'a, b, c, d, e'})
+        params = json.dumps(params)
+        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+                                 self.extra_environ_contrib, status=403)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'Only administrators are permitted to update orthographies that are used in the active application settings.'
+        assert response.content_type == 'application/json'
+
+        # The same update as an admin should succeed.
+        params = self.createParams.copy()
+        params.update({'name': u'orthography', 'orthography': u'a, b, c, d, e'})
+        params = json.dumps(params)
+        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['name'] == u'orthography'
+        assert resp['orthography'] == u'a, b, c, d, e'
+        assert response.content_type == 'application/json'
+
+        # If we now remove the orthography from the application settings, the
+        # contributor will be able to edit it.
+        appSet = h.getApplicationSettings()
+        appSet.storageOrthography = None
+        Session.commit()
+        params = self.createParams.copy()
+        params.update({'name': u'orthography', 'orthography': u'a, b, c, d, e, f'})
+        params = json.dumps(params)
+        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+                                 self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert resp['name'] == u'orthography'
+        assert resp['orthography'] == u'a, b, c, d, e, f'
+
     #@nottest
     def test_delete(self):
         """Tests that DELETE /orthographies/id deletes the orthography with id=id."""
@@ -330,6 +373,47 @@ class TestOrthographiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
+
+        # Observe how deletions are restricted when an orthography is part of an
+        # active application settings ...
+
+        # Create an orthography to demonstrate.
+        params = self.createParams.copy()
+        params.update({'name': u'orthography', 'orthography': u'a, b, c'})
+        params = json.dumps(params)
+        response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        orthographyCount = Session.query(Orthography).count()
+        assert resp['name'] == u'orthography'
+        assert resp['orthography'] == u'a, b, c'
+        assert resp['lowercase'] == False   # default value from model/orthography.py
+        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
+        orthographyId = resp['id']
+        originalDatetimeModified = resp['datetimeModified']
+
+        # Create an application settings with the above orthography as the storage orthography
+        appSet = h.generateDefaultApplicationSettings()
+        appSet.storageOrthography = Session.query(Orthography).get(orthographyId)
+        Session.add(appSet)
+        Session.commit()
+
+        # Now attempting to delete as a contributor should fail
+        response = self.app.delete(url('orthography', id=orthographyId),
+                    headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=403)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'Only administrators are permitted to delete orthographies that are used in the active application settings.'
+        assert response.content_type == 'application/json'
+
+        # If we now remove the orthography from the application settings, the
+        # contributor will be able to delete it.
+        appSet = h.getApplicationSettings()
+        appSet.storageOrthography = None
+        Session.commit()
+        response = self.app.delete(url('orthography', id=orthographyId),
+                    headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert resp['orthography'] == u'a, b, c'
 
     #@nottest
     def test_show(self):
