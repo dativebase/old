@@ -1672,6 +1672,119 @@ class TestFormsSearchController(TestController):
         assert resp['items'][0]['id'] == resultSet[14].id
 
     #@nottest
+    def test_search_zb_like_escaping(self):
+        """Tests SEARCH /forms: escaping special characters in LIKE queries.
+
+        Note: these tests are RDBMS-specific: MySQL allows escaping of "_" and
+        "%" in LIKE queries via the backslash.  In SQLite, on the other hand,
+        the backslash only works if "ESCAPE '\'" is specified after the LIKE
+        pattern.  As far as I can tell, this is not supported in SQLAlchemy.
+        Therefore, any OLD system using SQLite will not permit searching for "_"
+        or "%" in LIKE queries (regexp will do the trick though...).
+        """
+
+        createParams = {
+            'transcription': u'',
+            'phoneticTranscription': u'',
+            'narrowPhoneticTranscription': u'',
+            'morphemeBreak': u'',
+            'grammaticality': u'',
+            'morphemeGloss': u'',
+            'glosses': [],
+            'comments': u'',
+            'speakerComments': u'',
+            'elicitationMethod': u'',
+            'tags': [],
+            'syntacticCategory': u'',
+            'speaker': u'',
+            'elicitor': u'',
+            'verifier': u'',
+            'source': u'',
+            'dateElicited': u''     # mm/dd/yyyy
+        }
+
+        RDBMSName = h.getRDBMSName(configFilename='test.ini')
+
+        # Create a form with an underscore and a percent sign in it.
+        params = createParams.copy()
+        params.update({
+            'transcription': u'_%',
+            'glosses': [{'gloss': u'LIKE, test or some junk',
+                         'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+
+        forms = Session.query(model.Form).all()
+        formsCount = len(forms)
+
+        # Show how the underscore is a wildcard when unescaped: all forms will
+        # be returned.
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'transcription', 'like', '%_%']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == formsCount
+        assert response.content_type == 'application/json'
+
+        # Show how the underscore can be escaped and we can use it to match the
+        # one underscore-containing form in the db (*in MySQL only*).
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'transcription', 'like', '%\_%']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        if RDBMSName == u'mysql':
+            assert len(resp) == 1
+        else:
+            assert len(resp) == 0
+        assert response.content_type == 'application/json'
+
+        # Show how we can use a regexp search to match the underscore in SQLite
+        # (and MySQL).
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'transcription', 'regexp', '_']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+        assert response.content_type == 'application/json'
+
+        # Show how the percent sign is a zero-or-more-anything quantifier when
+        # unescaped: all forms will be returned.
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'transcription', 'like', '%']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == formsCount
+        assert response.content_type == 'application/json'
+
+        # Show how the percent sign can be escaped and we can use it to match the
+        # one percent sign-containing form in the db (*in MySQL only*).
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'transcription', 'like', '%\%%']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        if RDBMSName == u'mysql':
+            assert len(resp) == 1
+        else:
+            assert len(resp) == 0
+        assert response.content_type == 'application/json'
+
+        # Show how we can use a regexp search to match the percent sign in both
+        # RDBMSs.
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'transcription', 'regexp', '%']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+        assert response.content_type == 'application/json'
+
+    #@nottest
     def test_z_cleanup(self):
         """Tests POST /forms/search: clean up the database."""
 
