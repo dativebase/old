@@ -93,6 +93,7 @@ class RememberedformsController(BaseController):
                                      if accessible(user, f, unrestrictedUsers)]
                 if set(user.rememberedForms) != set(unrestrictedForms):
                     user.rememberedForms = unrestrictedForms
+                    user.datetimeModified = h.now()
                     Session.commit()
                     return user.rememberedForms
                 else:

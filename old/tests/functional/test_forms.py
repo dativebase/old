@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+from time import sleep
 import simplejson as json
 from nose.tools import nottest
 from base64 import encodestring
@@ -2206,16 +2207,19 @@ class TestFormsController(TestController):
 
         # Then try to remember all of these forms.  Send a JSON array of form
         # ids to remember and expect to get it back.
+        administrator = Session.query(model.User).filter(model.User.role==u'administrator').first()
+        administratorDatetimeModified = administrator.datetimeModified
+        sleep(1)
         params = json.dumps({'forms': formIds})
         response = self.app.post(url(controller='forms', action='remember'),
             params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        administrator = Session.query(model.User).filter(model.User.role==u'administrator').first()
         assert response.content_type == 'application/json'
         assert len(resp) == len(formIds)
         assert formIdsSet == set(resp)
-        administrator = Session.query(model.User).filter(
-            model.User.role==u'administrator').first()
+        assert administrator.datetimeModified != administratorDatetimeModified
         assert formIdsSet == set([f.id for f in administrator.rememberedForms])
 
         # A non-int-able form id in the input will result in a 400 error.

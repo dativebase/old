@@ -1,4 +1,5 @@
 import re
+from time import sleep
 from old.tests import *
 from nose.tools import nottest
 import simplejson as json
@@ -185,6 +186,7 @@ class TestRememberedformsController(TestController):
         forms = sorted(json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder)), key=lambda f: f['id'])
         viewer, contributor, administrator = getUsers()
         viewerId = viewer.id
+        viewerDatetimeModified = viewer.datetimeModified
         contributorId = contributor.id
         administratorId = administrator.id
 
@@ -195,14 +197,19 @@ class TestRememberedformsController(TestController):
         # Try to add every form in the database to the viewer's remembered forms.
         # Since the viewer is restricted (i.e., not unrestricted), only the
         # unrestricted forms will be added.
+        sleep(1)
         params = json.dumps({'forms': [f['id'] for f in forms]})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
                                 params, self.json_headers, self.extra_environ_view)
         resp = json.loads(response.body)
         viewerRememberedForms = sorted(resp, key=lambda f: f['id'])
         resultSet = [f for f in forms if u'restricted' not in [t['name'] for t in f['tags']]]
+        viewer, contributor, administrator = getUsers()
+        newViewerDatetimeModified = viewer.datetimeModified
+        assert newViewerDatetimeModified != viewerDatetimeModified
         assert set([f['id'] for f in resultSet]) == set([f['id'] for f in resp])
         assert response.content_type == 'application/json'
+
 
         # Try to clear the viewer's remembered forms as the contributor and
         # expect the request to be denied.

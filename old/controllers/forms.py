@@ -307,6 +307,7 @@ class FormsController(BaseController):
                                      if accessible(user, f, unrestrictedUsers)]
                 if unrestrictedForms:
                     session['user'].rememberedForms += unrestrictedForms
+                    session['user'].datetimeModified = h.now()
                     Session.commit()
                     return [f.id for f in unrestrictedForms]
                 else:
