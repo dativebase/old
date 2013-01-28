@@ -24,8 +24,8 @@ class SyntacticcategoriesController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('SyntacticCategory', config=config)
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /syntacticcategories: Return all syntactic categories."""
@@ -37,8 +37,8 @@ class SyntacticcategoriesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
@@ -58,8 +58,8 @@ class SyntacticcategoriesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -69,8 +69,8 @@ class SyntacticcategoriesController(BaseController):
         """
         return {'syntacticCategoryTypes': h.syntacticCategoryTypes}
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
@@ -103,8 +103,8 @@ class SyntacticcategoriesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no syntactic category with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
@@ -118,8 +118,8 @@ class SyntacticcategoriesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no syntactic category with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /syntacticcategories/id: Return a JSON object representation of
@@ -137,8 +137,8 @@ class SyntacticcategoriesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no syntactic category with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):

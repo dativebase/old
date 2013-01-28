@@ -36,4 +36,6 @@ class ErrorController(BaseController):
                 JSONResp = json.loads(resp.body)
             except json.decoder.JSONDecodeError:
                 resp.body = json.dumps({'error': u'The resource could not be found.'})
+        elif resp.status_int == 500:
+            resp.body = json.dumps({'error': u'Internal Server Error'})
         return resp.body

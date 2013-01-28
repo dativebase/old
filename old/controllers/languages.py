@@ -27,8 +27,8 @@ class LanguagesController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('Language', 'Id', config=config)
 
-    @h.OLDjsonify
-    @restrict('SEARCH', 'POST')
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
         """SEARCH /languages: Return all languages matching the filter passed as JSON in the request body.
@@ -57,8 +57,8 @@ class LanguagesController(BaseController):
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def new_search(self):
         """GET /languages/new_search: Return the data necessary to inform a search
@@ -66,8 +66,8 @@ class LanguagesController(BaseController):
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /languages: Return all languages."""
@@ -79,28 +79,28 @@ class LanguagesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
+    @h.jsonify
     def create(self):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
+    @h.jsonify
     def new(self):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
+    @h.jsonify
     def update(self, id):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
+    @h.jsonify
     def delete(self, id):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /languages/id: Return a JSON object representation of the
@@ -118,7 +118,7 @@ class LanguagesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no language with Id %s' % id}
 
-    @h.OLDjsonify
+    @h.jsonify
     def edit(self, id, format='html'):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}

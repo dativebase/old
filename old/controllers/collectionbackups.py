@@ -27,8 +27,8 @@ class CollectionbackupsController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('CollectionBackup', config=config)
 
-    @h.OLDjsonify
-    @restrict('SEARCH', 'POST')
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
         """SEARCH /collectionbackups: Return all collection backups matching the filter passed as JSON in the request body.
@@ -58,8 +58,8 @@ class CollectionbackupsController(BaseController):
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def new_search(self):
         """GET /collectionbackups/new_search: Return the data necessary to inform a search
@@ -67,8 +67,8 @@ class CollectionbackupsController(BaseController):
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /collectionbackups: Return all collection backups."""
@@ -81,28 +81,28 @@ class CollectionbackupsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
+    @h.jsonify
     def create(self):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
+    @h.jsonify
     def new(self, format='html'):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
+    @h.jsonify
     def update(self, id):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
+    @h.jsonify
     def delete(self, id):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /collectionbackups/id: Return a JSON object representation of the
@@ -126,7 +126,7 @@ class CollectionbackupsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no collection backup with id %s' % id}
 
-    @h.OLDjsonify
+    @h.jsonify
     def edit(self, id, format='html'):
         response.status_int = 404
         return {'error': 'This resource is read-only.'}

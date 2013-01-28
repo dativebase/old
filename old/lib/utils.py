@@ -130,7 +130,7 @@ JSONDecodeErrorResponse = {'error': 'JSON decode error: the parameters provided 
 
 
 @decorator
-def OLDjsonify(func, *args, **kwargs):
+def jsonify(func, *args, **kwargs):
     """Action decorator that formats output for JSON
 
     Given a function that will return content, this decorator will turn
@@ -145,6 +145,24 @@ def OLDjsonify(func, *args, **kwargs):
     data = func(*args, **kwargs)
     return json.dumps(data, cls=JSONOLDEncoder)
 
+
+def restrict(*methods):
+    """Restricts access to the function depending on HTTP method
+
+    Just like pylons.decorators.rest.restrict except it returns JSON.
+    """
+    def check_methods(func, *args, **kwargs):
+        """Wrapper for restrict"""
+        pylons = get_pylons(args)
+        if pylons.request.method not in methods:
+            log.debug("Method not allowed by restrict")
+            pylons.response.headers['Content-Type'] = 'application/json'
+            pylons.response.status_int = 405
+            return {'error':
+                'The %s method is not permitted for this resource; permitted method(s): %s' % (
+                    pylons.request.method, ', '.join(methods))}
+        return func(*args, **kwargs)
+    return decorator(check_methods)
 
 ################################################################################
 # File system functions

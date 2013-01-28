@@ -2439,6 +2439,7 @@ class TestFormsController(TestController):
                                  extra_environ)
 
         # Request PUT /forms/update_morpheme_references
+        sleep(1)
         response = self.app.put(url('/forms/update_morpheme_references'),
             headers=self.json_headers, extra_environ=extra_environ)
         assert response.content_type == 'application/json'

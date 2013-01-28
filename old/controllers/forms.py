@@ -24,8 +24,8 @@ class FormsController(BaseController):
 
     queryBuilder = SQLAQueryBuilder(config=config)
 
-    @h.OLDjsonify
-    @restrict('SEARCH', 'POST')
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
         """SEARCH /forms: Return all forms matching the filter passed as JSON in
@@ -55,8 +55,8 @@ class FormsController(BaseController):
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def new_search(self):
         """GET /forms/new_search: Return the data necessary to inform a search
@@ -64,8 +64,8 @@ class FormsController(BaseController):
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /forms: Return all forms."""
@@ -78,8 +78,8 @@ class FormsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
@@ -101,8 +101,8 @@ class FormsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -118,8 +118,8 @@ class FormsController(BaseController):
         """
         return getNewEditFormData(request.GET)
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
@@ -160,8 +160,8 @@ class FormsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
@@ -185,8 +185,8 @@ class FormsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /forms/id: Return a JSON object representation of the form with
@@ -210,8 +210,8 @@ class FormsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
@@ -245,8 +245,8 @@ class FormsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def history(self, id):
         """GET /forms/history/id: Return a JSON object representation of the form and its previous versions.
@@ -279,8 +279,8 @@ class FormsController(BaseController):
             response.status_int = 404
             return {'error': 'No forms or form backups match %s' % id}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     def remember(self):
         """Store references to the forms passed as input (via id) in the logged
@@ -317,8 +317,8 @@ class FormsController(BaseController):
                 response.status_int = 404
                 return {'error': u'No valid form ids were provided.'}
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator'])
     def update_morpheme_references(self):

@@ -23,8 +23,8 @@ class UsersController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('User', config=config)
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /users: Return all users."""
@@ -36,8 +36,8 @@ class UsersController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator'])
     def create(self):
@@ -57,8 +57,8 @@ class UsersController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator'])
     def new(self):
@@ -73,8 +73,8 @@ class UsersController(BaseController):
         """
         return getNewUserData(request.GET)
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor', 'viewer'], None, True)
     def update(self, id):
@@ -108,8 +108,8 @@ class UsersController(BaseController):
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator'])
     def delete(self, id):
@@ -124,8 +124,8 @@ class UsersController(BaseController):
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /users/id: Return a JSON object representation of the user with id=id.
@@ -142,8 +142,8 @@ class UsersController(BaseController):
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor', 'viewer'], userIDIsArgs1=True)
     def edit(self, id):

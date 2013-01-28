@@ -27,8 +27,8 @@ class FilesController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('File', config=config)
 
-    @h.OLDjsonify
-    @restrict('SEARCH', 'POST')
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
         """SEARCH /files: Return all files matching the filter passed as JSON in
@@ -58,8 +58,8 @@ class FilesController(BaseController):
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def new_search(self):
         """GET /files/new_search: Return the data necessary to inform a search
@@ -67,8 +67,8 @@ class FilesController(BaseController):
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /files: Return all files."""
@@ -81,8 +81,8 @@ class FilesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
@@ -104,8 +104,8 @@ class FilesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -120,8 +120,8 @@ class FilesController(BaseController):
         """
         return getNewEditFileData(request.GET)
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
@@ -160,8 +160,8 @@ class FilesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
@@ -181,8 +181,8 @@ class FilesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /files/id: Return a JSON object representation of the file with
@@ -206,8 +206,8 @@ class FilesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
@@ -242,7 +242,7 @@ class FilesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
 
-    @restrict('GET')
+    @h.restrict('GET')
     @h.authenticateWithJSON
     def retrieve(self, id):
         """Return the file data (binary stream) for the file in files/ with

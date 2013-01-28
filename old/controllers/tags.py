@@ -23,8 +23,8 @@ class TagsController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('Tag', config=config)
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /tags: Return all tags."""
@@ -36,8 +36,8 @@ class TagsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
@@ -57,8 +57,8 @@ class TagsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -67,8 +67,8 @@ class TagsController(BaseController):
         """
         return {}
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
@@ -101,8 +101,8 @@ class TagsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no tag with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
@@ -120,8 +120,8 @@ class TagsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no tag with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /tags/id: Return a JSON object representation of the tag with id=id.
@@ -138,8 +138,8 @@ class TagsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no tag with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):

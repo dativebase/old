@@ -23,8 +23,8 @@ class PagesController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('Page', config=config)
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /pages: Return all pages."""
@@ -36,8 +36,8 @@ class PagesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
@@ -57,8 +57,8 @@ class PagesController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -67,8 +67,8 @@ class PagesController(BaseController):
         """
         return {'markupLanguages': h.markupLanguages}
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
@@ -99,8 +99,8 @@ class PagesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no page with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
@@ -114,8 +114,8 @@ class PagesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no page with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /pages/id: Return a JSON object representation of the page with id=id.
@@ -132,8 +132,8 @@ class PagesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no page with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):

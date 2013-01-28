@@ -535,7 +535,7 @@ class TestRememberedformsController(TestController):
 
         # Perform the same search as above on the contributor's remembered forms,
         # as the contributor.
-        response = self.app.request(url('/rememberedforms/%d/search' % contributorId),
+        response = self.app.request(url('/rememberedforms/%d' % contributorId),
                         method='SEARCH', body=jsonQuery, headers=self.json_headers,
                         environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
@@ -556,7 +556,7 @@ class TestRememberedformsController(TestController):
         assert resp
 
         # Perform the search on the administrator's remembered forms as the viewer.
-        response = self.app.request(url('/rememberedforms/%d/search' % administratorId),
+        response = self.app.request(url('/rememberedforms/%d' % administratorId),
                         method='SEARCH', body=jsonQueryAdmin, headers=self.json_headers,
                         environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -575,7 +575,7 @@ class TestRememberedformsController(TestController):
         assert resp
 
         # Perform the search on the administrator's remembered forms as the administrator.
-        response = self.app.request(url('/rememberedforms/%d/search' % administratorId),
+        response = self.app.request(url('/rememberedforms/%d' % administratorId),
                         method='SEARCH', body=jsonQueryAdmin, headers=self.json_headers,
                         environ=self.extra_environ_admin)
         resp = json.loads(response.body)

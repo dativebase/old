@@ -43,9 +43,6 @@ assert type(rJSON) == list, errorMsg
 assert len(rJSON) > 0, errorMsg
 assert u'Admin' in [u['firstName'] for u in rJSON], errorMsg 
 
-# Wait 5 seconds to see if the cookie expires ...
-sleep(5)
-
 # Request GET /forms.
 r = s.get('%s/forms' % baseurl)
 assert type(r.json()) == list, 'Could not GET /forms.'
@@ -97,6 +94,16 @@ errorMsg = 'Error: unable to retrieve the form just created.'
 assert type(rJSON) == dict, errorMsg
 assert rJSON['transcription'] == u'test', errorMsg
 
-print 'Yay!  The requests library plays nicely with the OLD!'
+# Ensure that @h.restrict is returning JSON
+r = s.post('%s/forms/history/1' % baseurl)
+errorMsg = '@h.restrict not working as expected.'
+assert r.status_code == 405, errorMsg
+assert r.json()['error'] == u"The POST method is not permitted for this resource; permitted method(s): GET", errorMsg
 
-# print s.cookies['old']
+# Ensure that invalid URLs return JSON also
+r = s.put('%s/files' % baseurl)
+errorMsg = 'Invalid URLs are not returning JSON.'
+assert r.status_code == 404, errorMsg
+assert r.json()['error'] == u'The resource could not be found.', errorMsg
+
+print 'Yay!  The requests library plays nicely with the OLD!'

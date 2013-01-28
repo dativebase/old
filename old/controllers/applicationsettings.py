@@ -20,8 +20,8 @@ class ApplicationsettingsController(BaseController):
     really one item that is relevant: the most recent one.
     """
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /applicationsettings: return all application settings models as
@@ -29,8 +29,8 @@ class ApplicationsettingsController(BaseController):
         """
         return Session.query(ApplicationSettings).order_by(asc(ApplicationSettings.id)).all()
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator'])
     def create(self):
@@ -51,8 +51,8 @@ class ApplicationsettingsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator'])
     def new(self):
@@ -67,8 +67,8 @@ class ApplicationsettingsController(BaseController):
         """
         return getNewApplicationSettingsData(request.GET)
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator'])
     def update(self, id):
@@ -101,8 +101,8 @@ class ApplicationsettingsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no application settings with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator'])
     def delete(self, id):
@@ -120,8 +120,8 @@ class ApplicationsettingsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no application settings with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /applicationsettings/id: Return a JSON object representation of
@@ -139,8 +139,8 @@ class ApplicationsettingsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no application settings with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator'])
     def edit(self, id):

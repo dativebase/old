@@ -10,7 +10,9 @@ from routes import Mapper
 def searchConnect(map, name, controller=None):
     controller = controller or name
     map.connect(name, '/%s' % name, controller=controller,
-        action='search', conditions=dict(method='SEARCH'))
+                action='search', conditions=dict(method='SEARCH'))
+    map.connect('/%s/search' % name, controller=controller,
+                action='search', conditions=dict(method='POST'))
     map.connect('/%s/new_search' % name, controller=controller,
                 action='new_search', conditions=dict(method='GET'))
     return map
@@ -28,19 +30,25 @@ def make_map(config):
     map.connect('/error/{action}/{id}', controller='error')
 
     # CUSTOM ROUTES HERE
+    map.connect('/collections/history/{id}', controller='oldcollections', action='history')
+    map.connect('/files/retrieve/{id}', controller='files', action='retrieve')
+    map.connect('/forms/history/{id}', controller='forms', action='history')
+    map.connect('/forms/remember', controller='forms', action='remember')
     map.connect('/forms/update_morpheme_references', controller='forms',
-            action='update_morpheme_references', conditions=dict(method='PUT'))
+                action='update_morpheme_references', conditions=dict(method='PUT'))
+    map.connect('/login/authenticate', controller='login', action='authenticate')
+    map.connect('/login/logout', controller='login', action='logout')
+    map.connect('/login/email_reset_password', controller='login', action='email_reset_password')
 
     # SEARCH routes
-    map = searchConnect(map, 'forms')
-    map = searchConnect(map, 'files')
-    map = searchConnect(map, 'collections', 'oldcollections')
-    map.connect('/collections/search', controller='oldcollections', action='search')
-    map = searchConnect(map, 'sources')
     map = searchConnect(map, 'collectionbackups')
+    map = searchConnect(map, 'collections', 'oldcollections')
+    map = searchConnect(map, 'files')
     map = searchConnect(map, 'formbackups')
-    map = searchConnect(map, 'languages')
+    map = searchConnect(map, 'forms')
     map = searchConnect(map, 'formsearches')
+    map = searchConnect(map, 'languages')
+    map = searchConnect(map, 'sources')
 
     # rememberedforms "resource"
     map.connect("rememberedforms", "/rememberedforms/{id}",
@@ -52,6 +60,9 @@ def make_map(config):
     map.connect("rememberedforms", "/rememberedforms/{id}",
         controller='rememberedforms', action='search',
         conditions=dict(method='SEARCH'))
+    map.connect("/rememberedforms/{id}/search",
+        controller='rememberedforms', action='search',
+        conditions=dict(method='POST'))
 
     # RESTful resoure mappings
     map.resource('applicationsetting', 'applicationsettings')
@@ -78,7 +89,7 @@ def make_map(config):
     map.connect('collections', controller='oldcollections')
 
     # Pylons Defaults
-    map.connect('/{controller}/{action}')
-    map.connect('/{controller}/{id}/{action}')
+    #map.connect('/{controller}/{action}')
+    #map.connect('/{controller}/{id}/{action}')
 
     return map

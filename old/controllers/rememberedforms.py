@@ -44,9 +44,9 @@ class RememberedformsController(BaseController):
 
     queryBuilder = SQLAQueryBuilder(config=config)
 
-    @h.OLDjsonify
+    @h.jsonify
     @h.authenticate
-    @restrict('GET')
+    @h.restrict('GET')
     def show(self, id):
         """Return a JSON array of the forms remembered by the user with id=id.
         Note that any authenticated user is authorized to access this array.
@@ -66,9 +66,9 @@ class RememberedformsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
 
-    @h.OLDjsonify
+    @h.jsonify
     @h.authenticate
-    @restrict('PUT')
+    @h.restrict('PUT')
     @h.authorize(['administrator', 'contributor', 'viewer'], None, True)
     def update(self, id):
         """Set the user with id=id's rememberedForms to the forms referenced by
@@ -110,8 +110,8 @@ class RememberedformsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('SEARCH', 'POST')
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self, id):
         """SEARCH /forms: Return all forms in the user with id=id's remembered

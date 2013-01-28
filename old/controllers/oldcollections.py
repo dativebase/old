@@ -27,8 +27,8 @@ class OldcollectionsController(BaseController):
 
     queryBuilder = SQLAQueryBuilder('Collection', config=config)
 
-    @h.OLDjsonify
-    @restrict('SEARCH', 'POST')
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
         """SEARCH /collections: Return all collections matching the filter passed as JSON in
@@ -58,8 +58,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def new_search(self):
         """GET /collections/new_search: Return the data necessary to inform a search
@@ -67,8 +67,8 @@ class OldcollectionsController(BaseController):
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def index(self):
         """GET /collections: Return all collections."""
@@ -81,8 +81,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
@@ -104,8 +104,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -121,8 +121,8 @@ class OldcollectionsController(BaseController):
         """
         return getNewEditCollectionData(request.GET)
 
-    @h.OLDjsonify
-    @restrict('PUT')
+    @h.jsonify
+    @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
@@ -163,8 +163,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('DELETE')
+    @h.jsonify
+    @h.restrict('DELETE')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
@@ -187,8 +187,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def show(self, id):
         """GET /collections/id: Return a JSON object representation of the collection with
@@ -212,8 +212,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
@@ -250,8 +250,8 @@ class OldcollectionsController(BaseController):
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def history(self, id):
         """GET /collections/history/id: Return a JSON object representation of the collection and its previous versions.

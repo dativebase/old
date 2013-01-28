@@ -493,6 +493,7 @@ class TestUsersController(TestController):
         # Valid user: the password contains a unicode character
         researchersDirectory = os.listdir(self.researchersPath)
         researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        sleep(1)
         params = self.createParams.copy()
         params.update({
             'username': u'aadams',

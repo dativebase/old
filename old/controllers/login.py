@@ -19,8 +19,8 @@ class LoginController(BaseController):
 
     here = appconfig('config:test.ini', relative_to='.')['here']
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     def authenticate(self):
         """POST /login/authenticate: request body should be a JSON object of the
         form {username: '...', password: '...'}.  Response is a JSON object with
@@ -55,16 +55,16 @@ class LoginController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-    @h.OLDjsonify
-    @restrict('GET')
+    @h.jsonify
+    @h.restrict('GET')
     @h.authenticate
     def logout(self):
         """Logout user by deleting the session."""
         session.delete()
         return {'authenticated': False}
 
-    @h.OLDjsonify
-    @restrict('POST')
+    @h.jsonify
+    @h.restrict('POST')
     def email_reset_password(self):
         """Try to reset the user's password and email them a new one.
         Response is a JSON object with two boolean properties:
