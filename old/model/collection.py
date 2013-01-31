@@ -53,6 +53,16 @@ class Collection(Base):
     files = relation('File', secondary=collectionfile_table, backref='collections')
     # forms attribute is defined in a relation/backref in the form model
 
+    # The contentsUnpacked column holds the contents of the collection where all
+    # collection references in the contents field are replaced with the contents
+    # of the referred-to collections.  These referred-to collections can refer
+    # to others in turn.  The forms related to a collection are calculated by
+    # gathering the form references from contentsUnpacked.  The result of all
+    # this is that the contents (and form references) of a collection can be
+    # altered by updates to another collection; however, these updates will not
+    # propagate until the collection in question is itself updated.
+    contentsUnpacked = Column(UnicodeText)
+
     def getDict(self):
         """Return a Python dictionary representation of the Collection.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
@@ -71,6 +81,7 @@ class Collection(Base):
             'description': self.description,
             'markupLanguage': self.markupLanguage,
             'contents': self.contents,
+            'contentsUnpacked': self.contentsUnpacked,
             'html': self.html,
             'dateElicited': self.dateElicited,
             'datetimeEntered': self.datetimeEntered,

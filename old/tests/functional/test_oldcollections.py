@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import simplejson as json
+from time import sleep
 from nose.tools import nottest
 from base64 import encodestring
 from paste.deploy import appconfig
@@ -346,12 +347,14 @@ class TestOldcollectionsController(TestController):
         # Create some test tags
         tag1 = model.Tag()
         tag2 = model.Tag()
+        restrictedTag = h.generateRestrictedTag()
         tag1.name = u'tag 1'
         tag2.name = u'tag 2'
-        Session.add_all([tag1, tag2])
+        Session.add_all([tag1, tag2, restrictedTag])
         Session.commit()
         tag1Id = tag1.id
         tag2Id = tag2.id
+        restrictedTagId = restrictedTag.id
 
         # Create some test files
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
@@ -405,27 +408,24 @@ class TestOldcollectionsController(TestController):
         form2Id = resp['id']
 
         # Create a test collection.
-        mdContents = u'\n'.join([
-            'Chapter',
-            '=======',
+        mdContents1 = u'\n'.join([
+            '### Chapter 1',
             '',
-            'Section',
-            '-------',
+            '#### Section 1',
             '',
             '* Item 1',
             '* Item 2',
             '',
-            'Section containing forms',
-            '------------------------',
+            '#### Section 2',
             '',
             'form[%d]' % form1Id,
             'form[%d]' % form2Id
         ])
         params = self.createParams.copy()
         params.update({
-            'title': u'test_create_title',
+            'title': u'Chapter 1',
             'markupLanguage': u'markdown',
-            'contents': mdContents,
+            'contents': mdContents1,
             'files': [file1Id, file2Id],
             'tags': [tag1Id, tag2Id]
         })
@@ -433,16 +433,187 @@ class TestOldcollectionsController(TestController):
         response = self.app.post(url('collections'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
+        collection1Id = resp['id']
         collectionCount = Session.query(model.Collection).count()
         assert type(resp) == type({})
-        assert resp['title'] == u'test_create_title'
+        assert resp['title'] == u'Chapter 1'
         assert resp['enterer']['firstName'] == u'Admin'
-        assert resp['html'] == h.markupLanguageToFunc['markdown'](mdContents)
+        assert resp['html'] == h.markupLanguageToFunc['markdown'](mdContents1)
         assert sorted([f['id'] for f in resp['files']]) == sorted([file1Id, file2Id])
         assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1Id, tag2Id])
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id])
         assert collectionCount == 1
         assert response.content_type == 'application/json'
+
+        # Create two more forms
+        params = self.createFormParams.copy()
+        params.update({
+            'transcription': u'transcription 3',
+            'glosses': [{'gloss': u'gloss 3', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        form3Id = resp['id']
+
+        params = self.createFormParams.copy()
+        params.update({
+            'transcription': u'transcription 4',
+            'glosses': [{'gloss': u'gloss 4', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        form4Id = resp['id']
+
+        # Create a second collection, one that references the first.
+        mdContents2 = u'\n'.join([
+            '## Book 1',
+            '',
+            'collection[%d]' % collection1Id,
+            '',
+            '### Chapter 2',
+            '',
+            'form[%d]' % form3Id
+        ])
+        params = self.createParams.copy()
+        params.update({
+            'title': u'Book 1',
+            'markupLanguage': u'markdown',
+            'contents': mdContents2
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('collections'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        collection2Id = resp['id']
+        collectionCount = Session.query(model.Collection).count()
+        collection2ContentsUnpacked = mdContents2.replace(
+            'collection[%d]' % collection1Id, mdContents1)
+        assert type(resp) == type({})
+        assert resp['title'] == u'Book 1'
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert resp['contentsUnpacked'] == collection2ContentsUnpacked
+        assert resp['html'] == h.markupLanguageToFunc['markdown'](collection2ContentsUnpacked)
+        assert resp['files'] == []
+        assert resp['tags'] == []
+        assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id, form3Id])
+        assert collectionCount == 2
+        assert response.content_type == 'application/json'
+
+        # Create a third collection, one that references the second and, thereby,
+        # the third also.
+        mdContents3 = u'\n'.join([
+            '# Title',
+            '',
+            'collection(%d)' % collection2Id,
+            '',
+            '## Book 2',
+            '',
+            '### Chapter 3',
+            '',
+            'form[%d]' % form4Id
+        ])
+        params3 = self.createParams.copy()
+        params3.update({
+            'title': u'Novel',
+            'markupLanguage': u'markdown',
+            'contents': mdContents3
+        })
+        params3 = json.dumps(params3)
+        response = self.app.post(url('collections'), params3, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        collection3Id = resp['id']
+        collectionCount = Session.query(model.Collection).count()
+        collection3ContentsUnpacked = mdContents3.replace(
+            'collection(%d)' % collection2Id, collection2ContentsUnpacked)
+        assert type(resp) == type({})
+        assert resp['title'] == u'Novel'
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert resp['contentsUnpacked'] == collection3ContentsUnpacked
+        assert resp['html'] == h.markupLanguageToFunc['markdown'](collection3ContentsUnpacked)
+        assert resp['files'] == []
+        assert resp['tags'] == []
+        assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id, form3Id, form4Id])
+        assert collectionCount == 3
+        assert response.content_type == 'application/json'
+
+        # Now show that if we update the contents of one of the collections
+        # referenced by the third (Novel) collection, the third will not have
+        # its contentsUnpacked/html updated until update is called on it.
+
+        # First attempt to update the third collection with no new data and
+        # expect to fail.
+        response = self.app.put(url('collection', id=collection3Id), params3,
+            self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'The update request failed because the submitted data were not new.'
+
+        # Now update the first collection by restricting it and updating its
+        # contents.  Show that these changes propagate up to all collections that
+        # reference collection 1 and that the values of the datetimeModified,
+        # forms and html (and contentsUnpacked) attributes of these other
+        # collections are updated also.
+        collection2 = Session.query(model.Collection).get(collection2Id)
+        collection2FormIds = [f.id for f in collection2.forms]
+        collection2DatetimeModified = collection2.datetimeModified
+        collection2HTML = collection2.html
+        collection3 = Session.query(model.Collection).get(collection3Id)
+        collection3FormIds = [f.id for f in collection3.forms]
+        collection3DatetimeModified = collection3.datetimeModified
+        collection3HTML = collection3.html
+        sleep(1)
+        mdContents1 = u'\n'.join([
+            '### Chapter 1',
+            '',
+            '#### Section 1',
+            '',
+            '* Item 1',
+            '* Item 2',
+            '',
+            '#### Section 2',
+            '',
+            'form[%d]' % form2Id    # THE CHANGE: reference to form1 has been removed
+        ])
+        params = self.createParams.copy()
+        params.update({
+            'title': u'Chapter 1',
+            'markupLanguage': u'markdown',
+            'contents': mdContents1,
+            'files': [file1Id, file2Id],
+            'tags': [tag1Id, tag2Id, restrictedTagId]   # ANOTHER CHANGE: restrict this collection
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('collection', id=collection1Id), params,
+            self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        newCollection2 = Session.query(model.Collection).get(collection2Id)
+        newCollection2FormIds = [f.id for f in newCollection2.forms]
+        newCollection2DatetimeModified = newCollection2.datetimeModified
+        newCollection2HTML = newCollection2.html
+        newCollection3 = Session.query(model.Collection).get(collection3Id)
+        newCollection3FormIds = [f.id for f in newCollection3.forms]
+        newCollection3DatetimeModified = newCollection3.datetimeModified
+        newCollection3HTML = newCollection3.html
+        assert form1Id not in [f['id'] for f in resp['forms']]
+        assert sorted(collection2FormIds) != sorted(newCollection2FormIds)
+        assert form1Id in collection2FormIds
+        assert form1Id not in newCollection2FormIds
+        assert collection2DatetimeModified != newCollection2DatetimeModified
+        assert collection2HTML != newCollection2HTML
+        assert sorted(collection3FormIds) != sorted(newCollection3FormIds)
+        assert form1Id in collection3FormIds
+        assert form1Id not in newCollection3FormIds
+        assert collection3DatetimeModified != newCollection3DatetimeModified
+        assert collection3HTML != newCollection3HTML
+
+        # Show that a vacuous update of the third collection with no new data
+        # will again fail.
+        response = self.app.put(url('collection', id=collection3Id), params3,
+            self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'The update request failed because the submitted data were not new.'
 
     #@nottest
     def test_create_invalid(self):

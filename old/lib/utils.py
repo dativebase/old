@@ -1217,6 +1217,10 @@ collectionTypes = (
 # This is the regex for finding form references in the contents of collections.
 formReferencePattern = re.compile('[Ff]orm\[([0-9]+)\]')
 
+# This is the regex for finding collection references in the contents of collections.
+#collectionReferencePattern = re.compile('[cC]ollection[\(\[](\d+)[\)\]]')
+collectionReferencePattern = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
+
 def rst2html(string):
     return publish_parts(string, writer_name='html')['html_body']
 

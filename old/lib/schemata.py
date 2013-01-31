@@ -383,6 +383,7 @@ class CollectionSchema(Schema):
     description = UnicodeString()
     markupLanguage = OneOf(h.markupLanguages)
     contents = UnicodeString()
+    contentsUnpacked = UnicodeString()
     # html = UnicodeString()      # uncomment to permit saving of client-side-generated html
     speaker = ValidOLDModelObject(modelName='Speaker')
     source = ValidOLDModelObject(modelName='Source')

@@ -18,12 +18,29 @@ from old.lib.schemata import CollectionSchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session
-from old.model import Collection, CollectionBackup, User
+from old.model import Collection, CollectionBackup, User, Form
 
 log = logging.getLogger(__name__)
 
 class OldcollectionsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """REST Controller styled on the Atom Publishing Protocol.
+
+    The collections controller is one of the more complex.  A great deal of this
+    complexity arised from the fact that collections can reference forms and
+    other collections in the value of their contents attribute.  The propagation
+    of restricted tags and associated forms and the generation of the html from
+    these contents-with-references, necessitates some complex logic for updates.
+
+    There is a potential issue with collection-collection reference.  A
+    restricted user can restrict their own collection A and that restriction
+    would be propagated up the reference chain, possibly causing another
+    collection B (that was not created by the updater) to become restricted.
+    That is, collection-collection reference permits restricted users to
+    restrict collections they would otherwise not be permitted to restrict. This
+    will be bothersome to other restricted users since they can no longer access
+    the newly restricted collection B.  A user authorized to update collection
+    B will be able to remove this restriction.
+    """
 
     queryBuilder = SQLAQueryBuilder('Collection', config=config)
 
@@ -88,18 +105,29 @@ class OldcollectionsController(BaseController):
     def create(self):
         """POST /collections: Create a new collection."""
         try:
+            unrestrictedUsers = h.getUnrestrictedUsers()
+            user = session['user']
             schema = CollectionSchema()
             values = json.loads(unicode(request.body, request.charset))
+            collectionsReferenced = getCollectionsReferenced(values['contents'],
+                                                        user, unrestrictedUsers)
+            values = addContentsUnpackedToValues(values, collectionsReferenced)
             values = addFormIdsListToValues(values)
             state = h.getStateObject(values)
             data = schema.to_python(values, state)
-            collection = createNewCollection(data)
+            collection = createNewCollection(data, collectionsReferenced)
             Session.add(collection)
             Session.commit()
             return collection
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
+        except InvalidCollectionReferenceError, e:
+            response.status_int = 400
+            return {'error': u'Invalid collection reference error: there is no collection with id %d' % e.args[0]}
+        except UnauthorizedCollectionReferenceError:
+            response.status_int = 403
+            return {'error': u'Unauthorized collection reference error: you are not authorized to access collection %d' % e.args[0]}
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -135,14 +163,18 @@ class OldcollectionsController(BaseController):
                 try:
                     schema = CollectionSchema()
                     values = json.loads(unicode(request.body, request.charset))
+                    collectionsReferenced = getCollectionsReferenced(
+                                values['contents'], user, unrestrictedUsers, id)
+                    values = addContentsUnpackedToValues(values, collectionsReferenced)
                     values = addFormIdsListToValues(values)
                     state = h.getStateObject(values)
                     data = schema.to_python(values, state)
                     collectionDict = collection.getDict()
-                    collection = updateCollection(collection, data)
+                    collection = updateCollection(collection, data, collectionsReferenced)
                     # collection will be False if there are no changes (cf. updateCollection).
                     if collection:
                         backupCollection(collectionDict, collection.datetimeModified)
+                        updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder)
                         Session.add(collection)
                         Session.commit()
                         return collection
@@ -153,6 +185,16 @@ class OldcollectionsController(BaseController):
                 except h.JSONDecodeError:
                     response.status_int = 400
                     return h.JSONDecodeErrorResponse
+                except CircularCollectionReferenceError, e:
+                    response.status_int = 400
+                    return {'error':
+                        u'Circular collection reference error: collection %d references collection %d.' % (id, e.args[0])}
+                except InvalidCollectionReferenceError, e:
+                    response.status_int = 400
+                    return {'error': u'Invalid collection reference error: there is no collection with id %d' % e.args[0]}
+                except UnauthorizedCollectionReferenceError:
+                    response.status_int = 403
+                    return {'error': u'Unauthorized collection reference error: you are not authorized to access collection %d' % e.args[0]}
                 except Invalid, e:
                     response.status_int = 400
                     return {'errors': e.unpack_errors()}
@@ -325,21 +367,167 @@ def backupCollection(collectionDict, datetimeModified=None):
 
 
 ################################################################################
-# Collection Create & Update Functions
+# Reference-extraction functions
 ################################################################################
 
+# The following set of functions generate data from the references in the contents
+# attribute of a collection.  The two primary tasks are to generate values for
+# the 'forms' and 'contentsUnpacked' attributes of the collection.  The three
+# "public" functions are getCollectionsReferenced, addFormIdsListToValues and
+# addContentsUnpackedToValues.  getCollectionsReferenced raises errors if
+# collection references are invalid and returns a dict from reference ids to
+# collection objects, which dict is used by addContentsUnpackedToValues, the
+# output of the latter being used to generate the list of referenced forms.
+
+def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None, collectionId=None, patt=None):
+    """Return a dict of the form {id: collection} where the keys are the ids of
+    all the collections referenced in the contents and all of the collection ids
+    referenced in those collections, etc., and the values are the collection
+    objects themselves.  This function is called recursively.
+    """
+    patt = patt or re.compile(h.collectionReferencePattern)
+    collectionsReferenced = dict([(int(id), getCollection(int(id), user, unrestrictedUsers))
+                                  for id in patt.findall(contents)])
+    temp = collectionsReferenced.copy()
+    if collectionId in collectionsReferenced:
+        raise CircularCollectionReferenceError(collectionId)
+    [collectionsReferenced.update(getCollectionsReferenced(
+        collectionsReferenced[id].contents, user, unrestrictedUsers, collectionId, patt))
+     for id in temp]
+    return collectionsReferenced
+
 def addFormIdsListToValues(values):
-    contents = getContentsFromCollectionInputValues(values)
-    values['forms'] = [int(id) for id in h.formReferencePattern.findall(contents)]
+    """Add a list of form ids (extracted from contentsUnpacked) to the values
+    dict and return values.
+    """
+    contentsUnpacked = getUnicode('contentsUnpacked', values)
+    values['forms'] = [int(id) for id in h.formReferencePattern.findall(contentsUnpacked)]
     return values
 
-def getContentsFromCollectionInputValues(values):
-    contents = values.get('contents', u'')
-    if not isinstance(contents, (unicode, str)):
-        return u''
-    else:
-        return unicode(contents)
+def addContentsUnpackedToValues(values, collectionsReferenced):
+    """Add a 'contentsUnpacked' value to values and return values.
+    """
+    contents = getUnicode('contents', values)
+    values['contentsUnpacked'] = generateContentsUnpacked(contents, collectionsReferenced)
+    return values
 
+def getCollectionsReferencedInContents(collection, collectionsReferenced):
+    """Return the list of collections referenced in the contents field of the
+    input collection.  collectionsReferenced is a pre-generated dict from ids to
+    collections that obviates the need to query the database.  The output of this
+    function is useful in determining whether directly referenced collections are
+    restricted and deciding, on that basis, whether to restrict the present collection.
+    """
+    return [collectionsReferenced[int(id)]
+            for id in h.collectionReferencePattern.findall(collection.contents)]
+
+def updateCollectionsThatReferenceThisCollection(collection, queryBuilder):
+    """If the contents of this collection have changed (i.e., CONTENTS_CHANGED=True)
+    or this collection has just been tagged as restricted (i.e., RESTRICTED=True),
+    then retrieve all collections that reference this collection and all collections
+    that reference those referers, etc., and (1) tag them as restricted (if
+    appropriate), (2) update their contentsUnpacked and html attributes (if
+    appropriate) and (3) update their datetimeModified attribute.
+    """
+    def updateContentsUnpackedEtc(collection):
+        collectionsReferenced = getCollectionsReferenced(collection.contents)
+        collection.contentsUnpacked = generateContentsUnpacked(
+                                    collection.contents, collectionsReferenced)
+        collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
+                                                  collection.markupLanguage)
+        collection.forms = [Session.query(Form).get(int(id)) for id in
+                    h.formReferencePattern.findall(collection.contentsUnpacked)]
+
+    global RESTRICTED
+    global CONTENTS_CHANGED
+    if RESTRICTED or CONTENTS_CHANGED:
+        collectionsReferencingThisCollection = getCollectionsReferencingThisCollection(
+            collection, queryBuilder)
+        now = h.now()
+        if RESTRICTED:
+            RESTRICTED = False
+            restrictedTag = h.getRestrictedTag()
+            [c.tags.append(restrictedTag) for c in collectionsReferencingThisCollection]
+        if CONTENTS_CHANGED:
+            CONTENTS_CHANGED = False
+            [updateContentsUnpackedEtc(c) for c in collectionsReferencingThisCollection]
+        [setattr(c, 'datetimeModified', now) for c in collectionsReferencingThisCollection]
+        Session.add_all(collectionsReferencingThisCollection)
+        Session.commit()
+
+def getCollectionsReferencingThisCollection(collection, queryBuilder):
+    patt = h.collectionReferencePattern.pattern.replace(
+        '\d+', str(collection.id)).replace('\\', '')
+    query = {'filter': ['Collection', 'contents', 'regex', patt]}
+    result = queryBuilder.getSQLAQuery(query).all()
+    for c in result[:]:
+        result += getCollectionsReferencingThisCollection(c, queryBuilder)
+    return result
+
+
+# PRIVATE FUNCTIONS
+
+def getUnicode(key, dict_):
+    """Return dict_[key], making sure it defaults to a unicode string.
+    """
+    value = dict_.get(key, u'')
+    if isinstance(value, unicode):
+        return value
+    elif isinstance(value, str):
+        return unicode(value)
+    return u''
+
+def getContents(collectionId, collectionsReferenced):
+    """Attempt to return the contents of the collection with id=collectionId.
+    If the collection id is invalid or the collection has no stringy contents,
+    return an appropriate warning message.
+    """
+    return getattr(collectionsReferenced[collectionId],
+                   u'contents',
+                   u'Collection %d has no contents.' % collectionId)
+
+def generateContentsUnpacked(contents, collectionsReferenced, patt=None):
+    """Generate the value for the contentsUnpacked attribute for a collection
+    based on the value of its contents attribute.  This function calls itself
+    recursively.  The collectionsReferenced dict is generated earlier and
+    obviates repeated database queries.  Note also that circular, invalid and
+    unauthorized reference chains are caught in the generation of collectionsReferenced.
+    """
+    patt = patt or re.compile(h.collectionReferencePattern)
+    return patt.sub(
+        lambda m: generateContentsUnpacked(
+            getContents(int(m.group(1)), collectionsReferenced),
+            collectionsReferenced, patt),
+        contents
+    )
+
+# Three custom error classes to raise when collection.contents are invalid
+class CircularCollectionReferenceError(Exception):
+    pass
+
+class InvalidCollectionReferenceError(Exception):
+    pass
+
+class UnauthorizedCollectionReferenceError(Exception):
+    pass
+
+def getCollection(collectionId, user, unrestrictedUsers):
+    """Return the collection with collectionId or, if the collection does not
+    exist or is restricted, raise an appropriate error.
+    """
+    collection = Session.query(Collection).get(collectionId)
+    if collection:
+        if user is None or unrestrictedUsers is None or \
+        h.userIsAuthorizedToAccessModel(user, collection, unrestrictedUsers):
+            return collection
+        else:
+            raise UnauthorizedCollectionReferenceError(collectionId)
+    raise InvalidCollectionReferenceError(collectionId)
+
+
+################################################################################
+# Get data for requests to /collections/new and /collections/{id}/edit requests
+################################################################################
 
 def getNewEditCollectionData(GET_params):
     """Return the data necessary to create a new OLD collection or update an existing
@@ -409,8 +597,11 @@ def getNewEditCollectionData(GET_params):
 
     return result
 
+################################################################################
+# Collection Create & Update Functions
+################################################################################
 
-def createNewCollection(data):
+def createNewCollection(data, collectionsReferenced):
     """Create a new Collection model object given a data dictionary provided by the
     user (as a JSON object).
     """
@@ -425,8 +616,9 @@ def createNewCollection(data):
     collection.description = h.normalize(data['description'])
     collection.markupLanguage = h.normalize(data['markupLanguage'])
     collection.contents = h.normalize(data['contents'])
-    collection.html = h.getHTMLFromContents(collection.contents,
-                                                      collection.markupLanguage)
+    collection.contentsUnpacked = h.normalize(data['contentsUnpacked'])
+    collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
+                                            collection.markupLanguage)
 
     # User-inputted date: dateElicited
     collection.dateElicited = data['dateElicited']
@@ -444,8 +636,11 @@ def createNewCollection(data):
     collection.files = [f for f in data['files'] if f]
     collection.forms = [f for f in data['forms'] if f]
 
-    # Restrict the entire collection if it is associated to restricted forms or files.
-    tags = [f.tags for f in collection.files + collection.forms]
+    # Restrict the entire collection if it is associated to restricted forms or
+    # files or if it references a restricted collection in its contents field.
+    immediatelyReferencedCollections = getCollectionsReferencedInContents(
+                                            collection, collectionsReferenced)
+    tags = [f.tags for f in collection.files + collection.forms + immediatelyReferencedCollections]
     tags = [tag for tagList in tags for tag in tagList]
     restrictedTags = [tag for tag in tags if tag.name == u'restricted']
     if restrictedTags:
@@ -463,17 +658,30 @@ def createNewCollection(data):
     return collection
 
 # Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateCollection function
-# below.
-CHANGED = None
+# succeed.  This global may only be used/changed in the updateCollection function below.
+CHANGED = False
 
-def updateCollection(collection, data):
+# Global RESTRICTED variable is set to true if a collection update request results
+# in the collection becoming restricted.  This global can be set to True in
+# updateCollection, can only be accessed in updateCollectionsThatReferenceThisCollection
+# and must be reset to False only in updateCollectionsThatReferenceThisCollection.
+RESTRICTED = False
+
+# Global CONTENTS_CHANGED variable is set to true if a collection update request results
+# in the collection's contents being changed.  This global may only be set to True in
+# updateCollection, can only be accessed in updateCollectionsThatReferenceThisCollection
+# and must be reset to False only in updateCollectionsThatReferenceThisCollection.
+CONTENTS_CHANGED = False
+
+def updateCollection(collection, data, collectionsReferenced):
     """Update the input Collection model object given a data dictionary provided by
     the user (as a JSON object).  If CHANGED is not set to true in the course
     of attribute setting, then None is returned and no update occurs.
     """
 
     global CHANGED
+    global RESTRICTED
+    global CONTENTS_CHANGED
 
     def setAttr(obj, name, value):
         if getattr(obj, name) != value:
@@ -487,9 +695,13 @@ def updateCollection(collection, data):
     setAttr(collection, 'url', h.normalize(data['url']))
     setAttr(collection, 'description', h.normalize(data['description']))
     setAttr(collection, 'markupLanguage', h.normalize(data['markupLanguage']))
-    setAttr(collection, 'contents', h.normalize(data['contents']))
-    setAttr(collection, 'html', h.getHTMLFromContents(
-        collection.contents, collection.markupLanguage))
+    submittedContents = h.normalize(data['contents'])
+    if collection.contents != submittedContents:
+        collection.contents = submittedContents
+        CONTENTS_CHANGED = CHANGED = True
+    setAttr(collection, 'contentsUnpacked', h.normalize(data['contentsUnpacked']))
+    setAttr(collection, 'html', h.getHTMLFromContents(collection.contentsUnpacked,
+                                                      collection.markupLanguage))
 
     # User-entered date: dateElicited
     if collection.dateElicited != data['dateElicited']:
@@ -521,8 +733,9 @@ def updateCollection(collection, data):
         collection.forms = formsToAdd
         CHANGED = True
 
-    # Restrict the entire collection if it is associated to restricted forms or files.
-    tags = [f.tags for f in collection.files + collection.forms]
+    # Restrict the entire collection if it is associated to restricted forms or
+    # files or if it references a restricted collection.
+    tags = [f.tags for f in collection.files + collection.forms + collectionsReferenced.values()]
     tags = [tag for tagList in tags for tag in tagList]
     restrictedTags = [tag for tag in tags if tag.name == u'restricted']
     if restrictedTags:
@@ -531,11 +744,14 @@ def updateCollection(collection, data):
             tagsToAdd.append(restrictedTag)
 
     if set(tagsToAdd) != set(collection.tags):
+        if u'restricted' in [t.name for t in tagsToAdd] and \
+        u'restricted' not in [t.name for t in collection.tags]:
+            RESTRICTED = True
         collection.tags = tagsToAdd
         CHANGED = True
 
     if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+        CHANGED = False      # It's crucial to reset the CHANGED global!
         collection.datetimeModified = datetime.datetime.utcnow()
         return collection
     return CHANGED
