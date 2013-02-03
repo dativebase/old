@@ -1,7 +1,8 @@
 import logging
 import datetime
 import re
-import os
+import os, shutil
+from cgi import FieldStorage
 import simplejson as json
 from string import letters, digits
 from random import sample
@@ -14,10 +15,12 @@ from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
 from old.lib.base import BaseController
-from old.lib.schemata import FileCreateSchema, FileUpdateSchema
+from old.lib.schemata import FileCreateWithBase64EncodedFiledataSchema, \
+    FileCreateWithFiledataSchema, FileSubintervalReferencingSchema, \
+    FileExternallyHostedSchema, FileUpdateSchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
-from old.model.meta import Session
+from old.model.meta import Session, Model
 from old.model import File, User
 
 log = logging.getLogger(__name__)
@@ -86,20 +89,53 @@ class FilesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /files: Create a new file."""
+        """POST /files: Create a new file.  There are four ways to create a new
+        file:
+
+        1. Plain File:
+
+           - Upload filedata via a POST request with Content-Type set to
+             'multipart/form-data'.  A filename POST param should also be present.
+
+        2. Base64-encoded File with JSON Metadata:
+
+           - Upload the filedata (base64 encoded) and metadata all within a JSON
+             POST request, i.e., Content-Type='application/json'.  This permits
+             the uploading of everything in one go (all via JSON), the downside
+             being the processing time required to encode to and decode from base64.
+
+        3. Audio/Video Subinterval-Referencing File:
+
+           - Upload file metadata in a JSON POST request and specify the id of an
+             existing *audio/video* 'parentFile' as well as 'start' and 'end'
+             attributes (in seconds as ints/floats) in the JSON request params.
+             Here the name attribute is user-specifiable.
+
+        4. Externally Hosted File:
+
+           - JSON POST body of request must contain a url attribute; name,
+             MIMEtype and password attributes are optional.
+        """
         try:
-            schema = FileCreateSchema()
-            values = json.loads(unicode(request.body, request.charset))
-            state = h.State()
-            state.full_dict = values
-            state.user = session['user']
-            file = createNewFile(schema.to_python(values, state))
+            if request.content_type == 'application/json':
+                values = json.loads(unicode(request.body, request.charset))
+                if 'base64EncodedFile' in values:
+                    file = createBase64File(values)
+                elif 'url' in values:
+                    file = createExternallyHostedFile(values)
+                else:
+                    file = createSubintervalReferencingFile(values)
+            else:
+                file = createPlainFile()
             Session.add(file)
             Session.commit()
             return file
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
+        except InvalidFieldStorageObjectError:
+            response.status_int = 400
+            return {'error': 'The attempted multipart/form-data file upload failed.'}
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -132,13 +168,13 @@ class FilesController(BaseController):
             user = session['user']
             if h.userIsAuthorizedToAccessModel(user, file, unrestrictedUsers):
                 try:
-                    schema = FileUpdateSchema()
-                    values = json.loads(unicode(request.body, request.charset))
-                    state = h.State()
-                    state.full_dict = values
-                    state.user = user
-                    file = updateFile(file, schema.to_python(values, state))
-                    # file will be False if there are no changes (cf. updateFile).
+                    if getattr(file, 'parentFile', None):
+                        file = updateSubintervalReferencingFile(file)
+                    elif getattr(file, 'url', None):
+                        file = updateExternallyHostedFile(file)
+                    else:
+                        file = updateFile(file)
+                    # file will be False if there are no changes (cf. update(SubintervalReferencing)File).
                     if file:
                         Session.add(file)
                         Session.commit()
@@ -249,7 +285,7 @@ class FilesController(BaseController):
         name=id or an error message if the file does not exist or the user is
         not authorized to access it.
         """
-        file = Session.query(File).filter(File.name==id).first()
+        file = Session.query(File).filter(File.filename==id).first()
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
             if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
@@ -264,7 +300,344 @@ class FilesController(BaseController):
 
 
 ################################################################################
-# File Create & Update Functions
+# File Create Functionality
+################################################################################
+
+def getUniqueFilePath(filePath):
+    """This function ensures a unique file path (without race conditions) by
+    attempting to create the file using os.open.  If the file exists, an OS
+    error is raised (or if the file is too long, an IO error is raised), and
+    a new file path/name is generated until a unique one is found.  Returns
+    an ordered pair: (<file object>, <unique file path>).
+    """
+    filePathParts = os.path.splitext(filePath) # returns ('/path/file', '.ext')
+    while 1:
+        try:
+            fileDescriptor = os.open(filePath, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            return os.fdopen(fileDescriptor, 'wb'), unicode(filePath)
+        except (OSError, IOError):
+            pass
+        filePath = u'%s_%s%s' % (filePathParts[0][:230],
+                    ''.join(sample(digits + letters, 8)), filePathParts[1])
+
+def addStandardMetadata(file, data):
+    """Add the metadata that all JSON-created file creation requests can add."""
+    file.description = h.normalize(data['description'])
+    file.utteranceType = data['utteranceType']
+    file.dateElicited = data['dateElicited']
+    if data['elicitor']:
+        file.elicitor = data['elicitor']
+    if data['speaker']:
+        file.speaker = data['speaker']
+    file.tags = [t for t in data['tags'] if t]
+    file.forms = [f for f in data['forms'] if f]
+    now = h.now()
+    file.datetimeEntered = now
+    file.datetimeModified = now
+    file.enterer = session['user']
+    return file
+
+def restrictFileByForms(file):
+    """Restrict the entire file if it is associated to restricted forms."""
+    tags = [f.tags for f in file.forms]
+    tags = [tag for tagList in tags for tag in tagList]
+    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+    if restrictedTags:
+        restrictedTag = restrictedTags[0]
+        if restrictedTag not in file.tags:
+            file.tags.append(restrictedTag)
+    return file
+
+class InvalidFieldStorageObjectError(Exception):
+    pass
+
+def createBase64File(data):
+    """Create and return an OLD file model generated from a data dict that
+    contains a 'base64EncodedFile' key whose value should be a base64 encoded
+    file.
+    """
+    data['MIMEtype'] = u''  # during validation, the schema will set a proper value based on the base64EncodedFile or filename attribute
+    schema = FileCreateWithBase64EncodedFiledataSchema()
+    state = h.State()
+    state.full_dict = data
+    state.user = session['user']
+    data = schema.to_python(data, state)
+
+    file = File()
+    file.MIMEtype = data['MIMEtype']
+    file.filename = h.normalize(data['filename'])
+
+    file = addStandardMetadata(file, data)
+
+    # Write the file to disk (making sure it's unique and thereby potentially)
+    # modifying file.filename; and calculate file.size.
+    fileData = data['base64EncodedFile']     # base64-decoded during validation
+    filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
+    fileObject, filePath = getUniqueFilePath(filePath)
+    file.filename = os.path.split(filePath)[-1]
+    file.name = file.filename
+    fileObject.write(fileData)
+    fileObject.close()
+    file.size = os.path.getsize(filePath)
+
+    file = restrictFileByForms(file)
+    return file
+
+def createExternallyHostedFile(data):
+    """Create and return an OLD file model generated from a data dict that
+    contains a 'url' key whose value should be a valid url where the file is
+    served.  Optional attributes: name, password, MIMEtype.
+    """
+
+    schema = FileExternallyHostedSchema()
+    data = schema.to_python(data)
+    file = File()
+
+    # User-inputted string data
+    file.name = h.normalize(data['name'])
+    file.password = data['password']
+    file.MIMEtype = data['MIMEtype']
+    file.url = data['url']
+
+    file = addStandardMetadata(file, data)
+    file = restrictFileByForms(file)
+    return file
+
+def createSubintervalReferencingFile(data):
+    """Create and return an OLD file model generated from a data dict that
+    contains a 'parentFile' key whose value must be a foreign key id that
+    references another file, which file must be an audio or video file.  The
+    data dict should also contain a 'name' key whose value can be a name that is
+    distinct from the filename value of the parent file (the child/referencing
+    file has no value for filename.)  The referencing subinterval file must also
+    contain float values for the 'start' and 'end' attributes which indicate the
+    subinterval of the parent file that constitute the content of the
+    referencing file.
+
+    As with files created from base64-encoded file data (cf. createBase64File
+    above), creation requests for referencing subinterval files may contain
+    metadata such as a description, an utterance type, etc.
+
+    Note that referencing files have no filename or size attributes.
+    """
+
+    schema = FileSubintervalReferencingSchema()
+    state = h.State()
+    state.full_dict = data
+    state.user = session['user']
+    data = schema.to_python(data, state)
+
+    file = File()
+
+    # Data unique to referencing subinterval files
+    file.parentFile = data['parentFile']
+    file.name = h.normalize(data['name']) or file.parentFile.filename   # Name defaults to the parent file's filename if nothing provided by user
+    file.start = data['start']
+    file.end = data['end']
+    file.MIMEtype = file.parentFile.MIMEtype
+
+    file = addStandardMetadata(file, data)
+    file = restrictFileByForms(file)
+
+    return file
+
+def createPlainFile():
+    """Return an OLD file model generated from nothing more than the body of a
+    multipart/form-data POST request whose only attributes are:
+    
+    1. 'filedata', a  cgi.FieldStorage object containing the file data.
+    2. 'filename', a string (optional but encouraged, i.e., if not provided, the
+       system will attempt to create one from the file path)
+
+    If no filename POST param is supplied, create a filename from the filename
+    attribute fo the filedata cgi.FieldStorage instance; assume that filepath
+    separators are the same as on the server's OS.
+    """
+
+    filedata = request.POST.get('filedata')
+    if not hasattr(filedata, 'file'):
+        raise InvalidFieldStorageObjectError
+
+    filename = request.POST.get('filename')
+    if not filename:
+        filename = os.path.split(filedata.filename)[-1]
+
+    schema = FileCreateWithFiledataSchema()
+    data = schema.to_python({'filename': filename, 'MIMEtype': u'',
+                             'filedataFirstKB': filedata.value[:1024]})
+
+    file = File()
+
+    file.filename = h.normalize(data['filename'])
+    file.MIMEtype = data['MIMEtype']
+
+    now = datetime.datetime.utcnow()
+    file.datetimeEntered = now
+    file.datetimeModified = now
+    file.enterer = session['user']
+
+    filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
+    fileObject, filePath = getUniqueFilePath(filePath)
+    file.filename = os.path.split(filePath)[-1]
+    file.name = file.filename
+
+    shutil.copyfileobj(filedata.file, fileObject)
+    filedata.file.close()
+    fileObject.close()
+
+    file.size = os.path.getsize(filePath)
+
+    return file
+
+################################################################################
+# File Update Functionality
+################################################################################
+
+# Global CHANGED variable keeps track of whether an update request should
+# succeed.  This global may only be used/changed in the update-related functions,
+# i.e.:
+# - updateSubintervalReferencingFile
+# - updateExternallyHostedFile
+# - updateFile
+# - setAttr
+# - updateStandardMetadata
+
+CHANGED = False
+
+def setAttr(obj, name, value):
+    if getattr(obj, name) != value:
+        setattr(obj, name, value)
+        global CHANGED
+        CHANGED = True
+
+def updateStandardMetadata(file, data):
+    global CHANGED
+
+    setAttr(file, 'description', h.normalize(data['description']))
+    setAttr(file, 'utteranceType', h.normalize(data['utteranceType']))
+    if file.dateElicited != data['dateElicited']:
+        file.dateElicited = data['dateElicited']
+        CHANGED = True
+    if data['elicitor'] != file.elicitor:
+        file.elicitor = data['elicitor']
+        CHANGED = True
+    if data['speaker'] != file.speaker:
+        file.speaker = data['speaker']
+        CHANGED = True
+
+    # Many-to-Many Data: tags & forms
+    # Update only if the user has made changes.
+    formsToAdd = [f for f in data['forms'] if f]
+    tagsToAdd = [t for t in data['tags'] if t]
+
+    if set(formsToAdd) != set(file.forms):
+        file.forms = formsToAdd
+        CHANGED = True
+
+        # Cause the entire file to be tagged as restricted if any one of its
+        # forms are so tagged.
+        tags = [f.tags for f in file.forms]
+        tags = [tag for tagList in tags for tag in tagList]
+        restrictedTags = [tag for tag in tags if tag.name == u'restricted']
+        if restrictedTags:
+            restrictedTag = restrictedTags[0]
+            if restrictedTag not in tagsToAdd:
+                tagsToAdd.append(restrictedTag)
+
+    if set(tagsToAdd) != set(file.tags):
+        file.tags = tagsToAdd
+        CHANGED = True
+
+    return file
+
+def updateFile(file):
+    """Update the input File model object using the JSON object of the request
+    body.  If CHANGED is not set to true in the course of attribute setting,
+    then False is returned and no update occurs.
+    """
+    global CHANGED
+    schema = FileUpdateSchema()
+    data = json.loads(unicode(request.body, request.charset))
+    state = h.State()
+    state.full_dict = data
+    state.user = session['user']
+    data = schema.to_python(data, state)
+
+    file = updateStandardMetadata(file, data)
+
+    if CHANGED:
+        CHANGED = False      # It's crucial to reset the CHANGED global!
+        file.datetimeModified = datetime.datetime.utcnow()
+        return file
+    return CHANGED
+
+def updateSubintervalReferencingFile(file):
+    """Update the subinterval-referencing file model using the JSON object in
+    the request body.  If CHANGED is not set to true in the course of attribute
+    setting, then False is returned and no update occurs.
+    """
+    global CHANGED
+    schema = FileSubintervalReferencingSchema()
+    data = json.loads(unicode(request.body, request.charset))
+    state = h.State()
+    state.full_dict = data
+    state.user = session['user']
+    data = schema.to_python(data, state)
+
+    # Data unique to referencing subinterval files
+    setAttr(file, 'parentFile', data['parentFile'])
+    setAttr(file, 'name', (h.normalize(data['name']) or file.parentFile.filename))
+    setAttr(file, 'start', data['start'])
+    setAttr(file, 'end', data['end'])
+
+    file = updateStandardMetadata(file, data)
+
+    if CHANGED:
+        CHANGED = False      # It's crucial to reset the CHANGED global!
+        file.datetimeModified = datetime.datetime.utcnow()
+        return file
+    return CHANGED
+
+def updateExternallyHostedFile(file):
+    """Update the externally hosted file model using the JSON object in
+    the request body.  If CHANGED is not set to true in the course of attribute
+    setting, then False is returned and no update occurs.
+    """
+    global CHANGED
+    data = FileExternallyHostedSchema().to_python(data)
+
+    # Data unique to referencing subinterval files
+    setAttr(file, 'url', data['url'])
+    setAttr(file, 'name', h.normalize(data['name']))
+    setAttr(file, 'password', data['password'])
+    setAttr(file, 'MIMEtype', data['MIMEtype'])
+
+    file = updateStandardMetadata(file, data)
+
+    if CHANGED:
+        CHANGED = False      # It's crucial to reset the CHANGED global!
+        file.datetimeModified = datetime.datetime.utcnow()
+        return file
+    return CHANGED
+
+
+################################################################################
+# Delete File Functionality
+################################################################################
+
+def deleteFile(file):
+    """Delete the file object from the database and the file from the filesystem.
+    Note that if we implement .ogg versions of .wav files, we will need to delete
+    those here as well too.
+    """
+    filePath = os.path.join(config['app_conf']['permanent_store'], file.name)
+    os.remove(filePath)
+    Session.delete(file)
+    Session.commit()
+
+
+################################################################################
+# New/Edit File Functionality
 ################################################################################
 
 def getNewEditFileData(GET_params):
@@ -304,6 +677,7 @@ def getNewEditFileData(GET_params):
     # result is initialized as a dict with empty list values.
     result = dict([(key, []) for key in map_])
     result['utteranceTypes'] = h.utteranceTypes
+    result['allowedFileTypes'] = h.allowedFileTypes
 
     # There are GET params, so we are selective in what we return.
     if GET_params:
@@ -331,150 +705,3 @@ def getNewEditFileData(GET_params):
             result[key] = map_[key]()
 
     return result
-
-
-def createNewFile(data):
-    """Create a new File model object given a data dictionary provided by the
-    user (as a JSON object).
-    """
-
-    file = File()
-
-    # User-inputted string data
-    file.name = h.normalize(data['name'])
-    file.description = h.normalize(data['description'])
-    file.utteranceType = h.normalize(data['utteranceType'])
-    file.embeddedFileMarkup = h.normalize(data['embeddedFileMarkup'])
-    file.embeddedFilePassword = h.normalize(data['embeddedFilePassword'])
-
-    # User-inputted date: dateElicited
-    file.dateElicited = data['dateElicited']
-    file.MIMEtype = unicode(h.guess_type(file.name)[0])
-
-    # Many-to-One
-    if data['elicitor']:
-        file.elicitor = data['elicitor']
-    if data['speaker']:
-        file.speaker = data['speaker']
-
-    # Many-to-Many
-    file.tags = [t for t in data['tags'] if t]
-    file.forms = [f for f in data['forms'] if f]
-
-    # OLD-generated Data
-    now = datetime.datetime.utcnow()
-    file.datetimeEntered = now
-    file.datetimeModified = now
-    file.enterer = Session.query(User).get(session['user'].id)
-
-    # Write the file to disk (making sure it's unique and thereby potentially)
-    # modifying file.name and calculate file.size.
-
-    def getUniqueFilePath(filePath):
-        """This function ensures a unique file path (without race conditions) by
-        attempting to create the file using os.open.  If the file exists, an OS
-        error is raised (or if the file is too long, an IO error is raised), and
-        a new file is generated until a unique one is found.
-        """
-        filePathParts = os.path.splitext(filePath) # returns ('/path/file', '.ext')
-        while 1:
-            try:
-                fileDescriptor = os.open(filePath, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-                return os.fdopen(fileDescriptor, 'wb'), unicode(filePath)
-            except (OSError, IOError):
-                pass
-            filePath = u'%s_%s%s' % (filePathParts[0][:230],
-                        ''.join(sample(digits + letters, 8)), filePathParts[1])
-
-    fileData = data['file']     # Base64 decoded in the FileCreateSchema
-    filePath = os.path.join(config['app_conf']['permanent_store'], file.name)
-    fileObject, filePath = getUniqueFilePath(filePath)
-    file.name = os.path.split(filePath)[-1]
-    fileObject.write(fileData)
-    fileObject.close()
-    file.size = os.path.getsize(filePath)
-
-    # Restrict the entire file if it is associated to restricted forms.
-    tags = [f.tags for f in file.forms]
-    tags = [tag for tagList in tags for tag in tagList]
-    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-    if restrictedTags:
-        restrictedTag = restrictedTags[0]
-        if restrictedTag not in file.tags:
-            file.tags.append(restrictedTag)
-
-    return file
-
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateFile function
-# below.
-CHANGED = None
-
-def updateFile(file, data):
-    """Update the input File model object given a data dictionary provided by
-    the user (as a JSON object).  If CHANGED is not set to true in the course
-    of attribute setting, then None is returned and no update occurs.
-    """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
-    # Unicode Data
-    setAttr(file, 'description', h.normalize(data['description']))
-    setAttr(file, 'utteranceType', h.normalize(data['utteranceType']))
-    setAttr(file, 'embeddedFileMarkup', h.normalize(data['embeddedFileMarkup']))
-    setAttr(file, 'embeddedFilePassword', h.normalize(data['embeddedFilePassword']))
-
-    # User-entered date: dateElicited
-    if file.dateElicited != data['dateElicited']:
-        file.dateElicited = data['dateElicited']
-        CHANGED = True
-
-    # Many-to-One Data
-    if data['elicitor'] != file.elicitor:
-        file.elicitor = data['elicitor']
-        CHANGED = True
-    if data['speaker'] != file.speaker:
-        file.speaker = data['speaker']
-        CHANGED = True
-
-    # Many-to-Many Data: tags & forms
-    # Update only if the user has made changes.
-    formsToAdd = [f for f in data['forms'] if f]
-    tagsToAdd = [t for t in data['tags'] if t]
-
-    if set(formsToAdd) != set(file.forms):
-        file.forms = formsToAdd
-        CHANGED = True
-
-        # Cause the entire file to be tagged as restricted if any one of its
-        # forms are so tagged.
-        tags = [f.tags for f in file.forms]
-        tags = [tag for tagList in tags for tag in tagList]
-        restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-        if restrictedTags:
-            restrictedTag = restrictedTags[0]
-            if restrictedTag not in tagsToAdd:
-                tagsToAdd.append(restrictedTag)
-
-    if set(tagsToAdd) != set(file.tags):
-        file.tags = tagsToAdd
-        CHANGED = True
-
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
-        file.datetimeModified = datetime.datetime.utcnow()
-        return file
-    return CHANGED
-
-def deleteFile(file):
-    filePath = os.path.join(config['app_conf']['permanent_store'], file.name)
-    os.remove(filePath)
-    Session.delete(file)
-    Session.commit()
-

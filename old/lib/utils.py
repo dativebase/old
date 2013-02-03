@@ -155,7 +155,6 @@ def restrict(*methods):
         """Wrapper for restrict"""
         pylons = get_pylons(args)
         if pylons.request.method not in methods:
-            log.debug("Method not allowed by restrict")
             pylons.response.headers['Content-Type'] = 'application/json'
             pylons.response.status_int = 405
             return {'error':
@@ -246,6 +245,17 @@ def makeDirectorySafely(path):
     except OSError, exception:
         if exception.errno != errno.EEXIST:
             raise
+
+def secureFilename(path):
+    """Removes null bytes, path.sep and path.altsep from a path.
+    From http://lucumr.pocoo.org/2010/12/24/common-mistakes-as-web-developer/
+    """
+    patt = re.compile(r'[\0%s]' % re.escape(''.join(
+        [os.path.sep, os.path.altsep or ''])))
+    return patt.sub('', path)
+
+def cleanAndSecureFilename(path):
+    return secureFilename(path).replace("'", "").replace('"', '').replace(' ', '_')
 
 
 ################################################################################
@@ -1166,12 +1176,12 @@ class OrderBySchema(Schema):
 ################################################################################
 
 allowedFileTypes = (
-    u'text/plain',
-    u'application/x-latex',
-    u'application/msword',
-    u'application/vnd.ms-powerpoint',
-    u'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    u'application/vnd.oasis.opendocument.text',
+    #u'text/plain',
+    #u'application/x-latex',
+    #u'application/msword',
+    #u'application/vnd.ms-powerpoint',
+    #u'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    #u'application/vnd.oasis.opendocument.text',
     u'application/pdf',
     u'image/gif',
     u'image/jpeg',
@@ -1185,6 +1195,9 @@ allowedFileTypes = (
     u'video/quicktime',
     u'video/x-ms-wmv'
 )
+
+def isAudioVideoFile(file_):
+    return u'audio' in file_.MIMEtype or u'video' in file_.MIMEtype
 
 utteranceTypes = (
     u'None',

@@ -992,8 +992,8 @@ class TestFormsController(TestController):
 
         params = self.createFileParams.copy()
         params.update({
-            'name': u'restrictedFile.wav',
-            'file': wavFileBase64,
+            'filename': u'restrictedFile.wav',
+            'base64EncodedFile': wavFileBase64,
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -1004,8 +1004,8 @@ class TestFormsController(TestController):
 
         params = self.createFileParams.copy()
         params.update({
-            'name': u'unrestrictedFile.wav',
-            'file': wavFileBase64
+            'filename': u'unrestrictedFile.wav',
+            'base64EncodedFile': wavFileBase64
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,

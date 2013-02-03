@@ -113,16 +113,18 @@ class TestFormsSearchController(TestController):
 
             params = self.createParams.copy()
             params.update({
-                'file': encodestring(open(jpgFilePath).read())
+                'base64EncodedFile': encodestring(open(jpgFilePath).read())
             })
 
             if i > 10:
                 params.update({
+                    'filename': u'Name_%d.jpg' % i,
                     'name': u'Name_%d.jpg' % i,
                     'dateElicited': u'%02d/%02d/%d' % (jan1.month, jan1.day, jan1.year)
                 })
             else:
                 params.update({
+                    'filename': u'name_%d.jpg' % i,
                     'name': u'name_%d.jpg' % i,
                     'tags': [testModels['tags'][i - 1]['id']]
                 })

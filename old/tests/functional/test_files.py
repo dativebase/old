@@ -22,39 +22,67 @@ class TestFilesController(TestController):
     testFilesPath = os.path.join(here, 'test_files')
 
     createParams = {
-        'name': u'',
+        'filename': u'',        # Will be filtered out on update requests
         'description': u'',
         'dateElicited': u'',    # mm/dd/yyyy
         'elicitor': u'',
         'speaker': u'',
         'utteranceType': u'',
-        'embeddedFileMarkup': u'',
-        'embeddedFilePassword': u'',
         'tags': [],
         'forms': [],
-        'file': ''      # file data Base64 encoded
+        'base64EncodedFile': '' # file data Base64 encoded; will be filtered out on update requests
+    }
+
+    # Empty create dict for subinterval-referencing file creation requests
+    createParamsSR = {
+        'parentFile': u'',
+        'name': u'',
+        'start': u'',
+        'end': u'',
+        'description': u'',
+        'dateElicited': u'',    # mm/dd/yyyy
+        'elicitor': u'',
+        'speaker': u'',
+        'utteranceType': u'',
+        'tags': [],
+        'forms': []
+    }
+
+    # Empty create dict for externally hosted file creation requests
+    createParamsEH = {
+        'url': u'',
+        'name': u'',
+        'password': u'',
+        'MIMEtype': u'',
+        'description': u'',
+        'dateElicited': u'',    # mm/dd/yyyy
+        'elicitor': u'',
+        'speaker': u'',
+        'utteranceType': u'',
+        'tags': [],
+        'forms': []
     }
 
     createFormParams = {
-            'transcription': u'',
-            'phoneticTranscription': u'',
-            'narrowPhoneticTranscription': u'',
-            'morphemeBreak': u'',
-            'grammaticality': u'',
-            'morphemeGloss': u'',
-            'glosses': [{'gloss': u'', 'glossGrammaticality': u''}],
-            'comments': u'',
-            'speakerComments': u'',
-            'elicitationMethod': u'',
-            'tags': [],
-            'syntacticCategory': u'',
-            'speaker': u'',
-            'elicitor': u'',
-            'verifier': u'',
-            'source': u'',
-            'dateElicited': u'',     # mm/dd/yyyy
-            'files': []
-        }
+        'transcription': u'',
+        'phoneticTranscription': u'',
+        'narrowPhoneticTranscription': u'',
+        'morphemeBreak': u'',
+        'grammaticality': u'',
+        'morphemeGloss': u'',
+        'glosses': [{'gloss': u'', 'glossGrammaticality': u''}],
+        'comments': u'',
+        'speakerComments': u'',
+        'elicitationMethod': u'',
+        'tags': [],
+        'syntacticCategory': u'',
+        'speaker': u'',
+        'elicitor': u'',
+        'verifier': u'',
+        'source': u'',
+        'dateElicited': u'',     # mm/dd/yyyy
+        'files': []
+    }
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
@@ -124,8 +152,8 @@ class TestFilesController(TestController):
         # Create the restricted file.
         params = self.createParams.copy()
         params.update({
-            'name': u'test_restricted_file.wav',
-            'file': wavFileBase64Encoded,
+            'filename': u'test_restricted_file.wav',
+            'base64EncodedFile': wavFileBase64Encoded,
             'tags': [h.getTags()[0].id]    # the restricted tag should be the only one
         })
         params = json.dumps(params)
@@ -137,8 +165,8 @@ class TestFilesController(TestController):
         # Create the unrestricted file.
         params = self.createParams.copy()
         params.update({
-            'name': u'test_unrestricted_file.jpg',
-            'file': jpgFileBase64Encoded
+            'filename': u'test_unrestricted_file.jpg',
+            'base64EncodedFile': jpgFileBase64Encoded
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -157,8 +185,8 @@ class TestFilesController(TestController):
                                 extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert len(resp) == 2
-        assert resp[0]['name'] == u'test_restricted_file.wav'
-        assert resp[1]['name'] == u'test_unrestricted_file.jpg'
+        assert resp[0]['filename'] == u'test_restricted_file.wav'
+        assert resp[1]['filename'] == u'test_unrestricted_file.jpg'
         assert response.content_type == 'application/json'
 
         # The default contributor (qua enterer) should also be able to view both
@@ -225,7 +253,7 @@ class TestFilesController(TestController):
         # but that's ok ...
         def createFileFromIndex(index):
             file = model.File()
-            file.name = u'name_%d.jpg' % index
+            file.filename = u'name_%d.jpg' % index
             return file
         files = [createFileFromIndex(i) for i in range(1, 101)]
         Session.add_all(files)
@@ -233,7 +261,7 @@ class TestFilesController(TestController):
         files = h.getFiles()
         restrictedTag = h.getRestrictedTag()
         for file in files:
-            if int(file.name.split('_')[1].split('.')[0]) % 2 == 0:
+            if int(file.filename.split('_')[1].split('.')[0]) % 2 == 0:
                 file.tags.append(restrictedTag)
             Session.add(file)
         Session.commit()
@@ -246,7 +274,7 @@ class TestFilesController(TestController):
                                 extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert len(resp) == 100
-        assert resp[0]['name'] == u'name_1.jpg'
+        assert resp[0]['filename'] == u'name_1.jpg'
         assert resp[0]['id'] == files[0].id
 
         # Test the paginator GET params.
@@ -255,25 +283,25 @@ class TestFilesController(TestController):
                                 extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
-        assert resp['items'][0]['name'] == files[46].name
+        assert resp['items'][0]['filename'] == files[46].filename
 
         # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'File', 'orderByAttribute': 'name',
+        orderByParams = {'orderByModel': 'File', 'orderByAttribute': 'filename',
                      'orderByDirection': 'desc'}
         response = self.app.get(url('files'), orderByParams,
                         headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
-        resultSet = sorted([f.name for f in files], reverse=True)
-        assert resultSet == [f['name'] for f in resp]
+        resultSet = sorted([f.filename for f in files], reverse=True)
+        assert resultSet == [f['filename'] for f in resp]
         assert response.content_type == 'application/json'
 
         # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'File', 'orderByAttribute': 'name',
+        params = {'orderByModel': 'File', 'orderByAttribute': 'filename',
                      'orderByDirection': 'desc', 'itemsPerPage': 23, 'page': 3}
         response = self.app.get(url('files'), params,
                         headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
-        assert resultSet[46] == resp['items'][0]['name']
+        assert resultSet[46] == resp['items'][0]['filename']
 
         # The default viewer should only be able to see the odd numbered files,
         # even with a paginator.
@@ -286,11 +314,11 @@ class TestFilesController(TestController):
                                 extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert len(resp['items']) == itemsPerPage
-        assert resp['items'][0]['name'] == u'name_%d.jpg' % (
+        assert resp['items'][0]['filename'] == u'name_%d.jpg' % (
             ((itemsPerPage * (page - 1)) * 2) + 1)
 
         # Expect a 400 error when the orderByDirection param is invalid
-        orderByParams = {'orderByModel': 'File', 'orderByAttribute': 'name',
+        orderByParams = {'orderByModel': 'File', 'orderByAttribute': 'filename',
                      'orderByDirection': 'descending'}
         response = self.app.get(url('files'), orderByParams, status=400,
             headers=self.json_headers, extra_environ=extra_environ)
@@ -327,6 +355,10 @@ class TestFilesController(TestController):
     def test_create(self):
         """Tests that POST /files correctly creates a new file."""
 
+        ########################################################################
+        # base64-encoded file creation
+        ########################################################################
+
         # Pass some mal-formed JSON to test that a 400 error is returned.
         params = '"a'   # Bad JSON
         response = self.app.post(url('files'), params, self.json_headers,
@@ -339,15 +371,15 @@ class TestFilesController(TestController):
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.wav',
-            'file': encodestring(open(wavFilePath).read())
+            'filename': u'old_test.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
-        assert resp['name'] == u'old_test.wav'
+        assert resp['filename'] == u'old_test.wav'
         assert resp['MIMEtype'] == u'audio/x-wav'
         assert resp['size'] == wavFileSize
         assert resp['enterer']['firstName'] == u'Admin'
@@ -360,16 +392,16 @@ class TestFilesController(TestController):
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
-        fileId = resp['id']
-        assert resp['name'] == u'old_test.jpg'
+        fileId = anImageId = resp['id']
+        assert resp['filename'] == u'old_test.jpg'
         assert resp['MIMEtype'] == u'image/jpeg'
         assert resp['size'] == jpgFileSize
         assert resp['enterer']['firstName'] == u'Admin'
@@ -381,10 +413,12 @@ class TestFilesController(TestController):
         tag1.name = u'tag 1'
         tag2 = model.Tag()
         tag2.name = u'tag 2'
-        Session.add_all([tag1, tag2])
+        restrictedTag = h.generateRestrictedTag()
+        Session.add_all([tag1, tag2, restrictedTag])
         Session.commit()
         tag1Id = tag1.id
         tag2Id = tag2.id
+        restrictedTagId = restrictedTag.id
 
         # Then create a form to associate.
         params = self.createFormParams.copy()
@@ -401,8 +435,8 @@ class TestFilesController(TestController):
         # Now create the file with forms and tags
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64,
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64,
             'tags': [tag1Id, tag2Id],
             'forms': [formId]
         })
@@ -412,7 +446,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
         fileId = resp['id']
-        assert resp['name'][:9] == u'old_test_'
+        assert resp['filename'][:9] == u'old_test_'
         assert resp['MIMEtype'] == u'image/jpeg'
         assert resp['size'] == jpgFileSize
         assert resp['enterer']['firstName'] == u'Admin'
@@ -425,8 +459,8 @@ class TestFilesController(TestController):
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createParams.copy()
         params.update({
-            'name': u'',                    # empty; not allowed
-            'file': '',                     # empty; not allowed
+            'filename': u'',                    # empty; not allowed
+            'base64EncodedFile': '',        # empty; not allowed
             'utteranceType': u'l' * 1000,   # too long
             'dateElicited': '31/12/2012',   # wrong format
             'speaker': 200                  # invalid id
@@ -440,8 +474,8 @@ class TestFilesController(TestController):
             resp['errors']['utteranceType']
         assert resp['errors']['speaker'] == u'There is no speaker with id 200.'
         assert resp['errors']['dateElicited'] == u'Please enter a month from 1 to 12'
-        assert resp['errors']['name'] == u'Please enter a value'
-        assert resp['errors']['file']== u'Please enter a value'
+        assert resp['errors']['filename'] == u'Please enter a value'
+        assert resp['errors']['base64EncodedFile']== u'Please enter a value'
         assert fileCount == 3
         assert response.content_type == 'application/json'
 
@@ -452,21 +486,346 @@ class TestFilesController(TestController):
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createParams.copy()
         params.update({
-            'name': u'\u201Cold te\u0301st\u201D.wav',
-            'file': encodestring(open(wavFilePath).read())
+            'filename': u'\u201Cold te\u0301st\u201D.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read()),
+            'tags': [restrictedTagId]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        aWavFileId = resp['id']
+        fileCount = Session.query(model.File).count()
+        assert u'\u201Cold_te\u0301st\u201D.wav' in os.listdir(self.filesPath)
+        assert resp['filename'] == u'\u201Cold_te\u0301st\u201D.wav'
+        assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert fileCount == 4
+        assert restrictedTagId in [t['id'] for t in resp['tags']]
+        assert response.content_type == 'application/json'
+
+        # Attempt to create an illicit file type (.html) but with a valid
+        # extension (.wav).  Expect an error, i.e., validation detects that the
+        # file is really html, despite the misleading extension.
+        filesDirList = os.listdir(self.filesPath)
+        htmlFilePath = os.path.join(self.testFilesPath, 'illicit.html')
+        htmlFileBase64 = encodestring(open(htmlFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': u'pretend_its_wav.wav',
+            'base64EncodedFile': htmlFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        newFilesDirList = os.listdir(self.filesPath)
+        assert fileCount == 4
+        assert resp['errors'] == u"The file extension does not match the file's true type (audio/x-wav vs. text/html, respectively)."
+        assert filesDirList == newFilesDirList
+
+        ########################################################################
+        # multipart/form-data file creation
+        ########################################################################
+
+        # Upload a file using the multipart/form-data Content-Type and a POST
+        # request to /files.  Here we do not supply a filename POST param so the
+        # files controller creates one based on the path automatically included
+        # in filedata.  The controller removes the path separators of its os
+        # when it creates the filename; however path separators from a foreign os
+        # may remain in the generated filename.
+        response = self.app.post(url('/files'), extra_environ=self.extra_environ_admin,
+                                 upload_files=[('filedata', wavFilePath)])
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert resp['filename'] in os.listdir(self.filesPath)
+        assert resp['filename'][:8] == u'old_test'
+        assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert fileCount == 5
+        assert response.content_type == 'application/json'
+
+        # Upload a file using the multipart/form-data Content-Type and a POST
+        # request to /files.  Here we do supply a filename POST param.
+        params = {'filename': u'wavfile.wav'}
+        response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
+                                 upload_files=[('filedata', wavFilePath)])
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert u'wavfile.wav' in os.listdir(self.filesPath)
+        assert resp['filename'] == u'wavfile.wav'
+        assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert fileCount == 6
+        assert response.content_type == 'application/json'
+
+        # Upload using multipart/form-data and attempt to pass a malicious
+        # filename; the path separator should be removed from the filename.  If
+        # the separator were not removed, this filename could cause the file to
+        # be written to the parent directory of the files directory
+        params = {'filename': u'../wavfile.wav'}
+        response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
+            upload_files=[('filedata', wavFilePath)])
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        binaryFilesList = os.listdir(self.filesPath)
+        binaryFilesListCount = len(binaryFilesList)
+        assert u'..wavfile.wav' in binaryFilesList
+        assert resp['filename'] == u'..wavfile.wav'
+        assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert fileCount == 7
+        assert response.content_type == 'application/json'
+
+        # Upload using multipart/form-data and attempt to pass an invalid file
+        # type (.html) but with a valid extension (.wav).  Expect an error.
+        htmlFilePath = os.path.join(self.testFilesPath, 'illicit.html')
+        filesDirList = os.listdir(self.filesPath)
+        params = {'filename': u'pretend_its_wav.wav'}
+        response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
+            upload_files=[('filedata', htmlFilePath)], status=400)
+        resp = json.loads(response.body)
+        newFileCount = Session.query(model.File).count()
+        newFilesDirList = os.listdir(self.filesPath)
+        assert fileCount == newFileCount
+        assert resp['errors'] == u"The file extension does not match the file's true type (audio/x-wav vs. text/html, respectively)."
+        assert filesDirList == newFilesDirList
+
+        # Try the same as above but instead of providing a deceitful filename in
+        # the POST params, upload a file with a false extension.
+        htmlFilePath = os.path.join(self.testFilesPath, 'illicit.wav')
+        filesDirList = newFilesDirList
+        response = self.app.post(url('/files'), extra_environ=self.extra_environ_admin,
+            upload_files=[('filedata', htmlFilePath)], status=400)
+        resp = json.loads(response.body)
+        newFileCount = Session.query(model.File).count()
+        newFilesDirList = os.listdir(self.filesPath)
+        assert fileCount == newFileCount
+        assert resp['errors'] == u"The file extension does not match the file's true type (audio/x-wav vs. text/html, respectively)."
+        assert filesDirList == newFilesDirList
+
+        ########################################################################
+        # Subinterval-Referencing File
+        ########################################################################
+
+        # Create a subinterval-referencing audio file; reference one of the wav
+        # files created earlier.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': aWavFileId,
+            'name': u'subinterval_x',
+            'start': 1.3,
+            'end': 2.6
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
-        assert u'\u201Cold_te\u0301st\u201D.wav' in os.listdir(self.filesPath)
-        assert resp['name'] == u'\u201Cold_te\u0301st\u201D.wav'
+        newBinaryFilesList = os.listdir(self.filesPath)
+        newBinaryFilesListCount = len(newBinaryFilesList)
+        subintervalReferencingId = resp['id']
+        x = Session.query(model.File).get(subintervalReferencingId)
+        assert newBinaryFilesListCount == binaryFilesListCount
+        assert u'\u201Cold_te\u0301st\u201D.wav' in newBinaryFilesList
+        assert u'subinterval_x' not in newBinaryFilesList
+        assert resp['filename'] == None
+        assert resp['parentFile']['filename'] == u'\u201Cold_te\u0301st\u201D.wav'
+        assert resp['name'] == u'subinterval_x'
         assert resp['MIMEtype'] == u'audio/x-wav'
-        assert resp['size'] == wavFileSize
+        assert resp['size'] == None
+        assert resp['parentFile']['size'] == wavFileSize
         assert resp['enterer']['firstName'] == u'Admin'
-        assert fileCount == 4
+        assert resp['start'] == 1.3
+        assert type(resp['start']) is float
+        assert resp['end'] == 2.6
+        assert type(resp['end']) is float
+        assert fileCount == 8
         assert response.content_type == 'application/json'
+
+        # Attempt to create another subinterval-referencing audio file; fail
+        # because name is too long, parentFile is empty, start is not a number
+        # and end is unspecified
+        params = self.createParamsSR.copy()
+        params.update({
+            'name': u'subinterval_x' * 200,
+            'start': u'a',
+            'end': None
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert fileCount == 8   # unchanged
+        assert resp['errors']['parentFile'] == u'An id corresponding to an existing audio or video file must be provided.'
+        assert resp['errors']['start'] == u'Please enter a number'
+        assert resp['errors']['end'] == u'Please enter a value'
+        assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
+
+        # Attempt to create another subinterval-referencing audio file; fail
+        # because the contributor is not authorized to access the restricted parentFile.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': aWavFileId,
+            'name': u'subinterval_y',
+            'start': 3.75,
+            'end': 4.999
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_contrib, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert fileCount == 8
+        assert resp['errors']['parentFile'] == u'You are not authorized to access the file with id %d.' % aWavFileId
+
+        # Create another subinterval-referencing audio file; this one's parent is
+        # restricted.  Note that it does not itself become restricted.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': aWavFileId,
+            'name': u'i_not_restricted',
+            'start': 3.75,
+            'end': 4.999
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert fileCount == 9
+        assert resp['parentFile']['id'] == aWavFileId
+        assert u'restricted' not in [t['name'] for t in resp['tags']]
+
+        # Attempt to create another subinterval-referencing file; fail because
+        # the parent file is not an A/V file.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': anImageId,
+            'name': u'subinterval_y',
+            'start': 3.75,
+            'end': 4.999
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert fileCount == 9
+        assert resp['errors']['parentFile'] == u'File %d is not an audio or a video file.' % anImageId
+
+        # Attempt to create another subinterval-referencing file; fail because
+        # the parent file id is invalid
+        badId = 1000009252345345
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': badId,
+            'name': u'subinterval_y',
+            'start': 3.75,
+            'end': 4.999
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert fileCount == 9
+        assert resp['errors']['parentFile'] == u'There is no file with id %d.' % badId
+
+        # Attempt to create another subinterval-referencing file; fail because
+        # the parent file id is itself a subinterval-referencing file
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': subintervalReferencingId,
+            'name': u'subinterval_y',
+            'start': 3.75,
+            'end': 4.999
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert fileCount == 9
+        assert resp['errors']['parentFile'] == u'The parent file cannot itself be a subinterval-referencing file.'
+
+        # Attempt to create a subinterval-referencing audio file; fail because
+        # start >= end.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': aWavFileId,
+            'name': u'subinterval_z',
+            'start': 1.3,
+            'end': 1.3
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert response.content_type == 'application/json'
+        assert resp['errors'] == u'The start value must be less than the end value.'
+
+        ########################################################################
+        # externally hosted file creation
+        ########################################################################
+
+        # Create a valid externally hosted file
+        params = self.createParamsEH.copy()
+        url_ = 'http://vimeo.com/54144270'
+        params.update({
+            'url': url_,
+            'name': u'externally hosted file',
+            'MIMEtype': u'video/mpeg',
+            'description': u'A large video file I didn\'t want to upload here.'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['description'] == u'A large video file I didn\'t want to upload here.'
+        assert resp['url'] == url_
+
+        # Attempt to create an externally hosted file with invalid params
+        params = self.createParamsEH.copy()
+        url_ = 'http://vimeo.com/541442705414427054144270541442705414427054144270'  # Invalid url
+        params.update({
+            'url': url_,
+            'name': u'invalid externally hosted file',
+            'MIMEtype': u'video/gepm',      # invalid MIMEtype
+            'description': u'A large video file, sadly invalid.'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['MIMEtype'] == u'The file upload failed because the file type video/gepm is not allowed.'
+        assert resp['errors']['url'] == u'The server responded that the page could not be found'
+
+        # Attempt to create an externally hosted file with different invalid params
+        params = self.createParamsEH.copy()
+        params.update({
+            'url': u'',   # shouldn't be empty
+            'name': u'invalid externally hosted file' * 200,    # too long
+            'password': u'a87XS.1d9X837a001W2w3a87XS.1d9X837a001W2w3' * 200,    # too long
+            'description': u'A large video file, sadly invalid.'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['url'] == u'Please enter a value'
+        assert resp['errors']['password'] == u'Enter a value not more than 255 characters long'
+        assert resp['errors']['name'] ==  u'Enter a value not more than 255 characters long'
 
     #@nottest
     def test_relational_restrictions(self):
@@ -486,15 +845,15 @@ class TestFilesController(TestController):
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.wav',
-            'file': encodestring(open(wavFilePath).read())
+            'filename': u'old_test.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
                                  admin)
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
-        assert resp['name'] == u'old_test.wav'
+        assert resp['filename'] == u'old_test.wav'
         assert resp['MIMEtype'] == u'audio/x-wav'
         assert resp['size'] == wavFileSize
         assert resp['enterer']['firstName'] == u'Admin'
@@ -538,8 +897,8 @@ class TestFilesController(TestController):
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64,
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64,
             'forms': [restrictedFormId]
         })
         params = json.dumps(params)
@@ -556,8 +915,8 @@ class TestFilesController(TestController):
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64,
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64,
             'forms': [unrestrictedFormId]
         })
         params = json.dumps(params)
@@ -565,7 +924,7 @@ class TestFilesController(TestController):
                                  contrib)
         resp = json.loads(response.body)
         unrestrictedFileId = resp['id']
-        assert resp['name'] == u'old_test.jpg'
+        assert resp['filename'] == u'old_test.jpg'
         assert resp['forms'][0]['transcription'] == u'unrestricted'
 
         # Now, as a(n unrestricted) administrator, attempt to create a file and
@@ -576,15 +935,15 @@ class TestFilesController(TestController):
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64,
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64,
             'forms': [restrictedFormId]
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers, admin)
         resp = json.loads(response.body)
         indirectlyRestrictedFileId = resp['id']
-        assert resp['name'][:8] == u'old_test'
+        assert resp['filename'][:8] == u'old_test'
         assert resp['forms'][0]['transcription'] == u'restricted'
         assert u'restricted' in [t['name'] for t in resp['tags']]
 
@@ -598,14 +957,14 @@ class TestFilesController(TestController):
         # Now, as a(n unrestricted) administrator, create a file.
         unrestrictedFileParams = self.createParams.copy()
         unrestrictedFileParams.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64
         })
         params = json.dumps(unrestrictedFileParams)
         response = self.app.post(url('files'), params, self.json_headers, admin)
         resp = json.loads(response.body)
         unrestrictedFileId = resp['id']
-        assert resp['name'][:8] == u'old_test'
+        assert resp['filename'][:8] == u'old_test'
         assert response.content_type == 'application/json'
 
         # As a restricted contributor, attempt to update the unrestricted file
@@ -653,15 +1012,15 @@ class TestFilesController(TestController):
             wavFileSize = os.path.getsize(wavFilePath)
             params = self.createParams.copy()
             params.update({
-                'name': wavFileName,
-                'file': encodestring(open(wavFilePath).read())
+                'filename': wavFileName,
+                'base64EncodedFile': encodestring(open(wavFilePath).read())
             })
             params = json.dumps(params)
             response = self.app.post(url('files'), params, self.json_headers,
                                      self.extra_environ_admin)
             resp = json.loads(response.body)
             fileCount = Session.query(model.File).count()
-            assert resp['name'] == wavFileName
+            assert resp['filename'] == wavFileName
             assert resp['MIMEtype'] == u'audio/x-wav'
             assert resp['size'] == wavFileSize
             assert resp['enterer']['firstName'] == u'Admin'
@@ -697,7 +1056,8 @@ class TestFilesController(TestController):
             'tags': h.getTags(),
             'speakers': h.getSpeakers(),
             'users': h.getUsers(),
-            'utteranceTypes': h.utteranceTypes
+            'utteranceTypes': h.utteranceTypes,
+            'allowedFileTypes': h.allowedFileTypes
         }
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
@@ -712,6 +1072,7 @@ class TestFilesController(TestController):
         assert resp['speakers'] == data['speakers']
         assert resp['users'] == data['users']
         assert resp['utteranceTypes'] == data['utteranceTypes']
+        assert resp['allowedFileTypes'] == data['allowedFileTypes']
         assert response.content_type == 'application/json'
 
         # GET /new_file with params.  Param values are treated as strings, not
@@ -755,17 +1116,18 @@ class TestFilesController(TestController):
         Session.add_all([applicationSettings, restrictedTag])
         Session.commit()
         restrictedTag = h.getRestrictedTag()
+        restrictedTagId = restrictedTag.id
 
         # Create a file to update.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createParams.copy()
-        originalName = u'test_update_name.jpg'
+        originalName = u'test_update_name.wav'
         params.update({
-            'name': originalName,
+            'filename': originalName,
             'tags': [restrictedTag.id],
             'description': u'description',
-            'file': encodestring(open(wavFilePath).read())
+            'base64EncodedFile': encodestring(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -773,7 +1135,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         id = int(resp['id'])
         newFileCount = Session.query(model.File).count()
-        assert resp['name'] == originalName
+        assert resp['filename'] == originalName
         assert newFileCount == fileCount + 1
 
         # As a viewer, attempt to update the restricted file we just created.
@@ -826,6 +1188,7 @@ class TestFilesController(TestController):
         speaker = h.getSpeakers()[0]
         tag1Id = tag1.id
         tag2Id = tag2.id
+        speakerId = speaker.id
 
         # Now update our file by adding a many-to-one datum, viz. a speaker
         params = self.createParams.copy()
@@ -844,6 +1207,183 @@ class TestFilesController(TestController):
                                  extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert sorted([t['name'] for t in resp['tags']]) == [u'tag 1', u'tag 2']
+
+        ########################################################################
+        # Updating "Plain Files"
+        ########################################################################
+
+        # Create a file using the multipart/form-data POST method.
+        params = {'filename': u'multipart.wav'}
+        response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
+                                 upload_files=[('filedata', wavFilePath)])
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        plainFileId = resp['id']
+        assert resp['filename'] == u'multipart.wav'
+        assert resp['filename'] in os.listdir(self.filesPath)
+        assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert response.content_type == 'application/json'
+
+        # Update the plain file by adding some metadata.
+        params = self.createParams.copy()
+        params.update({
+            'tags': [tag1Id, tag2Id],
+            'description': u'plain updated',
+            'dateElicited': u'01/01/2000',
+            'speaker': speakerId,
+            'utteranceType': u'Metalanguage Utterance'
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('file', id=plainFileId), params, self.json_headers,
+                                 extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert sorted([t['name'] for t in resp['tags']]) == [u'tag 1', u'tag 2']
+        assert resp['description'] == u'plain updated'
+        assert resp['speaker']['id'] == speakerId
+        assert resp['filename'] == resp['name'] == u'multipart.wav'
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert response.content_type == 'application/json'
+
+        ########################################################################
+        # Update a subinterval-referencing file
+        ########################################################################
+
+        # Create a subinterval-referencing audio file; reference one of the wav
+        # files created earlier.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': plainFileId,
+            'name': u'anyname',
+            'start': 13.3,
+            'end': 26.89,
+            'tags': [tag1Id],
+            'description': u'subinterval-referencing file',
+            'dateElicited': u'01/01/2000',
+            'speaker': speakerId,
+            'utteranceType': u'Object Language Utterance'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        subintervalReferencingId = resp['id']
+        assert resp['filename'] == None
+        assert resp['name'] == u'anyname'
+        assert resp['parentFile']['filename'] == u'multipart.wav'
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == None
+        assert resp['parentFile']['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Contributor'
+        assert resp['start'] == 13.3
+        assert type(resp['start']) is float
+        assert resp['end'] == 26.89
+        assert type(resp['end']) is float
+        assert resp['tags'][0]['id'] == tag1Id
+        assert response.content_type == 'application/json'
+
+        # Update the subinterval-referencing file.
+        params = self.createParams.copy()
+        params.update({
+            'parentFile': plainFileId,
+            'name': u'anyname',
+            'start': 13.3,
+            'end': 26.89,
+            'tags': [],
+            'description': u'abc to def',
+            'dateElicited': u'01/01/2010',
+            'utteranceType': u'Metalanguage Utterance'
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('file', id=subintervalReferencingId), params, self.json_headers,
+                                 extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        assert resp['parentFile']['id'] == plainFileId
+        assert resp['tags'] == []
+        assert resp['description'] == u'abc to def'
+        assert resp['speaker'] == None
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert response.content_type == 'application/json'
+
+        # Attempt a vacuous update and expect an error message.
+        response = self.app.put(url('file', id=subintervalReferencingId), params, self.json_headers,
+                                 extra_environ=self.extra_environ_contrib, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'The update request failed because the submitted data were not new.'
+
+        # Now restrict the parent file and verify that the child file does not
+        # thereby become restricted.  This means that the metadata of a restricted
+        # parent file may accessible to restricted users via the child file;
+        # however, this is ok since the retrieve action still will not allow
+        # the contents of the restricted file to be served to the restricted users.
+        params = self.createParams.copy()
+        params.update({
+            'tags': [tag1Id, tag2Id, restrictedTagId],
+            'description': u'plain updated',
+            'dateElicited': u'01/01/2000',
+            'speaker': speakerId,
+            'utteranceType': u'Metalanguage Utterance'
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('file', id=plainFileId), params,
+                    self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert u'restricted' in [t['name'] for t in resp['tags']]
+
+        SRFile = Session.query(model.File).get(subintervalReferencingId)
+        assert u'restricted' not in [t.name for t in SRFile.tags]
+
+        ########################################################################
+        # externally hosted file creation
+        ########################################################################
+
+        # Create a valid externally hosted file
+        url_ = 'http://vimeo.com/54144270'
+        params = self.createParamsEH.copy()
+        params.update({
+            'url': url_,
+            'name': u'externally hosted file',
+            'MIMEtype': u'video/mpeg',
+            'description': u'A large video file I didn\'t want to upload here.'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['description'] == u'A large video file I didn\'t want to upload here.'
+        assert resp['url'] == url_
+
+        # Update the externally hosted file
+        params = self.createParamsEH.copy()
+        params.update({
+            'url': url_,
+            'name': u'externally hosted file',
+            'MIMEtype': u'video/mpeg',
+            'description': u'A large video file I didn\'t want to upload here.',
+            'dateElicited': u'12/29/1987'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['dateElicited'] == u'1987-12-29'
+
+        # Attempt to update the externally hosted file with invalid params.
+        params = self.createParamsEH.copy()
+        params.update({
+            'url': u'abc',      # Invalid
+            'name': u'externally hosted file' * 200,    # too long
+            'MIMEtype': u'zooboomafoo',                 # invalid
+            'description': u'A large video file I didn\'t want to upload here.',
+            'dateElicited': u'1987/12/29'               # wrong format
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['MIMEtype'] == u'The file upload failed because the file type zooboomafoo is not allowed.'
+        assert resp['errors']['url'] == u'You must provide a full domain name (like abc.com)'
+        assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
+        assert resp['errors']['dateElicited'] == u'Please enter the date in the form mm/dd/yyyy'
 
     #@nottest
     def test_delete(self):
@@ -879,8 +1419,8 @@ class TestFilesController(TestController):
                          'test.applicationSettings': True}
         params = self.createParams.copy()
         params.update({
-            'name': u'test_delete.jpg',
-            'file': encodestring(open(jpgFilePath).read()),
+            'filename': u'test_delete.jpg',
+            'base64EncodedFile': encodestring(open(jpgFilePath).read()),
             'speaker': speakerId,
             'tags': [tagId]
         })
@@ -889,8 +1429,8 @@ class TestFilesController(TestController):
                                  extra_environ)
         resp = json.loads(response.body)
         toDeleteId = resp['id']
-        toDeleteName = resp['name']
-        assert resp['name'] == u'test_delete.jpg'
+        toDeleteName = resp['filename']
+        assert resp['filename'] == u'test_delete.jpg'
         assert resp['tags'][0]['name'] == u'default tag'
 
         # Now count the files
@@ -934,7 +1474,7 @@ class TestFilesController(TestController):
         assert not os.path.exists(filePath)
         assert 'old_test.jpg' not in os.listdir(self.filesPath)
         assert fileThatWasDeleted is None
-        assert resp['name'] == u'test_delete.jpg'
+        assert resp['filename'] == u'test_delete.jpg'
 
         # Delete with an invalid id
         id = 9999999999999
@@ -955,8 +1495,8 @@ class TestFilesController(TestController):
                          'test.applicationSettings': True}
         params = self.createParams.copy()
         params.update({
-            'name': u'\u201Cte\u0301st delete\u201D.wav',
-            'file': encodestring(open(jpgFilePath).read()),
+            'filename': u'\u201Cte\u0301st delete\u201D.jpg',
+            'base64EncodedFile': encodestring(open(jpgFilePath).read()),
             'speaker': speakerId,
             'tags': [tagId]
         })
@@ -964,13 +1504,56 @@ class TestFilesController(TestController):
         response = self.app.post(url('files'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
         toDeleteId = resp['id']
-        toDeleteName = resp['name']
-        assert resp['name'] == u'\u201Cte\u0301st_delete\u201D.wav'
+        toDeleteName = resp['filename']
+        assert resp['filename'] == u'\u201Cte\u0301st_delete\u201D.jpg'
         assert resp['tags'][0]['name'] == u'default tag'
-        assert u'\u201Cte\u0301st_delete\u201D.wav' in os.listdir(self.filesPath)
+        assert u'\u201Cte\u0301st_delete\u201D.jpg' in os.listdir(self.filesPath)
         response = self.app.delete(url('file', id=toDeleteId), extra_environ=extra_environ)
         resp = json.loads(response.body)
-        assert u'\u201Cte\u0301st_delete\u201D.wav' not in os.listdir(self.filesPath)
+        assert u'\u201Cte\u0301st_delete\u201D.jpg' not in os.listdir(self.filesPath)
+
+        # Create a file, create a subinterval-referencing file that references
+        # it and then delete the parent file.  Show that the child files become
+        # "orphaned" but are not deleted.  Use case: user has uploaded an incorrect
+        # parent file; must delete parent file, create a new one and then update
+        # child files' parentFile attribute.
+
+        # Create the parent WAV file.
+        wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
+        params = self.createParams.copy()
+        params.update({
+            'filename': u'parent.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read())
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        parentId = resp['id']
+
+        # Create a subinterval-referencing audio file; reference one of the wav
+        # files created earlier.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': parentId,
+            'name': u'child',
+            'start': 1,
+            'end': 2,
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        childId = resp['id']
+        assert resp['parentFile']['id'] == parentId
+
+        # Show that the child file still exists after the parent has been deleted.
+        response = self.app.delete(url('file', id=parentId), extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['filename'] == u'parent.wav'
+        parent = Session.query(model.File).get(parentId)
+        assert parent is None
+        child = Session.query(model.File).get(childId)
+        assert child is not None
+        assert child.parentFile is None
 
     #@nottest
     def test_show(self):
@@ -984,8 +1567,8 @@ class TestFilesController(TestController):
         jpgFileSize = os.path.getsize(jpgFilePath)
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': encodestring(open(jpgFilePath).read())
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': encodestring(open(jpgFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -993,7 +1576,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
         fileId = resp['id']
-        assert resp['name'] == u'old_test.jpg'
+        assert resp['filename'] == u'old_test.jpg'
         assert resp['MIMEtype'] == u'image/jpeg'
         assert resp['size'] == jpgFileSize
         assert resp['enterer']['firstName'] == u'Admin'
@@ -1016,14 +1599,14 @@ class TestFilesController(TestController):
         assert resp['glosses'][0]['gloss'] == u'test'
         assert resp['morphemeBreakIDs'] == None
         assert resp['enterer']['firstName'] == u'Admin'
-        assert resp['files'][0]['name'] == u'old_test.jpg'
+        assert resp['files'][0]['filename'] == u'old_test.jpg'
 
         # GET the image file and make sure we see the associated form.
         response = self.app.get(url('file', id=fileId), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['forms'][0]['transcription'] == u'test'
-        assert resp['name'] == u'old_test.jpg'
+        assert resp['filename'] == u'old_test.jpg'
         assert response.content_type == 'application/json'
 
         # Invalid id
@@ -1073,8 +1656,8 @@ class TestFilesController(TestController):
                          'test.applicationSettings': True}
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.wav',
-            'file': encodestring(open(wavFilePath).read()),
+            'filename': u'old_test.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read()),
             'tags': [h.getTags()[0].id]    # the restricted tag should be the only one
         })
         params = json.dumps(params)
@@ -1154,8 +1737,8 @@ class TestFilesController(TestController):
                          'test.applicationSettings': True}
         params = self.createParams.copy()
         params.update({
-            'name': u'old_test.wav',
-            'file': encodestring(open(wavFilePath).read()),
+            'filename': u'old_test.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read()),
             'tags': [restrictedTag.id]
         })
         params = json.dumps(params)
@@ -1197,7 +1780,7 @@ class TestFilesController(TestController):
         response = self.app.get(url('edit_file', id=restrictedFileId),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resp['file']['name'] == u'old_test.wav'
+        assert resp['file']['filename'] == u'old_test.wav'
         assert response.content_type == 'application/json'
 
         # Valid id with GET params.  Param values are treated as strings, not
@@ -1281,8 +1864,8 @@ class TestFilesController(TestController):
         wavFileBase64 = encodestring(open(wavFilePath).read())
         params = self.createParams.copy()
         params.update({
-            'name': wavFileName,
-            'file': wavFileBase64,
+            'filename': wavFileName,
+            'base64EncodedFile': wavFileBase64,
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -1293,9 +1876,6 @@ class TestFilesController(TestController):
         response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         responseBase64 = encodestring(response.body)
-        #log.debug('len wavFileBase64: %d' % len(wavFileBase64))
-        #log.debug('len responseBase64: %d' % len(responseBase64))
-        #log.debug('response.body: %s' % response.body)
         assert wavFileBase64 == responseBase64
         assert guess_type(wavFileName)[0] == response.headers['Content-Type']
         assert wavFileSize == int(response.headers['Content-Length'])

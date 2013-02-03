@@ -2,6 +2,8 @@
 
 import simplejson as json
 import datetime
+import logging
+log = logging.getLogger(__name__)
 
 class Model(object):
     """The Model class holds methods needed (potentially) by all models.  All
@@ -49,7 +51,7 @@ class Model(object):
         return self.getDictFromModel(tag, ['id', 'name'])
 
     def getMiniFileDict(self, file):
-        return self.getDictFromModel(file, ['id', 'name', 'MIMEtype', 'size', 'embeddedFileMarkup'])
+        return self.getDictFromModel(file, ['id', 'name', 'filename', 'MIMEtype', 'size', 'url'])
 
     def getMiniOrthographyDict(self, orthography):
         return self.getDictFromModel(orthography,

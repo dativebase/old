@@ -1,7 +1,7 @@
 from formencode import variabledecode, All
 from formencode.schema import Schema
 from formencode.validators import Invalid, FancyValidator, Int, DateConverter, \
-    UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL
+    UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL, Number
 from formencode.foreach import ForEach
 from formencode.api import NoDefault
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
@@ -15,6 +15,10 @@ import logging
 from base64 import b64decode
 import os, re
 import simplejson as json
+try:
+    from magic import Magic
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -314,11 +318,11 @@ class FormIdsSchemaNullable(Schema):
 ################################################################################
 
 class ValidBase64EncodedFile(String):
-    """Validator for the 'file' attribute of a file create request."""
+    """Validator for the base64EncodedFile attribute of a file create request."""
 
-    messages = {u'invalid_base64_encoded_file':
-                u'The uploaded file must be base64 encoded.'}
-
+    messages = {
+        'invalid_base64_encoded_file': u'The uploaded file must be base64 encoded.'
+    }
     def _to_python(self, value, state):
         try:
             return b64decode(value)
@@ -327,18 +331,18 @@ class ValidBase64EncodedFile(String):
 
 class ValidFileName(UnicodeString):
     """Ensures that the filename of the file to be uploaded has a valid extension
-    given the allowed file types listed in lib/utils.py.
+    given the allowed file types listed in lib/utils.py.  The 
     """
 
-    messages = {u'invalid_file_name':
-                u'The file upload failed because the file type is not allowed.'}
+    messages = {u'invalid_type':
+                u'The file upload failed because the file type %(MIMEtype)s is not allowed.'}
 
     def _to_python(self, value, state):
-        if h.guess_type(value)[0] in h.allowedFileTypes:
-            return value.replace(os.sep, '_').replace("'", "").replace(
-                '"', '').replace(' ', '_')
+        MIMEtypeFromExt = h.guess_type(value)[0]
+        if MIMEtypeFromExt in h.allowedFileTypes:
+            return h.cleanAndSecureFilename(value)
         else:
-            raise Invalid(self.message('invalid_file_name', state), value, state)
+            raise Invalid(self.message('invalid_type', state, MIMEtype=MIMEtypeFromExt), value, state)
 
 class FileUpdateSchema(Schema):
     """FileUpdateSchema is a Schema for validating the data input upon a file
@@ -349,22 +353,140 @@ class FileUpdateSchema(Schema):
 
     description = UnicodeString()
     utteranceType = OneOf(h.utteranceTypes)
-    embeddedFileMarkup = UnicodeString()
-    embeddedFilePassword = UnicodeString(max=255)
     speaker = ValidOLDModelObject(modelName='Speaker')
     elicitor = ValidOLDModelObject(modelName='User')
     tags = ForEach(ValidOLDModelObject(modelName='Tag'))
     forms = ForEach(ValidOLDModelObject(modelName='Form'))
     dateElicited = DateConverter(month_style='mm/dd/yyyy')
 
-class FileCreateSchema(FileUpdateSchema):
-    """FileCreateSchema is a Schema for validating the data input upon a file
-    create request.  The file data and name can only be specified on the create
-    request.
+class AddMIMEtypeToValues(FancyValidator):
+    """Guesses the MIMEtype based on the file contents and name and sets the
+    MIMEtype key in values.  If python-magic is installed, the system will guess
+    the type from the file contents and an error will be raised if the filename
+    extension is inaccurate.
     """
-    file = ValidBase64EncodedFile(not_empty=True)
-    name = ValidFileName(not_empty=True, max=255)
+    messages = {
+        'mismatched_type': u'The file extension does not match the file\'s true type (%(x)s vs. %(y)s, respectively).'
+    }
+    def _to_python(self, values, state):
+        MIMEtypeFromFilename = h.guess_type(values['filename'])[0]
+        if 'base64EncodedFile' in values:
+            contents = values['base64EncodedFile'][:1024]
+        else:
+            contents = values['filedataFirstKB']
+        try:
+            MIMEtypeFromContents = Magic(mime=True).from_buffer(contents)
+            if MIMEtypeFromContents != MIMEtypeFromFilename:
+                raise Invalid(self.message('mismatched_type', state,
+                    x=MIMEtypeFromFilename, y=MIMEtypeFromContents), values, state)
+        except (NameError, KeyError):
+            pass    # NameError because Magic is not installed; KeyError because PlainFile validation will lack a base64EncodedFile key
+        values['MIMEtype'] = unicode(MIMEtypeFromFilename)
+        return values
 
+class FileCreateWithBase64EncodedFiledataSchema(FileUpdateSchema):
+    """Schema for validating the data input upon a file create request where a
+    base64EncodedFile attribute is present in the JSON request params.  The
+    base64EncodedFile and filename attributes can only be specified on the create
+    request (i.e., not on the update request).
+    """
+    chained_validators = [AddMIMEtypeToValues()]
+    base64EncodedFile = ValidBase64EncodedFile(not_empty=True)
+    filename = ValidFileName(not_empty=True, max=255)
+    MIMEtype = UnicodeString()
+
+class FileCreateWithFiledataSchema(Schema):
+    """Schema for validating the data input upon a file create request where the
+    Content-Type is 'multipart/form-data'.  Here we just verify that the filename
+    is licit.
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    chained_validators = [AddMIMEtypeToValues()]
+    filename = ValidFileName(not_empty=True, max=255)
+    filedataFirstKB = String()
+
+class ValidAudioVideoFile(FancyValidator):
+    """Validator for input values that are integer ids (i.e., primary keys) of
+    OLD File objects representing audio or video files.  Note that the referenced
+    A/V file must *not* itself be a subinterval-referencing file.
+    """
+
+    messages = {
+        'invalid_file': u'There is no file with id %(id)d.',
+        'restricted_file': u'You are not authorized to access the file with id %(id)d.',
+        'not_av': u'File %(id)d is not an audio or a video file.',
+        'empty': u'An id corresponding to an existing audio or video file must be provided.',
+        'ref_ref': u'The parent file cannot itself be a subinterval-referencing file.'
+    }
+
+    def _to_python(self, value, state):
+        if value in [u'', None]:
+            raise Invalid(self.message('empty', state), value, state)
+        else:
+            id = Int().to_python(value, state)
+            fileObject = Session.query(model.File).get(id)
+            if fileObject is None:
+                raise Invalid(self.message("invalid_file", state, id=id), value, state)
+            else:
+                if h.isAudioVideoFile(fileObject):
+                    if fileObject.parentFile is None:
+                        unrestrictedUsers = h.getUnrestrictedUsers()
+                        if h.userIsAuthorizedToAccessModel(state.user, fileObject, unrestrictedUsers):
+                            return fileObject
+                        else:
+                            raise Invalid(self.message("restricted_file", state, id=id),
+                                          value, state)
+                    else:
+                        raise Invalid(self.message('ref_ref', state, id=id), value, state)
+                else:
+                    raise Invalid(self.message('not_av', state, id=id), value, state)
+
+class ValidSubinterval(FancyValidator):
+    """Validator ensures that the float/int value of the 'start' key is less
+    than the float/int value of the 'end' key.  These values are also converted
+    to floats.
+    """
+    messages = {
+        'invalid': u'The start value must be less than the end value.',
+        'not_numbers': u'The start and end values must be numbers.'
+    }
+    def _to_python(self, values, state):
+        if type(values['start']) not in (int, float) or \
+        type(values['end']) not in (int, float):
+            raise Invalid(self.message('not_numbers', state), values, state)
+        values['start'] == float(values['start'])
+        values['end'] == float(values['end'])
+        if values['start'] < values['end']:
+            return values
+        else:
+            raise Invalid(self.message('invalid', state), values, state)
+
+class FileSubintervalReferencingSchema(FileUpdateSchema):
+    """Validates input for subinterval-referencing file creation and update
+    requests.
+    """
+    chained_validators = [ValidSubinterval()]
+    name = UnicodeString(max=255)
+    parentFile = ValidAudioVideoFile(not_empty=True)
+    start = Number(not_empty=True)
+    end = Number(not_empty=True)
+
+class ValidMIMEtype(FancyValidator):
+    """Validator ensures that the user-supplied MIMEtype value is one of those
+    listed in hallowedFileTypes.
+    """
+    messages = {u'invalid_type': u'The file upload failed because the file type %(MIMEtype)s is not allowed.'}
+    def validate_python(self, value, state):
+        if value not in h.allowedFileTypes:
+            raise Invalid(self.message('invalid_type', state, MIMEtype=value), value, state)
+
+class FileExternallyHostedSchema(FileUpdateSchema):
+    """Validates input for files whose content is hosted elsewhere."""
+    name = UnicodeString(max=255)
+    url = URL(not_empty=True, check_exists=True)
+    password = UnicodeString(max=255)
+    MIMEtype = ValidMIMEtype()
 
 ################################################################################
 # Collection Schemata

@@ -361,8 +361,8 @@ class TestOldcollectionsController(TestController):
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createFileParams.copy()
         params.update({
-            'name': u'old_test.wav',
-            'file': encodestring(open(wavFilePath).read())
+            'filename': u'old_test.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -375,8 +375,8 @@ class TestOldcollectionsController(TestController):
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
         params = self.createFileParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -787,8 +787,8 @@ class TestOldcollectionsController(TestController):
         wavFileBase64 = encodestring(open(wavFilePath).read())
         params = self.createFileParams.copy()
         params.update({
-            'name': u'restrictedFile.wav',
-            'file': wavFileBase64,
+            'filename': u'restrictedFile.wav',
+            'base64EncodedFile': wavFileBase64,
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -798,8 +798,8 @@ class TestOldcollectionsController(TestController):
 
         params = self.createFileParams.copy()
         params.update({
-            'name': u'unrestrictedFile.wav',
-            'file': wavFileBase64
+            'filename': u'unrestrictedFile.wav',
+            'base64EncodedFile': wavFileBase64
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers, admin)
@@ -1224,8 +1224,8 @@ class TestOldcollectionsController(TestController):
         wavFileSize = os.path.getsize(wavFilePath)
         params = self.createFileParams.copy()
         params.update({
-            'name': u'old_test.wav',
-            'file': encodestring(open(wavFilePath).read())
+            'filename': u'old_test.wav',
+            'base64EncodedFile': encodestring(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -1238,8 +1238,8 @@ class TestOldcollectionsController(TestController):
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
         params = self.createFileParams.copy()
         params.update({
-            'name': u'old_test.jpg',
-            'file': jpgFileBase64
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
