@@ -10,6 +10,7 @@ I altered the global valid_methods tuple of webtest.lint at runtime by adding a
 """
 
 import re
+import time
 from old.tests import *
 from nose.tools import nottest
 import simplejson as json
@@ -19,7 +20,6 @@ import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
 import webtest
-
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +99,8 @@ def createTestForms(n=100):
             fi = testModels['files'][i - 1]
             f.files.append(fi)
             contributor.rememberedForms.append(f)
+        #if (i -1) == 73:
+        #    f.files.append(testModels['files'][70])
         if i > 50:
             f.elicitor = contributor
             if i != 100:
@@ -464,7 +466,6 @@ class TestFormsSearchController(TestController):
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
         assert resp['errors']['Form.tags.regex'] == u'The relation regex is not permitted for Form.tags'
 
         # model.Form.glosses.like('gloss') will raise a custom OLDSearchParseError
@@ -519,8 +520,8 @@ class TestFormsSearchController(TestController):
         query = {'query': {'filter': [
             'and', [
                 ['Form', 'transcription', 'like', u'%1%'],
-                ['Form', 'elicitor', '=', contributor.id],
-                ['Form', 'elicitationMethod', '=', models['elicitationMethods'][49].id]
+                ['Form', 'elicitor', 'id', '=', contributor.id],
+                ['Form', 'elicitationMethod', 'id', '=', models['elicitationMethods'][49].id]
             ]
         ]}}
         jsonQuery = json.dumps(query)
@@ -584,7 +585,7 @@ class TestFormsSearchController(TestController):
             'or', [
                 ['Form', 'transcription', 'like', u'%2%'],    # 19; Total: 19
                 ['Form', 'transcription', 'like', u'%1%'],    # 18 (20 but '12' and '21' shared with '2'); Total: 37
-                ['Form', 'elicitor', '=', contributor.id]   # 39 (50 but 11 shared with '2' and '1'); Total: 76
+                ['Form', 'elicitor', 'id', '=', contributor.id]   # 39 (50 but 11 shared with '2' and '1'); Total: 76
             ]
         ]}}
         jsonQuery = json.dumps(query)
@@ -1035,14 +1036,14 @@ class TestFormsSearchController(TestController):
 
         # = int
         jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'enterer', '=', contributor.id]}})
+            {'query': {'filter': ['Form', 'enterer', 'id', '=', contributor.id]}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'speaker', '=', testModels['speakers'][0].id]}})
+            ['Form', 'speaker', 'id', '=', testModels['speakers'][0].id]}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1050,7 +1051,7 @@ class TestFormsSearchController(TestController):
 
         # in array of ints
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'speaker', 'in', [s.id for s in testModels['speakers']]]}})
+            ['Form', 'speaker', 'id', 'in', [s.id for s in testModels['speakers']]]}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1058,7 +1059,7 @@ class TestFormsSearchController(TestController):
 
         # <
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'elicitationMethod', '<', 56]}})
+            ['Form', 'elicitationMethod', 'id', '<', 56]}})
         expectedForms = [f for f in forms if f.elicitationmethod_id < 56]
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
@@ -1067,15 +1068,15 @@ class TestFormsSearchController(TestController):
 
         # regex
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'elicitationMethod', 'regex', '5']}})
-        expectedForms = [f for f in forms if '5' in str(f.elicitationmethod_id)]
+            ['Form', 'elicitationMethod', 'name', 'regex', '5']}})
+        expectedForms = [f for f in forms if '5' in f.elicitationMethod.name]
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len(expectedForms)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'elicitationMethod', 'regex', '[56]']}})
+            ['Form', 'elicitationMethod', 'id', 'regex', '[56]']}})
         expectedForms = [f for f in forms 
             if '5' in str(f.elicitationmethod_id) or '6' in str(f.elicitationmethod_id)] 
         response = self.app.post(url('/forms/search'), jsonQuery,
@@ -1085,11 +1086,36 @@ class TestFormsSearchController(TestController):
 
         # like
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'syntacticCategory', 'like', '%5%']}})
-        expectedForms = [f for f in forms if '5' in str(f.syntacticcategory_id)]
+            ['Form', 'syntacticCategory', 'name', 'like', '%5%']}})
+        expectedForms = [f for f in forms if '5' in f.syntacticCategory.name]
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
+        assert len(resp) == len(expectedForms)
+
+        # Show how we can search things other than ids
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'syntacticCategory', 'name', 'like', '%5%']}})
+        expectedForms = [f for f in forms if '5' in f.syntacticCategory.name]
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp
+        assert len(resp) == len(expectedForms)
+        assert response.content_type == 'application/json'
+
+        # Searching for the presence/absence of a many-to-one relation
+        jsonQuery = json.dumps({'query': {'filter': ['Form', 'source', '!=', None]}})
+        expectedForms = [f for f in forms if f.source]
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp
+        assert len(resp) == len(expectedForms)
+        jsonQuery = json.dumps({'query': {'filter': ['Form', 'source', '=', None]}})
+        expectedForms = [f for f in forms if not f.source]
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp
         assert len(resp) == len(expectedForms)
 
     #@nottest
@@ -1099,6 +1125,14 @@ class TestFormsSearchController(TestController):
         # gloss.gloss =
         jsonQuery = json.dumps({'query': {'filter':
             ['Gloss', 'gloss', '=', 'gloss 1']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+
+        # gloss.gloss = (with any())
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'glosses', 'gloss', '=', 'gloss 1']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1153,13 +1187,22 @@ class TestFormsSearchController(TestController):
         assert len(resp) == 99
 
         # To search for the presence/absence of glosses, one must use the
-        # glosses attribute of the Form model.
+        # glosses attribute of the Form model, =/!= and None.
         jsonQuery = json.dumps({'query': {'filter':
             ['Form', 'glosses', '=', None]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
+
+        # Using an empty list to test for presence of glosses fails too.
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'glosses', '=', []]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['InvalidRequestError'] == \
+            u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
         jsonQuery = json.dumps({'query': {'filter':
             ['Form', 'glosses', '!=', None]}})
@@ -1185,7 +1228,7 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-        # Search based on two distinct glosses (only Form #79 has two)
+        # Search based on two distinct glosses (only Form #79 has two) ...
         jsonQuery = json.dumps({'query': {'filter':
             ['and', [
                 ['Gloss', 'gloss', '=', 'gloss 79'],
@@ -1194,11 +1237,22 @@ class TestFormsSearchController(TestController):
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
+
         # ... one is ungrammatical, the other is unspecified
         jsonQuery = json.dumps({'query': {'filter':
             ['and', [
                 ['Gloss', 'glossGrammaticality', '=', '*'],
                 ['Gloss', 'glossGrammaticality', '=', None]]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 1
+
+        # Same search as above but using has()
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [
+                ['Form', 'glosses', 'glossGrammaticality', '=', '*'],
+                ['Form', 'glosses', 'glossGrammaticality', '=', None]]]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1226,6 +1280,14 @@ class TestFormsSearchController(TestController):
         # file.name regexp
         jsonQuery = json.dumps({'query': {'filter':
             ['File', 'name', 'regex', 'name [67]']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 14
+
+        # Same regexp on file.name as above exceupt using the SQLA ORM's any()
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'files', 'name', 'regex', 'name [67]']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1459,7 +1521,7 @@ class TestFormsSearchController(TestController):
                     ['Form', 'datetimeModified', '>', yesterdayTimestamp.isoformat()],
                     ['not', ['Form', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
                     ['and', [
-                        ['Form', 'enterer', 'regex', '[135680]'],
+                        ['Form', 'enterer', 'id', 'regex', '[135680]'],
                         ['Form', 'id', '<', 90]
                     ]]
                 ]],

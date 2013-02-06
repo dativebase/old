@@ -532,8 +532,8 @@ class TestFormsSearchController(TestController):
         query = {'query': {'filter': [
             'and', [
                 ['File', 'name', 'like', u'%1%'],
-                ['File', 'elicitor', '=', contributor.id],
-                ['File', 'speaker', '=', models['speakers'][3]['id']]
+                ['File', 'elicitor', 'id', '=', contributor.id],
+                ['File', 'speaker', 'id', '=', models['speakers'][3]['id']]
             ]
         ]}}
         jsonQuery = json.dumps(query)
@@ -603,7 +603,7 @@ class TestFormsSearchController(TestController):
             'or', [
                 ['File', 'name', 'like', u'%2%'],
                 ['File', 'name', 'like', u'%1%'],
-                ['File', 'elicitor', '=', contributor.id]
+                ['File', 'elicitor', 'id', '=', contributor.id]
             ]
         ]}}
         jsonQuery = json.dumps(query)
@@ -1108,7 +1108,7 @@ class TestFormsSearchController(TestController):
 
         # = int
         jsonQuery = json.dumps(
-            {'query': {'filter': ['File', 'enterer', '=', contributor.id]}})
+            {'query': {'filter': ['File', 'enterer', 'id', '=', contributor.id]}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1116,7 +1116,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', '=', testModels['speakers'][0]['id']]}})
+            ['File', 'speaker', 'id', '=', testModels['speakers'][0]['id']]}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1126,7 +1126,7 @@ class TestFormsSearchController(TestController):
 
         # in array of ints
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'in', [s['id'] for s in testModels['speakers']]]}})
+            ['File', 'speaker', 'id', 'in', [s['id'] for s in testModels['speakers']]]}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1136,7 +1136,7 @@ class TestFormsSearchController(TestController):
 
         # <
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', '<', 15]}})
+            ['File', 'speaker', 'id', '<', 15]}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1146,7 +1146,7 @@ class TestFormsSearchController(TestController):
 
         # regex
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'regex', '5']}})
+            ['File', 'speaker', 'id', 'regex', '5']}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1155,7 +1155,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'regex', '[56]']}})
+            ['File', 'speaker', 'id', 'regex', '[56]']}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1165,7 +1165,7 @@ class TestFormsSearchController(TestController):
 
         # like
         jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'speaker', 'like', '%5%']}})
+            ['File', 'speaker', 'id', 'like', '%5%']}})
         response = self.app.post(url('/files/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1352,7 +1352,7 @@ class TestFormsSearchController(TestController):
                     ['File', 'datetimeEntered', '<', todayTimestamp.isoformat()],
                     ['not', ['File', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
                     ['and', [
-                        ['File', 'enterer', 'regex', '[135680]'],
+                        ['File', 'enterer', 'id', 'regex', '[135680]'],
                         ['File', 'id', '<', 90]
                     ]]
                 ]],

@@ -1289,7 +1289,7 @@ def getSearchParameters(queryBuilder):
     relevant to searching.
     """
     return {
-        'attributes': queryBuilder.models2attributes[queryBuilder.modelName],
+        'attributes': queryBuilder.schema[queryBuilder.modelName],
         'relations': queryBuilder.relations
     }
 

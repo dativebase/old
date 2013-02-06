@@ -648,7 +648,7 @@ class TestFormsSearchController(TestController):
             'or', [
                 ['Collection', 'title', 'like', u'%2%'],
                 ['Collection', 'title', 'like', u'%1%'],
-                ['Collection', 'elicitor', '=', contributor.id]
+                ['Collection', 'elicitor', 'id', '=', contributor.id]
             ]
         ]}}
         jsonQuery = json.dumps(query)
@@ -1153,7 +1153,7 @@ class TestFormsSearchController(TestController):
 
         # = int
         jsonQuery = json.dumps(
-            {'query': {'filter': ['Collection', 'enterer', '=', contributor.id]}})
+            {'query': {'filter': ['Collection', 'enterer', 'id', '=', contributor.id]}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1161,7 +1161,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['Collection', 'speaker', '=', testModels['speakers'][0]['id']]}})
+            ['Collection', 'speaker', 'id', '=', testModels['speakers'][0]['id']]}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1171,7 +1171,7 @@ class TestFormsSearchController(TestController):
 
         # in array of ints
         jsonQuery = json.dumps({'query': {'filter':
-            ['Collection', 'speaker', 'in', [s['id'] for s in testModels['speakers']]]}})
+            ['Collection', 'speaker', 'id', 'in', [s['id'] for s in testModels['speakers']]]}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1181,7 +1181,7 @@ class TestFormsSearchController(TestController):
 
         # <
         jsonQuery = json.dumps({'query': {'filter':
-            ['Collection', 'speaker', '<', 15]}})
+            ['Collection', 'speaker', 'id', '<', 15]}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1191,7 +1191,7 @@ class TestFormsSearchController(TestController):
 
         # regex
         jsonQuery = json.dumps({'query': {'filter':
-            ['Collection', 'speaker', 'regex', '5']}})
+            ['Collection', 'speaker', 'id', 'regex', '5']}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1200,7 +1200,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == len(resultSet)
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['Collection', 'speaker', 'regex', '[56]']}})
+            ['Collection', 'speaker', 'id', 'regex', '[56]']}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1210,7 +1210,7 @@ class TestFormsSearchController(TestController):
 
         # like
         jsonQuery = json.dumps({'query': {'filter':
-            ['Collection', 'speaker', 'like', '%5%']}})
+            ['Collection', 'speaker', 'id', 'like', '%5%']}})
         response = self.app.post(url('/collections/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1426,7 +1426,7 @@ class TestFormsSearchController(TestController):
                     ['Collection', 'datetimeEntered', '<', todayTimestamp.isoformat()],
                     ['not', ['Collection', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
                     ['and', [
-                        ['Collection', 'enterer', 'regex', '[135680]'],
+                        ['Collection', 'enterer', 'id', 'regex', '[135680]'],
                         ['Collection', 'id', '<', 90]
                     ]]
                 ]],
