@@ -107,31 +107,48 @@ class TestFormsSearchController(TestController):
         viewer = [u for u in testModels['users'] if u['role'] == u'viewer'][0]
         contributor = [u for u in testModels['users'] if u['role'] == u'contributor'][0]
         administrator = [u for u in testModels['users'] if u['role'] == u'administrator'][0]
+        ids = []
         for i in range(1, n + 1):
             jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-            jpgFileSize = os.path.getsize(jpgFilePath)
-
+            jpgBase64 = encodestring(open(jpgFilePath).read())
+            wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
+            wavBase64 = encodestring(open(wavFilePath).read())
             params = self.createParams.copy()
-            params.update({
-                'base64EncodedFile': encodestring(open(jpgFilePath).read())
-            })
 
-            if i > 10:
+            if i < 11:
                 params.update({
-                    'filename': u'Name_%d.jpg' % i,
-                    'name': u'Name_%d.jpg' % i,
-                    'dateElicited': u'%02d/%02d/%d' % (jan1.month, jan1.day, jan1.year)
-                })
-            else:
-                params.update({
+                    'base64EncodedFile': jpgBase64,
                     'filename': u'name_%d.jpg' % i,
                     'name': u'name_%d.jpg' % i,
                     'tags': [testModels['tags'][i - 1]['id']]
                 })
+            elif i < 21:
+                params.update({
+                    'base64EncodedFile': jpgBase64,
+                    'filename': u'Name_%d.jpg' % i,
+                    'dateElicited': u'%02d/%02d/%d' % (jan1.month, jan1.day, jan1.year)
+                })
+            elif i < 31:
+                params.update({
+                    'base64EncodedFile': wavBase64,
+                    'filename': u'Name_%d.wav' % i,
+                    'dateElicited': u'%02d/%02d/%d' % (jan1.month, jan1.day, jan1.year)
+                })
+            elif i < 41:
+                params.update({'parentFile': ids[-10], 'start': 1, 'end': 2,
+                               'name': u'Name_%d' % i})
+            else:
+                params.update({'name': u'Name_%d' % i, 'MIMEtype': u'video/mpeg',
+                               'url': 'http://vimeo.com/54144270'})
+
+            if i in [36, 37]:
+                del params['name']
+
             if i in [13, 15]:
                 params.update({
                     'dateElicited': u'%02d/%02d/%d' % (jan3.month, jan3.day, jan3.year)
                 })
+
             if i > 5 and i < 16:
                 params.update({
                     'forms': [testModels['forms'][i - 1]['id']]
@@ -140,11 +157,13 @@ class TestFormsSearchController(TestController):
             params = json.dumps(params)
             response = self.app.post(url('files'), params, self.json_headers,
                                      self.extra_environ_admin)
+            resp = json.loads(response.body)
+            ids.append(resp['id'])
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     extra_environ_viewer = {'test.authentication.role': u'viewer'}
     json_headers = {'Content-Type': 'application/json'}
-    n = 20
+    n = 50
 
     def tearDown(self):
         pass
@@ -1173,6 +1192,16 @@ class TestFormsSearchController(TestController):
                      '5' in str(f['speaker']['id'])]
         assert len(resp) == len(resultSet)
 
+        # regex on parentFile.filename
+        jsonQuery = json.dumps({'query': {'filter':
+            ['File', 'parentFile', 'filename', 'regex', '[13579]']}})
+        response = self.app.post(url('/files/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = [f for f in files if f['parentFile'] and
+                     set(list('13579')) & set(list(f['parentFile']['filename']))]
+        assert len(resp) == len(resultSet)
+
     #@nottest
     def test_search_v_many_to_many(self):
         """Tests POST /files/search: searches on many-to-many attributes, i.e., Tag, Form."""
@@ -1184,6 +1213,13 @@ class TestFormsSearchController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         resultSet = [f for f in files if 'name_6.jpg' in [t['name'] for t in f['tags']]]
+        assert len(resp) == len(resultSet)
+
+        # tag.name = (using any())
+        jsonQuery = json.dumps({'query': {'filter': ['File', 'tags', 'name', '=', 'name_6.jpg']}})
+        response = self.app.post(url('/files/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
         # form.transcription like
@@ -1549,6 +1585,35 @@ class TestFormsSearchController(TestController):
         assert resp['paginator']['count'] == restrictedFileCount
         assert len(resp['items']) == 3
         assert resp['items'][0]['id'] == resultSet[3].id
+
+    #@nottest
+    def test_search_zb_file_type(self):
+        """Tests SEARCH /files: get the different types of files."""
+        files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
+
+        # Get all files with real files to back them up, (they're the ones with filenames).
+        jsonQuery = json.dumps({'query': {'filter': ['File', 'filename', '!=', None]}})
+        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = [f for f in files if f['filename']]
+        assert len(resp) == 30
+
+        # Get all the subinterval-referencing.
+        jsonQuery = json.dumps({'query': {'filter': ['File', 'parentFile', '!=', None]}})
+        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = [f for f in files if f['parentFile']]
+        assert len(resp) == 10
+
+        # Get all the subinterval-referencing.
+        jsonQuery = json.dumps({'query': {'filter': ['File', 'url', '!=', None]}})
+        response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        resultSet = [f for f in files if f['url']]
+        assert len(resp) == 10
 
     #@nottest
     def test_z_cleanup(self):

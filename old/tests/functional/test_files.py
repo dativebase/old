@@ -690,11 +690,11 @@ class TestFilesController(TestController):
         assert resp['errors']['parentFile'] == u'You are not authorized to access the file with id %d.' % aWavFileId
 
         # Create another subinterval-referencing audio file; this one's parent is
-        # restricted.  Note that it does not itself become restricted.
+        # restricted.  Note that it does not itself become restricted.  Note also
+        # that a name is not required.
         params = self.createParamsSR.copy()
         params.update({
             'parentFile': aWavFileId,
-            'name': u'i_not_restricted',
             'start': 3.75,
             'end': 4.999
         })
@@ -706,6 +706,7 @@ class TestFilesController(TestController):
         assert fileCount == 9
         assert resp['parentFile']['id'] == aWavFileId
         assert u'restricted' not in [t['name'] for t in resp['tags']]
+        assert resp['name'] == resp['parentFile']['name']
 
         # Attempt to create another subinterval-referencing file; fail because
         # the parent file is not an A/V file.
@@ -826,6 +827,19 @@ class TestFilesController(TestController):
         assert resp['errors']['url'] == u'Please enter a value'
         assert resp['errors']['password'] == u'Enter a value not more than 255 characters long'
         assert resp['errors']['name'] ==  u'Enter a value not more than 255 characters long'
+
+        # Show that the name param is optional
+        params = self.createParamsEH.copy()
+        url_ = 'http://vimeo.com/54144270'
+        params.update({
+            'url': url_,
+            'MIMEtype': u'video/mpeg',
+            'description': u'A large video file I didn\'t want to upload here.'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['name'] == u''
 
     #@nottest
     def test_relational_restrictions(self):
@@ -1288,7 +1302,6 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'parentFile': plainFileId,
-            'name': u'anyname',
             'start': 13.3,
             'end': 26.89,
             'tags': [],
@@ -1301,6 +1314,7 @@ class TestFilesController(TestController):
                                  extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp['parentFile']['id'] == plainFileId
+        assert resp['name'] == resp['parentFile']['name']
         assert resp['tags'] == []
         assert resp['description'] == u'abc to def'
         assert resp['speaker'] == None
@@ -1359,6 +1373,7 @@ class TestFilesController(TestController):
         params.update({
             'url': url_,
             'name': u'externally hosted file',
+            'password': u'abc',
             'MIMEtype': u'video/mpeg',
             'description': u'A large video file I didn\'t want to upload here.',
             'dateElicited': u'12/29/1987'
@@ -1367,6 +1382,7 @@ class TestFilesController(TestController):
         response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['dateElicited'] == u'1987-12-29'
+        assert resp['password'] == u'abc'
 
         # Attempt to update the externally hosted file with invalid params.
         params = self.createParamsEH.copy()

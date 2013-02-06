@@ -388,7 +388,7 @@ def createExternallyHostedFile(data):
     contains a 'url' key whose value should be a valid url where the file is
     served.  Optional attributes: name, password, MIMEtype.
     """
-
+    data['password'] = data.get('password') or u''
     schema = FileExternallyHostedSchema()
     data = schema.to_python(data)
     file = File()
@@ -420,7 +420,7 @@ def createSubintervalReferencingFile(data):
 
     Note that referencing files have no filename or size attributes.
     """
-
+    data['name'] = data.get('name') or u''
     schema = FileSubintervalReferencingSchema()
     state = h.State()
     state.full_dict = data
@@ -579,6 +579,7 @@ def updateSubintervalReferencingFile(file):
     global CHANGED
     schema = FileSubintervalReferencingSchema()
     data = json.loads(unicode(request.body, request.charset))
+    data['name'] = data.get('name') or u''
     state = h.State()
     state.full_dict = data
     state.user = session['user']
@@ -604,6 +605,8 @@ def updateExternallyHostedFile(file):
     setting, then False is returned and no update occurs.
     """
     global CHANGED
+    data = json.loads(unicode(request.body, request.charset))
+    data['password'] = data.get('password') or u''
     data = FileExternallyHostedSchema().to_python(data)
 
     # Data unique to referencing subinterval files
