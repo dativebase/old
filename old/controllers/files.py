@@ -479,39 +479,31 @@ def createSubintervalReferencingFile(data):
     return file
 
 def createPlainFile():
-    """Return an OLD file model generated from nothing more than the body of a
-    multipart/form-data POST request whose only attributes are:
+    """Return an OLD file model generated from POST params (not JSON formatted).
+    The usual file metadata can be submitted.  Unique to this method is the
+    filedata key and the treatment of the filename value.
     
     1. 'filedata', a  cgi.FieldStorage object containing the file data.
     2. 'filename', a string (optional but encouraged, i.e., if not provided, the
        system will attempt to create one from the file path)
 
-    If no filename POST param is supplied, create a filename from the filename
-    attribute fo the filedata cgi.FieldStorage instance; assume that filepath
-    separators are the same as on the server's OS.
+    Note that the schema expects not 'forms' and 'files' keys but 'forms-0',
+    'forms-1', etc., as per the formencode.variabledecode.NestedVariables format.
     """
 
+    values = dict(request.params)
     filedata = request.POST.get('filedata')
     if not hasattr(filedata, 'file'):
         raise InvalidFieldStorageObjectError
-
-    filename = request.POST.get('filename')
-    if not filename:
-        filename = os.path.split(filedata.filename)[-1]
-
+    if not values.get('filename'):
+        values['filename'] = os.path.split(filedata.filename)[-1]
+    values['filedataFirstKB'] = filedata.value[:1024]
     schema = FileCreateWithFiledataSchema()
-    data = schema.to_python({'filename': filename, 'MIMEtype': u'',
-                             'filedataFirstKB': filedata.value[:1024]})
+    data = schema.to_python(values)
 
     file = File()
-
     file.filename = h.normalize(data['filename'])
     file.MIMEtype = data['MIMEtype']
-
-    now = datetime.datetime.utcnow()
-    file.datetimeEntered = now
-    file.datetimeModified = now
-    file.enterer = session['user']
 
     filesPath = config['app_conf']['permanent_store']
     filePath = os.path.join(filesPath, file.filename)
@@ -522,6 +514,8 @@ def createPlainFile():
     filedata.file.close()
     fileObject.close()
     file.size = os.path.getsize(filePath)
+
+    file = addStandardMetadata(file, data)
 
     return file
 
@@ -666,11 +660,16 @@ def updateExternallyHostedFile(file):
 
 def deleteFile(file):
     """Delete the file object from the database and the file from the filesystem.
-    Note that if we implement .ogg versions of .wav files, we will need to delete
-    those here as well too.
+    If the file has a lossyFilename attribute, then files/reduced_files/<lossyFilename>
+    is deleted from the filesystem also
     """
-    filePath = os.path.join(config['app_conf']['permanent_store'], file.name)
-    os.remove(filePath)
+    if getattr(file, 'filename', None):
+        filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
+        os.remove(filePath)
+    if getattr(file, 'lossyFilename', None):
+        filePath = os.path.join(config['app_conf']['permanent_store'],
+                                'reduced_files', file.lossyFilename)
+        os.remove(filePath)
     Session.delete(file)
     Session.commit()
 

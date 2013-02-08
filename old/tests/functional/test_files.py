@@ -38,6 +38,20 @@ class TestFilesController(TestController):
         'base64EncodedFile': '' # file data Base64 encoded; will be filtered out on update requests
     }
 
+    # Empty create dict for multipart/form-data file creation requests.  Will be
+    # converted to a conventional POST k=v body format.  'tags-i' and 'forms-i' for
+    # i > 0 can be added.
+    createParamsBasic = {
+        'filename': u'',        # Will be filtered out on update requests
+        'description': u'',
+        'dateElicited': u'',    # mm/dd/yyyy
+        'elicitor': u'',
+        'speaker': u'',
+        'utteranceType': u'',
+        'tags-0': u'',
+        'forms-0': u''
+    }
+
     # Empty create dict for subinterval-referencing file creation requests
     createParamsSR = {
         'parentFile': u'',
@@ -543,7 +557,8 @@ class TestFilesController(TestController):
         # in filedata.  The controller removes the path separators of its os
         # when it creates the filename; however path separators from a foreign os
         # may remain in the generated filename.
-        response = self.app.post(url('/files'), extra_environ=self.extra_environ_admin,
+        params = self.createParamsBasic.copy()
+        response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', wavFilePath)])
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
@@ -557,8 +572,17 @@ class TestFilesController(TestController):
         assert response.content_type == 'application/json'
 
         # Upload a file using the multipart/form-data Content-Type and a POST
-        # request to /files.  Here we do supply a filename POST param.
-        params = {'filename': u'wavfile.wav'}
+        # request to /files.  Here we do supply a filename and some metadata.
+        params = self.createParamsBasic.copy()
+        params.update({
+            'filename': u'wavfile.wav',
+            'description': u'multipart/form-data',
+            'dateElicited': u'12/03/2011',    # mm/dd/yyyy
+            'utteranceType': u'Mixed Utterance',
+            'tags-0': tag1Id,
+            'tags-1': tag2Id,
+            'forms-0': formId
+        })
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', wavFilePath)])
         resp = json.loads(response.body)
@@ -569,6 +593,11 @@ class TestFilesController(TestController):
         assert resp['MIMEtype'] == u'audio/x-wav'
         assert resp['size'] == wavFileSize
         assert resp['enterer']['firstName'] == u'Admin'
+        assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1Id, tag2Id])
+        assert resp['forms'][0]['id'] == formId
+        assert resp['utteranceType'] == u'Mixed Utterance'
+        assert resp['description'] == u'multipart/form-data'
+        assert resp['dateElicited'] == u'2011-12-03'
         assert fileCount == 6
         assert response.content_type == 'application/json'
 
@@ -576,7 +605,8 @@ class TestFilesController(TestController):
         # filename; the path separator should be removed from the filename.  If
         # the separator were not removed, this filename could cause the file to
         # be written to the parent directory of the files directory
-        params = {'filename': u'../wavfile.wav'}
+        params = self.createParamsBasic.copy()
+        params.update({'filename': u'../wavfile.wav'})
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
             upload_files=[('filedata', wavFilePath)])
         resp = json.loads(response.body)
@@ -596,7 +626,8 @@ class TestFilesController(TestController):
         # type (.html) but with a valid extension (.wav).  Expect an error.
         htmlFilePath = os.path.join(self.testFilesPath, 'illicit.html')
         filesDirList = os.listdir(self.filesPath)
-        params = {'filename': u'pretend_its_wav.wav'}
+        params = self.createParamsBasic.copy()
+        params.update({'filename': u'pretend_its_wav.wav'})
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
             upload_files=[('filedata', htmlFilePath)], status=400)
         resp = json.loads(response.body)
@@ -610,7 +641,8 @@ class TestFilesController(TestController):
         # the POST params, upload a file with a false extension.
         htmlFilePath = os.path.join(self.testFilesPath, 'illicit.wav')
         filesDirList = newFilesDirList
-        response = self.app.post(url('/files'), extra_environ=self.extra_environ_admin,
+        params = self.createParamsBasic.copy()
+        response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
             upload_files=[('filedata', htmlFilePath)], status=400)
         resp = json.loads(response.body)
         newFileCount = Session.query(model.File).count()
@@ -1086,7 +1118,8 @@ class TestFilesController(TestController):
         # POST method.
         if os.path.exists(longWavFilePath):
             longWavFileSize = os.path.getsize(longWavFilePath)
-            params = {'filename': longWavFileName}
+            params = self.createParamsBasic.copy()
+            params.update({'filename': longWavFileName})
             response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', longWavFilePath)])
             resp = json.loads(response.body)
@@ -1294,7 +1327,8 @@ class TestFilesController(TestController):
         ########################################################################
 
         # Create a file using the multipart/form-data POST method.
-        params = {'filename': u'multipart.wav'}
+        params = self.createParamsBasic.copy()
+        params.update({'filename': u'multipart.wav'})
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', wavFilePath)])
         resp = json.loads(response.body)
@@ -1612,6 +1646,8 @@ class TestFilesController(TestController):
         response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         parentId = resp['id']
+        parentFilename = resp['filename']
+        parentLossyFilename = resp['lossyFilename']
 
         # Create a subinterval-referencing audio file; reference one of the wav
         # files created earlier.
@@ -1629,14 +1665,26 @@ class TestFilesController(TestController):
         assert resp['parentFile']['id'] == parentId
 
         # Show that the child file still exists after the parent has been deleted.
+        assert parentFilename in os.listdir(self.filesPath)
+        if self.create_reduced_size_file_copies:
+            assert parentLossyFilename in os.listdir(self.reducedFilesPath)
         response = self.app.delete(url('file', id=parentId), extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        assert parentFilename not in os.listdir(self.filesPath)
+        assert parentLossyFilename not in os.listdir(self.reducedFilesPath)
         assert resp['filename'] == u'parent.wav'
+
         parent = Session.query(model.File).get(parentId)
         assert parent is None
+
         child = Session.query(model.File).get(childId)
         assert child is not None
         assert child.parentFile is None
+
+        # Delete the child file
+        response = self.app.delete(url('file', id=childId), extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['name'] == u'child'
 
     #@nottest
     def test_show(self):
@@ -2227,7 +2275,9 @@ class TestFilesController(TestController):
         filename = 'large_image.png'
         pngFilePath = os.path.join(self.testFilesPath, filename)
         pngReducedFilePath = os.path.join(self.reducedFilesPath, filename)
-        response = self.app.post(url('/files'), {'filename': filename},
+        params = self.createParamsBasic.copy()
+        params.update({'filename': filename})
+        response = self.app.post(url('/files'), params,
                                  extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', pngFilePath)])
         resp = json.loads(response.body)

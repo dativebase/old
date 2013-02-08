@@ -1,4 +1,5 @@
-from formencode import variabledecode, All
+from formencode import All
+from formencode.variabledecode import NestedVariables
 from formencode.schema import Schema
 from formencode.validators import Invalid, FancyValidator, Int, DateConverter, \
     UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL, Number
@@ -353,7 +354,6 @@ class FileUpdateSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-
     description = UnicodeString()
     utteranceType = OneOf(h.utteranceTypes)
     speaker = ValidOLDModelObject(modelName='Speaker')
@@ -400,14 +400,30 @@ class FileCreateWithBase64EncodedFiledataSchema(FileUpdateSchema):
 
 class FileCreateWithFiledataSchema(Schema):
     """Schema for validating the data input upon a file create request where the
-    Content-Type is 'multipart/form-data'.  Here we just verify that the filename
-    is licit.
+    Content-Type is 'multipart/form-data'.
+
+    Note the pre-validation NestedVariables call.  This causes certain key-value
+    patterns to be transformed to Python data structures.  In this case,
+
+        {'forms-0': 1, 'forms-1': 33, 'tags-0': 2, 'tags-1': 4, 'tags-2': 5}
+
+    becomes
+
+        {'forms': [1, 33], 'tags': [2, 4, 5]}
     """
     allow_extra_fields = True
     filter_extra_fields = True
+    pre_validators = [NestedVariables()]
     chained_validators = [AddMIMEtypeToValues()]
     filename = ValidFileName(not_empty=True, max=255)
     filedataFirstKB = String()
+    description = UnicodeString()
+    utteranceType = OneOf(h.utteranceTypes)
+    speaker = ValidOLDModelObject(modelName='Speaker')
+    elicitor = ValidOLDModelObject(modelName='User')
+    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
+    forms = ForEach(ValidOLDModelObject(modelName='Form'))
+    dateElicited = DateConverter(month_style='mm/dd/yyyy')
 
 class ValidAudioVideoFile(FancyValidator):
     """Validator for input values that are integer ids (i.e., primary keys) of
