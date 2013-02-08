@@ -22,6 +22,7 @@ import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session, Model
 from old.model import File, User
+from old.lib.resize import saveReducedCopy
 
 log = logging.getLogger(__name__)
 
@@ -118,6 +119,10 @@ class FilesController(BaseController):
         """
         try:
             if request.content_type == 'application/json':
+                if len(request.body) > 20971520:    # JSON/Base64 file upload caps out at ~20MB
+                    response.status_int = 400
+                    return {'error':
+                        u'The request body is too large; use the multipart/form-data Content-Type when uploading files greater than 20MB.'}
                 values = json.loads(unicode(request.body, request.charset))
                 if 'base64EncodedFile' in values:
                     file = createBase64File(values)
@@ -127,6 +132,7 @@ class FilesController(BaseController):
                     file = createSubintervalReferencingFile(values)
             else:
                 file = createPlainFile()
+            file.lossyFilename = saveReducedCopy(file, config)
             Session.add(file)
             Session.commit()
             return file
@@ -372,12 +378,14 @@ def createBase64File(data):
     # Write the file to disk (making sure it's unique and thereby potentially)
     # modifying file.filename; and calculate file.size.
     fileData = data['base64EncodedFile']     # base64-decoded during validation
-    filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
+    filesPath = config['app_conf']['permanent_store']
+    filePath = os.path.join(filesPath, file.filename)
     fileObject, filePath = getUniqueFilePath(filePath)
     file.filename = os.path.split(filePath)[-1]
     file.name = file.filename
     fileObject.write(fileData)
     fileObject.close()
+    fileData = None
     file.size = os.path.getsize(filePath)
 
     file = restrictFileByForms(file)
@@ -476,15 +484,14 @@ def createPlainFile():
     file.datetimeModified = now
     file.enterer = session['user']
 
-    filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
+    filesPath = config['app_conf']['permanent_store']
+    filePath = os.path.join(filesPath, file.filename)
     fileObject, filePath = getUniqueFilePath(filePath)
     file.filename = os.path.split(filePath)[-1]
     file.name = file.filename
-
     shutil.copyfileobj(filedata.file, fileObject)
     filedata.file.close()
     fileObject.close()
-
     file.size = os.path.getsize(filePath)
 
     return file

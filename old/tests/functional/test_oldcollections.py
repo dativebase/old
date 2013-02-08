@@ -22,6 +22,7 @@ class TestOldcollectionsController(TestController):
     here = appconfig('config:test.ini', relative_to='.')['here']
     filesPath = os.path.join(here, 'files')
     testFilesPath = os.path.join(here, 'test_files')
+    reducedFilesPath = os.path.join(filesPath, u'reduced_files')
 
     createParams = {
         'title': u'',
@@ -93,6 +94,7 @@ class TestOldcollectionsController(TestController):
 
         # Clear the files directory
         h.clearDirectoryOfFiles(self.filesPath)
+        h.clearDirectoryOfFiles(self.reducedFilesPath)
 
         # Perform a vacuous GET just to delete app_globals.applicationSettings
         # to clean up for subsequent tests.

@@ -25,6 +25,7 @@ def setup_app(command, conf, vars):
     h.makeDirectorySafely('files')
     h.makeDirectorySafely(os.path.join('files', 'archived_files'))
     h.makeDirectorySafely(os.path.join('files', 'researchers'))
+    h.makeDirectorySafely(os.path.join('files', 'reduced_files'))
 
     # Create the analysis directories.
     h.makeDirectorySafely('analysis')

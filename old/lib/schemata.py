@@ -484,7 +484,7 @@ class ValidMIMEtype(FancyValidator):
 class FileExternallyHostedSchema(FileUpdateSchema):
     """Validates input for files whose content is hosted elsewhere."""
     name = UnicodeString(max=255)
-    url = URL(not_empty=True, check_exists=True)
+    url = URL(not_empty=True, check_exists=False, add_http=True)       # add check_exists=True if desired
     password = UnicodeString(max=255)
     MIMEtype = ValidMIMEtype()
 

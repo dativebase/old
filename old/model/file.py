@@ -62,6 +62,8 @@ class File(Base):
     start = Column(Float)
     end = Column(Float)
 
+    lossyFilename = Column(Unicode(255))        # .ogg generated from .wav or resized images
+
     def getDict(self):
         """Return a Python dictionary representation of the File.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
@@ -74,6 +76,7 @@ class File(Base):
             'datetimeModified': self.datetimeModified,
             'filename': self.filename,
             'name': self.name,
+            'lossyFilename': self.lossyFilename,
             'MIMEtype': self.MIMEtype,
             'size': self.size,
             'description': self.description,

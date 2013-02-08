@@ -27,6 +27,8 @@ from markdown import Markdown
 from docutils.core import publish_parts
 from decorator import decorator
 from pylons.decorators.util import get_pylons
+from subprocess import Popen, PIPE
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -1323,7 +1325,8 @@ def getObjectLanguageId():
 
 def sendPasswordResetEmailTo(user, newPassword, **kwargs):
     """Send the "password reset" email to the user.  **kwargs should contain a
-    config object or a config file name (e.g., 'production.ini').  If
+    config object (with 'config' as key) or a config file name (e.g.,
+    'production.ini' with 'configFilename' as key).  If
     password_reset_smtp_server is set to smtp.gmail.com in the config file, then
     the email will be sent using smtp.gmail.com and the system will expect a
     gmail.ini file with valid gmail_from_address and gmail_from_password values.
@@ -1387,3 +1390,51 @@ def compile_query(query, **kwargs):
         return (comp.string.encode(enc) % tuple(params)).decode(enc)
     else:
         return str(query)
+
+
+################################################################################
+# Command-line processes
+################################################################################
+
+def getSubprocess(command):
+    """Return a subprocess process.  The command argument is a list.  See
+    http://docs.python.org/2/library/subprocess.html
+    """
+    try:
+        return Popen(command, stderr=PIPE, stdout=PIPE, stdin=PIPE)
+    except OSError:
+        return None
+
+def commandLineProgramInstalled(command):
+    """Command is the list representing the command-line utility."""
+    try:
+        return bool(getSubprocess(command))
+    except:
+        return False
+
+def ffmpegInstalled():
+    """Check if the ffmpeg command-line utility is installed on the host.  Check
+    first if the answer to this question is cached in app_globals.
+    """
+    try:
+        return app_globals.ffmpegInstalled
+    except AttributeError:
+        ffmpegInstalled = commandLineProgramInstalled(['ffmpeg'])
+        app_globals.ffmpegInstalled = ffmpegInstalled
+        return ffmpegInstalled
+
+def ffmpegEncodes(format_):
+    """Check if ffmpeg encodes the input format.  First check if it's installed."""
+    if ffmpegInstalled():
+        try:
+            return app_globals.ffmpegEncodes[format_]
+        except (AttributeError, KeyError):
+            process = Popen(['ffmpeg', '-formats'], stderr=PIPE, stdout=PIPE)
+            stdout, stderr = process.communicate()
+            encodesFormat = 'E %s' % format_ in stdout
+            try:
+                app_globals.ffmpegEncodes[format_] = encodesFormat
+            except AttributeError:
+                app_globals.ffmpegEncodes = {format_: encodesFormat}
+            return encodesFormat
+    return False

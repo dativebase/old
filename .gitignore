@@ -19,6 +19,7 @@ analysis/
 
 # Ignore a large file in test_files
 test_files/old_test_long.wav
+test_files/old_test_medium.wav
 
 # The client-side JavaScript application should be kept separate, at least for now
 old/public/

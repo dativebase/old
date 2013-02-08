@@ -51,7 +51,8 @@ class Model(object):
         return self.getDictFromModel(tag, ['id', 'name'])
 
     def getMiniFileDict(self, file):
-        return self.getDictFromModel(file, ['id', 'name', 'filename', 'MIMEtype', 'size', 'url'])
+        return self.getDictFromModel(file, ['id', 'name', 'filename', 'MIMEtype',
+                                            'size', 'url', 'lossyFilename'])
 
     def getMiniOrthographyDict(self, orthography):
         return self.getDictFromModel(orthography,

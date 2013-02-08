@@ -2,7 +2,7 @@ import datetime
 import logging
 import simplejson as json
 import os
-from base64 import encodestring
+from base64 import b64encode
 from nose.tools import nottest
 from paste.deploy import appconfig
 from mimetypes import guess_type
@@ -12,13 +12,18 @@ from old.model.meta import Session
 import old.lib.helpers as h
 from pylons import config
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
+from paste.deploy.converters import asbool
 
 log = logging.getLogger(__name__)
 
 class TestFilesController(TestController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
+    config = appconfig('config:test.ini', relative_to='.')
+    create_reduced_size_file_copies = asbool(config.get('create_reduced_size_file_copies', False))
+    preferred_lossy_audio_format = config.get('preferred_lossy_audio_format', 'ogg')
+    here = config['here']
     filesPath = os.path.join(here, u'files')
+    reducedFilesPath = os.path.join(filesPath, u'reduced_files')
     testFilesPath = os.path.join(here, 'test_files')
 
     createParams = {
@@ -99,6 +104,7 @@ class TestFilesController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
         h.clearDirectoryOfFiles(self.filesPath)
+        h.clearDirectoryOfFiles(self.reducedFilesPath)
 
         # Perform a vacuous GET just to delete app_globals.applicationSettings
         # to clean up for subsequent tests.
@@ -143,11 +149,11 @@ class TestFilesController(TestController):
 
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
-        wavFileBase64Encoded = encodestring(open(wavFilePath).read())
+        wavFileBase64Encoded = b64encode(open(wavFilePath).read())
 
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
-        jpgFileBase64Encoded = encodestring(open(jpgFilePath).read())
+        jpgFileBase64Encoded = b64encode(open(jpgFilePath).read())
 
         # Create the restricted file.
         params = self.createParams.copy()
@@ -372,7 +378,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.wav',
-            'base64EncodedFile': encodestring(open(wavFilePath).read())
+            'base64EncodedFile': b64encode(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -389,7 +395,7 @@ class TestFilesController(TestController):
         # Create a test image file.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
-        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.jpg',
@@ -487,7 +493,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'\u201Cold te\u0301st\u201D.wav',
-            'base64EncodedFile': encodestring(open(wavFilePath).read()),
+            'base64EncodedFile': b64encode(open(wavFilePath).read()),
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -511,7 +517,7 @@ class TestFilesController(TestController):
         # file is really html, despite the misleading extension.
         filesDirList = os.listdir(self.filesPath)
         htmlFilePath = os.path.join(self.testFilesPath, 'illicit.html')
-        htmlFileBase64 = encodestring(open(htmlFilePath).read())
+        htmlFileBase64 = b64encode(open(htmlFilePath).read())
         params = self.createParams.copy()
         params.update({
             'filename': u'pretend_its_wav.wav',
@@ -798,7 +804,7 @@ class TestFilesController(TestController):
 
         # Attempt to create an externally hosted file with invalid params
         params = self.createParamsEH.copy()
-        url_ = 'http://vimeo.com/541442705414427054144270541442705414427054144270'  # Invalid url
+        url_ = 'http://vimeo/541442705414427054144270541442705414427054144270'  # Invalid url
         params.update({
             'url': url_,
             'name': u'invalid externally hosted file',
@@ -810,7 +816,7 @@ class TestFilesController(TestController):
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['MIMEtype'] == u'The file upload failed because the file type video/gepm is not allowed.'
-        assert resp['errors']['url'] == u'The server responded that the page could not be found'
+        resp['errors']['url'] == u'You must provide a full domain name (like vimeo.com)'
 
         # Attempt to create an externally hosted file with different invalid params
         params = self.createParamsEH.copy()
@@ -860,7 +866,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.wav',
-            'base64EncodedFile': encodestring(open(wavFilePath).read())
+            'base64EncodedFile': b64encode(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -908,7 +914,7 @@ class TestFilesController(TestController):
         # associate it to a restricted form -- expect to fail.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
-        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.jpg',
@@ -926,7 +932,7 @@ class TestFilesController(TestController):
         # associate it to an unrestricted form -- expect to succeed.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
-        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.jpg',
@@ -946,7 +952,7 @@ class TestFilesController(TestController):
         # find that the file is now restricted.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
-        jpgFileBase64 = encodestring(open(jpgFilePath).read())
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.jpg',
@@ -1019,28 +1025,89 @@ class TestFilesController(TestController):
         a large file in the code base so this file needs to be created if one
         wants this test to run.
         """
-        wavFileName = u'old_test_long.wav'
-        wavFilePath = os.path.join(self.testFilesPath, wavFileName)
-        if os.path.exists(wavFilePath):
-            # Create a large (>60 MB) test audio file.
-            wavFileSize = os.path.getsize(wavFilePath)
+
+        fileCount = newFileCount = Session.query(model.File).count()
+
+        # Try to create a file with a > 20 MB file as content using JSON/Base64
+        # encoding and expect to fail because the file is too big.
+        longWavFileName = 'old_test_long.wav'
+        longWavFilePath = os.path.join(self.testFilesPath, longWavFileName)
+        if os.path.exists(longWavFilePath):
+            longWavFileSize = os.path.getsize(longWavFilePath)
             params = self.createParams.copy()
             params.update({
-                'filename': wavFileName,
-                'base64EncodedFile': encodestring(open(wavFilePath).read())
+                'filename': longWavFileName,
+                'base64EncodedFile': b64encode(open(longWavFilePath).read())
             })
             params = json.dumps(params)
             response = self.app.post(url('files'), params, self.json_headers,
-                                     self.extra_environ_admin)
+                                     self.extra_environ_admin, status=400)
             resp = json.loads(response.body)
-            fileCount = Session.query(model.File).count()
-            assert resp['filename'] == wavFileName
-            assert resp['MIMEtype'] == u'audio/x-wav'
-            assert resp['size'] == wavFileSize
-            assert resp['enterer']['firstName'] == u'Admin'
-            assert fileCount == 1
+            newFileCount = Session.query(model.File).count()
+            assert fileCount == newFileCount
+            assert resp['error'] == u'The request body is too large; use the multipart/form-data Content-Type when uploading files greater than 20MB.'
             assert response.content_type == 'application/json'
 
+        # Try to create a file with a ~6MB .wav file as content using JSON/Base64
+        # encoding and expect to succeed because the file is < 20MB.
+        mediumWavFileName = u'old_test_medium.wav'
+        mediumWavFilePath = os.path.join(self.testFilesPath, mediumWavFileName)
+        if os.path.exists(mediumWavFilePath):
+            oldReducedDirList = os.listdir(self.reducedFilesPath)
+            mediumWavFileSize = os.path.getsize(mediumWavFilePath)
+            params = self.createParams.copy()
+            params.update({
+                'filename': mediumWavFileName,
+                'base64EncodedFile': b64encode(open(mediumWavFilePath).read())
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+            resp = json.loads(response.body)
+            fileCount = newFileCount
+            newFileCount = Session.query(model.File).count()
+            newReducedDirList = os.listdir(self.reducedFilesPath)
+            lossyFilename = '%s.%s' % (os.path.splitext(mediumWavFileName)[0],
+                                       self.config.get('preferred_lossy_audio_format', 'ogg'))
+            assert fileCount + 1 == newFileCount
+            assert resp['filename'] == mediumWavFileName
+            assert resp['MIMEtype'] == u'audio/x-wav'
+            assert resp['size'] == mediumWavFileSize
+            assert resp['enterer']['firstName'] == u'Admin'
+            assert response.content_type == 'application/json'
+            assert lossyFilename not in oldReducedDirList
+            if self.create_reduced_size_file_copies:
+                assert resp['lossyFilename'] == lossyFilename
+                assert lossyFilename in newReducedDirList
+            else:
+                assert resp['lossyFilename'] == None
+                assert lossyFilename not in newReducedDirList
+
+        # Create the large (> 20MB) .wav file from above using the multipart/form-data
+        # POST method.
+        if os.path.exists(longWavFilePath):
+            longWavFileSize = os.path.getsize(longWavFilePath)
+            params = {'filename': longWavFileName}
+            response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
+                                 upload_files=[('filedata', longWavFilePath)])
+            resp = json.loads(response.body)
+            fileCount = newFileCount
+            newFileCount = Session.query(model.File).count()
+            newReducedDirList = os.listdir(self.reducedFilesPath)
+            lossyFilename = '%s.%s' % (os.path.splitext(longWavFileName)[0],
+                                       self.config.get('preferred_lossy_audio_format', 'ogg'))
+            assert fileCount + 1 == newFileCount
+            assert resp['filename'] == longWavFileName
+            assert resp['MIMEtype'] == u'audio/x-wav'
+            assert resp['size'] == longWavFileSize
+            assert resp['enterer']['firstName'] == u'Admin'
+            assert response.content_type == 'application/json'
+            assert lossyFilename not in oldReducedDirList
+            if self.create_reduced_size_file_copies:
+                assert resp['lossyFilename'] == lossyFilename
+                assert lossyFilename in newReducedDirList
+            else:
+                assert resp['lossyFilename'] == None
+                assert lossyFilename not in newReducedDirList
     #@nottest
     def test_new(self):
         """Tests that GET /file/new returns an appropriate JSON object for creating a new OLD file.
@@ -1141,7 +1208,7 @@ class TestFilesController(TestController):
             'filename': originalName,
             'tags': [restrictedTag.id],
             'description': u'description',
-            'base64EncodedFile': encodestring(open(wavFilePath).read())
+            'base64EncodedFile': b64encode(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -1436,7 +1503,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'test_delete.jpg',
-            'base64EncodedFile': encodestring(open(jpgFilePath).read()),
+            'base64EncodedFile': b64encode(open(jpgFilePath).read()),
             'speaker': speakerId,
             'tags': [tagId]
         })
@@ -1512,7 +1579,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'\u201Cte\u0301st delete\u201D.jpg',
-            'base64EncodedFile': encodestring(open(jpgFilePath).read()),
+            'base64EncodedFile': b64encode(open(jpgFilePath).read()),
             'speaker': speakerId,
             'tags': [tagId]
         })
@@ -1539,7 +1606,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'parent.wav',
-            'base64EncodedFile': encodestring(open(wavFilePath).read())
+            'base64EncodedFile': b64encode(open(wavFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
@@ -1584,7 +1651,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.jpg',
-            'base64EncodedFile': encodestring(open(jpgFilePath).read())
+            'base64EncodedFile': b64encode(open(jpgFilePath).read())
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers,
@@ -1673,7 +1740,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.wav',
-            'base64EncodedFile': encodestring(open(wavFilePath).read()),
+            'base64EncodedFile': b64encode(open(wavFilePath).read()),
             'tags': [h.getTags()[0].id]    # the restricted tag should be the only one
         })
         params = json.dumps(params)
@@ -1754,7 +1821,7 @@ class TestFilesController(TestController):
         params = self.createParams.copy()
         params.update({
             'filename': u'old_test.wav',
-            'base64EncodedFile': encodestring(open(wavFilePath).read()),
+            'base64EncodedFile': b64encode(open(wavFilePath).read()),
             'tags': [restrictedTag.id]
         })
         params = json.dumps(params)
@@ -1877,7 +1944,7 @@ class TestFilesController(TestController):
         wavFileName = u'old_test.wav'
         wavFilePath = os.path.join(testFilesPath, wavFileName)
         wavFileSize = os.path.getsize(wavFilePath)
-        wavFileBase64 = encodestring(open(wavFilePath).read())
+        wavFileBase64 = b64encode(open(wavFilePath).read())
         params = self.createParams.copy()
         params.update({
             'filename': wavFileName,
@@ -1891,7 +1958,7 @@ class TestFilesController(TestController):
         # Retrieve the file data as the admin who entered it
         response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
             headers=self.json_headers, extra_environ=extra_environ_admin)
-        responseBase64 = encodestring(response.body)
+        responseBase64 = b64encode(response.body)
         assert wavFileBase64 == responseBase64
         assert guess_type(wavFileName)[0] == response.headers['Content-Type']
         assert wavFileSize == int(response.headers['Content-Length'])
@@ -1909,6 +1976,156 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_file_reduction(self):
+        """Verifies that reduced-size copies of image and wav files are created in files/reduced_files
+        and that the names of these reduced-size files is returned as the lossyFilename
+        attribute.
+
+        Note that this test will fail if create_reduced_size_file_copies is set
+        to 0 in the config file.
+        """
+        def getSize(path):
+            return os.stat(path).st_size
+
+        # Create a JPG file that will not be reduced because it is already small enough
+        jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
+        jpgFileSize = os.path.getsize(jpgFilePath)
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': u'old_test.jpg',
+            'base64EncodedFile': jpgFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        fileCount = Session.query(model.File).count()
+        assert resp['filename'] == u'old_test.jpg'
+        assert resp['MIMEtype'] == u'image/jpeg'
+        assert resp['size'] == jpgFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert resp['lossyFilename'] == None
+        assert fileCount == 1
+        assert len(os.listdir(self.reducedFilesPath)) == 0
+
+        # Create a large JPEG file and expect a reduced-size .jpg to be created in
+        # files/reduced_files.
+        filename = u'large_image.jpg'
+        jpgFilePath = os.path.join(self.testFilesPath, filename)
+        jpgReducedFilePath = os.path.join(self.reducedFilesPath, filename)
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': filename,
+            'base64EncodedFile': jpgFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        newFileCount = Session.query(model.File).count()
+        assert newFileCount == fileCount + 1
+        assert resp['filename'] == filename
+        assert resp['MIMEtype'] == u'image/jpeg'
+        assert resp['enterer']['firstName'] == u'Admin'
+        if self.create_reduced_size_file_copies:
+            assert resp['lossyFilename'] == filename
+            assert resp['lossyFilename'] in os.listdir(self.reducedFilesPath)
+            assert getSize(jpgFilePath) > getSize(jpgReducedFilePath)
+        else:
+            assert resp['lossyFilename'] is None
+            assert not os.path.isfile(jpgReducedFilePath)
+
+        # Create a large GIF file and expect a reduced-size .gif to be created in
+        # files/reduced_files.
+        filename = u'large_image.gif'
+        gifFilePath = os.path.join(self.testFilesPath, filename)
+        gifReducedFilePath = os.path.join(self.reducedFilesPath, filename)
+        gifFileBase64 = b64encode(open(gifFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': filename,
+            'base64EncodedFile': gifFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        fileCount = newFileCount
+        newFileCount = Session.query(model.File).count()
+        assert newFileCount == fileCount + 1
+        assert resp['filename'] == filename
+        assert resp['MIMEtype'] == u'image/gif'
+        assert resp['enterer']['firstName'] == u'Admin'
+        if self.create_reduced_size_file_copies:
+            assert resp['lossyFilename'] == filename
+            assert resp['lossyFilename'] in os.listdir(self.reducedFilesPath)
+            assert getSize(gifFilePath) > getSize(gifReducedFilePath)
+        else:
+            assert resp['lossyFilename'] is None
+            assert not os.path.isfile(gifReducedFilePath)
+
+        # Create a large PNG file and expect a reduced-size .png to be created in
+        # files/reduced_files.
+        filename = 'large_image.png'
+        pngFilePath = os.path.join(self.testFilesPath, filename)
+        pngReducedFilePath = os.path.join(self.reducedFilesPath, filename)
+        response = self.app.post(url('/files'), {'filename': filename},
+                                 extra_environ=self.extra_environ_admin,
+                                 upload_files=[('filedata', pngFilePath)])
+        resp = json.loads(response.body)
+        fileCount = newFileCount
+        newFileCount = Session.query(model.File).count()
+        assert newFileCount == fileCount + 1
+        assert resp['filename'] == filename
+        assert resp['MIMEtype'] == u'image/png'
+        assert resp['enterer']['firstName'] == u'Admin'
+        if self.create_reduced_size_file_copies:
+            assert resp['lossyFilename'] == filename
+            assert resp['lossyFilename'] in os.listdir(self.reducedFilesPath)
+            assert getSize(pngFilePath) > getSize(pngReducedFilePath)
+        else:
+            assert resp['lossyFilename'] is None
+            assert not os.path.isfile(pngReducedFilePath)
+
+        # Test copying .wav files to .ogg/.mp3
+
+        format_ = self.preferred_lossy_audio_format
+
+        # Create a WAV file for which an .ogg/.mp3 Vorbis copy will be created in
+        # files/reduced_files.
+        filename = 'old_test.wav'
+        lossyFilename = u'%s.%s' % (os.path.splitext(filename)[0], format_)
+        lossyFilePath = os.path.join(self.reducedFilesPath, lossyFilename)
+        wavFilePath = os.path.join(self.testFilesPath, filename)
+        wavFileSize = os.path.getsize(wavFilePath)
+        wavFileBase64 = b64encode(open(wavFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': filename,
+            'base64EncodedFile': wavFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        fileCount = newFileCount
+        newFileCount = Session.query(model.File).count()
+        assert resp['filename'] == filename
+        assert resp['MIMEtype'] == u'audio/x-wav'
+        assert resp['size'] == wavFileSize
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert newFileCount == fileCount + 1
+        if self.create_reduced_size_file_copies:
+            assert resp['lossyFilename'] == lossyFilename
+            assert resp['lossyFilename'] in os.listdir(self.reducedFilesPath)
+            assert getSize(wavFilePath) > getSize(lossyFilePath)
+        else:
+            assert resp['lossyFilename'] is None
+            assert not os.path.isfile(lossyFilePath)
 
     #@nottest
     def test_new_search(self):
