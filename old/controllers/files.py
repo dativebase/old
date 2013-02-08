@@ -286,24 +286,53 @@ class FilesController(BaseController):
 
     @h.restrict('GET')
     @h.authenticateWithJSON
-    def retrieve(self, id):
+    def serve(self, id):
         """Return the file data (binary stream) for the file in files/ with
-        name=id or an error message if the file does not exist or the user is
+        id=id or an error message if the file does not exist or the user is
         not authorized to access it.
         """
-        file = Session.query(File).filter(File.filename==id).first()
-        if file:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
-                filePath = os.path.join(config['app_conf']['permanent_store'], id)
-                return forward(FileApp(filePath))
-            else:
-                response.status_int = 403
-                return json.dumps(h.unauthorizedMsg)
-        else:
-            response.status_int = 404
-            return json.dumps({'error': 'There is no file with name %s' % id})
+        return serveFile(id)
 
+    @h.restrict('GET')
+    @h.authenticateWithJSON
+    def serve_reduced(self, id):
+        """Return the reduced-size file data (i.e., resized image or ogg/mp3-
+        converted wav) for the file in files/ with id=id or an error message if
+        the file does not exist or the user is not authorized to access it.
+        """
+        return serveFile(id, True)
+
+
+def serveFile(id, reduced=False):
+    """Use FileApp to serve the content (binary data) of the file with id=id.  If
+    reduced is True, then try to serve /files/reduced_files/<filename> where
+    filename is file.lossyFilename.
+    """
+    file = Session.query(File).get(id)
+    if getattr(file, 'parentFile', None):
+        file = file.parentFile
+    elif getattr(file, 'url', None):
+        response.status_int = 400
+        return json.dumps({'error': u'The content of file %s is stored elsewhere at %s' % (id, file.url)})
+    if file:
+        filesDir = config['app_conf']['permanent_store']
+        if reduced:
+            filename = getattr(file, 'lossyFilename', None)
+            if not filename:
+                response.status_int = 404
+                return json.dumps({'error': u'There is no size-reduced copy of file %s' % id})
+            filePath = os.path.join(filesDir, 'reduced_files', filename)
+        else:
+            filePath = os.path.join(filesDir, file.filename)
+        unrestrictedUsers = h.getUnrestrictedUsers()
+        if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
+            return forward(FileApp(filePath))
+        else:
+            response.status_int = 403
+            return json.dumps(h.unauthorizedMsg)
+    else:
+        response.status_int = 404
+        return json.dumps({'error': 'There is no file with id %s' % id})
 
 ################################################################################
 # File Create Functionality

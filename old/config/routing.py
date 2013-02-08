@@ -31,7 +31,8 @@ def make_map(config):
 
     # CUSTOM ROUTES HERE
     map.connect('/collections/history/{id}', controller='oldcollections', action='history')
-    map.connect('/files/retrieve/{id}', controller='files', action='retrieve')
+    map.connect('/files/serve/{id}', controller='files', action='serve')
+    map.connect('/files/serve_reduced/{id}', controller='files', action='serve_reduced')
     map.connect('/forms/history/{id}', controller='forms', action='history')
     map.connect('/forms/remember', controller='forms', action='remember')
     map.connect('/forms/update_morpheme_references', controller='forms',

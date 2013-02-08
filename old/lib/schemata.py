@@ -317,6 +317,9 @@ class FormIdsSchemaNullable(Schema):
 # File Schemata
 ################################################################################
 
+def getMIMEtypeFromContents(contents):
+    return Magic(mime=True).from_buffer(contents).replace('application/ogg', 'audio/ogg')
+
 class ValidBase64EncodedFile(String):
     """Validator for the base64EncodedFile attribute of a file create request."""
 
@@ -375,7 +378,7 @@ class AddMIMEtypeToValues(FancyValidator):
         else:
             contents = values['filedataFirstKB']
         try:
-            MIMEtypeFromContents = Magic(mime=True).from_buffer(contents)
+            MIMEtypeFromContents = getMIMEtypeFromContents(contents)
             if MIMEtypeFromContents != MIMEtypeFromFilename:
                 raise Invalid(self.message('mismatched_type', state,
                     x=MIMEtypeFromFilename, y=MIMEtypeFromContents), values, state)

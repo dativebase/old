@@ -1397,7 +1397,7 @@ class TestFilesController(TestController):
         # Now restrict the parent file and verify that the child file does not
         # thereby become restricted.  This means that the metadata of a restricted
         # parent file may accessible to restricted users via the child file;
-        # however, this is ok since the retrieve action still will not allow
+        # however, this is ok since the serve action still will not allow
         # the contents of the restricted file to be served to the restricted users.
         params = self.createParams.copy()
         params.update({
@@ -1924,8 +1924,8 @@ class TestFilesController(TestController):
         assert u'There is no file with id %s' % id in json.loads(response.body)['error']
 
     #@nottest
-    def test_retrieve(self):
-        """Tests that GET /files/retrieve/id returns the file with name id from
+    def test_serve(self):
+        """Tests that GET /files/serve/id returns the file with name id from
         the permanent store, i.e., from old/files/.
         """
 
@@ -1934,48 +1934,202 @@ class TestFilesController(TestController):
         extra_environ_contrib = {'test.authentication.role': 'contributor',
                          'test.applicationSettings': True}
 
-        # Create a restricted file.
+        # Create a restricted wav file.
         restrictedTag = h.generateRestrictedTag()
         Session.add(restrictedTag)
         Session.commit()
         restrictedTagId = restrictedTag.id
         here = self.here
         testFilesPath = os.path.join(here, 'test_files')
-        wavFileName = u'old_test.wav'
-        wavFilePath = os.path.join(testFilesPath, wavFileName)
+        wavFilename = u'old_test.wav'
+        wavFilePath = os.path.join(testFilesPath, wavFilename)
         wavFileSize = os.path.getsize(wavFilePath)
         wavFileBase64 = b64encode(open(wavFilePath).read())
         params = self.createParams.copy()
         params.update({
-            'filename': wavFileName,
+            'filename': wavFilename,
             'base64EncodedFile': wavFileBase64,
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
         response = self.app.post(url('files'), params, self.json_headers, extra_environ_admin)
         resp = json.loads(response.body)
+        wavFilename = resp['filename']
+        wavFileId = resp['id']
 
         # Retrieve the file data as the admin who entered it
-        response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
+        response = self.app.get(url(controller='files', action='serve', id=wavFileId),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         responseBase64 = b64encode(response.body)
         assert wavFileBase64 == responseBase64
-        assert guess_type(wavFileName)[0] == response.headers['Content-Type']
+        assert guess_type(wavFilename)[0] == response.headers['Content-Type']
         assert wavFileSize == int(response.headers['Content-Length'])
 
         # Attempt to retrieve the file without authentication and expect to fail (401).
-        response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
+        response = self.app.get(url(controller='files', action='serve', id=wavFileId),
             headers=self.json_headers, status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
         assert response.content_type == 'application/json'
 
         # Attempt to retrieve the restricted file data as the contrib and expect to fail.
-        response = self.app.get(url(controller='files', action='retrieve', id=wavFileName),
+        response = self.app.get(url(controller='files', action='serve', id=wavFileId),
             headers=self.json_headers, extra_environ=extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
+
+        # Attempt to serve an externally hosted file and expect a 400 status response.
+
+        # Create a valid externally hosted file
+        params = self.createParamsEH.copy()
+        url_ = 'http://vimeo.com/54144270'
+        params.update({
+            'url': url_,
+            'name': u'externally hosted file',
+            'MIMEtype': u'video/mpeg',
+            'description': u'A large video file I didn\'t want to upload here.'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        ehFileId = resp['id']
+
+        # Attempt to retrieve the externally hosted file's "data" and expect a 400 response.
+        response = self.app.get(url(controller='files', action='serve', id=ehFileId),
+            headers=self.json_headers, extra_environ=extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'The content of file %s is stored elsewhere at %s' % (ehFileId, url_)
+        assert response.content_type == 'application/json'
+
+        # Request the content of a subinterval-referencing file and expect to receive
+        # the file data from its parentFile
+
+        # Create a subinterval-referencing audio file; reference the wav created above.
+        params = self.createParamsSR.copy()
+        params.update({
+            'parentFile': wavFileId,
+            'name': u'subinterval_x',
+            'start': 1.3,
+            'end': 2.6
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        srFileId = resp['id']
+
+        # Retrieve the parent file's file data when requesting that of the child.
+        response = self.app.get(url(controller='files', action='serve', id=srFileId),
+            headers=self.json_headers, extra_environ=extra_environ_admin)
+        responseBase64 = b64encode(response.body)
+        assert wavFileBase64 == responseBase64
+        assert guess_type(wavFilename)[0] == response.headers['Content-Type']
+
+        # Retrieve the reduced file data of the wav file created above.
+        if self.create_reduced_size_file_copies:
+            response = self.app.get(url(controller='files', action='serve_reduced', id=wavFileId),
+                headers=self.json_headers, extra_environ=extra_environ_admin)
+            responseBase64 = b64encode(response.body)
+            assert len(wavFileBase64) > len(responseBase64)
+            assert response.content_type == h.guess_type('x.%s' % self.preferred_lossy_audio_format)[0]
+        else:
+            response = self.app.get(url(controller='files', action='serve_reduced', id=wavFileId),
+                headers=self.json_headers, extra_environ=extra_environ_admin, status=404)
+            resp = json.loads(response.body)
+            assert resp['error'] == u'There is no size-reduced copy of file %s' % wavFileId
+            assert response.content_type == 'application/json'
+
+        # Retrieve the reduced file of the wav-subinterval-referencing file above
+        if self.create_reduced_size_file_copies:
+            response = self.app.get(url(controller='files', action='serve_reduced', id=srFileId),
+                headers=self.json_headers, extra_environ=extra_environ_admin)
+            srResponseBase64 = b64encode(response.body)
+            assert len(wavFileBase64) > len(srResponseBase64)
+            assert srResponseBase64 == responseBase64
+            assert response.content_type == h.guess_type('x.%s' % self.preferred_lossy_audio_format)[0]
+        else:
+            response = self.app.get(url(controller='files', action='serve_reduced', id=srFileId),
+                headers=self.json_headers, extra_environ=extra_environ_admin, status=404)
+            resp = json.loads(response.body)
+            assert resp['error'] == u'There is no size-reduced copy of file %s' % srFileId
+            assert response.content_type == 'application/json'
+
+        # Create an image file and retrieve its contents and resized contents
+        jpgFilename = u'large_image.jpg'
+        jpgFilePath = os.path.join(testFilesPath, jpgFilename)
+        jpgFileSize = os.path.getsize(jpgFilePath)
+        jpgFileBase64 = b64encode(open(jpgFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': jpgFilename,
+            'base64EncodedFile': jpgFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, extra_environ_admin)
+        resp = json.loads(response.body)
+        jpgFilename = resp['filename']
+        jpgFileId = resp['id']
+
+        # Get the image file's contents
+        response = self.app.get(url(controller='files', action='serve', id=jpgFileId),
+            headers=self.json_headers, extra_environ=extra_environ_admin)
+        responseBase64 = b64encode(response.body)
+        assert jpgFileBase64 == responseBase64
+        assert guess_type(jpgFilename)[0] == response.headers['Content-Type']
+        assert jpgFileSize == int(response.headers['Content-Length'])
+
+        # Get the reduced image file's contents
+        if self.create_reduced_size_file_copies:
+            response = self.app.get(url(controller='files', action='serve_reduced', id=jpgFileId),
+                headers=self.json_headers, extra_environ=extra_environ_admin)
+            responseBase64 = b64encode(response.body)
+            assert jpgFileBase64 > responseBase64
+            assert guess_type(jpgFilename)[0] == response.headers['Content-Type']
+        else:
+            response = self.app.get(url(controller='files', action='serve_reduced', id=jpgFileId),
+                headers=self.json_headers, extra_environ=extra_environ_admin, status=404)
+            resp = json.loads(response.body)
+            assert resp['error'] == u'There is no size-reduced copy of file %s' % jpgFileId
+
+        # Attempt to get the reduced contents of a file that has none (i.e., no
+        # lossyFilename value) and expect to fail.
+
+        # Create a .ogg file and retrieve its contents and fail to retrieve its resized contents
+        oggFilename = u'old_test.ogg'
+        oggFilePath = os.path.join(testFilesPath, oggFilename)
+        oggFileSize = os.path.getsize(oggFilePath)
+        oggFileBase64 = b64encode(open(oggFilePath).read())
+        params = self.createParams.copy()
+        params.update({
+            'filename': oggFilename,
+            'base64EncodedFile': oggFileBase64
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('files'), params, self.json_headers, extra_environ_admin)
+        resp = json.loads(response.body)
+        oggFilename = resp['filename']
+        oggFileId = resp['id']
+
+        # Get the .ogg file's contents
+        response = self.app.get(url(controller='files', action='serve', id=oggFileId),
+            headers=self.json_headers, extra_environ=extra_environ_admin)
+        responseBase64 = b64encode(response.body)
+        assert oggFileBase64 == responseBase64
+        assert guess_type(oggFilename)[0] == response.headers['Content-Type']
+        assert oggFileSize == int(response.headers['Content-Length'])
+
+        # Attempt to get the reduced image file's contents and expect to fail
+        response = self.app.get(url(controller='files', action='serve_reduced', id=oggFileId),
+            headers=self.json_headers, extra_environ=extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'There is no size-reduced copy of file %s' % oggFileId
+
+        # Invalid id
+        response = self.app.get(url(controller='files', action='serve', id=123456789012),
+            headers=self.json_headers, extra_environ=extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'There is no file with id 123456789012'
 
     #@nottest
     def test_file_reduction(self):
