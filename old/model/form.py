@@ -57,6 +57,7 @@ class Form(Base):
     breakGlossCategory = Column(Unicode(1023))
     syntax = Column(Unicode(1023))
     semantics = Column(Unicode(1023))
+    status = Column(Unicode(40), default=u'tested')  # u'tested' vs. u'requires testing'
     elicitor_id = Column(Integer, ForeignKey('user.id'))
     elicitor = relation('User', primaryjoin='Form.elicitor_id==User.id')
     enterer_id = Column(Integer, ForeignKey('user.id'))
@@ -102,6 +103,7 @@ class Form(Base):
             'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
             'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
             'breakGlossCategory': self.breakGlossCategory,
+            'status': self.status,
             'elicitor': self.getMiniUserDict(self.elicitor),
             'enterer': self.getMiniUserDict(self.enterer),
             'verifier': self.getMiniUserDict(self.verifier),

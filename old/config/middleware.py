@@ -7,10 +7,9 @@ from paste.deploy.converters import asbool
 from pylons.middleware import ErrorHandler, StatusCodeRedirect
 from pylons.wsgiapp import PylonsApp
 from routes.middleware import RoutesMiddleware
-
 from old.config.environment import load_environment
-
 import logging
+
 log = logging.getLogger(__name__)
 
 class HTML2JSONContentType(object):

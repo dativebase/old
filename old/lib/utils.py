@@ -1266,6 +1266,8 @@ syntacticCategoryTypes = (
     u'sentential'
 )
 
+formStatuses = (u'tested', u'requires testing')
+
 userRoles = (
     u'viewer',
     u'contributor',

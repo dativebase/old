@@ -284,6 +284,7 @@ class FormSchema(Schema):
     glosses = ValidGlosses(not_empty=True)
     comments = UnicodeString()
     speakerComments = UnicodeString()
+    status = OneOf(h.formStatuses)
     elicitationMethod = ValidOLDModelObject(modelName='ElicitationMethod')
     syntacticCategory = ValidOLDModelObject(modelName='SyntacticCategory')
     speaker = ValidOLDModelObject(modelName='Speaker')

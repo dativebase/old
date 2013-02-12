@@ -650,6 +650,7 @@ def createNewForm(data):
     form.comments = h.normalize(data['comments'])
     form.speakerComments = h.normalize(data['speakerComments'])
     form.grammaticality = data['grammaticality']
+    form.status = data['status']
 
     # User-entered date: dateElicited
     form.dateElicited = data['dateElicited']
@@ -731,6 +732,7 @@ def updateForm(form, data):
     setAttr(form, 'comments', h.normalize(data['comments']))
     setAttr(form, 'speakerComments', h.normalize(data['speakerComments']))
     setAttr(form, 'grammaticality', data['grammaticality'])
+    setAttr(form, 'status', data['status'])
 
     # User-entered date: dateElicited
     if form.dateElicited != data['dateElicited']:

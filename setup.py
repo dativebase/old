@@ -18,7 +18,7 @@ setup(
         "WebOb<=1.0",
         "Markdown",
         "PassLib"
-    ],  # These libs will be used but are not required: python-magic, PIL, ...
+    ],  # These libs will be used if available, but are not required: python-magic, PIL, ...
     setup_requires=["PasteScript>=1.6.3"],
     packages=find_packages(exclude=['ez_setup']),
     include_package_data=True,

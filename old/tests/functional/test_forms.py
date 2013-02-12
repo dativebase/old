@@ -48,6 +48,7 @@ class TestFormsController(TestController):
         'elicitor': u'',
         'verifier': u'',
         'source': u'',
+        'status': u'tested',
         'dateElicited': u''     # mm/dd/yyyy
     }
 
@@ -346,7 +347,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test_create_transcription',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}]
+            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'status': u'tested'
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -358,6 +360,7 @@ class TestFormsController(TestController):
         assert resp['glosses'][0]['gloss'] == u'test_create_gloss'
         assert resp['morphemeBreakIDs'] == None
         assert resp['enterer']['firstName'] == u'Admin'
+        assert resp['status'] == u'tested'
         assert formCount == 1
         assert response.content_type == 'application/json'
 
@@ -531,7 +534,8 @@ class TestFormsController(TestController):
             'narrowPhoneticTranscription': u'test create invalid narrow phonetic transcription' * 100,
             'morphemeBreak': u'test create invalid morpheme break' * 100,
             'morphemeGloss': u'test create invalid morpheme gloss' * 100,
-            'glosses': [{'gloss': 'test create invalid gloss', 'glossGrammaticality': u''}]
+            'glosses': [{'gloss': 'test create invalid gloss', 'glossGrammaticality': u''}],
+            'status': u'invalid status value'
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -544,6 +548,8 @@ class TestFormsController(TestController):
         assert resp['errors']['narrowPhoneticTranscription'] == tooLongError
         assert resp['errors']['morphemeBreak'] == tooLongError
         assert resp['errors']['morphemeGloss'] == tooLongError
+        assert resp['errors']['status'] == \
+            u"Value must be one of: tested; requires testing (not u'invalid status value')"
         assert newFormCount == formCount
 
         # Add some default application settings and set
@@ -1259,7 +1265,8 @@ class TestFormsController(TestController):
             'transcription': u'Updated!',
             'glosses': [{'gloss': u'test_update_gloss', 'glossGrammaticality': u''}],
             'morphemeBreak': u'a-b',
-            'morphemeGloss': u'c-d'
+            'morphemeGloss': u'c-d',
+            'status': u'requires testing'
         })
         params = json.dumps(params)
         response = self.app.put(url('form', id=id), params,
@@ -1273,6 +1280,7 @@ class TestFormsController(TestController):
         assert resp['morphemeGloss'] == u'c-d'
         assert resp['morphemeBreakIDs'] == [[[], []]]
         assert resp['morphemeGlossIDs'] == [[[], []]]
+        assert resp['status'] == u'requires testing'
         assert newFormCount == formCount + 1
         assert origBackupCount + 1 == newBackupCount
         backup = Session.query(model.FormBackup).filter(

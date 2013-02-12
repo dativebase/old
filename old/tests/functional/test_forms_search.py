@@ -1762,6 +1762,7 @@ class TestFormsSearchController(TestController):
             'elicitor': u'',
             'verifier': u'',
             'source': u'',
+            'status': u'tested',
             'dateElicited': u''     # mm/dd/yyyy
         }
 
