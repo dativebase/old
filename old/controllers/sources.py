@@ -34,13 +34,10 @@ class SourcesController(BaseController):
         is returned or an error is raised.  The 'query' object requires a
         'filter' attribute; an 'orderBy' attribute is optional.
         """
-        #for attr in dir(self.queryBuilder):
-        #    log.warn('self.queryBuilder.%s = %s' % (attr, getattr(self.queryBuilder, attr)))
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            #log.warn(h.compile_query(query))
             return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
@@ -48,10 +45,7 @@ class SourcesController(BaseController):
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        # SQLAQueryBuilder should have captured these exceptions (and packed
-        # them into an OLDSearchParseError) or sidestepped them, but here we'll
-        # handle any that got past -- just in case.
-        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+        except:
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 

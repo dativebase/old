@@ -75,7 +75,8 @@ class Form(Base):
     files = relation('File', secondary=FormFile.__table__, backref='forms')
     collections = relation('Collection', secondary=collectionform_table, backref='forms')
     tags = relation('Tag', secondary=formtag_table, backref='forms')
-    def getDict(self):
+
+    def getDict(self):
         """Return a Python dictionary representation of the Form.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
         data are truncated, e.g., formDict['elicitor'] is a dict with keys for

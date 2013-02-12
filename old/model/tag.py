@@ -17,3 +17,11 @@ class Tag(Base):
     name = Column(Unicode(255), unique=True)
     description = Column(UnicodeText)
     datetimeModified = Column(DateTime, default=now)
+
+    def getDict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'datetimeModified': self.datetimeModified
+        }

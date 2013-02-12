@@ -4,6 +4,9 @@ from sqlalchemy import Table, Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
 from sqlalchemy.orm import relation, backref
 from old.model.meta import Base, now
+import logging
+
+log = logging.getLogger(__name__)
 
 def deleteKey(dict_, key_):
     """Try to delete the key_ from the dict_; then return the dict_."""
@@ -68,7 +71,6 @@ class ApplicationSettings(Base):
         Relational data are truncated, e.g., applicationSettings.getDict()['storageOrthography']
         is a dict with keys that are a subset of an orthography's attributes.
         """
-
         return {
             'id': self.id,
             'objectLanguageName': self.objectLanguageName,
@@ -88,8 +90,8 @@ class ApplicationSettings(Base):
             'punctuation': self.punctuation,
             'grammaticalities': self.grammaticalities,
             'datetimeModified': self.datetimeModified,
-            'storageOrthography': self.getMiniOrthographyDict(self.storageOrthography),
-            'inputOrthography': self.getMiniOrthographyDict(self.inputOrthography),
-            'outputOrthography': self.getMiniOrthographyDict(self.outputOrthography),
-            'unrestrictedUsers': [deleteKey(user.__dict__, 'password') for user in self.unrestrictedUsers]
+            'storageOrthography': self.getMiniUserDict(self.storageOrthography),
+            'inputOrthography': self.getMiniUserDict(self.inputOrthography),
+            'outputOrthography': self.getMiniUserDict(self.outputOrthography),
+            'unrestrictedUsers': self.getMiniList(self.unrestrictedUsers)
         }

@@ -19,3 +19,13 @@ class Speaker(Base):
     dialect = Column(Unicode(255))
     pageContent = Column(UnicodeText)
     datetimeModified = Column(DateTime, default=now)
+
+    def getDict(self):
+        return {
+            'id': self.id,
+            'firstName': self.firstName,
+            'lastName': self.lastName,
+            'dialect': self.dialect,
+            'pageContent': self.pageContent,
+            'datetimeModified': self.datetimeModified
+        }

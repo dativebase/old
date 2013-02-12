@@ -11,7 +11,24 @@ class Model(object):
     model.meta).
     """
 
+    # Maps names of tables to the sets of attributes required for mini-dict creation
+    tableName2coreAttributes = {
+        'elicitationmethod': ['id', 'name'],
+        'file': ['id', 'name', 'filename', 'MIMEtype', 'size', 'url', 'lossyFilename'],
+        'gloss': ['id', 'gloss', 'glossGrammaticality'],
+        'orthography': ['id', 'name', 'orthography', 'lowercase', 'initialGlottalStops'],
+        'source': ['id', 'type', 'key', 'journal', 'editor', 'chapter', 'pages',
+            'publisher', 'booktitle', 'school', 'institution', 'year', 'author', 'title', 'note'],
+        'speaker': ['id', 'firstName', 'lastName', 'dialect'],
+        'syntacticcategory': ['id', 'name'],
+        'tag': ['id', 'name'],
+        'user': ['id', 'firstName', 'lastName', 'role']
+    }
+
     def getDictFromModel(self, model, attrs):
+        """attrs is a list of attribute names (non-relational); returns a dict
+        containing all of these attributes and their values.
+        """
         dict_ = {}
         try:
             for attr in attrs:
@@ -26,37 +43,43 @@ class Model(object):
         except (json.decoder.JSONDecodeError, TypeError):
             return None
 
+    def getMiniDict(self, model=None):
+        model = model or self
+        return self.getDictFromModel(model,
+                    self.tableName2coreAttributes.get(model.__tablename__, []))
+
+    def getMiniDictFor(self, model):
+        return model and self.getMiniDict(model) or None
+
     def getMiniUserDict(self, user):
-        return self.getDictFromModel(user, ['id', 'firstName', 'lastName', 'role'])
+        return self.getMiniDictFor(user)
 
     def getMiniSpeakerDict(self, speaker):
-        return self.getDictFromModel(speaker, ['id', 'firstName', 'lastName',
-                                               'dialect'])
+        return self.getMiniDictFor(speaker)
 
     def getMiniElicitationMethodDict(self, elicitationMethod):
-        return self.getDictFromModel(elicitationMethod, ['id', 'name'])
+        return self.getMiniDictFor(elicitationMethod)
 
     def getMiniSyntacticCategoryDict(self, syntacticCategory):
-        return self.getDictFromModel(syntacticCategory, ['id', 'name'])
+        return self.getMiniDictFor(syntacticCategory)
 
     def getMiniSourceDict(self, source):
-        return self.getDictFromModel(source, ['id', 'type', 'key', 'journal',
-                        'editor', 'chapter', 'pages', 'publisher', 'booktitle',
-                        'school', 'institution', 'year', 'author', 'title', 'note'])
+        return self.getMiniDictFor(source)
 
     def getMiniGlossDict(self, gloss):
-        return self.getDictFromModel(gloss, ['id', 'gloss', 'glossGrammaticality'])
+        return self.getMiniDictFor(gloss)
 
     def getMiniTagDict(self, tag):
-        return self.getDictFromModel(tag, ['id', 'name'])
+        return self.getMiniDictFor(tag)
 
     def getMiniFileDict(self, file):
-        return self.getDictFromModel(file, ['id', 'name', 'filename', 'MIMEtype',
-                                            'size', 'url', 'lossyFilename'])
+        return self.getMiniDictFor(file)
 
     def getMiniOrthographyDict(self, orthography):
-        return self.getDictFromModel(orthography,
-            ['id', 'name', 'orthography', 'lowercase', 'initialGlottalStops'])
+        return self.getMiniDictFor(orthography)
+
+    def getMiniList(self, listOfModels):
+        return [m.getMiniDict() for m in listOfModels]
 
     def getGlossesList(self, glosses):
         return [self.getMiniGlossDict(gloss) for gloss in glosses]

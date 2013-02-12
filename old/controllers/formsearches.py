@@ -41,7 +41,8 @@ class FormsearchesController(BaseController):
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
-            query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            query = h.eagerloadFormSearch(
+                self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
             return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
@@ -49,10 +50,7 @@ class FormsearchesController(BaseController):
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        # SQLAQueryBuilder should have captured these exceptions (and packed
-        # them into an OLDSearchParseError) or sidestepped them, but here we'll
-        # handle any that got past -- just in case.
-        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+        except:
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
@@ -71,7 +69,7 @@ class FormsearchesController(BaseController):
     def index(self):
         """GET /formsearches: Return all form searches."""
         try:
-            query = Session.query(FormSearch)
+            query = h.eagerloadFormSearch(Session.query(FormSearch))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             return h.addPagination(query, dict(request.GET))
         except Invalid, e:
@@ -118,7 +116,7 @@ class FormsearchesController(BaseController):
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /formsearches/id: Update an existing form search."""
-        formSearch = Session.query(FormSearch).get(int(id))
+        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(int(id))
         if formSearch:
             try:
                 schema = FormSearchSchema()
@@ -153,7 +151,7 @@ class FormsearchesController(BaseController):
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /formsearches/id: Delete an existing form search."""
-        formSearch = Session.query(FormSearch).get(id)
+        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             Session.delete(formSearch)
             Session.commit()
@@ -173,7 +171,7 @@ class FormsearchesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-        formSearch = Session.query(FormSearch).get(id)
+        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             return formSearch
         else:
@@ -188,7 +186,7 @@ class FormsearchesController(BaseController):
         """GET /formsearches/id/edit: Return the data necessary to update an existing
         OLD form search.
         """
-        formSearch = Session.query(FormSearch).get(id)
+        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             data = {'searchParameters': h.getSearchParameters(self.queryBuilder)}
             return {'data': data, 'formSearch': formSearch}
@@ -210,7 +208,6 @@ def createNewFormSearch(data):
     formSearch.name = h.normalize(data['name'])
     formSearch.search = data['search']      # Note that this is purposefully not normalized (reconsider this? ...)
     formSearch.description = h.normalize(data['description'])
-    #formSearch.enterer = Session.query(User).get(session['user'].id)
     formSearch.enterer = session['user']
     formSearch.datetimeModified = datetime.datetime.utcnow()
     return formSearch

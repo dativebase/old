@@ -14,6 +14,7 @@ from pylons.controllers.util import forward
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
+from sqlalchemy.orm import subqueryload
 from old.lib.base import BaseController
 from old.lib.schemata import FileCreateWithBase64EncodedFiledataSchema, \
     FileCreateWithFiledataSchema, FileSubintervalReferencingSchema, \
@@ -46,7 +47,8 @@ class FilesController(BaseController):
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            SQLAQuery = h.eagerloadFile(
+                self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
             query = h.filterRestrictedModels('File', SQLAQuery)
             return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
@@ -55,10 +57,7 @@ class FilesController(BaseController):
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        # SQLAQueryBuilder should have captured these exceptions (and packed
-        # them into an OLDSearchParseError) or sidestepped them, but here we'll
-        # handle any that got past -- just in case.
-        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+        except:
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
@@ -77,7 +76,7 @@ class FilesController(BaseController):
     def index(self):
         """GET /files: Return all files."""
         try:
-            query = Session.query(File)
+            query = h.eagerloadFile(Session.query(File))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             query = h.filterRestrictedModels('File', query)
             return h.addPagination(query, dict(request.GET))
@@ -168,7 +167,7 @@ class FilesController(BaseController):
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /files/id: Update an existing file."""
-        file = Session.query(File).get(int(id))
+        file = h.eagerloadFile(Session.query(File)).get(int(id))
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -210,7 +209,7 @@ class FilesController(BaseController):
         """DELETE /files/id: Delete an existing file.  Only the enterer and
         administrators can delete a file.
         """
-        file = Session.query(File).get(id)
+        file = h.eagerloadFile(Session.query(File)).get(id)
         if file:
             if session['user'].role == u'administrator' or \
             file.enterer is session['user']:
@@ -235,7 +234,7 @@ class FilesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-        file = Session.query(File).get(id)
+        file = h.eagerloadFile(Session.query(File)).get(id)
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -272,7 +271,7 @@ class FilesController(BaseController):
         result in selective retrieval (see getNewEditFileData for details).
         """
         response.content_type = 'application/json'
-        file = Session.query(File).get(id)
+        file = h.eagerloadFile(Session.query(File)).get(id)
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
             if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
@@ -308,7 +307,7 @@ def serveFile(id, reduced=False):
     reduced is True, then try to serve /files/reduced_files/<filename> where
     filename is file.lossyFilename.
     """
-    file = Session.query(File).get(id)
+    file = Session.query(File).options(subqueryload(File.parentFile)).get(id)
     if getattr(file, 'parentFile', None):
         file = file.parentFile
     elif getattr(file, 'url', None):
@@ -707,9 +706,9 @@ def getNewEditFileData(GET_params):
     # map_ maps param names to functions that retrieve the appropriate data
     # from the db.
     map_ = {
-        'tags': h.getTags,
-        'speakers': h.getSpeakers,
-        'users': h.getUsers
+        'tags': h.getMiniDictsGetter('Tag'),
+        'speakers': h.getMiniDictsGetter('Speaker'),
+        'users': h.getMiniDictsGetter('User')
     }
 
     # result is initialized as a dict with empty list values.

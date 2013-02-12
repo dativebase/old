@@ -50,10 +50,7 @@ class LanguagesController(BaseController):
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        # SQLAQueryBuilder should have captured these exceptions (and packed
-        # them into an OLDSearchParseError) or sidestepped them, but here we'll
-        # handle any that got past -- just in case.
-        except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+        except:
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 

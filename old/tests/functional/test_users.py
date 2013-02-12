@@ -618,7 +618,7 @@ class TestUsersController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'orthographies': h.getOrthographies(),
+            'orthographies': h.getMiniDictsGetter('Orthography')(),
             'roles': h.userRoles,
             'markupLanguages': h.markupLanguages
         }
@@ -1056,7 +1056,7 @@ class TestUsersController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'orthographies': h.getOrthographies(),
+            'orthographies': h.getMiniDictsGetter('Orthography')(),
             'roles': h.userRoles,
             'markupLanguages': h.markupLanguages
         }

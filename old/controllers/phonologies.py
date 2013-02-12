@@ -29,7 +29,7 @@ class PhonologiesController(BaseController):
     def index(self):
         """GET /phonologies: Return all phonologies."""
         try:
-            query = Session.query(Phonology)
+            query = h.eagerloadPhonology(Session.query(Phonology))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             return h.addPagination(query, dict(request.GET))
         except Invalid, e:
@@ -73,7 +73,7 @@ class PhonologiesController(BaseController):
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /phonologies/id: Update an existing phonology."""
-        phonology = Session.query(Phonology).get(int(id))
+        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(int(id))
         if phonology:
             try:
                 schema = PhonologySchema()
@@ -107,7 +107,7 @@ class PhonologiesController(BaseController):
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
         """DELETE /phonologies/id: Delete an existing phonology."""
-        phonology = Session.query(Phonology).get(id)
+        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
             Session.delete(phonology)
             Session.commit()
@@ -127,7 +127,7 @@ class PhonologiesController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-        phonology = Session.query(Phonology).get(id)
+        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
             return phonology
         else:
@@ -143,7 +143,7 @@ class PhonologiesController(BaseController):
         OLD phonology; here we return only the phonology and
         an empty JSON object.
         """
-        phonology = Session.query(Phonology).get(id)
+        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
             return {'data': {}, 'phonology': phonology}
         else:

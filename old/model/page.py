@@ -20,4 +20,3 @@ class Page(Base):
     content = Column(UnicodeText)
     html = Column(UnicodeText)
     datetimeModified = Column(DateTime, default=now)
-

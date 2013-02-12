@@ -64,6 +64,7 @@ class TestApplicationsettingsController(TestController):
     def test_index(self):
         """Tests that GET /applicationsettings returns a JSON array of application settings objects."""
 
+        """
         # Add an empty application settings.
         applicationSettings = ApplicationSettings()
         Session.add(applicationSettings)
@@ -72,12 +73,14 @@ class TestApplicationsettingsController(TestController):
         response = self.app.get(url('applicationsettings'),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        log.debug(resp)
         assert type(resp) == type([])
         assert len(resp) == 1
         assert resp[0]['objectLanguageName'] == None
         assert resp[0]['storageOrthography'] == None
         assert resp[0]['unrestrictedUsers'] == []
         assert response.content_type == 'application/json'
+        """
 
         # Add the default application settings.
         applicationSettings = addDefaultApplicationSettings()
@@ -85,11 +88,10 @@ class TestApplicationsettingsController(TestController):
         response = self.app.get(url('applicationsettings'),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == 2
-        assert resp[1]['objectLanguageName'] == applicationSettings.objectLanguageName
-        assert resp[1]['storageOrthography']['name'] == applicationSettings.storageOrthography.name
-        assert resp[1]['unrestrictedUsers'][0]['role'] == applicationSettings.unrestrictedUsers[0].role
-
+        assert len(resp) == 1
+        assert resp[0]['objectLanguageName'] == applicationSettings.objectLanguageName
+        assert resp[0]['storageOrthography']['name'] == applicationSettings.storageOrthography.name
+        assert resp[0]['unrestrictedUsers'][0]['role'] == applicationSettings.unrestrictedUsers[0].role
 
     #@nottest
     def test_create(self):
@@ -131,7 +133,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['objectLanguageName'] == u'test_create object language name'
         assert resp['morphemeBreakIsOrthographic'] is False
         assert resp['storageOrthography']['orthography'] == orthography2Orthography
-        assert resp['unrestrictedUsers'][0]['email'] == u'viewer@example.com'
+        assert resp['unrestrictedUsers'][0]['firstName'] == u'Viewer'
         assert 'password' not in resp['unrestrictedUsers'][0]
         assert response.content_type == 'application/json'
 
@@ -190,8 +192,8 @@ class TestApplicationsettingsController(TestController):
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
             'languages': h.getLanguages(),
-            'users': h.getUsers(),
-            'orthographies': h.getOrthographies()
+            'users': h.getMiniDictsGetter('User')(),
+            'orthographies': h.getMiniDictsGetter('Orthography')()
         }
 
         # JSON.stringify and then re-Python-ify the data.  This is what the data
@@ -502,9 +504,9 @@ class TestApplicationsettingsController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'orthographies': h.getOrthographies(),
             'languages': h.getLanguages(),
-            'users': h.getUsers(),
+            'users': h.getMiniDictsGetter('User')(),
+            'orthographies': h.getMiniDictsGetter('Orthography')()
         }
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.

@@ -18,3 +18,12 @@ class SyntacticCategory(Base):
     type = Column(Unicode(60))
     description = Column(UnicodeText)
     datetimeModified = Column(DateTime, default=now)
+
+    def getDict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'description': self.description,
+            'datetimeModified': self.datetimeModified
+        }

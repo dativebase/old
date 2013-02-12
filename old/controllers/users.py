@@ -189,7 +189,7 @@ def getNewUserData(GET_params):
 
     # getterMap maps param names to getter functions that retrieve the
     # appropriate data from the db.
-    getterMap = {'orthographies': h.getOrthographies}
+    getterMap = {'orthographies': h.getMiniDictsGetter('Orthography')}
 
     # result is initialized as a dict with empty list values.
     result = dict([(key, []) for key in getterMap])

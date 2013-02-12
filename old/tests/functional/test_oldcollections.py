@@ -1044,10 +1044,10 @@ class TestOldcollectionsController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'tags': h.getTags(),
-            'speakers': h.getSpeakers(),
-            'users': h.getUsers(),
-            'sources': h.getSources(),
+            'speakers': h.getMiniDictsGetter('Speaker')(),
+            'users': h.getMiniDictsGetter('User')(),
+            'tags': h.getMiniDictsGetter('Tag')(),
+            'sources': h.getMiniDictsGetter('Source')()
         }
 
         # JSON.stringify and then re-Python-ify the data.  This is what the data
@@ -1731,11 +1731,12 @@ class TestOldcollectionsController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'tags': h.getTags(),
-            'speakers': h.getSpeakers(),
-            'users': h.getUsers(),
-            'sources': h.getSources()
+            'speakers': h.getMiniDictsGetter('Speaker')(),
+            'users': h.getMiniDictsGetter('User')(),
+            'tags': h.getMiniDictsGetter('Tag')(),
+            'sources': h.getMiniDictsGetter('Source')()
         }
+
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
         data = json.loads(json.dumps(data, cls=h.JSONOLDEncoder))

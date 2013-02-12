@@ -27,7 +27,8 @@ class ApplicationsettingsController(BaseController):
         """GET /applicationsettings: return all application settings models as
         JSON objects.
         """
-        return Session.query(ApplicationSettings).order_by(asc(ApplicationSettings.id)).all()
+        return h.eagerloadApplicationSettings(Session.query(ApplicationSettings))\
+                    .order_by(asc(ApplicationSettings.id)).all()
 
     @h.jsonify
     @h.restrict('POST')
@@ -73,7 +74,8 @@ class ApplicationsettingsController(BaseController):
     @h.authorize(['administrator'])
     def update(self, id):
         """PUT /applicationsettings/id: Update an existing application settings."""
-        applicationSettings = Session.query(ApplicationSettings).get(int(id))
+        applicationSettings = h.eagerloadApplicationSettings(
+            Session.query(ApplicationSettings)).get(int(id))
         if applicationSettings:
             try:
                 schema = ApplicationSettingsSchema()
@@ -90,7 +92,6 @@ class ApplicationsettingsController(BaseController):
                 else:
                     response.status_int = 400
                     return {'error': 'The update request failed because the submitted data were not new.'}
-
             except h.JSONDecodeError:
                 response.status_int = 400
                 return h.JSONDecodeErrorResponse
@@ -107,7 +108,8 @@ class ApplicationsettingsController(BaseController):
     @h.authorize(['administrator'])
     def delete(self, id):
         """DELETE /applicationsettings/id: Delete an existing application settings."""
-        applicationSettings = Session.query(ApplicationSettings).get(id)
+        applicationSettings = h.eagerloadApplicationSettings(
+            Session.query(ApplicationSettings)).get(id)
         if applicationSettings:
             activeApplicationSettingsId = getattr(h.getApplicationSettings(), 'id', None)
             toBeDeletedApplicationSettingsId = applicationSettings.id
@@ -132,7 +134,8 @@ class ApplicationsettingsController(BaseController):
         with a JSON.stringified {error: '404 Not Found'} object (see the
         error.py controller).
         """
-        applicationSettings = Session.query(ApplicationSettings).get(id)
+        applicationSettings = h.eagerloadApplicationSettings(
+            Session.query(ApplicationSettings)).get(id)
         if applicationSettings:
             return applicationSettings
         else:
@@ -165,7 +168,8 @@ class ApplicationsettingsController(BaseController):
         result in selective retrieval (see getNewApplicationSettingsData for
         details).
         """
-        applicationSettings = Session.query(ApplicationSettings).get(id)
+        applicationSettings = h.eagerloadApplicationSettings(
+            Session.query(ApplicationSettings)).get(id)
         if applicationSettings:
             return {'data': getNewApplicationSettingsData(request.GET),
                     'applicationSettings': applicationSettings}
@@ -204,8 +208,8 @@ def getNewApplicationSettingsData(GET_params):
     # getterMap maps param names to getter functions that retrieve the
     # appropriate data from the db.
     getterMap = {
-        'users': h.getUsers,
-        'orthographies': h.getOrthographies,
+        'users': h.getMiniDictsGetter('User'),
+        'orthographies': h.getMiniDictsGetter('Orthography'),
         'languages': h.getLanguages
     }
 

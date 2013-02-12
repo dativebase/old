@@ -1167,9 +1167,9 @@ class TestFilesController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'tags': h.getTags(),
-            'speakers': h.getSpeakers(),
-            'users': h.getUsers(),
+            'tags': h.getMiniDictsGetter('Tag')(),
+            'speakers': h.getMiniDictsGetter('Speaker')(),
+            'users': h.getMiniDictsGetter('User')(),
             'utteranceTypes': h.utteranceTypes,
             'allowedFileTypes': h.allowedFileTypes
         }
@@ -1934,10 +1934,11 @@ class TestFilesController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'tags': h.getTags(),
-            'speakers': h.getSpeakers(),
-            'users': h.getUsers(),
-            'utteranceTypes': h.utteranceTypes
+            'tags': h.getMiniDictsGetter('Tag')(),
+            'speakers': h.getMiniDictsGetter('Speaker')(),
+            'users': h.getMiniDictsGetter('User')(),
+            'utteranceTypes': h.utteranceTypes,
+            'allowedFileTypes': h.allowedFileTypes
         }
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.

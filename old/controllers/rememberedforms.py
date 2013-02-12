@@ -9,7 +9,7 @@ from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
-
+from sqlalchemy.orm import subqueryload
 from old.lib.base import BaseController
 from old.lib.schemata import FormIdsSchemaNullable
 import old.lib.helpers as h
@@ -55,7 +55,8 @@ class RememberedformsController(BaseController):
         user = Session.query(User).get(id)
         if user:
             try:
-                query = Session.query(Form).filter(Form.memorizers.contains(user))
+                query = h.eagerloadForm(Session.query(Form))\
+                            .filter(Form.memorizers.contains(user))
                 query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
                 query = h.filterRestrictedModels('Form', query)
                 return h.addPagination(query, dict(request.GET))
@@ -80,7 +81,7 @@ class RememberedformsController(BaseController):
         Admins can update any user's remembered forms; non-admins can only
         update their own.
         """
-        user = Session.query(User).get(id)
+        user = Session.query(User).options(subqueryload(User.rememberedForms)).get(id)
         if user:
             try:
                 schema = FormIdsSchemaNullable
@@ -129,7 +130,8 @@ class RememberedformsController(BaseController):
             try:
                 jsonSearchParams = unicode(request.body, request.charset)
                 pythonSearchParams = json.loads(jsonSearchParams)
-                query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+                query = h.eagerloadForm(
+                    self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
                 query = query.filter(Form.memorizers.contains(user))
                 query = h.filterRestrictedModels('Form', query)
                 return h.addPagination(query, pythonSearchParams.get('paginator'))
@@ -139,10 +141,7 @@ class RememberedformsController(BaseController):
             except (OLDSearchParseError, Invalid), e:
                 response.status_int = 400
                 return {'errors': e.unpack_errors()}
-            # SQLAQueryBuilder should have captured these exceptions (and packed
-            # them into an OLDSearchParseError) or sidestepped them, but here we'll
-            # handle any that got past -- just in case.
-            except (OperationalError, AttributeError, InvalidRequestError, RuntimeError):
+            except:
                 response.status_int = 400
                 return {'error': u'The specified search parameters generated an invalid database query'}
         else:

@@ -9,7 +9,6 @@ from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
-
 from old.lib.base import BaseController
 from old.lib.schemata import FormSchema, FormIdsSchema
 import old.lib.helpers as h
@@ -40,6 +39,7 @@ class FormsController(BaseController):
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
             SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
+            query = h.eagerloadForm(SQLAQuery)
             query = h.filterRestrictedModels('Form', SQLAQuery)
             return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
@@ -48,9 +48,6 @@ class FormsController(BaseController):
         except (OLDSearchParseError, Invalid), e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        # SQLAQueryBuilder should have captured these exceptions (and packed
-        # them into an OLDSearchParseError) or sidestepped them, but here we'll
-        # handle any that got past -- just in case.
         except Exception, e:
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
@@ -70,7 +67,7 @@ class FormsController(BaseController):
     def index(self):
         """GET /forms: Return all forms."""
         try:
-            query = Session.query(Form)
+            query = h.eagerloadForm(Session.query(Form))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
             query = h.filterRestrictedModels('Form', query)
             return h.addPagination(query, dict(request.GET))
@@ -124,7 +121,7 @@ class FormsController(BaseController):
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
         """PUT /forms/id: Update an existing form."""
-        form = Session.query(Form).get(int(id))
+        form = h.eagerloadForm(Session.query(Form)).get(int(id))
         if form:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -168,7 +165,7 @@ class FormsController(BaseController):
         """DELETE /forms/id: Delete an existing form.  Only the enterer and
         administrators can delete a form.
         """
-        form = Session.query(Form).get(id)
+        form = h.eagerloadForm(Session.query(Form)).get(id)
         if form:
             if session['user'].role == u'administrator' or \
             form.enterer is session['user']:
@@ -197,7 +194,7 @@ class FormsController(BaseController):
         will put a 404 status int into the header and the default 404 JSON
         object defined in controllers/error.py will be returned.
         """
-        form = Session.query(Form).get(id)
+        form = h.eagerloadForm(Session.query(Form)).get(id)
         if form:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -233,7 +230,7 @@ class FormsController(BaseController):
         output.data being retrieved from the db while specified params will
         result in selective retrieval (see getNewEditFormData for details).
         """
-        form = Session.query(Form).get(id)
+        form = h.eagerloadForm(Session.query(Form)).get(id)
         if form:
             unrestrictedUsers = h.getUnrestrictedUsers()
             if h.userIsAuthorizedToAccessModel(session['user'], form, unrestrictedUsers):
@@ -336,7 +333,7 @@ class FormsController(BaseController):
         to decide what to do about the backuper attribute.
         """
         validDelimiters = h.getMorphemeDelimiters()
-        forms = h.getForms()
+        forms = h.getForms(None, True)
         updatedFormIds = []
         for form in forms:
             formDict = form.getDict()
@@ -401,12 +398,12 @@ def getNewEditFormData(GET_params):
     # from the db.
     map_ = {
         'grammaticalities': h.getGrammaticalities,
-        'elicitationMethods': h.getElicitationMethods,
-        'tags': h.getTags,
-        'syntacticCategories': h.getSyntacticCategories,
-        'speakers': h.getSpeakers,
-        'users': h.getUsers,
-        'sources': h.getSources
+        'elicitationMethods': h.getMiniDictsGetter('ElicitationMethod'),
+        'tags': h.getMiniDictsGetter('Tag'),
+        'syntacticCategories': h.getMiniDictsGetter('SyntacticCategory'),
+        'speakers': h.getMiniDictsGetter('Speaker'),
+        'users': h.getMiniDictsGetter('User'),
+        'sources': h.getMiniDictsGetter('Source')
     }
 
     # result is initialized as a dict with empty list values.
@@ -593,7 +590,7 @@ def getFormAndPreviousVersions(id):
     previousVersions = []
     try:
         id = int(id)
-        form = Session.query(Form).get(id)
+        form = h.eagerloadForm(Session.query(Form)).get(id)
         if form:
             previousVersions = h.getFormBackupsByUUID(form.UUID)
         else:
@@ -691,7 +688,7 @@ def createNewForm(data):
     now = datetime.datetime.utcnow()
     form.datetimeEntered = now
     form.datetimeModified = now
-    form.enterer = Session.query(User).get(session['user'].id)
+    form.enterer = session['user']
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
     # We add the form first to get an ID so that monomorphemic Forms can be

@@ -13,6 +13,7 @@ from uuid import uuid4, UUID
 from mimetypes import guess_type
 import simplejson as json
 from sqlalchemy.sql import or_, not_, desc, asc
+from sqlalchemy.orm import subqueryload, joinedload
 import old.model as model
 from old.model import Form, FormBackup, File, Collection, CollectionBackup
 from old.model.meta import Session, Model
@@ -655,8 +656,10 @@ def getFormsUserCanAccess(user, paginator=None):
         return query.slice(start, end).all()
     return query.all()
 
-def getForms(paginator=None):
+def getForms(paginator=None, eagerload=False):
     formQuery = Session.query(Form).order_by(asc(Form.id))
+    if eagerload:
+        formQuery = eagerloadForm(formQuery)
     if paginator:
         start, end = getStartAndEndFromPaginator(paginator)
         return formQuery.slice(start, end).all()
@@ -664,7 +667,7 @@ def getForms(paginator=None):
 
 def getFormByUUID(UUID):
     """Return the first (and only, hopefully) Form model with UUID."""
-    return Session.query(Form).filter(Form.UUID==UUID).first()
+    return eagerloadForm(Session.query(Form)).filter(Form.UUID==UUID).first()
 
 def getCollectionByUUID(UUID):
     """Return the first (and only, hopefully) Collection model with UUID."""
@@ -725,6 +728,12 @@ def getSpeakers(sortByIdAsc=False):
 
 def getUsers(sortByIdAsc=False):
     return getModelsByName('User', sortByIdAsc)
+
+def getMiniDictsGetter(modelName, sortByIdAsc=False):
+    def func():
+        models = getModelsByName(modelName, sortByIdAsc)
+        return [m.getMiniDict() for m in models]
+    return func
 
 def getSources(sortByIdAsc=False):
     return getModelsByName('Source', sortByIdAsc)
@@ -1438,3 +1447,65 @@ def ffmpegEncodes(format_):
                 app_globals.ffmpegEncodes = {format_: encodesFormat}
             return encodesFormat
     return False
+
+
+################################################################################
+# Eager loading of model queries
+################################################################################
+
+# It appears that SQLAlchemy does not query the db to retrieve a relational scalar
+# when the foreign key id col value is NULL.  Therefore, eager loading on relational
+# scalars is pointless if not wasteful.  However, collections that will always be
+# accessed should always be eager loaded.
+
+def eagerloadForm(query):
+    return query.options(
+        #subqueryload(model.Form.elicitor),
+        subqueryload(model.Form.enterer),   # All forms *should* have enterers
+        #subqueryload(model.Form.verifier),
+        #subqueryload(model.Form.speaker),
+        #subqueryload(model.Form.elicitationMethod),
+        #subqueryload(model.Form.syntacticCategory),
+        #subqueryload(model.Form.source),
+        joinedload(model.Form.glosses),
+        joinedload(model.Form.files),
+        joinedload(model.Form.tags))
+
+def eagerloadApplicationSettings(query):
+    return query.options(
+        #subqueryload(model.ApplicationSettings.inputOrthography),
+        #subqueryload(model.ApplicationSettings.outputOrthography),
+        #subqueryload(model.ApplicationSettings.storageOrthography)
+    )
+
+def eagerloadCollection(query):
+    return query.options(
+        #subqueryload(model.Collection.speaker),
+        #subqueryload(model.Collection.elicitor),
+        subqueryload(model.Collection.enterer),
+        #subqueryload(model.Collection.source),
+        subqueryload(model.Collection.forms),
+        joinedload(model.Collection.tags),
+        joinedload(model.Collection.files))
+
+def eagerloadFile(query):
+    return query.options(
+        subqueryload(model.File.enterer),
+        #subqueryload(model.File.elicitor),
+        #subqueryload(model.File.speaker),
+        joinedload(model.File.tags),
+        joinedload(model.File.forms))
+
+def eagerloadFormSearch(query):
+    return query.options(subqueryload(model.FormSearch.searcher))
+
+def eagerloadPhonology(query):
+    return query.options(
+        subqueryload(model.Phonology.enterer),
+        subqueryload(model.Phonology.modifier))
+
+def eagerloadUser(query):
+    return query.options(
+        #subqueryload(model.User.inputOrthography),
+        #subqueryload(model.User.outputOrthography)
+    )

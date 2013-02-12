@@ -1143,13 +1143,14 @@ class TestFormsController(TestController):
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
             'grammaticalities': h.getGrammaticalities(),
-            'elicitationMethods': h.getElicitationMethods(),
-            'tags': h.getTags(),
-            'syntacticCategories': h.getSyntacticCategories(),
-            'speakers': h.getSpeakers(),
-            'users': h.getUsers(),
-            'sources': h.getSources()
+            'elicitationMethods': h.getMiniDictsGetter('ElicitationMethod')(),
+            'tags': h.getMiniDictsGetter('Tag')(),
+            'syntacticCategories': h.getMiniDictsGetter('SyntacticCategory')(),
+            'speakers': h.getMiniDictsGetter('Speaker')(),
+            'users': h.getMiniDictsGetter('User')(),
+            'sources': h.getMiniDictsGetter('Source')()
         }
+
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
         data = json.loads(json.dumps(data, cls=h.JSONOLDEncoder))
@@ -1810,12 +1811,12 @@ class TestFormsController(TestController):
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
             'grammaticalities': h.getGrammaticalities(),
-            'elicitationMethods': h.getElicitationMethods(),
-            'tags': h.getTags(),
-            'syntacticCategories': h.getSyntacticCategories(),
-            'speakers': h.getSpeakers(),
-            'users': h.getUsers(),
-            'sources': h.getSources()
+            'elicitationMethods': h.getMiniDictsGetter('ElicitationMethod')(),
+            'tags': h.getMiniDictsGetter('Tag')(),
+            'syntacticCategories': h.getMiniDictsGetter('SyntacticCategory')(),
+            'speakers': h.getMiniDictsGetter('Speaker')(),
+            'users': h.getMiniDictsGetter('User')(),
+            'sources': h.getMiniDictsGetter('Source')()
         }
 
         # JSON.stringify and then re-Python-ify the data.  This is what the data
