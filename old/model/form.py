@@ -69,7 +69,7 @@ class Form(Base):
     elicitationmethod_id = Column(Integer, ForeignKey('elicitationmethod.id'))
     elicitationMethod = relation('ElicitationMethod')
     syntacticcategory_id = Column(Integer, ForeignKey('syntacticcategory.id'))
-    syntacticCategory = relation('SyntacticCategory')
+    syntacticCategory = relation('SyntacticCategory', backref='forms')
     source_id = Column(Integer, ForeignKey('source.id'))
     source = relation('Source')
     glosses = relation('Gloss', backref='form', cascade='all, delete, delete-orphan')

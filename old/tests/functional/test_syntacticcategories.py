@@ -24,6 +24,27 @@ log = logging.getLogger(__name__)
 
 class TestSyntacticcategoriesController(TestController):
 
+    createFormParams = {
+        'transcription': u'',
+        'phoneticTranscription': u'',
+        'narrowPhoneticTranscription': u'',
+        'morphemeBreak': u'',
+        'grammaticality': u'',
+        'morphemeGloss': u'',
+        'glosses': [],
+        'comments': u'',
+        'speakerComments': u'',
+        'elicitationMethod': u'',
+        'tags': [],
+        'syntacticCategory': u'',
+        'speaker': u'',
+        'elicitor': u'',
+        'verifier': u'',
+        'source': u'',
+        'status': u'tested',
+        'dateElicited': u''     # mm/dd/yyyy
+    }
+
     extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}
@@ -339,3 +360,105 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['syntacticCategory']['name'] == u'name'
         assert resp['data']['syntacticCategoryTypes'] == list(h.syntacticCategoryTypes)
         assert response.content_type == 'application/json'
+
+
+    #@nottest
+    def test_category_percolation(self):
+        """Tests that changes to a category's name and deletion of a category trigger updates to forms containing morphemes of that category.
+        """
+
+        applicationSettings = h.generateDefaultApplicationSettings()
+        Session.add(applicationSettings)
+        Session.commit()
+
+        extra_environ = {'test.authentication.role': u'administrator',
+                               'test.applicationSettings': True}
+
+        # Create an N category
+        params = json.dumps({'name': u'N', 'type': u'lexical', 'description': u''})
+        response = self.app.post(url('syntacticcategories'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        NId = resp['id']
+        assert resp['name'] == u'N'
+        assert response.content_type == 'application/json'
+
+        # Create a lexical form 'chien/dog' of category N
+        params = self.createFormParams.copy()
+        params.update({
+            'transcription': u'chien',
+            'morphemeBreak': u'chien',
+            'morphemeGloss': u'dog',
+            'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        chienId = resp['id']
+        assert resp['morphemeBreakIDs'][0][0][0][1] == u'dog'
+        assert resp['morphemeBreakIDs'][0][0][0][2] == u'N'
+        assert resp['morphemeGlossIDs'][0][0][0][1] == u'chien'
+        assert resp['morphemeGlossIDs'][0][0][0][2] == u'N'
+        assert resp['syntacticCategoryString'] == u'N'
+        assert resp['breakGlossCategory'] == u'chien|dog|N'
+
+        # Create a phrasal form 'chien-s/dog-PL' that will contain 'chien/dog'
+        params = self.createFormParams.copy()
+        params.update({
+            'transcription': u'chiens',
+            'morphemeBreak': u'chien-s',
+            'morphemeGloss': u'dog-PL',
+            'glosses': [{'gloss': u'dogs', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        chiensId = resp['id']
+        assert resp['morphemeBreakIDs'][0][0][0][1] == u'dog'
+        assert resp['morphemeBreakIDs'][0][0][0][2] == u'N'
+        assert resp['morphemeGlossIDs'][0][0][0][1] == u'chien'
+        assert resp['morphemeGlossIDs'][0][0][0][2] == u'N'
+        assert resp['syntacticCategoryString'] == u'N-?'
+        assert resp['breakGlossCategory'] == u'chien|dog|N-s|PL|?'
+
+        # Now update the name of the N category and expect that change to cause
+        # an update to the chien/dog and chien-s/dog-PL forms.
+        formBackupCount = Session.query(model.FormBackup).count()
+        params = json.dumps({'name': u'Noun', 'type': u'lexical', 'description': u''})
+        response = self.app.put(url('syntacticcategory', id=NId), params, self.json_headers, extra_environ)
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        chien = Session.query(model.Form).get(chienId)
+        chiens = Session.query(model.Form).get(chiensId)
+        assert newFormBackupCount == formBackupCount + 2
+        assert chien.syntacticCategoryString == u'Noun'
+        assert chiens.syntacticCategoryString == u'Noun-?'
+        assert json.loads(chiens.morphemeBreakIDs)[0][0][0][2] == u'Noun'
+
+        # Now update something besides the name attribute of the N/Noun category
+        # and expect no updates to any forms.
+        params = json.dumps({'name': u'Noun', 'type': u'lexical', 'description': u'Blah!'})
+        response = self.app.put(url('syntacticcategory', id=NId), params, self.json_headers, extra_environ)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        chien = chiens = None
+        chien = Session.query(model.Form).get(chienId)
+        chiens = Session.query(model.Form).get(chiensId)
+        assert newFormBackupCount == formBackupCount
+        assert chien.syntacticCategoryString == u'Noun'
+        assert chiens.syntacticCategoryString == u'Noun-?'
+        assert json.loads(chiens.morphemeBreakIDs)[0][0][0][2] == u'Noun'
+
+        # Test deletion of sc
+        response = self.app.delete(url('syntacticcategory', id=NId), headers=self.json_headers,
+                                   extra_environ=extra_environ)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        chien = chiens = None
+        chien = Session.query(model.Form).get(chienId)
+        chiens = Session.query(model.Form).get(chiensId)
+        assert newFormBackupCount == formBackupCount + 2
+        assert chien.syntacticCategory == None
+        assert chien.syntacticCategoryString == u'?'
+        assert chiens.syntacticCategoryString == u'?-?'
+        assert json.loads(chiens.morphemeBreakIDs)[0][0][0][2] == None

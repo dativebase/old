@@ -243,8 +243,7 @@ def createNewApplicationSettings(data):
     applicationSettings.morphemeBreakValidation = data['morphemeBreakValidation']
     applicationSettings.phonemicInventory = h.normalize(h.removeAllWhiteSpace(
         data['phonemicInventory']))
-    applicationSettings.morphemeDelimiters = h.normalize(h.removeAllWhiteSpace(
-        data['morphemeDelimiters']))
+    applicationSettings.morphemeDelimiters = h.normalize(data['morphemeDelimiters'])
     applicationSettings.punctuation = h.normalize(h.removeAllWhiteSpace(
         data['punctuation']))
     applicationSettings.grammaticalities = h.normalize(h.removeAllWhiteSpace(
@@ -308,7 +307,7 @@ def updateApplicationSettings(applicationSettings, data):
     setAttr(applicationSettings, 'phonemicInventory',
             h.normalize(h.removeAllWhiteSpace(data['phonemicInventory'])))
     setAttr(applicationSettings, 'morphemeDelimiters',
-            h.normalize(h.removeAllWhiteSpace(data['morphemeDelimiters'])))
+            h.normalize(data['morphemeDelimiters']))
     setAttr(applicationSettings, 'punctuation',
             h.normalize(h.removeAllWhiteSpace(data['punctuation'])))
     setAttr(applicationSettings, 'grammaticalities',

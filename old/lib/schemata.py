@@ -542,6 +542,14 @@ class CollectionSchema(Schema):
 # ApplicationSettings Schemata
 ################################################################################
 
+class GetMorphemeDelimiters(FancyValidator):
+    """Remove redundant commas and whitespace from the string representing the
+    morpheme delimiters.
+    """
+    def _to_python(self, value, state):
+        value = h.removeAllWhiteSpace(value)
+        return ','.join([d for d in value.split(',') if d])
+
 class ApplicationSettingsSchema(Schema):
     """ApplicationSettingsSchema is a Schema for validating the data
     submitted to ApplicationsettingsController
@@ -564,7 +572,7 @@ class ApplicationSettingsSchema(Schema):
     morphemeBreakIsOrthographic = StringBoolean()
     morphemeBreakValidation = OneOf(validationValues)
     phonemicInventory = UnicodeString()
-    morphemeDelimiters = UnicodeString(max=255)
+    morphemeDelimiters = GetMorphemeDelimiters(max=255)
     punctuation = UnicodeString()
     grammaticalities = UnicodeString(max=255)
     unrestrictedUsers = ForEach(ValidOLDModelObject(modelName='User'))

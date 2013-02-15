@@ -78,6 +78,7 @@ class SyntacticcategoriesController(BaseController):
         syntacticCategory = Session.query(SyntacticCategory).get(int(id))
         if syntacticCategory:
             try:
+                oldName = syntacticCategory.name
                 schema = SyntacticCategorySchema()
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.getStateObject(values)
@@ -88,6 +89,8 @@ class SyntacticcategoriesController(BaseController):
                 if syntacticCategory:
                     Session.add(syntacticCategory)
                     Session.commit()
+                    if syntacticCategory.name != oldName:
+                        updateFormsReferencingThisCategory(syntacticCategory)
                     return syntacticCategory
                 else:
                     response.status_int = 400
@@ -113,6 +116,7 @@ class SyntacticcategoriesController(BaseController):
         if syntacticCategory:
             Session.delete(syntacticCategory)
             Session.commit()
+            updateFormsReferencingThisCategory(syntacticCategory)
             return syntacticCategory
         else:
             response.status_int = 404
@@ -202,3 +206,11 @@ def updateSyntacticCategory(syntacticCategory, data):
         syntacticCategory.datetimeModified = datetime.datetime.utcnow()
         return syntacticCategory
     return CHANGED
+
+
+from forms import updateFormsContainingThisFormAsMorpheme
+
+def updateFormsReferencingThisCategory(syntacticCategory):
+    formsOfThisCategory = syntacticCategory.forms
+    for form in formsOfThisCategory:
+        updateFormsContainingThisFormAsMorpheme(form)

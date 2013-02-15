@@ -592,15 +592,34 @@ def getGrammaticalities():
         return []
 
 def getMorphemeDelimiters():
+    """Return the morpheme delimiters from app settings as a list."""
     applicationSettings = getApplicationSettings()
     try:
         morphemeDelimiters = applicationSettings.morphemeDelimiters
     except AttributeError:
         return []
     try:
-        return morphemeDelimiters.split(',')
+        return morphemeDelimiters and morphemeDelimiters.split(',') or []
     except AttributeError:
         return []
+
+def isLexical(form):
+    """Return True if the input form is lexical, i.e, if neither its morpheme
+    break nor its morpheme gloss lines contain the space character or any of the
+    morpheme delimiters.  Note: designed to work on dict representations of forms
+    also.
+    """
+    delimiters = getMorphemeDelimiters() + [' ']
+    try:
+        return bool(form.morphemeBreak) and bool(form.morphemeGloss) and not (
+                    set(delimiters) & set(form.morphemeBreak) and
+                    set(delimiters) & set(form.morphemeGloss))
+    except AttributeError:
+        return bool(form['morphemeBreak']) and bool(form['morphemeGloss']) and not (
+                    set(delimiters) & set(form['morphemeBreak']) and
+                    set(delimiters) & set(form['morphemeGloss']))
+    except:
+        return False
 
 def getApplicationSettings():
     return Session.query(model.ApplicationSettings).order_by(

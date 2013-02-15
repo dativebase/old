@@ -30,6 +30,7 @@ class TestFormsController(TestController):
     here = appconfig('config:test.ini', relative_to='.')['here']
     filesPath = os.path.join(here, 'files')
     testFilesPath = os.path.join(here, 'test_files')
+    reducedFilesPath = os.path.join(filesPath, u'reduced_files')
 
     createParams = {
         'transcription': u'',
@@ -83,6 +84,9 @@ class TestFormsController(TestController):
         viewer = h.generateDefaultViewer()
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
+
+        h.clearDirectoryOfFiles(self.filesPath)
+        h.clearDirectoryOfFiles(self.reducedFilesPath)
 
         # Perform a vacuous GET just to delete app_globals.applicationSettings
         # to clean up for subsequent tests.
@@ -425,9 +429,9 @@ class TestFormsController(TestController):
         pluralAgrId = resp['id']
 
         # Create another form whose morphemic analysis will reference the
-        # lexical items created above.  Here we expect the morphemeBreakIDs,
-        # morphemeGlossIDs and syntacticCategoryString to be vacuous because
-        # no morpheme delimiters are specified in the application settings.
+        # lexical items created above.  Since the current application settings
+        # lists no morpheme delimiters, each word will be treated as a morpheme
+        # by compileMorphemicAnalysis.
         params = self.createParams.copy()
         params.update({
             'transcription': u'Les chiens aboient.',
@@ -447,8 +451,10 @@ class TestFormsController(TestController):
         assert resp['transcription'] == u'Les chiens aboient.'
         assert resp['glosses'][0]['gloss'] == u'The dogs are barking.'
         assert resp['syntacticCategory']['name'] == u'S'
-        assert resp['morphemeBreakIDs'] == None
-        assert resp['syntacticCategoryString'] == None
+        assert resp['morphemeBreakIDs'] == [[[]], [[]], [[]]]
+        assert resp['morphemeGlossIDs'] == [[[]], [[]], [[]]]
+        assert resp['syntacticCategoryString'] == u'? ? ?'
+        assert resp['breakGlossCategory'] == u'les|the|? chien-s|dog-PL|? aboient|bark|?'
         assert resp['syntacticCategory']['name'] == u'S'
         assert formCount == 5
 
@@ -1112,8 +1118,6 @@ class TestFormsController(TestController):
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
-        h.clearDirectoryOfFiles(self.filesPath)
-
     #@nottest
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for creating a new OLD form.
@@ -1274,6 +1278,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         newFormCount = Session.query(model.Form).count()
         newBackupCount = Session.query(model.FormBackup).count()
+        morphemeBreakIDsOfWord = resp['morphemeBreakIDs']
         assert resp['transcription'] == u'Updated!'
         assert resp['glosses'][0]['gloss'] == u'test_update_gloss'
         assert resp['morphemeBreak'] == u'a-b'
@@ -1302,11 +1307,13 @@ class TestFormsController(TestController):
         assert origBackupCount == newBackupCount
         assert u'the submitted data were not new' in resp['error']
 
-        # Create a lexical form that will cause the morphemeBreakIDs and
-        # morphemeGlossIDs attributes of the aforementioned form to change.  Now
-        # an update with no new data will succeed -- simply because the lexicon
-        # of the database has changed.
+        # Now create a lexical form matching one of the morpheme-form/morpheme-gloss
+        # pairs in the above form.  The call to updateFormsContainingThisFormAsMorpheme
+        # in the create action will cause the morphemeBreakIDs and
+        # morphemeGlossIDs attributes of the phrasal form to change.
         origBackupCount = Session.query(model.FormBackup).count()
+        updatedWord = Session.query(model.Form).get(id)
+        assert json.loads(updatedWord.morphemeBreakIDs) == morphemeBreakIDsOfWord
         newParams = self.createParams.copy()
         newParams.update({
             'transcription': u'a',
@@ -1317,21 +1324,23 @@ class TestFormsController(TestController):
         newParams = json.dumps(newParams)
         response = self.app.post(url('forms'), newParams, self.json_headers,
                                  self.extra_environ_admin)
-        response = self.app.put(url('form', id=id), params, self.json_headers,
-                                self.extra_environ_admin)
+        updatedWord = Session.query(model.Form).get(id)
+        newMorphemeBreakIDsOfWord = json.loads(updatedWord.morphemeBreakIDs)
+        newMorphemeGlossIDsOfWord = json.loads(updatedWord.morphemeGlossIDs)
         newBackupCount = Session.query(model.FormBackup).count()
-        resp = json.loads(response.body)
-        morphemeBreakIDs = resp['morphemeBreakIDs']
-        morphemeGlossIDs = resp['morphemeGlossIDs']
+        assert newMorphemeBreakIDsOfWord != morphemeBreakIDsOfWord
         assert origBackupCount + 1 == newBackupCount
-        assert resp['transcription'] == u'Updated!'
-        assert resp['glosses'][0]['gloss'] == u'test_update_gloss'
-        assert resp['morphemeBreak'] == u'a-b'
-        assert resp['morphemeGloss'] == u'c-d'
-        assert morphemeBreakIDs[0][0][0][1] == u'c'
-        assert morphemeBreakIDs[0][0][0][2] == None
-        assert morphemeGlossIDs[0][0][0][1] == u'a'
-        assert morphemeGlossIDs[0][0][0][2] == None
+        assert newMorphemeBreakIDsOfWord[0][0][0][1] == u'c'
+        assert newMorphemeBreakIDsOfWord[0][0][0][2] == None
+        assert newMorphemeGlossIDsOfWord[0][0][0][1] == u'a'
+        assert newMorphemeGlossIDsOfWord[0][0][0][2] == None
+
+        # A vacuous update on the word will fail since the updating was accomplished
+        # via the creation of the a/c morpheme.
+        response = self.app.put(url('form', id=id), params, self.json_headers,
+                                self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert u'the submitted data were not new' in resp['error']
 
         # Again update our form, this time making it into a foreign word.
         # Updating a form into a foreign word should update the Inventory
@@ -2315,8 +2324,14 @@ class TestFormsController(TestController):
         assert form1Id not in [f.id for id in viewer.rememberedForms]
 
     #@nottest
-    def test_update_morpheme_references(self):
-        """Tests that GET /forms/update_morpheme_references correctly updates the morpheme references."""
+    def _test_update_morpheme_references(self):
+        """Tests that GET /forms/update_morpheme_references correctly updates the morpheme references.
+        
+        *NOTE*: this test has been deactivated (by prefixation with '_') because
+        the update_morpheme_references functionality has been made obsolete by
+        the calls to updateFormsContainingThisFormAsMorpheme in the create, update
+        and delete actions.  If reactivated, this test will fail as is.
+        """
 
         # First create a couple of syntactic categories and the application settings
         N = h.generateNSyntacticCategory()
@@ -2622,3 +2637,654 @@ class TestFormsController(TestController):
         assert len(resp) == 2
         assert sorted([f['id'] for f in resp]) == sorted([combiningFormId, precomposedFormId])
 
+
+    #@nottest
+    def test_lexical_percolation(self):
+        """Tests that creation, updating and deletion of a lexical forms percolates up to the phrasal forms containing them.
+        """
+
+        # First create a couple of syntactic categories and the application settings
+        Agr = model.SyntacticCategory()
+        Agr.name = u'Agr'
+        N = h.generateNSyntacticCategory()
+        Num = h.generateNumSyntacticCategory()
+        applicationSettings = h.generateDefaultApplicationSettings()
+        Session.add_all([N, Num, applicationSettings, Agr])
+        Session.commit()
+        NId = N.id
+        NumId = Num.id
+        AgrId = Agr.id
+
+        extra_environ = {'test.authentication.role': u'administrator',
+                               'test.applicationSettings': True}
+
+        # Create two forms with morphological analyses.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'abc',
+            'morphemeBreak': u'a-b-c',
+            'morphemeGloss': u'1-2-3',
+            'glosses': [{'gloss': u'123', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        abcId = json.loads(response.body)['id']
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'xyz',
+            'morphemeBreak': u'x-y-z',
+            'morphemeGloss': u'7-8-9',
+            'glosses': [{'gloss': u'789', 'glossGrammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        xyzId = json.loads(response.body)['id']
+
+        # GET the forms and confirm that the morphemeBreakIDs values are "empty"
+        response = self.app.get(url('forms'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phrasalIds = [f['id'] for f in resp]
+        assert len(resp) == 2
+        assert [f['morphemeBreakIDs'] for f in resp] == [[[[], [], []]], [[[], [], []]]]
+        assert [f['morphemeGlossIDs'] for f in resp] == [[[[], [], []]], [[[], [], []]]]
+        assert [f['syntacticCategoryString'] for f in resp] == [u'?-?-?', u'?-?-?']
+
+        # Now add the implicit lexical items for the two forms just entered and
+        # expect the morphemeBreakIDs (etc.) fields of the two phrasal forms to
+        # have changed.
+        sleep(1)
+
+        xParams = self.createParams.copy()
+        xParams.update({
+            'transcription': u'x',
+            'morphemeBreak': u'x',
+            'morphemeGloss': u'7',
+            'glosses': [{'gloss': u'7', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        xParams = json.dumps(xParams)
+        response = self.app.post(url('forms'), xParams, self.json_headers, extra_environ)
+        xResp = json.loads(response.body)
+        xId = xResp['id']
+        assert xResp['morphemeBreakIDs'][0][0][0][1] == u'7'
+        assert xResp['morphemeBreakIDs'][0][0][0][2] == u'Num'
+        assert xResp['morphemeGlossIDs'][0][0][0][1] == u'x'
+        assert xResp['morphemeGlossIDs'][0][0][0][2] == u'Num'
+        assert xResp['syntacticCategoryString'] == u'Num'
+        assert xResp['breakGlossCategory'] == u'x|7|Num'
+
+        yParams = self.createParams.copy()
+        yParams.update({
+            'transcription': u'y',
+            'morphemeBreak': u'y',
+            'morphemeGloss': u'8',
+            'glosses': [{'gloss': u'8', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        yParams = json.dumps(yParams)
+        response = self.app.post(url('forms'), yParams, self.json_headers, extra_environ)
+        yId = json.loads(response.body)['id']
+
+        zParams = self.createParams.copy()
+        zParams.update({
+            'transcription': u'z',
+            'morphemeBreak': u'z',
+            'morphemeGloss': u'9',
+            'glosses': [{'gloss': u'9', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        zParams = json.dumps(zParams)
+        response = self.app.post(url('forms'), zParams, self.json_headers, extra_environ)
+        zId = json.loads(response.body)['id']
+
+        aParams = self.createParams.copy()
+        aParams.update({
+            'transcription': u'a',
+            'morphemeBreak': u'a',
+            'morphemeGloss': u'1',
+            'glosses': [{'gloss': u'1', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        aParams = json.dumps(aParams)
+        response = self.app.post(url('forms'), aParams, self.json_headers, extra_environ)
+        aId = json.loads(response.body)['id']
+
+        bParams = self.createParams.copy()
+        bParams.update({
+            'transcription': u'b',
+            'morphemeBreak': u'b',
+            'morphemeGloss': u'2',
+            'glosses': [{'gloss': u'2', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        bParams = json.dumps(bParams)
+        response = self.app.post(url('forms'), bParams, self.json_headers, extra_environ)
+        bId = json.loads(response.body)['id']
+
+        cParams = self.createParams.copy()
+        cParams.update({
+            'transcription': u'c',
+            'morphemeBreak': u'c',
+            'morphemeGloss': u'3',
+            'glosses': [{'gloss': u'3', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        cParams = json.dumps(cParams)
+        response = self.app.post(url('forms'), cParams, self.json_headers, extra_environ)
+        cId = json.loads(response.body)['id']
+
+        # Use search to get our two original morphologically complex forms
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'id', 'in', phrasalIds]}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                        self.json_headers, self.extra_environ_admin)
+
+        resp2 = json.loads(response.body)
+        assert [f['id'] for f in resp] == [f['id'] for f in resp2]
+        assert [f['datetimeModified'] for f in resp2] != [f['datetimeModified'] for f in resp]
+
+        assert resp2[0]['morphemeBreakIDs'][0][0][0][1] == u'1'
+        assert resp2[0]['morphemeBreakIDs'][0][0][0][2] == u'Num'
+        assert resp2[0]['morphemeBreakIDs'][0][1][0][1] == u'2'
+        assert resp2[0]['morphemeBreakIDs'][0][1][0][2] == u'N'
+        assert resp2[0]['morphemeBreakIDs'][0][2][0][1] == u'3'
+        assert resp2[0]['morphemeBreakIDs'][0][2][0][2] == u'Num'
+
+        assert resp2[0]['morphemeGlossIDs'][0][0][0][1] == u'a'
+        assert resp2[0]['morphemeGlossIDs'][0][0][0][2] == u'Num'
+        assert resp2[0]['morphemeGlossIDs'][0][1][0][1] == u'b'
+        assert resp2[0]['morphemeGlossIDs'][0][1][0][2] == u'N'
+        assert resp2[0]['morphemeGlossIDs'][0][2][0][1] == u'c'
+        assert resp2[0]['morphemeGlossIDs'][0][2][0][2] == u'Num'
+
+        assert resp2[0]['syntacticCategoryString'] == u'Num-N-Num'
+        assert resp2[0]['breakGlossCategory'] == u'a|1|Num-b|2|N-c|3|Num'
+
+        assert resp2[1]['morphemeBreakIDs'][0][0][0][1] == u'7'
+        assert resp2[1]['morphemeBreakIDs'][0][0][0][2] == u'Num'
+        assert resp2[1]['morphemeBreakIDs'][0][1][0][1] == u'8'
+        assert resp2[1]['morphemeBreakIDs'][0][1][0][2] == u'N'
+        assert resp2[1]['morphemeBreakIDs'][0][2][0][1] == u'9'
+        assert resp2[1]['morphemeBreakIDs'][0][2][0][2] == u'Num'
+
+        assert resp2[1]['morphemeGlossIDs'][0][0][0][1] == u'x'
+        assert resp2[1]['morphemeGlossIDs'][0][0][0][2] == u'Num'
+        assert resp2[1]['morphemeGlossIDs'][0][1][0][1] == u'y'
+        assert resp2[1]['morphemeGlossIDs'][0][1][0][2] == u'N'
+        assert resp2[1]['morphemeGlossIDs'][0][2][0][1] == u'z'
+        assert resp2[1]['morphemeGlossIDs'][0][2][0][2] == u'Num'
+
+        assert resp2[1]['syntacticCategoryString'] == u'Num-N-Num'
+        assert resp2[1]['breakGlossCategory'] == u'x|7|Num-y|8|N-z|9|Num'
+
+        formBackups = Session.query(model.FormBackup).all()
+        assert len(formBackups) == 6    # each lexical item creation updates one phrasal form
+
+        # Now update the lexical items and expect updates in the phrasal ones too
+
+        # Update the morphemeBreak value of the lexical form 'x' and expect the
+        # phrasal form 'xyz' to get updated too.
+        formBackupCount = Session.query(model.FormBackup).count()
+        fbs = Session.query(model.FormBackup).order_by(model.FormBackup.id).all()
+        xParams = json.loads(xParams)
+        xParams['morphemeBreak'] = u'xx'
+        xParams = json.dumps(xParams)
+        response = self.app.put(url('form', id=xId), xParams, self.json_headers, extra_environ)
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        fbs = Session.query(model.FormBackup).order_by(model.FormBackup.id).all()
+        assert newFormBackupCount == formBackupCount + 2    # 'x' and 'xyz' are both updated
+        assert xyzMorphemeGlossIDs[0][0][0][1] == u'xx' # The 'x' morpheme is still glossed as '7'
+        assert xyzMorphemeBreakIDs[0][0] == []  # No more 'x' morpheme so w1, m1 is empty
+        assert xyzPhrase.breakGlossCategory == u'x|7|Num-y|8|N-z|9|Num' # Stays unchanged
+        assert xyzPhrase.syntacticCategoryString == u'Num-N-Num'      # " "
+
+        # Update the morphemeGloss value of the lexical form 'y' and expect the
+        # phrasal form 'xyz' to get updated too.
+        yParams = json.loads(yParams)
+        yParams['morphemeGloss'] = u'88'
+        yParams = json.dumps(yParams)
+        response = self.app.put(url('form', id=yId), yParams, self.json_headers, extra_environ)
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        assert newFormBackupCount == formBackupCount + 2
+        assert xyzMorphemeBreakIDs[0][1][0][1] == u'88' # The 'y' morpheme is now glossed as '88'
+        assert xyzMorphemeGlossIDs[0][1] == []  # No more '8' morpheme so w1, m1 is empty
+        assert xyzPhrase.breakGlossCategory == u'x|7|Num-y|8|N-z|9|Num' # Stays unchanged
+        assert xyzPhrase.syntacticCategoryString == u'Num-N-Num'      # " "
+
+        # Update the syntactic category of the lexical form 'z' and expect the
+        # phrasal form 'xyz' to get updated too.
+        zParams = json.loads(zParams)
+        zParams['syntacticCategory'] = NId
+        zParams = json.dumps(zParams)
+        response = self.app.put(url('form', id=zId), zParams, self.json_headers, extra_environ)
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        assert newFormBackupCount == formBackupCount + 2
+        assert xyzMorphemeBreakIDs[0][2][0][2] == u'N' # The 'z' morpheme now has 'N' for category
+        assert xyzMorphemeGlossIDs[0][2][0][2] == u'N' # redundant, I know
+        assert xyzPhrase.breakGlossCategory == u'x|7|Num-y|8|N-z|9|N'
+        assert xyzPhrase.syntacticCategoryString == u'Num-N-N'
+
+        # Save these values for the next test:
+        xyzPhraseMorphemeBreakIDs = xyzPhrase.morphemeBreakIDs
+        xyzPhraseMorphemeGlossIDs = xyzPhrase.morphemeGlossIDs
+        xyzPhraseBreakGlossCategory = xyzPhrase.breakGlossCategory
+        xyzPhraseSyntacticCategoryString = xyzPhrase.syntacticCategoryString
+
+        # Update the lexical form 'z' in a way that is irrelevant to the phrasal
+        # form 'xyz'; expect 'xyz' to be unaffected.
+        zParams = json.loads(zParams)
+        zParams['transcription'] = u'zZz'
+        zParams['glosses'] = [{'gloss': u'999', 'glossGrammaticality': u''}]
+        zParams = json.dumps(zParams)
+        response = self.app.put(url('form', id=zId), zParams, self.json_headers, extra_environ)
+        newXyzPhrase = Session.query(model.Form).get(xyzId)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        assert newFormBackupCount == formBackupCount + 1    # only the lexical item has been updated
+        assert xyzPhraseMorphemeBreakIDs == newXyzPhrase.morphemeBreakIDs
+        assert xyzPhraseMorphemeGlossIDs == newXyzPhrase.morphemeGlossIDs
+        assert xyzPhraseBreakGlossCategory == newXyzPhrase.breakGlossCategory
+        assert xyzPhraseSyntacticCategoryString == newXyzPhrase.syntacticCategoryString
+
+        # Now create a new lexical item that will cause the 'xyz' phrasal form to be udpated
+        x2Params = self.createParams.copy()
+        x2Params.update({
+            'transcription': u'x',
+            'morphemeBreak': u'x',
+            'morphemeGloss': u'7',
+            'glosses': [{'gloss': u'7', 'glossGrammaticality': u''}],
+            'syntacticCategory': AgrId
+        })
+        x2Params = json.dumps(x2Params)
+        response = self.app.post(url('forms'), x2Params, self.json_headers, extra_environ)
+        x2Id = json.loads(response.body)['id']
+
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        assert newFormBackupCount == formBackupCount + 1    # 'xyz' will have been updated
+        assert xyzMorphemeGlossIDs[0][0][0][1] == u'x' # The new 'x' morpheme ousts the old ill-matching one
+        assert xyzMorphemeBreakIDs[0][0][0][1] == u'7' # " "
+        assert len(xyzMorphemeBreakIDs[0][0]) == 1  # The 'xx/7' partial match has been removed in favour of the 'x/7' perfect match
+        assert xyzMorphemeBreakIDs[0][0][0][2] == u'Agr'
+        assert xyzPhrase.breakGlossCategory == u'x|7|Agr-y|8|N-z|9|N'
+        assert xyzPhrase.syntacticCategoryString == u'Agr-N-N'
+
+        # Delete the 'y' morpheme and expect the 'xyz' phrase to be udpated.
+        response = self.app.delete(url('form', id=yId), headers=self.json_headers,
+                                   extra_environ=extra_environ)
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        assert newFormBackupCount == formBackupCount + 2    # 'xyz' and 'y' will both have been backed up
+        assert xyzMorphemeGlossIDs[0][1] == []
+        assert xyzMorphemeBreakIDs[0][1] == []
+        assert xyzPhrase.breakGlossCategory == u'x|7|Agr-y|8|?-z|9|N'
+        assert xyzPhrase.syntacticCategoryString == u'Agr-?-N'
+
+        # Delete the 'x/7' morpheme and expect the 'xyz' phrase to be udpated.  The
+        # partial match 'xx/7' morpheme will now again be referenced in xyzForm.morphemeGlossIDs
+        response = self.app.delete(url('form', id=x2Id), headers=self.json_headers, extra_environ=extra_environ)
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        assert newFormBackupCount == formBackupCount + 2    # 'xyz' and 'x' will both have been backed up
+        assert xyzMorphemeGlossIDs[0][0][0][1] == u'xx'
+        assert xyzMorphemeGlossIDs[0][0][0][2] == u'Num'
+        assert xyzMorphemeBreakIDs[0][0] == []
+        assert xyzPhrase.breakGlossCategory == u'x|7|Num-y|8|?-z|9|N'
+        assert xyzPhrase.syntacticCategoryString == u'Num-?-N'
+
+        # Update the lexical form 'z' so that its new morphemeBreak and morphemeGloss
+        # values no longer match the 'xyz' phrasal form.  Expect the 'xyz' form
+        # to be updated (shows that potentially affected forms are discovered by
+        # searching for matches to the altered lexcical item's current *and* previous
+        # states.)
+        zParams = json.loads(zParams)
+        zParams['morphemeBreak'] = u'm'
+        zParams['morphemeGloss'] = u'4'
+        zParams = json.dumps(zParams)
+        response = self.app.put(url('form', id=zId), zParams, self.json_headers, extra_environ)
+        newXyzPhrase = Session.query(model.Form).get(xyzId)
+        formBackupCount = newFormBackupCount
+        newFormBackupCount = Session.query(model.FormBackup).count()
+        xyzPhrase = Session.query(model.Form).get(xyzId)
+        xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
+        xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
+        assert newFormBackupCount == formBackupCount + 2    # only the lexical item has been updated
+        assert xyzMorphemeBreakIDs[0][2] == []
+        assert xyzMorphemeGlossIDs[0][2] == []
+        assert xyzPhrase.breakGlossCategory == u'x|7|Num-y|8|?-z|9|?'
+        assert xyzPhrase.syntacticCategoryString == u'Num-?-?'
+
+    #@nottest
+    def test_morphemic_analysis_compilation(self):
+        """Tests the behaviour of compileMorphemicAnalysis in the forms controller.
+
+        In particular, tests:
+
+        1. that regular expression metacharacters like the caret "^" can be used
+           as morpheme delimiters and
+        2. that compileMorphemicAnalysis works even when no morpheme delimiters
+           are supplied and
+        3. the matchesFound dict in compileMorphemicAnalysis reduces redundant
+           db queries and processing.
+
+        """
+
+        # First create a couple of syntactic categories and the application settings
+        T = model.SyntacticCategory()
+        T.name = u'T'
+        D = model.SyntacticCategory()
+        D.name = u'D'
+        Agr = model.SyntacticCategory()
+        Agr.name = u'Agr'
+        N = h.generateNSyntacticCategory()
+        V = h.generateVSyntacticCategory()
+        S = h.generateSSyntacticCategory()
+        Num = h.generateNumSyntacticCategory()
+        applicationSettings = h.generateDefaultApplicationSettings()
+        applicationSettings.morphemeDelimiters = u''    # NO MORPHEME DELIMITERS
+        Session.add_all([N, V, D, T, Num, Agr, S, applicationSettings])
+        Session.commit()
+        TId = T.id
+        DId = D.id
+        NId = N.id
+        VId = V.id
+        SId = S.id
+        NumId = Num.id
+        AgrId = Agr.id
+
+        extra_environ = {'test.authentication.role': u'administrator',
+                               'test.applicationSettings': True}
+
+        # Test that compileMorphemicAnalysis works when there are no morpheme delimiters
+
+        # First add a sentence with no word-internal morphemes indicated
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'Le chien a courru.',
+            'morphemeBreak': u'le chien a courru',
+            'morphemeGloss': u'the dog has run.PP',
+            'glosses': [{'gloss': u'The dog ran.', 'glossGrammaticality': u''}],
+            'syntacticCategory': SId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        sentId = resp['id']
+        assert resp['morphemeBreakIDs'] == [[[]], [[]], [[]], [[]]]
+        assert resp['syntacticCategoryString'] == u'? ? ? ?'
+        assert resp['breakGlossCategory'] == u'le|the|? chien|dog|? a|has|? courru|run.PP|?'
+
+        # Now add the words/morphemes for the sentence above.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'le',
+            'morphemeBreak': u'le',
+            'morphemeGloss': u'the',
+            'glosses': [{'gloss': u'the', 'glossGrammaticality': u''}],
+            'syntacticCategory': DId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        leId = resp['id']
+        assert resp['morphemeBreakIDs'][0][0][0][1] == u'the'
+        assert resp['morphemeBreakIDs'][0][0][0][2] == u'D'
+        assert resp['morphemeGlossIDs'][0][0][0][1] == u'le'
+        assert resp['syntacticCategoryString'] == u'D'
+        assert resp['breakGlossCategory'] == u'le|the|D'
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'chien',
+            'morphemeBreak': u'chien',
+            'morphemeGloss': u'dog',
+            'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
+            'syntacticCategory': NId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        chienId = resp['id']
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'a',
+            'morphemeBreak': u'a',
+            'morphemeGloss': u'has',
+            'glosses': [{'gloss': u'has', 'glossGrammaticality': u''}],
+            'syntacticCategory': TId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        aId = resp['id']
+
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'courru',
+            'morphemeBreak': u'courru',
+            'morphemeGloss': u'run.PP',
+            'glosses': [{'gloss': u'run', 'glossGrammaticality': u''}],
+            'syntacticCategory': VId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        courruId = resp['id']
+
+        sentence = Session.query(model.Form).get(sentId)
+        morphemeBreakIDs = json.loads(sentence.morphemeBreakIDs)
+        morphemeGlossIDs = json.loads(sentence.morphemeGlossIDs)
+        assert morphemeBreakIDs[0][0][0][1] == u'the'
+        assert morphemeBreakIDs[0][0][0][2] == u'D'
+        assert morphemeBreakIDs[1][0][0][1] == u'dog'
+        assert morphemeBreakIDs[1][0][0][2] == u'N'
+        assert morphemeBreakIDs[2][0][0][1] == u'has'
+        assert morphemeBreakIDs[2][0][0][2] == u'T'
+        assert morphemeBreakIDs[3][0][0][1] == u'run.PP'
+        assert morphemeBreakIDs[3][0][0][2] == u'V'
+
+        assert morphemeGlossIDs[0][0][0][1] == u'le'
+        assert morphemeGlossIDs[0][0][0][2] == u'D'
+        assert morphemeGlossIDs[1][0][0][1] == u'chien'
+        assert morphemeGlossIDs[1][0][0][2] == u'N'
+        assert morphemeGlossIDs[2][0][0][1] == u'a'
+        assert morphemeGlossIDs[2][0][0][2] == u'T'
+        assert morphemeGlossIDs[3][0][0][1] == u'courru'
+        assert morphemeGlossIDs[3][0][0][2] == u'V'
+
+        assert sentence.syntacticCategoryString == u'D N T V'
+        assert sentence.breakGlossCategory == u'le|the|D chien|dog|N a|has|T courru|run.PP|V'
+
+        # Ensure that regex metacharacters can be used as morpheme delimiters
+        applicationSettings = h.generateDefaultApplicationSettings()
+        applicationSettings.morphemeDelimiters = u'^,?,+,.'    # regexp metachars
+        Session.add(applicationSettings)
+        Session.commit()
+
+        # Now add a sentence that is morphologically parsed using those odd delimiters
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'Les chiens ont courru.',
+            'morphemeBreak': u'le^s chien.s o?nt courr+u',
+            'morphemeGloss': u'the^PL dog.PL have?3PL run+PP',
+            'glosses': [{'gloss': u'The dogs ran.', 'glossGrammaticality': u''}],
+            'syntacticCategory': SId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        sent2Id = resp['id']
+        # Note that the only lexical items matching the above form are chien/dog and le/the
+        assert resp['morphemeBreakIDs'][0][0][0][1] == u'the'
+        assert resp['morphemeBreakIDs'][0][0][0][2] == u'D'
+        assert resp['morphemeBreakIDs'][1][0][0][1] == u'dog'
+        assert resp['morphemeBreakIDs'][1][0][0][2] == u'N'
+
+        assert resp['morphemeGlossIDs'][0][0][0][1] == u'le'
+        assert resp['morphemeGlossIDs'][0][0][0][2] == u'D'
+        assert resp['morphemeGlossIDs'][1][0][0][1] == u'chien'
+        assert resp['morphemeGlossIDs'][1][0][0][2] == u'N'
+
+        assert resp['syntacticCategoryString'] == u'D^? N.? ??? ?+?'
+        # The breakGlossCategory is ugly ... but it's what we should expect.
+        assert resp['breakGlossCategory'] == u'le|the|D^s|PL|? chien|dog|N.s|PL|? o|have|??nt|3PL|? courr|run|?+u|PP|?'
+
+        # s/PL/Num
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u's',
+            'morphemeBreak': u's',
+            'morphemeGloss': u'PL',
+            'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
+            'syntacticCategory': NumId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        sId = resp['id']
+
+        # o/have/T
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'o',
+            'morphemeBreak': u'o',
+            'morphemeGloss': u'have',
+            'glosses': [{'gloss': u'have', 'glossGrammaticality': u''}],
+            'syntacticCategory': TId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        oId = resp['id']
+
+        # nt/3PL/Agr
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'nt',
+            'morphemeBreak': u'nt',
+            'morphemeGloss': u'3PL',
+            'glosses': [{'gloss': u'third person plural', 'glossGrammaticality': u''}],
+            'syntacticCategory': AgrId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        ntId = resp['id']
+
+        # courr/run/V
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'courr',
+            'morphemeBreak': u'courr',
+            'morphemeGloss': u'run',
+            'glosses': [{'gloss': u'run', 'glossGrammaticality': u''}],
+            'syntacticCategory': VId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        courrId = resp['id']
+
+        # u/PP/T
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'u',
+            'morphemeBreak': u'u',
+            'morphemeGloss': u'PP',
+            'glosses': [{'gloss': u'past participle', 'glossGrammaticality': u''}],
+            'syntacticCategory': TId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        uId = resp['id']
+
+        sentence2 = Session.query(model.Form).get(sent2Id)
+        morphemeBreakIDs = json.loads(sentence2.morphemeBreakIDs)
+        morphemeGlossIDs = json.loads(sentence2.morphemeGlossIDs)
+
+        assert morphemeBreakIDs[0][0][0][1] == u'the'
+        assert morphemeBreakIDs[0][0][0][2] == u'D'
+        assert morphemeBreakIDs[0][1][0][1] == u'PL'
+        assert morphemeBreakIDs[0][1][0][2] == u'Num'
+
+        assert morphemeBreakIDs[1][0][0][1] == u'dog'
+        assert morphemeBreakIDs[1][0][0][2] == u'N'
+        assert morphemeBreakIDs[1][1][0][1] == u'PL'
+        assert morphemeBreakIDs[1][1][0][2] == u'Num'
+
+        assert morphemeBreakIDs[2][0][0][1] == u'have'
+        assert morphemeBreakIDs[2][0][0][2] == u'T'
+        assert morphemeBreakIDs[2][1][0][1] == u'3PL'
+        assert morphemeBreakIDs[2][1][0][2] == u'Agr'
+
+        assert morphemeBreakIDs[3][0][0][1] == u'run'
+        assert morphemeBreakIDs[3][0][0][2] == u'V'
+        assert morphemeBreakIDs[3][1][0][1] == u'PP'
+        assert morphemeBreakIDs[3][1][0][2] == u'T'
+
+        assert morphemeGlossIDs[0][0][0][1] == u'le'
+        assert morphemeGlossIDs[0][0][0][2] == u'D'
+        assert morphemeGlossIDs[0][1][0][1] == u's'
+        assert morphemeGlossIDs[0][1][0][2] == u'Num'
+
+        assert morphemeGlossIDs[1][0][0][1] == u'chien'
+        assert morphemeGlossIDs[1][0][0][2] == u'N'
+        assert morphemeGlossIDs[1][1][0][1] == u's'
+        assert morphemeGlossIDs[1][1][0][2] == u'Num'
+
+        assert morphemeGlossIDs[2][0][0][1] == u'o'
+        assert morphemeGlossIDs[2][0][0][2] == u'T'
+        assert morphemeGlossIDs[2][1][0][1] == u'nt'
+        assert morphemeGlossIDs[2][1][0][2] == u'Agr'
+
+        assert morphemeGlossIDs[3][0][0][1] == u'courr'
+        assert morphemeGlossIDs[3][0][0][2] == u'V'
+        assert morphemeGlossIDs[3][1][0][1] == u'u'
+        assert morphemeGlossIDs[3][1][0][2] == u'T'
+
+        assert sentence2.syntacticCategoryString == u'D^Num N.Num T?Agr V+T'
+        assert sentence2.breakGlossCategory == \
+            u'le|the|D^s|PL|Num chien|dog|N.s|PL|Num o|have|T?nt|3PL|Agr courr|run|V+u|PP|T'
+
+        # Now test that the matchesFound dict of compileMorphemicAnalysis reduces
+        # redundant db requests & processing.  Note that seeing this requires
+        # placing log.warn statements in the getPerfectMatches & getPartialMatches
+        # sub-functions, e.g., log.warn('in getPerfectMatches and %s/%s was not queried!' % (morpheme, gloss))
+
+        # Once matches for the first 7 unique morphemes of this form have been found,
+        # compileMorphemicAnalysis should thenceforward rely on matchesFound for the
+        # repeats.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'Les chiens ont courru; les chiens ont courru; les chiens ont courru.',
+            'morphemeBreak': u'le^s chien.s o?nt courr+u le^s chien.s o?nt courr+u le^s chien.s o?nt courr+u',
+            'morphemeGloss': u'the^PL dog.PL have?3PL run+PP the^PL dog.PL have?3PL run+PP the^PL dog.PL have?3PL run+PP',
+            'glosses': [{'gloss': u'The dogs ran; the dogs ran; the dogs ran.', 'glossGrammaticality': u''}],
+            'syntacticCategory': SId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
