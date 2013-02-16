@@ -2,19 +2,18 @@ import logging
 import datetime
 import re
 import simplejson as json
-
 from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
-
 from old.lib.base import BaseController
 from old.lib.schemata import SyntacticCategorySchema
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.model.meta import Session
 from old.model import SyntacticCategory
+from forms import updateFormsContainingThisFormAsMorpheme
 
 log = logging.getLogger(__name__)
 
@@ -177,38 +176,23 @@ def createNewSyntacticCategory(data):
     syntacticCategory.datetimeModified = datetime.datetime.utcnow()
     return syntacticCategory
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateSyntacticCategory function
-# below.
-CHANGED = None
 
 def updateSyntacticCategory(syntacticCategory, data):
     """Update the input syntactic category model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
+    changed = False
     # Unicode Data
-    setAttr(syntacticCategory, 'name', h.normalize(data['name']))
-    setAttr(syntacticCategory, 'type', h.normalize(data['type']))
-    setAttr(syntacticCategory, 'description', h.normalize(data['description']))
+    changed = h.setAttr(syntacticCategory, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(syntacticCategory, 'type', h.normalize(data['type']), changed)
+    changed = h.setAttr(syntacticCategory, 'description', h.normalize(data['description']), changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         syntacticCategory.datetimeModified = datetime.datetime.utcnow()
         return syntacticCategory
-    return CHANGED
+    return changed
 
-
-from forms import updateFormsContainingThisFormAsMorpheme
 
 def updateFormsReferencingThisCategory(syntacticCategory):
     formsOfThisCategory = syntacticCategory.forms

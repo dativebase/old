@@ -212,32 +212,19 @@ def createNewFormSearch(data):
     formSearch.datetimeModified = datetime.datetime.utcnow()
     return formSearch
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateFormSearch function
-# below.
-CHANGED = None
-
 def updateFormSearch(formSearch, data):
     """Update the input form  search model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
+    changed = False
 
     # Unicode Data
-    setAttr(formSearch, 'name', h.normalize(data['name']))
-    setAttr(formSearch, 'search', data['search'])
-    setAttr(formSearch, 'description', h.normalize(data['description']))
+    changed = h.setAttr(formSearch, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(formSearch, 'search', data['search'], changed)
+    changed = h.setAttr(formSearch, 'description', h.normalize(data['description']), changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         formSearch.datetimeModified = datetime.datetime.utcnow()
         return formSearch
-    return CHANGED
+    return changed

@@ -1,0 +1,7 @@
+Developer Guide
+===============
+
+This software is documented in detail in the SimpleSite tutorial chapters of the
+book *The Definitive Guide to Pylons* available under an open source license at
+http://pylonsbook.com. You should read those chapters to discover how SimpleSite
+is developed.

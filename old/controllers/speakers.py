@@ -166,33 +166,21 @@ def createNewSpeaker(data):
     speaker.datetimeModified = datetime.datetime.utcnow()
     return speaker
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateSpeaker function
-# below.
-CHANGED = None
 
 def updateSpeaker(speaker, data):
     """Update the input speaker model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
+    changed = False
 
     # Unicode Data
-    setAttr(speaker, 'firstName', h.normalize(data['firstName']))
-    setAttr(speaker, 'lastName', h.normalize(data['lastName']))
-    setAttr(speaker, 'dialect', h.normalize(data['dialect']))
-    setAttr(speaker, 'pageContent', h.normalize(data['pageContent']))
+    changed = h.setAttr(speaker, 'firstName', h.normalize(data['firstName']), changed)
+    changed = h.setAttr(speaker, 'lastName', h.normalize(data['lastName']), changed)
+    changed = h.setAttr(speaker, 'dialect', h.normalize(data['dialect']), changed)
+    changed = h.setAttr(speaker, 'pageContent', h.normalize(data['pageContent']), changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         speaker.datetimeModified = datetime.datetime.utcnow()
         return speaker
-    return CHANGED
+    return changed

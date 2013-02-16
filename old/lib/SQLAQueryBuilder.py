@@ -79,11 +79,13 @@ Note also that SQLAQueryBuilder detects the RDBMS and issues collate commands
 where necessary to ensure that pattern matches are case-sensitive while ordering
 is not.
 
-Potential enhancement:
+A further potential enhancement would be to allow doubly relational searches, e.g.,
+return all forms whose enterer has remembered a form with a transcription like 'a':
 
-??. ['Form', 'enterer', 'rememberedForms', 'transcription', 'like', '%a%']
+xx. ['Form', 'enterer', 'rememberedForms', 'transcription', 'like', '%a%']
     Session.query(Form).filter(Form.enterer.has(User.rememberedForms.any(
         Form.transcription.like('%1%'))))
+
 """
 
 import logging

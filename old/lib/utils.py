@@ -1,3 +1,23 @@
+"""
+The utils module is really cool!
+------------------------------------
+
+.. code-block:: python
+
+    class NewPageForm(formencode.Schema):
+        allow_extra_fields = True
+        filter_extra_fields = True
+        content = formencode.validators.String(
+            not_empty=True,
+            messages={
+                'empty':'Please enter some content for the page. '
+            }
+        )
+        heading = formencode.validators.String()
+        title = formencode.validators.String(not_empty=True)
+
+"""
+
 import os
 import re
 import errno
@@ -1181,6 +1201,8 @@ def getRDBMSName(**kwargs):
         SQLAlchemyURL = config['sqlalchemy.url']
         return SQLAlchemyURL.split(':')[0]
     except (TypeError, KeyError):
+        # WARNING The exception below should be raised -- I've replaced it with this log just to allow Sphinx to import my controllers ...
+        #log.warn('The config object was inadequate.')
         raise Exception('The config object was inadequate.')
 
 
@@ -1530,3 +1552,17 @@ def eagerloadUser(query):
         #subqueryload(model.User.inputOrthography),
         #subqueryload(model.User.outputOrthography)
     )
+
+def getUserFullName(user):
+    return '%s %s' % (user.firstName, user.lastName)
+
+
+def setAttr(obj, name, value, changed):
+    """Set the value of obj.name to value only if obj.name != value.  Set changed
+    to True if obj.name has changed as a result.  Return changed.  Useful in the
+    updateModel function of the controllers.
+    """
+    if getattr(obj, name) != value:
+        setattr(obj, name, value)
+        changed = True
+    return changed

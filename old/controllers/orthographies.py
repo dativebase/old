@@ -185,33 +185,17 @@ def createNewOrthography(data):
     orthography.datetimeModified = datetime.datetime.utcnow()
     return orthography
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateOrthography function
-# below.
-CHANGED = None
-
 def updateOrthography(orthography, data):
     """Update the input orthography model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
-    # Unicode Data
-    setAttr(orthography, 'name', h.normalize(data['name']))
-    setAttr(orthography, 'orthography', h.normalize(data['orthography']))
-    setAttr(orthography, 'lowercase', data['lowercase'])
-    setAttr(orthography, 'initialGlottalStops', data['initialGlottalStops'])
-    
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    changed = False
+    changed = h.setAttr(orthography, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(orthography, 'orthography', h.normalize(data['orthography']), changed)
+    changed = h.setAttr(orthography, 'lowercase', data['lowercase'], changed)
+    changed = h.setAttr(orthography, 'initialGlottalStops', data['initialGlottalStops'], changed)
+    if changed:
         orthography.datetimeModified = datetime.datetime.utcnow()
         return orthography
-    return CHANGED
+    return changed

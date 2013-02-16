@@ -255,55 +255,41 @@ def createNewUser(data):
 
     return user
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateUser
-# function below.
-CHANGED = None
 
 def updateUser(user, data):
     """Update the input user model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
 
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
+    changed = False
 
     # Unicode Data
-    setAttr(user, 'firstName', h.normalize(data['firstName']))
-    setAttr(user, 'lastName', h.normalize(data['lastName']))
-    setAttr(user, 'email', h.normalize(data['email']))
-    setAttr(user, 'affiliation', h.normalize(data['affiliation']))
-    setAttr(user, 'role', h.normalize(data['role']))
-    setAttr(user, 'pageContent', h.normalize(data['pageContent']))
-    setAttr(user, 'markupLanguage', h.normalize(data['markupLanguage']))
-    setAttr(user, 'html', h.getHTMLFromContents(user.pageContent, user.markupLanguage))
+    changed = h.setAttr(user, 'firstName', h.normalize(data['firstName']), changed)
+    changed = h.setAttr(user, 'lastName', h.normalize(data['lastName']), changed)
+    changed = h.setAttr(user, 'email', h.normalize(data['email']), changed)
+    changed = h.setAttr(user, 'affiliation', h.normalize(data['affiliation']), changed)
+    changed = h.setAttr(user, 'role', h.normalize(data['role']), changed)
+    changed = h.setAttr(user, 'pageContent', h.normalize(data['pageContent']), changed)
+    changed = h.setAttr(user, 'markupLanguage', h.normalize(data['markupLanguage']), changed)
+    changed = h.setAttr(user, 'html', h.getHTMLFromContents(user.pageContent, user.markupLanguage), changed)
 
     # username and password need special treatment: a value of None means that
     # these should not be updated.
     if data['password'] is not None:
-        setAttr(user, 'password', unicode(h.encryptPassword(data['password'], str(user.salt))))
+        changed = h.setAttr(user, 'password',
+                    unicode(h.encryptPassword(data['password'], str(user.salt))), changed)
     if data['username'] is not None:
         username = h.normalize(data['username'])
         if username != user.username:
             h.renameResearcherDirectory(user.username, username)
-        setAttr(user, 'username', username)
+        changed = h.setAttr(user, 'username', username, changed)
 
     # Many-to-One Data
-    if data['inputOrthography'] != user.inputOrthography:
-        user.inputOrthography = data['inputOrthography']
-        CHANGED = True
-    if data['outputOrthography'] != user.outputOrthography:
-        user.outputOrthography = data['outputOrthography']
-        CHANGED = True
+    changed = h.setAttr(user, 'inputOrthography', data['inputOrthography'], changed)
+    changed = h.setAttr(user, 'outputOrthography', data['outputOrthography'], changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         user.datetimeModified = datetime.datetime.utcnow()
         return user
-    return CHANGED
+    return changed

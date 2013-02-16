@@ -17,8 +17,10 @@ setup(
         "SQLAlchemy>=0.5,<=0.7.9",
         "WebOb<=1.0",
         "Markdown",
-        "PassLib"
+        "PassLib",
+        "docutils>=0.10"
     ],  # These libs will be used if available, but are not required: python-magic, PIL, ...
+    # QUESTION: do I need to include docutils in the required installs? ...
     setup_requires=["PasteScript>=1.6.3"],
     packages=find_packages(exclude=['ez_setup']),
     include_package_data=True,

@@ -60,11 +60,16 @@ class ValidGlosses(FancyValidator):
                 u'grammaticality does not match any of the available options.'])
     }
 
-    def validate_python(self, value, state):
+    def _to_python(self, value, state):
+        def createGloss(dict_):
+            gloss = model.Gloss()
+            gloss.gloss = h.toSingleSpace(h.normalize(dict_['gloss']))
+            gloss.glossGrammaticality = dict_['glossGrammaticality']
+            return gloss
         try:
-            glosses = [v['gloss'] for v in value if v['gloss'].strip()]
-            glossGrammaticalities = [v['glossGrammaticality'] for v in value
-                                     if v['glossGrammaticality'].strip()]
+            glosses = [g for g in value if g['gloss'].strip()]
+            glossGrammaticalities = [g['glossGrammaticality'] for g in value
+                                     if g['glossGrammaticality'].strip()]
         except (AttributeError, KeyError, TypeError):
             glosses = []
             glossGrammaticalities = []
@@ -75,6 +80,7 @@ class ValidGlosses(FancyValidator):
             raise Invalid(self.message("one_gloss", state), value, state)
         if badGlossGrammaticalities:
             raise Invalid(self.message("invalid_grammaticality", state), value, state)
+        return [createGloss(g) for g in glosses]
 
 
 class ValidOrthographicTranscription(UnicodeString):

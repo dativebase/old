@@ -160,41 +160,24 @@ class TagsController(BaseController):
 ################################################################################
 
 def createNewTag(data):
-    """Create a new tag model object given a data dictionary
-    provided by the user (as a JSON object).
+    """Create a new tag model object given a data dictionary provided by the
+    user (as a JSON object).
     """
-
     tag = Tag()
     tag.name = h.normalize(data['name'])
     tag.description = h.normalize(data['description'])
     tag.datetimeModified = datetime.datetime.utcnow()
     return tag
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateTag function
-# below.
-CHANGED = None
-
 def updateTag(tag, data):
-    """Update the input tag model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update the input tag model object given a data dictionary provided by the
+    user (as a JSON object).  If changed is not set to true in the course of
+    attribute setting, then False is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
-    # Unicode Data
-    setAttr(tag, 'name', h.normalize(data['name']))
-    setAttr(tag, 'description', h.normalize(data['description']))
-    
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    changed = False
+    changed = h.setAttr(tag, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(tag, 'description', h.normalize(data['description']), changed)
+    if changed:
         tag.datetimeModified = datetime.datetime.utcnow()
         return tag
-    return CHANGED
+    return changed

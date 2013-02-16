@@ -522,37 +522,13 @@ def createPlainFile():
 # File Update Functionality
 ################################################################################
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the update-related functions,
-# i.e.:
-# - updateSubintervalReferencingFile
-# - updateExternallyHostedFile
-# - updateFile
-# - setAttr
-# - updateStandardMetadata
+def updateStandardMetadata(file, data, changed):
 
-CHANGED = False
-
-def setAttr(obj, name, value):
-    if getattr(obj, name) != value:
-        setattr(obj, name, value)
-        global CHANGED
-        CHANGED = True
-
-def updateStandardMetadata(file, data):
-    global CHANGED
-
-    setAttr(file, 'description', h.normalize(data['description']))
-    setAttr(file, 'utteranceType', h.normalize(data['utteranceType']))
-    if file.dateElicited != data['dateElicited']:
-        file.dateElicited = data['dateElicited']
-        CHANGED = True
-    if data['elicitor'] != file.elicitor:
-        file.elicitor = data['elicitor']
-        CHANGED = True
-    if data['speaker'] != file.speaker:
-        file.speaker = data['speaker']
-        CHANGED = True
+    changed = h.setAttr(file, 'description', h.normalize(data['description']), changed)
+    changed = h.setAttr(file, 'utteranceType', h.normalize(data['utteranceType']), changed)
+    changed = h.setAttr(file, 'dateElicited', data['dateElicited'], changed)
+    changed = h.setAttr(file, 'elicitor', data['elicitor'], changed)
+    changed = h.setAttr(file, 'speaker', data['speaker'], changed)
 
     # Many-to-Many Data: tags & forms
     # Update only if the user has made changes.
@@ -561,7 +537,7 @@ def updateStandardMetadata(file, data):
 
     if set(formsToAdd) != set(file.forms):
         file.forms = formsToAdd
-        CHANGED = True
+        changed = True
 
         # Cause the entire file to be tagged as restricted if any one of its
         # forms are so tagged.
@@ -575,37 +551,34 @@ def updateStandardMetadata(file, data):
 
     if set(tagsToAdd) != set(file.tags):
         file.tags = tagsToAdd
-        CHANGED = True
+        changed = True
 
-    return file
+    return file, changed
 
 def updateFile(file):
     """Update the input File model object using the JSON object of the request
-    body.  If CHANGED is not set to true in the course of attribute setting,
+    body.  If changed is not set to true in the course of attribute setting,
     then False is returned and no update occurs.
     """
-    global CHANGED
+    changed = False
     schema = FileUpdateSchema()
     data = json.loads(unicode(request.body, request.charset))
     state = h.State()
     state.full_dict = data
     state.user = session['user']
     data = schema.to_python(data, state)
-
-    file = updateStandardMetadata(file, data)
-
-    if CHANGED:
-        CHANGED = False      # It's crucial to reset the CHANGED global!
+    file, changed = updateStandardMetadata(file, data, changed)
+    if changed:
         file.datetimeModified = datetime.datetime.utcnow()
         return file
-    return CHANGED
+    return changed
 
 def updateSubintervalReferencingFile(file):
     """Update the subinterval-referencing file model using the JSON object in
-    the request body.  If CHANGED is not set to true in the course of attribute
+    the request body.  If changed is not set to true in the course of attribute
     setting, then False is returned and no update occurs.
     """
-    global CHANGED
+    changed = False
     schema = FileSubintervalReferencingSchema()
     data = json.loads(unicode(request.body, request.charset))
     data['name'] = data.get('name') or u''
@@ -615,42 +588,40 @@ def updateSubintervalReferencingFile(file):
     data = schema.to_python(data, state)
 
     # Data unique to referencing subinterval files
-    setAttr(file, 'parentFile', data['parentFile'])
-    setAttr(file, 'name', (h.normalize(data['name']) or file.parentFile.filename))
-    setAttr(file, 'start', data['start'])
-    setAttr(file, 'end', data['end'])
+    changed = h.setAttr(file, 'parentFile', data['parentFile'], changed)
+    changed = h.setAttr(file, 'name', (h.normalize(data['name']) or file.parentFile.filename), changed)
+    changed = h.setAttr(file, 'start', data['start'], changed)
+    changed = h.setAttr(file, 'end', data['end'], changed)
 
-    file = updateStandardMetadata(file, data)
+    file, changed = updateStandardMetadata(file, data, changed)
 
-    if CHANGED:
-        CHANGED = False      # It's crucial to reset the CHANGED global!
+    if changed:
         file.datetimeModified = datetime.datetime.utcnow()
         return file
-    return CHANGED
+    return changed
 
 def updateExternallyHostedFile(file):
     """Update the externally hosted file model using the JSON object in
-    the request body.  If CHANGED is not set to true in the course of attribute
+    the request body.  If changed is not set to true in the course of attribute
     setting, then False is returned and no update occurs.
     """
-    global CHANGED
+    changed = False
     data = json.loads(unicode(request.body, request.charset))
     data['password'] = data.get('password') or u''
     data = FileExternallyHostedSchema().to_python(data)
 
     # Data unique to referencing subinterval files
-    setAttr(file, 'url', data['url'])
-    setAttr(file, 'name', h.normalize(data['name']))
-    setAttr(file, 'password', data['password'])
-    setAttr(file, 'MIMEtype', data['MIMEtype'])
+    changed = h.setAttr(file, 'url', data['url'], changed)
+    changed = h.setAttr(file, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(file, 'password', data['password'], changed)
+    changed = h.setAttr(file, 'MIMEtype', data['MIMEtype'], changed)
 
-    file = updateStandardMetadata(file, data)
+    file, changed = updateStandardMetadata(file, data, changed)
 
-    if CHANGED:
-        CHANGED = False      # It's crucial to reset the CHANGED global!
+    if changed:
         file.datetimeModified = datetime.datetime.utcnow()
         return file
-    return CHANGED
+    return changed
 
 
 ################################################################################

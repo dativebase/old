@@ -1,0 +1,178 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>API Documentation &mdash; OLD 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="OLD 1.0.0 documentation" href="index.html" />
+    <link rel="prev" title="1   Online Linguistic Database Documentation" href="documentation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="documentation.html" title="1   Online Linguistic Database Documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-old.controllers.tags">
+<span id="api-documentation"></span><h1>API Documentation<a class="headerlink" href="#module-old.controllers.tags" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="old.controllers.tags.TagsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.tags.</tt><tt class="descname">TagsController</tt><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /tags: Create a new tag.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /tags/id: Delete an existing tag.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags/id/edit: Return the data necessary to update an existing
+OLD tag; here we return only the tag and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags: Return all tags.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags/new: Return the data necessary to create a new OLD
+tag.  NOTHING TO RETURN HERE ...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags/id: Return a JSON object representation of the tag with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#TagsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /tags/id: Update an existing tag.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.tags.createNewTag">
+<tt class="descclassname">old.controllers.tags.</tt><tt class="descname">createNewTag</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#createNewTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.createNewTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new tag model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.tags.updateTag">
+<tt class="descclassname">old.controllers.tags.</tt><tt class="descname">updateTag</tt><big>(</big><em>tag</em>, <em>data</em><big>)</big><a class="reference internal" href="_modules/old/controllers/tags.html#updateTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.updateTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input tag model object given a data dictionary
+provided by the user (as a JSON object).  If CHANGED is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="documentation.html"
+                        title="previous chapter">1&nbsp;&nbsp;&nbsp;Online Linguistic Database Documentation</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/api.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="documentation.html" title="1   Online Linguistic Database Documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

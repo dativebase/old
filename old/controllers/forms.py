@@ -50,6 +50,8 @@ class FormsController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
         except Exception, e:
+            log.warn("%s's filter expression (%s) raised an unexpected exception: %s." % (
+                h.getUserFullName(session['user']), request.body, e))
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
@@ -479,13 +481,6 @@ def backupForm(formDict, datetimeModified=None):
 # Form Create & Update Functions
 ################################################################################
 
-def createNewGloss(data):
-    gloss = Gloss()
-    gloss.gloss = h.toSingleSpace(h.normalize(data['gloss']))
-    gloss.glossGrammaticality = data['glossGrammaticality']
-    return gloss
-
-
 def createNewForm(data):
     """Create a new Form model object given a data dictionary provided by the
     user (as a JSON object).
@@ -510,22 +505,16 @@ def createNewForm(data):
     # User-entered date: dateElicited
     form.dateElicited = data['dateElicited']
 
-    # One-to-Many Data: Glosses
-    form.glosses = [createNewGloss(g) for g in data['glosses'] if g['gloss']]
-
     # Many-to-One
-    if data['elicitationMethod']:
-        form.elicitationMethod = data['elicitationMethod']
-    if data['syntacticCategory']:
-        form.syntacticCategory = data['syntacticCategory']
-    if data['source']:
-        form.source = data['source']
-    if data['elicitor']:
-        form.elicitor = data['elicitor']
-    if data['verifier']:
-        form.verifier = data['verifier']
-    if data['speaker']:
-        form.speaker = data['speaker']
+    form.elicitationMethod = data['elicitationMethod']
+    form.syntacticCategory = data['syntacticCategory']
+    form.source = data['source']
+    form.elicitor = data['elicitor']
+    form.verifier = data['verifier']
+    form.speaker = data['speaker']
+
+    # One-to-Many Data: glosses
+    form.glosses = data['glosses']
 
     # Many-to-Many Data: tags & files
     form.tags = [t for t in data['tags'] if t]
@@ -554,45 +543,30 @@ def createNewForm(data):
                                                         compileMorphemicAnalysis(form)
     return form
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateForm function
-# below.
-CHANGED = None
-
 def updateForm(form, data):
     """Update the input Form model object given a data dictionary provided by
-    the user (as a JSON object).  If CHANGED is not set to true in the course
-    of attribute setting, then None is returned and no update occurs.
+    the user (as a JSON object).  If changed is not set to true in the course
+    of attribute setting, then False is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
+    changed = False
     # Unicode Data
-    setAttr(form, 'transcription',
-            h.toSingleSpace(h.normalize(data['transcription'])))
-    setAttr(form, 'phoneticTranscription',
-            h.toSingleSpace(h.normalize(data['phoneticTranscription'])))
-    setAttr(form, 'narrowPhoneticTranscription',
-            h.toSingleSpace(h.normalize(data['narrowPhoneticTranscription'])))
-    setAttr(form, 'morphemeBreak',
-            h.toSingleSpace(h.normalize(data['morphemeBreak'])))
-    setAttr(form, 'morphemeGloss',
-            h.toSingleSpace(h.normalize(data['morphemeGloss'])))
-    setAttr(form, 'comments', h.normalize(data['comments']))
-    setAttr(form, 'speakerComments', h.normalize(data['speakerComments']))
-    setAttr(form, 'grammaticality', data['grammaticality'])
-    setAttr(form, 'status', data['status'])
+    changed = h.setAttr(form, 'transcription',
+            h.toSingleSpace(h.normalize(data['transcription'])), changed)
+    changed = h.setAttr(form, 'phoneticTranscription',
+            h.toSingleSpace(h.normalize(data['phoneticTranscription'])), changed)
+    changed = h.setAttr(form, 'narrowPhoneticTranscription',
+            h.toSingleSpace(h.normalize(data['narrowPhoneticTranscription'])), changed)
+    changed = h.setAttr(form, 'morphemeBreak',
+            h.toSingleSpace(h.normalize(data['morphemeBreak'])), changed)
+    changed = h.setAttr(form, 'morphemeGloss',
+            h.toSingleSpace(h.normalize(data['morphemeGloss'])), changed)
+    changed = h.setAttr(form, 'comments', h.normalize(data['comments']), changed)
+    changed = h.setAttr(form, 'speakerComments', h.normalize(data['speakerComments']), changed)
+    changed = h.setAttr(form, 'grammaticality', data['grammaticality'], changed)
+    changed = h.setAttr(form, 'status', data['status'], changed)
 
     # User-entered date: dateElicited
-    if form.dateElicited != data['dateElicited']:
-        form.dateElicited = data['dateElicited']
-        CHANGED = True
+    changed = h.setAttr(form, 'dateElicited', data['dateElicited'], changed)
 
     # One-to-Many Data: Glosses
     # First check if the user has made any changes to the glosses.
@@ -600,34 +574,19 @@ def updateForm(form, data):
     #  ones.  (Note: this will result in the deletion of a gloss and the
     #  recreation of an identical one with a different index.  There may be a
     #  "better" way of doing this, but this way is simple...
-    glossesToAdd = [(gloss['gloss'], gloss['glossGrammaticality'])
-                    for gloss in data['glosses'] if gloss['gloss']]
-    glossesWeHave = [(gloss.gloss, gloss.glossGrammaticality)
-                    for gloss in form.glosses]
-    if glossesToAdd != glossesWeHave:
-        form.glosses = [createNewGloss(g) for g in data['glosses']
-                        if g['gloss']]
-        CHANGED = True
+    glossesWeHave = [(g.gloss, g.glossGrammaticality) for g in form.glosses]
+    glossesToAdd = [(g.gloss, g.glossGrammaticality) for g in data['glosses']]
+    if set(glossesWeHave) != set(glossesToAdd):
+        form.glosses = data['glosses']
+        changed = True
 
     # Many-to-One Data
-    if data['elicitationMethod'] != form.elicitationMethod:
-        form.elicitationMethod = data['elicitationMethod']
-        CHANGED = True
-    if data['syntacticCategory'] != form.syntacticCategory:
-        form.syntacticCategory = data['syntacticCategory']
-        CHANGED = True
-    if data['source'] != form.source:
-        form.source = data['source']
-        CHANGED = True
-    if data['elicitor'] != form.elicitor:
-        form.elicitor = data['elicitor']
-        CHANGED = True
-    if data['verifier'] != form.verifier:
-        form.verifier = data['verifier']
-        CHANGED = True
-    if data['speaker'] != form.speaker:
-        form.speaker = data['speaker']
-        CHANGED = True
+    changed = h.setAttr(form, 'elicitationMethod', data['elicitationMethod'], changed)
+    changed = h.setAttr(form, 'syntacticCategory', data['syntacticCategory'], changed)
+    changed = h.setAttr(form, 'source', data['source'], changed)
+    changed = h.setAttr(form, 'elicitor', data['elicitor'], changed)
+    changed = h.setAttr(form, 'verifier', data['verifier'], changed)
+    changed = h.setAttr(form, 'speaker', data['speaker'], changed)
 
     # Many-to-Many Data: tags & files
     # Update only if the user has made changes.
@@ -636,7 +595,7 @@ def updateForm(form, data):
 
     if set(filesToAdd) != set(form.files):
         form.files = filesToAdd
-        CHANGED = True
+        changed = True
 
         # Cause the entire form to be tagged as restricted if any one of its
         # files are so tagged.
@@ -650,29 +609,21 @@ def updateForm(form, data):
 
     if set(tagsToAdd) != set(form.tags):
         form.tags = tagsToAdd
-        CHANGED = True
+        changed = True
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
     morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory = \
                                                         compileMorphemicAnalysis(form)
-    if morphemeBreakIDs != form.morphemeBreakIDs:
-        form.morphemeBreakIDs = morphemeBreakIDs
-        CHANGED = True
-    if morphemeGlossIDs != form.morphemeGlossIDs:
-        form.morphemeGlossIDs = morphemeGlossIDs
-        CHANGED = True
-    if syntacticCategoryString != form.syntacticCategoryString:
-        form.syntacticCategoryString = syntacticCategoryString
-        CHANGED = True
-    if breakGlossCategory != form.breakGlossCategory:
-        form.breakGlossCategory = breakGlossCategory
-        CHANGED = True
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    changed = h.setAttr(form, 'morphemeBreakIDs', morphemeBreakIDs, changed)
+    changed = h.setAttr(form, 'morphemeGlossIDs', morphemeGlossIDs, changed)
+    changed = h.setAttr(form, 'syntacticCategoryString', syntacticCategoryString, changed)
+    changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
+
+    if changed:
         form.datetimeModified = datetime.datetime.utcnow()
         return form
-    return CHANGED
+    return changed
 
 
 def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
@@ -683,31 +634,17 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
     If specified, lexicalItems should be a list of lexical forms with which the
     new morphemic analyses should (exclusively) be constructed.
     """
-
-    global CHANGED
-
+    changed = False
     morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory = \
         compileMorphemicAnalysis(form, validDelimiters, **kwargs)
-
-    if morphemeBreakIDs != form.morphemeBreakIDs:
-        form.morphemeBreakIDs = morphemeBreakIDs
-        CHANGED = True
-    if morphemeGlossIDs != form.morphemeGlossIDs:
-        form.morphemeGlossIDs = morphemeGlossIDs
-        CHANGED = True
-    if syntacticCategoryString != form.syntacticCategoryString:
-        form.syntacticCategoryString = syntacticCategoryString
-        CHANGED = True
-    if breakGlossCategory != form.breakGlossCategory:
-        form.breakGlossCategory = breakGlossCategory
-        CHANGED = True
-
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    changed = h.setAttr(form, 'morphemeBreakIDs', morphemeBreakIDs, changed)
+    changed = h.setAttr(form, 'morphemeGlossIDs', morphemeGlossIDs, changed)
+    changed = h.setAttr(form, 'syntacticCategoryString', syntacticCategoryString, changed)
+    changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
+    if changed:
         form.datetimeModified = datetime.datetime.utcnow()
         return form
-
-    return CHANGED
+    return changed
 
 def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
     """Calls updateMorphemeReferencesOfForm for each form in forms, commits any
@@ -735,7 +672,8 @@ def compileMorphemicAnalysis(form, morphemeDelimiters=None, **kwargs):
     try:
         return _compileMorphemicAnalysis(form, morphemeDelimiters, **kwargs)
     except Exception, e:
-        log.debug('compileMorphemicAnalysis raised an error: %s' % e)
+        log.debug('compileMorphemicAnalysis raised an error (%s) on "%s"/"%s".' % (
+            e, form.morphemeBreak, form.morphemeGloss))
         return None, None, None, None
 
 def _compileMorphemicAnalysis(form, morphemeDelimiters=None, **kwargs):
@@ -1032,14 +970,8 @@ def updateFormsContainingThisFormAsMorpheme(form, change='create', previousVersi
     This function is called in each of the create, update and delete actions whenever
     they succeed.  The change parameter signifies the type of action.  The
     previousVersion parameter contains a dict representation of an updated form's
-    previous state.
-
-    - update forms when the name of a syntacticCategory changes or when a sc is deleted!!!
-      - get all forms with this syntactic category
-      - for each form m
-        - if isLexical(m)
-          - follow the same procedure for lexical form update above ...
-
+    previous state.  This function is also the one called in the syntacticcategories
+    controller when a lexical category is deleted or has its name changed.
     """
 
     if h.isLexical(form):

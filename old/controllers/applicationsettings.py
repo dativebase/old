@@ -263,66 +263,48 @@ def createNewApplicationSettings(data):
     return applicationSettings
 
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the
-# updateApplicationSettings function below.
-CHANGED = None
-
 def updateApplicationSettings(applicationSettings, data):
     """Update the input ApplicationSettings model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
 
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
+    changed = False
 
     # Unicode Data
-    setAttr(applicationSettings, 'objectLanguageName', data['objectLanguageName'])
-    setAttr(applicationSettings, 'objectLanguageId', data['objectLanguageId'])
-    setAttr(applicationSettings, 'metalanguageName', data['metalanguageName'])
-    setAttr(applicationSettings, 'metalanguageId', data['metalanguageId'])
-    setAttr(applicationSettings, 'metalanguageInventory',
-            h.normalize(h.removeAllWhiteSpace(data['metalanguageInventory'])))
-    setAttr(applicationSettings, 'orthographicValidation',
-            data['orthographicValidation'])
-    setAttr(applicationSettings, 'narrowPhoneticInventory',
-            h.normalize(h.removeAllWhiteSpace(data['narrowPhoneticInventory'])))
-    setAttr(applicationSettings, 'narrowPhoneticValidation',
-            data['narrowPhoneticValidation'])
-    setAttr(applicationSettings, 'broadPhoneticInventory',
-            h.normalize(h.removeAllWhiteSpace(data['broadPhoneticInventory'])))
-    setAttr(applicationSettings, 'broadPhoneticValidation',
-            data['broadPhoneticValidation'])
-    setAttr(applicationSettings, 'morphemeBreakIsOrthographic',
-            data['morphemeBreakIsOrthographic'])
-    setAttr(applicationSettings, 'morphemeBreakValidation',
-            data['morphemeBreakValidation'])
-    setAttr(applicationSettings, 'phonemicInventory',
-            h.normalize(h.removeAllWhiteSpace(data['phonemicInventory'])))
-    setAttr(applicationSettings, 'morphemeDelimiters',
-            h.normalize(data['morphemeDelimiters']))
-    setAttr(applicationSettings, 'punctuation',
-            h.normalize(h.removeAllWhiteSpace(data['punctuation'])))
-    setAttr(applicationSettings, 'grammaticalities',
-            h.normalize(h.removeAllWhiteSpace(data['grammaticalities'])))
+    changed = h.setAttr(applicationSettings, 'objectLanguageName', data['objectLanguageName'], changed)
+    changed = h.setAttr(applicationSettings, 'objectLanguageId', data['objectLanguageId'], changed)
+    changed = h.setAttr(applicationSettings, 'metalanguageName', data['metalanguageName'], changed)
+    changed = h.setAttr(applicationSettings, 'metalanguageId', data['metalanguageId'], changed)
+    changed = h.setAttr(applicationSettings, 'metalanguageInventory',
+            h.normalize(h.removeAllWhiteSpace(data['metalanguageInventory'])), changed)
+    changed = h.setAttr(applicationSettings, 'orthographicValidation',
+            data['orthographicValidation'], changed)
+    changed = h.setAttr(applicationSettings, 'narrowPhoneticInventory',
+            h.normalize(h.removeAllWhiteSpace(data['narrowPhoneticInventory'])), changed)
+    changed = h.setAttr(applicationSettings, 'narrowPhoneticValidation',
+            data['narrowPhoneticValidation'], changed)
+    changed = h.setAttr(applicationSettings, 'broadPhoneticInventory',
+            h.normalize(h.removeAllWhiteSpace(data['broadPhoneticInventory'])), changed)
+    changed = h.setAttr(applicationSettings, 'broadPhoneticValidation',
+            data['broadPhoneticValidation'], changed)
+    changed = h.setAttr(applicationSettings, 'morphemeBreakIsOrthographic',
+            data['morphemeBreakIsOrthographic'], changed)
+    changed = h.setAttr(applicationSettings, 'morphemeBreakValidation',
+            data['morphemeBreakValidation'], changed)
+    changed = h.setAttr(applicationSettings, 'phonemicInventory',
+            h.normalize(h.removeAllWhiteSpace(data['phonemicInventory'])), changed)
+    changed = h.setAttr(applicationSettings, 'morphemeDelimiters',
+            h.normalize(data['morphemeDelimiters']), changed)
+    changed = h.setAttr(applicationSettings, 'punctuation',
+            h.normalize(h.removeAllWhiteSpace(data['punctuation'])), changed)
+    changed = h.setAttr(applicationSettings, 'grammaticalities',
+            h.normalize(h.removeAllWhiteSpace(data['grammaticalities'])), changed)
 
     # Many-to-One
-    if data['storageOrthography'] != applicationSettings.storageOrthography:
-        applicationSettings.storageOrthography = data['storageOrthography']
-        CHANGED = True
-    if data['inputOrthography'] != applicationSettings.inputOrthography:
-        applicationSettings.inputOrthography = data['inputOrthography']
-        CHANGED = True
-    if data['outputOrthography'] != applicationSettings.outputOrthography:
-        applicationSettings.outputOrthography = data['outputOrthography']
-        CHANGED = True
+    changed = h.setAttr(applicationSettings, 'storageOrthography', data['storageOrthography'], changed)
+    changed = h.setAttr(applicationSettings, 'inputOrthography', data['inputOrthography'], changed)
+    changed = h.setAttr(applicationSettings, 'outputOrthography', data['outputOrthography'], changed)
 
     # Many-to-Many Data: unrestrictedUsers
     # First check if the user has made any changes. If there are changes, just
@@ -330,10 +312,9 @@ def updateApplicationSettings(applicationSettings, data):
     unrestrictedUsersToAdd = [u for u in data['unrestrictedUsers'] if u]
     if set(unrestrictedUsersToAdd) != set(applicationSettings.unrestrictedUsers):
         applicationSettings.unrestrictedUsers = unrestrictedUsersToAdd
-        CHANGED = True
+        changed = True
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         applicationSettings.datetimeModified = datetime.datetime.utcnow()
         return applicationSettings
-    return CHANGED
+    return changed

@@ -65,6 +65,7 @@ formCreateParams = {
     'elicitor': u'',
     'verifier': u'',
     'source': u'',
+    'status': u'',
     'dateElicited': u''     # mm/dd/yyyy
 }
 
@@ -82,7 +83,10 @@ payload['glosses'].append({'gloss': u'test', 'glossGrammaticality': u''})
 r = s.post('%s/forms' % baseurl, data=json.dumps(payload))
 rJSON = r.json()
 errorMsg = u'Failed in attempt to request creation of a form.'
-formId = rJSON['id']
+try:
+    formId = rJSON['id']
+except:
+    print rJSON
 assert r.status_code == 200, errorMsg
 assert rJSON['transcription'] == u'test'
 assert rJSON['glosses'][0]['gloss'] == u'test'

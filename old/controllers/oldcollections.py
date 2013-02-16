@@ -167,11 +167,13 @@ class OldcollectionsController(BaseController):
                     state = h.getStateObject(values)
                     data = schema.to_python(values, state)
                     collectionDict = collection.getDict()
-                    collection = updateCollection(collection, data, collectionsReferenced)
+                    collection, restricted, contents_changed = updateCollection(
+                        collection, data, collectionsReferenced)
                     # collection will be False if there are no changes (cf. updateCollection).
                     if collection:
                         backupCollection(collectionDict, collection.datetimeModified)
-                        updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder)
+                        updateCollectionsThatReferenceThisCollection(collection,
+                                self.queryBuilder, restricted, contents_changed)
                         Session.add(collection)
                         Session.commit()
                         return collection
@@ -418,9 +420,9 @@ def getCollectionsReferencedInContents(collection, collectionsReferenced):
     return [collectionsReferenced[int(id)]
             for id in h.collectionReferencePattern.findall(collection.contents)]
 
-def updateCollectionsThatReferenceThisCollection(collection, queryBuilder):
-    """If the contents of this collection have changed (i.e., CONTENTS_CHANGED=True)
-    or this collection has just been tagged as restricted (i.e., RESTRICTED=True),
+def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, restricted, contents_changed):
+    """If the contents of this collection have changed (i.e., contents_changed=True)
+    or this collection has just been tagged as restricted (i.e., restricted=True),
     then retrieve all collections that reference this collection and all collections
     that reference those referers, etc., and (1) tag them as restricted (if
     appropriate), (2) update their contentsUnpacked and html attributes (if
@@ -435,18 +437,14 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder):
         collection.forms = [Session.query(Form).get(int(id)) for id in
                     h.formReferencePattern.findall(collection.contentsUnpacked)]
 
-    global RESTRICTED
-    global CONTENTS_CHANGED
-    if RESTRICTED or CONTENTS_CHANGED:
+    if restricted or contents_changed:
         collectionsReferencingThisCollection = getCollectionsReferencingThisCollection(
             collection, queryBuilder)
         now = h.now()
-        if RESTRICTED:
-            RESTRICTED = False
+        if restricted:
             restrictedTag = h.getRestrictedTag()
             [c.tags.append(restrictedTag) for c in collectionsReferencingThisCollection]
-        if CONTENTS_CHANGED:
-            CONTENTS_CHANGED = False
+        if contents_changed:
             [updateContentsUnpackedEtc(c) for c in collectionsReferencingThisCollection]
         [setattr(c, 'datetimeModified', now) for c in collectionsReferencingThisCollection]
         Session.add_all(collectionsReferencingThisCollection)
@@ -654,67 +652,37 @@ def createNewCollection(data, collectionsReferenced):
 
     return collection
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateCollection function below.
-CHANGED = False
-
-# Global RESTRICTED variable is set to true if a collection update request results
-# in the collection becoming restricted.  This global can be set to True in
-# updateCollection, can only be accessed in updateCollectionsThatReferenceThisCollection
-# and must be reset to False only in updateCollectionsThatReferenceThisCollection.
-RESTRICTED = False
-
-# Global CONTENTS_CHANGED variable is set to true if a collection update request results
-# in the collection's contents being changed.  This global may only be set to True in
-# updateCollection, can only be accessed in updateCollectionsThatReferenceThisCollection
-# and must be reset to False only in updateCollectionsThatReferenceThisCollection.
-CONTENTS_CHANGED = False
 
 def updateCollection(collection, data, collectionsReferenced):
     """Update the input Collection model object given a data dictionary provided by
-    the user (as a JSON object).  If CHANGED is not set to true in the course
+    the user (as a JSON object).  If changed is not set to true in the course
     of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-    global RESTRICTED
-    global CONTENTS_CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
+    changed = False
+    restricted = False
+    contents_changed = False
 
     # Unicode Data
-    setAttr(collection, 'title', h.normalize(data['title']))
-    setAttr(collection, 'type', h.normalize(data['type']))
-    setAttr(collection, 'url', h.normalize(data['url']))
-    setAttr(collection, 'description', h.normalize(data['description']))
-    setAttr(collection, 'markupLanguage', h.normalize(data['markupLanguage']))
+    changed = h.setAttr(collection, 'title', h.normalize(data['title']), changed)
+    changed = h.setAttr(collection, 'type', h.normalize(data['type']), changed)
+    changed = h.setAttr(collection, 'url', h.normalize(data['url']), changed)
+    changed = h.setAttr(collection, 'description', h.normalize(data['description']), changed)
+    changed = h.setAttr(collection, 'markupLanguage', h.normalize(data['markupLanguage']), changed)
     submittedContents = h.normalize(data['contents'])
     if collection.contents != submittedContents:
         collection.contents = submittedContents
-        CONTENTS_CHANGED = CHANGED = True
-    setAttr(collection, 'contentsUnpacked', h.normalize(data['contentsUnpacked']))
-    setAttr(collection, 'html', h.getHTMLFromContents(collection.contentsUnpacked,
-                                                      collection.markupLanguage))
+        contents_changed = changed = True
+    changed = h.setAttr(collection, 'contentsUnpacked', h.normalize(data['contentsUnpacked']), changed)
+    changed = h.setAttr(collection, 'html', h.getHTMLFromContents(collection.contentsUnpacked,
+                                                      collection.markupLanguage), changed)
 
     # User-entered date: dateElicited
-    if collection.dateElicited != data['dateElicited']:
-        collection.dateElicited = data['dateElicited']
-        CHANGED = True
+    changed = h.setAttr(collection, 'dateElicited', data['dateElicited'], changed)
 
     # Many-to-One Data
-    if data['elicitor'] != collection.elicitor:
-        collection.elicitor = data['elicitor']
-        CHANGED = True
-    if data['speaker'] != collection.speaker:
-        collection.speaker = data['speaker']
-        CHANGED = True
-    if data['source'] != collection.source:
-        collection.source = data['source']
-        CHANGED = True
+    changed = h.setAttr(collection, 'elicitor', data['elicitor'], changed)
+    changed = h.setAttr(collection, 'speaker', data['speaker'], changed)
+    changed = h.setAttr(collection, 'source', data['source'], changed)
 
     # Many-to-Many Data: files, forms & tags
     # Update only if the user has made changes.
@@ -724,11 +692,11 @@ def updateCollection(collection, data, collectionsReferenced):
 
     if set(filesToAdd) != set(collection.files):
         collection.files = filesToAdd
-        CHANGED = True
+        changed = True
 
     if set(formsToAdd) != set(collection.forms):
         collection.forms = formsToAdd
-        CHANGED = True
+        changed = True
 
     # Restrict the entire collection if it is associated to restricted forms or
     # files or if it references a restricted collection.
@@ -743,12 +711,11 @@ def updateCollection(collection, data, collectionsReferenced):
     if set(tagsToAdd) != set(collection.tags):
         if u'restricted' in [t.name for t in tagsToAdd] and \
         u'restricted' not in [t.name for t in collection.tags]:
-            RESTRICTED = True
+            restricted = True
         collection.tags = tagsToAdd
-        CHANGED = True
+        changed = True
 
-    if CHANGED:
-        CHANGED = False      # It's crucial to reset the CHANGED global!
+    if changed:
         collection.datetimeModified = datetime.datetime.utcnow()
-        return collection
-    return CHANGED
+        return collection, restricted, contents_changed
+    return changed, restricted, contents_changed

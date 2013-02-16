@@ -173,33 +173,19 @@ def createNewPhonology(data):
     phonology.datetimeEntered = now
     return phonology
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updatePhonology function
-# below.
-CHANGED = None
-
 def updatePhonology(phonology, data):
     """Update the input phonology model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
+    changed = False
     # Unicode Data
-    setAttr(phonology, 'name', h.normalize(data['name']))
-    setAttr(phonology, 'description', h.normalize(data['description']))
-    setAttr(phonology, 'script', h.normalize(data['script']))
+    changed = h.setAttr(phonology, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(phonology, 'description', h.normalize(data['description']), changed)
+    changed = h.setAttr(phonology, 'script', h.normalize(data['script']), changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         phonology.modifier = session['user']
         phonology.datetimeModified = datetime.datetime.utcnow()
         return phonology
-    return CHANGED
+    return changed

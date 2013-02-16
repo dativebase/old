@@ -253,74 +253,60 @@ def createNewSource(data):
 
     return source
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updateForm function
-# below.
-CHANGED = None
 
 def updateSource(source, data):
     """Update the input Source model object given a data dictionary provided by
-    the user (as a JSON object).  If CHANGED is not set to true in the course
+    the user (as a JSON object).  If changed is not set to true in the course
     of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
+    changed = False
 
     # Unicode Data
-    setAttr(source, 'type', h.normalize(data['type']))
-    setAttr(source, 'key', h.normalize(data['key']))
-    setAttr(source, 'address', h.normalize(data['address']))
-    setAttr(source, 'annote', h.normalize(data['annote']))
-    setAttr(source, 'author', h.normalize(data['author']))
-    setAttr(source, 'booktitle', h.normalize(data['booktitle']))
-    setAttr(source, 'chapter', h.normalize(data['chapter']))
-    setAttr(source, 'crossref', h.normalize(data['crossref']))
-    setAttr(source, 'edition', h.normalize(data['edition']))
-    setAttr(source, 'editor', h.normalize(data['editor']))
-    setAttr(source, 'howpublished', h.normalize(data['howpublished']))
-    setAttr(source, 'institution', h.normalize(data['institution']))
-    setAttr(source, 'journal', h.normalize(data['journal']))
-    setAttr(source, 'keyField', h.normalize(data['keyField']))
-    setAttr(source, 'month', h.normalize(data['month']))
-    setAttr(source, 'note', h.normalize(data['note']))
-    setAttr(source, 'number', h.normalize(data['number']))
-    setAttr(source, 'organization', h.normalize(data['organization']))
-    setAttr(source, 'pages', h.normalize(data['pages']))
-    setAttr(source, 'publisher', h.normalize(data['publisher']))
-    setAttr(source, 'school', h.normalize(data['school']))
-    setAttr(source, 'series', h.normalize(data['series']))
-    setAttr(source, 'title', h.normalize(data['title']))
-    setAttr(source, 'typeField', h.normalize(data['typeField']))
-    setAttr(source, 'url', data['url'])
-    setAttr(source, 'volume', h.normalize(data['volume']))
-    setAttr(source, 'year', data['year'])
-    setAttr(source, 'affiliation', h.normalize(data['affiliation']))
-    setAttr(source, 'abstract', h.normalize(data['abstract']))
-    setAttr(source, 'contents', h.normalize(data['contents']))
-    setAttr(source, 'copyright', h.normalize(data['copyright']))
-    setAttr(source, 'ISBN', h.normalize(data['ISBN']))
-    setAttr(source, 'ISSN', h.normalize(data['ISSN']))
-    setAttr(source, 'keywords', h.normalize(data['keywords']))
-    setAttr(source, 'language', h.normalize(data['language']))
-    setAttr(source, 'location', h.normalize(data['location']))
-    setAttr(source, 'LCCN', h.normalize(data['LCCN']))
-    setAttr(source, 'mrnumber', h.normalize(data['mrnumber']))
-    setAttr(source, 'price', h.normalize(data['price']))
-    setAttr(source, 'size', h.normalize(data['size']))
+    changed = h.setAttr(source, 'type', h.normalize(data['type']), changed)
+    changed = h.setAttr(source, 'key', h.normalize(data['key']), changed)
+    changed = h.setAttr(source, 'address', h.normalize(data['address']), changed)
+    changed = h.setAttr(source, 'annote', h.normalize(data['annote']), changed)
+    changed = h.setAttr(source, 'author', h.normalize(data['author']), changed)
+    changed = h.setAttr(source, 'booktitle', h.normalize(data['booktitle']), changed)
+    changed = h.setAttr(source, 'chapter', h.normalize(data['chapter']), changed)
+    changed = h.setAttr(source, 'crossref', h.normalize(data['crossref']), changed)
+    changed = h.setAttr(source, 'edition', h.normalize(data['edition']), changed)
+    changed = h.setAttr(source, 'editor', h.normalize(data['editor']), changed)
+    changed = h.setAttr(source, 'howpublished', h.normalize(data['howpublished']), changed)
+    changed = h.setAttr(source, 'institution', h.normalize(data['institution']), changed)
+    changed = h.setAttr(source, 'journal', h.normalize(data['journal']), changed)
+    changed = h.setAttr(source, 'keyField', h.normalize(data['keyField']), changed)
+    changed = h.setAttr(source, 'month', h.normalize(data['month']), changed)
+    changed = h.setAttr(source, 'note', h.normalize(data['note']), changed)
+    changed = h.setAttr(source, 'number', h.normalize(data['number']), changed)
+    changed = h.setAttr(source, 'organization', h.normalize(data['organization']), changed)
+    changed = h.setAttr(source, 'pages', h.normalize(data['pages']), changed)
+    changed = h.setAttr(source, 'publisher', h.normalize(data['publisher']), changed)
+    changed = h.setAttr(source, 'school', h.normalize(data['school']), changed)
+    changed = h.setAttr(source, 'series', h.normalize(data['series']), changed)
+    changed = h.setAttr(source, 'title', h.normalize(data['title']), changed)
+    changed = h.setAttr(source, 'typeField', h.normalize(data['typeField']), changed)
+    changed = h.setAttr(source, 'url', data['url'], changed)
+    changed = h.setAttr(source, 'volume', h.normalize(data['volume']), changed)
+    changed = h.setAttr(source, 'year', data['year'], changed)
+    changed = h.setAttr(source, 'affiliation', h.normalize(data['affiliation']), changed)
+    changed = h.setAttr(source, 'abstract', h.normalize(data['abstract']), changed)
+    changed = h.setAttr(source, 'contents', h.normalize(data['contents']), changed)
+    changed = h.setAttr(source, 'copyright', h.normalize(data['copyright']), changed)
+    changed = h.setAttr(source, 'ISBN', h.normalize(data['ISBN']), changed)
+    changed = h.setAttr(source, 'ISSN', h.normalize(data['ISSN']), changed)
+    changed = h.setAttr(source, 'keywords', h.normalize(data['keywords']), changed)
+    changed = h.setAttr(source, 'language', h.normalize(data['language']), changed)
+    changed = h.setAttr(source, 'location', h.normalize(data['location']), changed)
+    changed = h.setAttr(source, 'LCCN', h.normalize(data['LCCN']), changed)
+    changed = h.setAttr(source, 'mrnumber', h.normalize(data['mrnumber']), changed)
+    changed = h.setAttr(source, 'price', h.normalize(data['price']), changed)
+    changed = h.setAttr(source, 'size', h.normalize(data['size']), changed)
 
     # Many-to-One Data
-    if data['file'] != source.file:
-        source.file = data['file']
-        CHANGED = True
+    changed = h.setAttr(source, 'file', data['file'], changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         source.datetimeModified = datetime.datetime.utcnow()
         return source
-    return CHANGED
+    return changed

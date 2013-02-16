@@ -1,0 +1,112 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>API Documentation</title>
+    
+    <link rel="stylesheet" href="_static/epub.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="developer_guide.html" title="Developer Guide"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body">
+            
+  <div class="section" id="api-documentation">
+<h1>API Documentation</h1>
+<p>This page contains some basic documentation for the SimpleSite project. To
+understand the project completely please refer to the documentation on the
+Pylons Book website at <a class="reference external" href="http://pylonsbook.com">http://pylonsbook.com</a> or read the source code directly.</p>
+<div class="section" id="module-simplesite">
+<span id="the-simplesite-module"></span><h2>The <a class="reference internal" href="#module-simplesite" title="simplesite"><tt class="xref py py-mod docutils literal"><span class="pre">simplesite</span></tt></a> Module</h2>
+<p>Contains all the controllers, model and templates as sub-modules.</p>
+</div>
+<div class="section" id="module-simplesite.controllers">
+<span id="the-controllers-module"></span><h2>The <tt class="xref py py-mod docutils literal"><span class="pre">controllers</span></tt> Module</h2>
+<p>Contains all the controllers. The most important of which is
+<a class="reference internal" href="#simplesite.controllers.PageController" title="simplesite.controllers.PageController"><tt class="xref py py-class docutils literal"><span class="pre">PageController</span></tt></a>.</p>
+<dl class="class">
+<dt id="simplesite.controllers.PageController">
+<em class="property">class </em><tt class="descclassname">simplesite.controllers.</tt><tt class="descname">PageController</tt></dt>
+<dd></dd></dl>
+
+<p>The <a class="reference internal" href="#simplesite.controllers.PageController" title="simplesite.controllers.PageController"><tt class="xref py py-class docutils literal"><span class="pre">PageController</span></tt></a> is responsible for displaying pages as well as
+allowing users to add, edit, delete and list pages.</p>
+<dl class="method">
+<dt id="simplesite.controllers.PageController.view">
+<tt class="descclassname">PageController.</tt><tt class="descname">view</tt><big>(</big><em>self</em><span class="optional">[</span>, <em>id=None</em><span class="optional">]</span><big>)</big></dt>
+<dd></dd></dl>
+
+<p>When a user visits a URL such as <tt class="docutils literal"><span class="pre">/view/page/1</span></tt> the <a class="reference internal" href="#simplesite.controllers.PageController" title="simplesite.controllers.PageController"><tt class="xref py py-class docutils literal"><span class="pre">PageController</span></tt></a>
+class&#8217;s <tt class="xref py py-meth docutils literal"><span class="pre">view()</span></tt> action is called to render the page.</p>
+<p>The page controller makes use of a FormEncode schema to validate the page data
+it receives. Here is the schema it uses:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">NewPageForm</span><span class="p">(</span><span class="n">formencode</span><span class="o">.</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="n">formencode</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">String</span><span class="p">(</span>
+        <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">{</span>
+            <span class="s">&#39;empty&#39;</span><span class="p">:</span><span class="s">&#39;Please enter some content for the page. &#39;</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">heading</span> <span class="o">=</span> <span class="n">formencode</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">formencode</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As you can see the schema includes validators for the title, heading and content.</p>
+</div>
+<div class="section" id="module-old.lib.utils">
+<span id="the-utils-module"></span><h2>The <tt class="xref py py-mod docutils literal"><span class="pre">utils</span></tt> Module</h2>
+<div class="section" id="the-utils-module-is-really-cool">
+<h3>The utils module is really cool!</h3>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">NewPageForm</span><span class="p">(</span><span class="n">formencode</span><span class="o">.</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="n">formencode</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">String</span><span class="p">(</span>
+        <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">{</span>
+            <span class="s">&#39;empty&#39;</span><span class="p">:</span><span class="s">&#39;Please enter some content for the page. &#39;</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">heading</span> <span class="o">=</span> <span class="n">formencode</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">formencode</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

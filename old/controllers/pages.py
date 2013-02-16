@@ -167,34 +167,20 @@ def createNewPage(data):
     page.datetimeModified = datetime.datetime.utcnow()
     return page
 
-# Global CHANGED variable keeps track of whether an update request should
-# succeed.  This global may only be used/changed in the updatePage function
-# below.
-CHANGED = None
-
 def updatePage(page, data):
     """Update the input page model object given a data dictionary
-    provided by the user (as a JSON object).  If CHANGED is not set to true in
+    provided by the user (as a JSON object).  If changed is not set to true in
     the course of attribute setting, then None is returned and no update occurs.
     """
-
-    global CHANGED
-
-    def setAttr(obj, name, value):
-        if getattr(obj, name) != value:
-            setattr(obj, name, value)
-            global CHANGED
-            CHANGED = True
-
+    changed = False
     # Unicode Data
-    setAttr(page, 'name', h.normalize(data['name']))
-    setAttr(page, 'heading', h.normalize(data['heading']))
-    setAttr(page, 'markupLanguage', data['markupLanguage'])
-    setAttr(page, 'content', h.normalize(data['content']))
-    setAttr(page, 'html', h.getHTMLFromContents(page.content, page.markupLanguage))
+    changed = h.setAttr(page, 'name', h.normalize(data['name']), changed)
+    changed = h.setAttr(page, 'heading', h.normalize(data['heading']), changed)
+    changed = h.setAttr(page, 'markupLanguage', data['markupLanguage'], changed)
+    changed = h.setAttr(page, 'content', h.normalize(data['content']), changed)
+    changed = h.setAttr(page, 'html', h.getHTMLFromContents(page.content, page.markupLanguage), changed)
 
-    if CHANGED:
-        CHANGED = None      # It's crucial to reset the CHANGED global!
+    if changed:
         page.datetimeModified = datetime.datetime.utcnow()
         return page
-    return CHANGED
+    return changed

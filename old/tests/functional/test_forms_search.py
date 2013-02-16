@@ -20,6 +20,7 @@ import old.model as model
 from old.model.meta import Session
 import old.lib.helpers as h
 import webtest
+from sqlalchemy import func
 
 log = logging.getLogger(__name__)
 
