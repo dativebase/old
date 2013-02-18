@@ -1,0 +1,203 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.websetup &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.websetup</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Setup the old application&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span><span class="o">,</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">codecs</span><span class="o">,</span> <span class="nn">datetime</span>
+
+<span class="kn">import</span> <span class="nn">pylons.test</span>
+
+<span class="kn">from</span> <span class="nn">old.config.environment</span> <span class="kn">import</span> <span class="n">load_environment</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Base</span><span class="p">,</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">old</span> <span class="kn">import</span> <span class="n">model</span>
+<span class="kn">import</span> <span class="nn">old.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="setup_app"><a class="viewcode-back" href="../../api/old.html#old.websetup.setup_app">[docs]</a><span class="k">def</span> <span class="nf">setup_app</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="nb">vars</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Place any commands to setup onlinelinguisticdatabase here&quot;&quot;&quot;</span>
+
+    <span class="c">#if not pylons.test.pylonsapp:</span>
+        <span class="c">#load_environment(conf.global_conf, conf.local_conf)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_environment</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">global_conf</span><span class="p">,</span> <span class="n">conf</span><span class="o">.</span><span class="n">local_conf</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Environment loaded.&#39;</span><span class="p">)</span>
+
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">Session</span><span class="o">.</span><span class="n">bind</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">conf</span><span class="o">.</span><span class="n">filename</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c"># e.g., production.ini, development.ini, test.ini, ...</span>
+
+    <span class="c"># Create the files directories.</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="s">&#39;files&#39;</span><span class="p">)</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;files&#39;</span><span class="p">,</span> <span class="s">&#39;archived_files&#39;</span><span class="p">))</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;files&#39;</span><span class="p">,</span> <span class="s">&#39;researchers&#39;</span><span class="p">))</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;files&#39;</span><span class="p">,</span> <span class="s">&#39;reduced_files&#39;</span><span class="p">))</span>
+
+    <span class="c"># Create the analysis directories.</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="s">&#39;analysis&#39;</span><span class="p">)</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;analysis&#39;</span><span class="p">,</span> <span class="s">&#39;phonology&#39;</span><span class="p">))</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;analysis&#39;</span><span class="p">,</span> <span class="s">&#39;morphotactics&#39;</span><span class="p">))</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;analysis&#39;</span><span class="p">,</span> <span class="s">&#39;morphophonology&#39;</span><span class="p">))</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;analysis&#39;</span><span class="p">,</span> <span class="s">&#39;probabilitycalculator&#39;</span><span class="p">))</span>
+
+    <span class="c"># ISO-639-3 Language data for the languages table</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Retrieving ISO-639-3 languages data.&quot;</span><span class="p">)</span>
+    <span class="n">languages</span> <span class="o">=</span> <span class="n">getLanguageObjects</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+    <span class="c"># Get default users.</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Creating a default administrator, contributor and viewer.&quot;</span><span class="p">)</span>
+    <span class="n">administrator</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateDefaultAdministrator</span><span class="p">(</span><span class="n">configFilename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">contributor</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateDefaultContributor</span><span class="p">(</span><span class="n">configFilename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">viewer</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateDefaultViewer</span><span class="p">(</span><span class="n">configFilename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+
+    <span class="c"># If we are running tests, make sure the test db contains only language data.</span>
+    <span class="k">if</span> <span class="n">filename</span> <span class="o">==</span> <span class="s">&#39;test.ini&#39;</span><span class="p">:</span>
+        <span class="c"># Permanently drop any existing tables</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">drop_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">Session</span><span class="o">.</span><span class="n">bind</span><span class="p">,</span> <span class="n">checkfirst</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Existing tables dropped.&quot;</span><span class="p">)</span>
+
+        <span class="c"># Create the tables if they don&#39;t already exist</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">Session</span><span class="o">.</span><span class="n">bind</span><span class="p">,</span> <span class="n">checkfirst</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Tables created.&#39;</span><span class="p">)</span>
+
+        <span class="n">Session</span><span class="o">.</span><span class="n">add_all</span><span class="p">(</span><span class="n">languages</span> <span class="o">+</span> <span class="p">[</span><span class="n">administrator</span><span class="p">,</span> <span class="n">contributor</span><span class="p">,</span> <span class="n">viewer</span><span class="p">])</span>
+        <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="c"># Not a test: add a bunch of nice defaults.</span>
+    <span class="k">else</span><span class="p">:</span>
+
+        <span class="c"># Create the tables if they don&#39;t already exist</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">Session</span><span class="o">.</span><span class="n">bind</span><span class="p">,</span> <span class="n">checkfirst</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Tables created.&#39;</span><span class="p">)</span>
+
+        <span class="c"># Get default home &amp; help pages.</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Creating default home and help pages.&quot;</span><span class="p">)</span>
+        <span class="n">homepage</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateDefaultHomePage</span><span class="p">()</span>
+        <span class="n">helppage</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateDefaultHelpPage</span><span class="p">()</span>
+    
+        <span class="c"># Get default application settings.</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Generating default application settings.&quot;</span><span class="p">)</span>
+        <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateDefaultApplicationSettings</span><span class="p">()</span>
+    
+        <span class="c"># Get default tags and categories</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Creating some useful tags and categories.&quot;</span><span class="p">)</span>
+        <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateRestrictedTag</span><span class="p">()</span>
+        <span class="n">foreignWordTag</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateForeignWordTag</span><span class="p">()</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateSSyntacticCategory</span><span class="p">()</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateNSyntacticCategory</span><span class="p">()</span>
+        <span class="n">V</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generateVSyntacticCategory</span><span class="p">()</span>
+    
+        <span class="c"># Initialize the database</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Adding defaults.&quot;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">administrator</span><span class="p">,</span> <span class="n">contributor</span><span class="p">,</span> <span class="n">viewer</span><span class="p">,</span> <span class="n">homepage</span><span class="p">,</span> <span class="n">helppage</span><span class="p">,</span>
+                <span class="n">applicationSettings</span><span class="p">,</span> <span class="n">restrictedTag</span><span class="p">,</span> <span class="n">foreignWordTag</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;addLanguageData&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;0&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">+=</span> <span class="n">languages</span>
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;emptyDatabase&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;0&#39;</span><span class="p">:</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add_all</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;OLD successfully set up.&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="getLanguageObjects"><a class="viewcode-back" href="../../api/old.html#old.websetup.getLanguageObjects">[docs]</a><span class="k">def</span> <span class="nf">getLanguageObjects</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+    <span class="n">languagesPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.paths&#39;</span><span class="p">][</span><span class="s">&#39;root&#39;</span><span class="p">],</span> <span class="s">&#39;lib&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;languages&#39;</span><span class="p">)</span>
+    <span class="c"># Use the truncated languages file if we are running tests</span>
+    <span class="k">if</span> <span class="n">filename</span> <span class="o">==</span> <span class="s">&#39;test.ini&#39;</span><span class="p">:</span>
+        <span class="n">iso_639_3FilePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">languagesPath</span><span class="p">,</span> <span class="s">&#39;iso_639_3_trunc.tab&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">iso_639_3FilePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">languagesPath</span><span class="p">,</span> <span class="s">&#39;iso_639_3.tab&#39;</span><span class="p">)</span>
+    <span class="n">iso_639_3File</span> <span class="o">=</span> <span class="n">codecs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">iso_639_3FilePath</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">,</span> <span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+    <span class="n">languageList</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">iso_639_3File</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">getLanguageObject</span><span class="p">(</span><span class="n">language</span><span class="p">)</span> <span class="k">for</span> <span class="n">language</span> <span class="ow">in</span> <span class="n">languageList</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">languageList</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="getLanguageObject"><a class="viewcode-back" href="../../api/old.html#old.websetup.getLanguageObject">[docs]</a><span class="k">def</span> <span class="nf">getLanguageObject</span><span class="p">(</span><span class="n">languageList</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Given a list of ISO-639-3 language data, return an OLD language model.&quot;&quot;&quot;</span>
+    <span class="n">language</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Language</span><span class="p">()</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Id</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Part2B</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Part2T</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Part1</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Scope</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Type</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Ref_Name</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+    <span class="n">language</span><span class="o">.</span><span class="n">Comment</span> <span class="o">=</span> <span class="n">languageList</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">language</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

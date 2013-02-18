@@ -1,0 +1,799 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.controllers.files &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.controllers.files</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">cgi</span> <span class="kn">import</span> <span class="n">FieldStorage</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">letters</span><span class="p">,</span> <span class="n">digits</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">sample</span>
+<span class="kn">from</span> <span class="nn">paste.fileapp</span> <span class="kn">import</span> <span class="n">FileApp</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators</span> <span class="kn">import</span> <span class="n">jsonify</span>
+<span class="kn">from</span> <span class="nn">pylons.controllers.util</span> <span class="kn">import</span> <span class="n">forward</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">asc</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">subqueryload</span>
+<span class="kn">from</span> <span class="nn">old.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">old.lib.schemata</span> <span class="kn">import</span> <span class="n">FileCreateWithBase64EncodedFiledataSchema</span><span class="p">,</span> \
+    <span class="n">FileCreateWithFiledataSchema</span><span class="p">,</span> <span class="n">FileSubintervalReferencingSchema</span><span class="p">,</span> \
+    <span class="n">FileExternallyHostedSchema</span><span class="p">,</span> <span class="n">FileUpdateSchema</span>
+<span class="kn">import</span> <span class="nn">old.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">old.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Session</span><span class="p">,</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">old.model</span> <span class="kn">import</span> <span class="n">File</span><span class="p">,</span> <span class="n">User</span>
+<span class="kn">from</span> <span class="nn">old.lib.resize</span> <span class="kn">import</span> <span class="n">saveReducedCopy</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FilesController"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController">[docs]</a><span class="k">class</span> <span class="nc">FilesController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;REST Controller styled on the Atom Publishing Protocol&quot;&quot;&quot;</span>
+
+    <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;SEARCH&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FilesController.search"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.search">[docs]</a>    <span class="k">def</span> <span class="nf">search</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SEARCH /files: Return all files matching the filter passed as JSON in</span>
+<span class="sd">        the request body.  Note: POST /files/search also routes to this action.</span>
+<span class="sd">        The request body must be a JSON object with a &#39;query&#39; attribute; a</span>
+<span class="sd">        &#39;paginator&#39; attribute is optional.  The &#39;query&#39; object is passed to the</span>
+<span class="sd">        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query</span>
+<span class="sd">        is returned or an error is raised.  The &#39;query&#39; object requires a</span>
+<span class="sd">        &#39;filter&#39; attribute; an &#39;orderBy&#39; attribute is optional.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">jsonSearchParams</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">)</span>
+            <span class="n">pythonSearchParams</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">jsonSearchParams</span><span class="p">)</span>
+            <span class="n">SQLAQuery</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadFile</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="o">.</span><span class="n">getSQLAQuery</span><span class="p">(</span><span class="n">pythonSearchParams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;query&#39;</span><span class="p">)))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">filterRestrictedModels</span><span class="p">(</span><span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="n">SQLAQuery</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">pythonSearchParams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;paginator&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">OLDSearchParseError</span><span class="p">,</span> <span class="n">Invalid</span><span class="p">),</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The specified search parameters generated an invalid database query&#39;</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FilesController.new_search"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.new_search">[docs]</a>    <span class="k">def</span> <span class="nf">new_search</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /files/new_search: Return the data necessary to inform a search</span>
+<span class="sd">        on the files resource.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;searchParameters&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getSearchParameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FilesController.index"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /files: Return all files.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadFile</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">File</span><span class="p">))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">filterRestrictedModels</span><span class="p">(</span><span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FilesController.create"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;POST /files: Create a new file.  There are four ways to create a new</span>
+<span class="sd">        file:</span>
+
+<span class="sd">        1. Plain File:</span>
+
+<span class="sd">           - Upload filedata via a POST request with Content-Type set to</span>
+<span class="sd">             &#39;multipart/form-data&#39;.  A filename POST param should also be present.</span>
+
+<span class="sd">        2. Base64-encoded File with JSON Metadata:</span>
+
+<span class="sd">           - Upload the filedata (base64 encoded) and metadata all within a JSON</span>
+<span class="sd">             POST request, i.e., Content-Type=&#39;application/json&#39;.  This permits</span>
+<span class="sd">             the uploading of everything in one go (all via JSON), the downside</span>
+<span class="sd">             being the processing time required to encode to and decode from base64.</span>
+
+<span class="sd">        3. Audio/Video Subinterval-Referencing File:</span>
+
+<span class="sd">           - Upload file metadata in a JSON POST request and specify the id of an</span>
+<span class="sd">             existing *audio/video* &#39;parentFile&#39; as well as &#39;start&#39; and &#39;end&#39;</span>
+<span class="sd">             attributes (in seconds as ints/floats) in the JSON request params.</span>
+<span class="sd">             Here the name attribute is user-specifiable.</span>
+
+<span class="sd">        4. Externally Hosted File:</span>
+
+<span class="sd">           - JSON POST body of request must contain a url attribute; name,</span>
+<span class="sd">             MIMEtype and password attributes are optional.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">content_type</span> <span class="o">==</span> <span class="s">&#39;application/json&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">20971520</span><span class="p">:</span>    <span class="c"># JSON/Base64 file upload caps out at ~20MB</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                        <span class="s">u&#39;The request body is too large; use the multipart/form-data Content-Type when uploading files greater than 20MB.&#39;</span><span class="p">}</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                <span class="k">if</span> <span class="s">&#39;base64EncodedFile&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                    <span class="nb">file</span> <span class="o">=</span> <span class="n">createBase64File</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="s">&#39;url&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                    <span class="nb">file</span> <span class="o">=</span> <span class="n">createExternallyHostedFile</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">file</span> <span class="o">=</span> <span class="n">createSubintervalReferencingFile</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">file</span> <span class="o">=</span> <span class="n">createPlainFile</span><span class="p">()</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">lossyFilename</span> <span class="o">=</span> <span class="n">saveReducedCopy</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="nb">file</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">InvalidFieldStorageObjectError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;The attempted multipart/form-data file upload failed.&#39;</span><span class="p">}</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FilesController.new"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /new_file: Return the data necessary to create a new OLD file.</span>
+
+<span class="sd">        Return a JSON object with the following properties: &#39;tags&#39;,</span>
+<span class="sd">        &#39;utteranceTypes&#39;, &#39;speakers&#39; and &#39;users&#39;, the value of each of which is</span>
+<span class="sd">        an array that is either empty or contains the appropriate objects.</span>
+
+<span class="sd">        See the getNewEditFileData function to understand how the GET params can</span>
+<span class="sd">        affect the contents of the arrays.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">getNewEditFileData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FilesController.update"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;PUT /files/id: Update an existing file.&quot;&quot;&quot;</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadFile</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">File</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;parentFile&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+                        <span class="nb">file</span> <span class="o">=</span> <span class="n">updateSubintervalReferencingFile</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+                        <span class="nb">file</span> <span class="o">=</span> <span class="n">updateExternallyHostedFile</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">file</span> <span class="o">=</span> <span class="n">updateFile</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                    <span class="c"># file will be False if there are no changes (cf. update(SubintervalReferencing)File).</span>
+                    <span class="k">if</span> <span class="nb">file</span><span class="p">:</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                        <span class="k">return</span> <span class="nb">file</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                            <span class="s">u&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+                <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+                <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no file with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FilesController.delete"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;DELETE /files/id: Delete an existing file.  Only the enterer and</span>
+<span class="sd">        administrators can delete a file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadFile</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">File</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s">u&#39;administrator&#39;</span> <span class="ow">or</span> \
+            <span class="nb">file</span><span class="o">.</span><span class="n">enterer</span> <span class="ow">is</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]:</span>
+                <span class="n">deleteFile</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                <span class="k">return</span> <span class="nb">file</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no file with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FilesController.show"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /files/id: Return a JSON object representation of the file with</span>
+<span class="sd">        id=id.</span>
+
+<span class="sd">        If the id is invalid, the header will contain a 404 status int and a</span>
+<span class="sd">        JSON object will be returned.  If the id is unspecified, then Routes</span>
+<span class="sd">        will put a 404 status int into the header and the default 404 JSON</span>
+<span class="sd">        object defined in controllers/error.py will be returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadFile</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">File</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">file</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no file with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FilesController.edit"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /files/id/edit: Return the data necessary to update an existing</span>
+<span class="sd">        OLD file, i.e., the file&#39;s properties and the necessary additional data,</span>
+<span class="sd">        i.e., users, speakers, etc.</span>
+
+<span class="sd">        This action can be thought of as a combination of the &#39;show&#39; and &#39;new&#39;</span>
+<span class="sd">        actions.  The output will be a JSON object of the form</span>
+
+<span class="sd">            {file: {...}, data: {...}},</span>
+
+<span class="sd">        where output.file is an object containing the file&#39;s properties (cf. the</span>
+<span class="sd">        output of show) and output.data is an object containing the data</span>
+<span class="sd">        required to add a new file (cf. the output of new).</span>
+
+<span class="sd">        GET parameters will affect the value of output.data in the same way as</span>
+<span class="sd">        for the new action, i.e., no params will result in all the necessary</span>
+<span class="sd">        output.data being retrieved from the db while specified params will</span>
+<span class="sd">        result in selective retrieval (see getNewEditFileData for details).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="s">&#39;application/json&#39;</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadFile</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">File</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">],</span> <span class="nb">file</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="n">getNewEditFileData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="s">&#39;file&#39;</span><span class="p">:</span> <span class="nb">file</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no file with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticateWithJSON</span>
+<div class="viewcode-block" id="FilesController.serve"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.serve">[docs]</a>    <span class="k">def</span> <span class="nf">serve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the file data (binary stream) for the file in files/ with</span>
+<span class="sd">        id=id or an error message if the file does not exist or the user is</span>
+<span class="sd">        not authorized to access it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">serveFile</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+</div>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticateWithJSON</span>
+<div class="viewcode-block" id="FilesController.serve_reduced"><a class="viewcode-back" href="../../../api.html#old.controllers.files.FilesController.serve_reduced">[docs]</a>    <span class="k">def</span> <span class="nf">serve_reduced</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the reduced-size file data (i.e., resized image or ogg/mp3-</span>
+<span class="sd">        converted wav) for the file in files/ with id=id or an error message if</span>
+<span class="sd">        the file does not exist or the user is not authorized to access it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">serveFile</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="serveFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.serveFile">[docs]</a><span class="k">def</span> <span class="nf">serveFile</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">reduced</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Use FileApp to serve the content (binary data) of the file with id=id.  If</span>
+<span class="sd">    reduced is True, then try to serve /files/reduced_files/&lt;filename&gt; where</span>
+<span class="sd">    filename is file.lossyFilename.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">File</span><span class="p">)</span><span class="o">.</span><span class="n">options</span><span class="p">(</span><span class="n">subqueryload</span><span class="p">(</span><span class="n">File</span><span class="o">.</span><span class="n">parentFile</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;parentFile&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">parentFile</span>
+    <span class="k">elif</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The content of file </span><span class="si">%s</span><span class="s"> is stored elsewhere at </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">url</span><span class="p">)})</span>
+    <span class="k">if</span> <span class="nb">file</span><span class="p">:</span>
+        <span class="n">filesDir</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;app_conf&#39;</span><span class="p">][</span><span class="s">&#39;permanent_store&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">reduced</span><span class="p">:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;lossyFilename&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+                <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;There is no size-reduced copy of file </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">})</span>
+            <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesDir</span><span class="p">,</span> <span class="s">&#39;reduced_files&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesDir</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">],</span> <span class="nb">file</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">forward</span><span class="p">(</span><span class="n">FileApp</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no file with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">})</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># File Create Functionality</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="getUniqueFilePath"><a class="viewcode-back" href="../../../api.html#old.controllers.files.getUniqueFilePath">[docs]</a><span class="k">def</span> <span class="nf">getUniqueFilePath</span><span class="p">(</span><span class="n">filePath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function ensures a unique file path (without race conditions) by</span>
+<span class="sd">    attempting to create the file using os.open.  If the file exists, an OS</span>
+<span class="sd">    error is raised (or if the file is too long, an IO error is raised), and</span>
+<span class="sd">    a new file path/name is generated until a unique one is found.  Returns</span>
+<span class="sd">    an ordered pair: (&lt;file object&gt;, &lt;unique file path&gt;).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">filePathParts</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span> <span class="c"># returns (&#39;/path/file&#39;, &#39;.ext&#39;)</span>
+    <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">fileDescriptor</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">O_CREAT</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">O_EXCL</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">O_RDWR</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">fileDescriptor</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">),</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">IOError</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="s">u&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filePathParts</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">230</span><span class="p">],</span>
+                    <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sample</span><span class="p">(</span><span class="n">digits</span> <span class="o">+</span> <span class="n">letters</span><span class="p">,</span> <span class="mi">8</span><span class="p">)),</span> <span class="n">filePathParts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="addStandardMetadata"><a class="viewcode-back" href="../../../api.html#old.controllers.files.addStandardMetadata">[docs]</a><span class="k">def</span> <span class="nf">addStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add the metadata that all JSON-created file creation requests can add.&quot;&quot;&quot;</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">])</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">utteranceType</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;utteranceType&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">dateElicited</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">]:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">elicitor</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">]:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;forms&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">enterer</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">file</span>
+</div>
+<div class="viewcode-block" id="restrictFileByForms"><a class="viewcode-back" href="../../../api.html#old.controllers.files.restrictFileByForms">[docs]</a><span class="k">def</span> <span class="nf">restrictFileByForms</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Restrict the entire file if it is associated to restricted forms.&quot;&quot;&quot;</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">tags</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">forms</span><span class="p">]</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tagList</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tagList</span><span class="p">]</span>
+    <span class="n">restrictedTags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">restrictedTags</span><span class="p">:</span>
+        <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">restrictedTags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">restrictedTag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">file</span>
+</div>
+<div class="viewcode-block" id="InvalidFieldStorageObjectError"><a class="viewcode-back" href="../../../api/old.controllers.html#old.controllers.files.InvalidFieldStorageObjectError">[docs]</a><span class="k">class</span> <span class="nc">InvalidFieldStorageObjectError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="createBase64File"><a class="viewcode-back" href="../../../api.html#old.controllers.files.createBase64File">[docs]</a><span class="k">def</span> <span class="nf">createBase64File</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create and return an OLD file model generated from a data dict that</span>
+<span class="sd">    contains a &#39;base64EncodedFile&#39; key whose value should be a base64 encoded</span>
+<span class="sd">    file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span><span class="p">[</span><span class="s">&#39;MIMEtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>  <span class="c"># during validation, the schema will set a proper value based on the base64EncodedFile or filename attribute</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">FileCreateWithBase64EncodedFiledataSchema</span><span class="p">()</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">State</span><span class="p">()</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">full_dict</span> <span class="o">=</span> <span class="n">data</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">File</span><span class="p">()</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;MIMEtype&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;filename&#39;</span><span class="p">])</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">addStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="c"># Write the file to disk (making sure it&#39;s unique and thereby potentially)</span>
+    <span class="c"># modifying file.filename; and calculate file.size.</span>
+    <span class="n">fileData</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;base64EncodedFile&#39;</span><span class="p">]</span>     <span class="c"># base64-decoded during validation</span>
+    <span class="n">filesPath</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;app_conf&#39;</span><span class="p">][</span><span class="s">&#39;permanent_store&#39;</span><span class="p">]</span>
+    <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesPath</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">fileObject</span><span class="p">,</span> <span class="n">filePath</span> <span class="o">=</span> <span class="n">getUniqueFilePath</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filePath</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span>
+    <span class="n">fileObject</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fileData</span><span class="p">)</span>
+    <span class="n">fileObject</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">fileData</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">restrictFileByForms</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">file</span>
+</div>
+<div class="viewcode-block" id="createExternallyHostedFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.createExternallyHostedFile">[docs]</a><span class="k">def</span> <span class="nf">createExternallyHostedFile</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create and return an OLD file model generated from a data dict that</span>
+<span class="sd">    contains a &#39;url&#39; key whose value should be a valid url where the file is</span>
+<span class="sd">    served.  Optional attributes: name, password, MIMEtype.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;password&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">u&#39;&#39;</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">FileExternallyHostedSchema</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">File</span><span class="p">()</span>
+
+    <span class="c"># User-inputted string data</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;MIMEtype&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">]</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">addStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">restrictFileByForms</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">file</span>
+</div>
+<div class="viewcode-block" id="createSubintervalReferencingFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.createSubintervalReferencingFile">[docs]</a><span class="k">def</span> <span class="nf">createSubintervalReferencingFile</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create and return an OLD file model generated from a data dict that</span>
+<span class="sd">    contains a &#39;parentFile&#39; key whose value must be a foreign key id that</span>
+<span class="sd">    references another file, which file must be an audio or video file.  The</span>
+<span class="sd">    data dict should also contain a &#39;name&#39; key whose value can be a name that is</span>
+<span class="sd">    distinct from the filename value of the parent file (the child/referencing</span>
+<span class="sd">    file has no value for filename.)  The referencing subinterval file must also</span>
+<span class="sd">    contain float values for the &#39;start&#39; and &#39;end&#39; attributes which indicate the</span>
+<span class="sd">    subinterval of the parent file that constitute the content of the</span>
+<span class="sd">    referencing file.</span>
+
+<span class="sd">    As with files created from base64-encoded file data (cf. createBase64File</span>
+<span class="sd">    above), creation requests for referencing subinterval files may contain</span>
+<span class="sd">    metadata such as a description, an utterance type, etc.</span>
+
+<span class="sd">    Note that referencing files have no filename or size attributes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">u&#39;&#39;</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">FileSubintervalReferencingSchema</span><span class="p">()</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">State</span><span class="p">()</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">full_dict</span> <span class="o">=</span> <span class="n">data</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">File</span><span class="p">()</span>
+
+    <span class="c"># Data unique to referencing subinterval files</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">parentFile</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;parentFile&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span> <span class="ow">or</span> <span class="nb">file</span><span class="o">.</span><span class="n">parentFile</span><span class="o">.</span><span class="n">filename</span>   <span class="c"># Name defaults to the parent file&#39;s filename if nothing provided by user</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;end&#39;</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">parentFile</span><span class="o">.</span><span class="n">MIMEtype</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">addStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">restrictFileByForms</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">file</span>
+</div>
+<div class="viewcode-block" id="createPlainFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.createPlainFile">[docs]</a><span class="k">def</span> <span class="nf">createPlainFile</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Return an OLD file model generated from POST params (not JSON formatted).</span>
+<span class="sd">    The usual file metadata can be submitted.  Unique to this method is the</span>
+<span class="sd">    filedata key and the treatment of the filename value.</span>
+<span class="sd">    </span>
+<span class="sd">    1. &#39;filedata&#39;, a  cgi.FieldStorage object containing the file data.</span>
+<span class="sd">    2. &#39;filename&#39;, a string (optional but encouraged, i.e., if not provided, the</span>
+<span class="sd">       system will attempt to create one from the file path)</span>
+
+<span class="sd">    Note that the schema expects not &#39;forms&#39; and &#39;files&#39; keys but &#39;forms-0&#39;,</span>
+<span class="sd">    &#39;forms-1&#39;, etc., as per the formencode.variabledecode.NestedVariables format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">values</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">filedata</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;filedata&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">filedata</span><span class="p">,</span> <span class="s">&#39;file&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidFieldStorageObjectError</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;filename&#39;</span><span class="p">):</span>
+        <span class="n">values</span><span class="p">[</span><span class="s">&#39;filename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filedata</span><span class="o">.</span><span class="n">filename</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">values</span><span class="p">[</span><span class="s">&#39;filedataFirstKB&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filedata</span><span class="o">.</span><span class="n">value</span><span class="p">[:</span><span class="mi">1024</span><span class="p">]</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">FileCreateWithFiledataSchema</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">File</span><span class="p">()</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;filename&#39;</span><span class="p">])</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;MIMEtype&#39;</span><span class="p">]</span>
+
+    <span class="n">filesPath</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;app_conf&#39;</span><span class="p">][</span><span class="s">&#39;permanent_store&#39;</span><span class="p">]</span>
+    <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesPath</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">fileObject</span><span class="p">,</span> <span class="n">filePath</span> <span class="o">=</span> <span class="n">getUniqueFilePath</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filePath</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">copyfileobj</span><span class="p">(</span><span class="n">filedata</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="n">fileObject</span><span class="p">)</span>
+    <span class="n">filedata</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">fileObject</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">addStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">file</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># File Update Functionality</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="updateStandardMetadata"><a class="viewcode-back" href="../../../api/old.controllers.html#old.controllers.files.updateStandardMetadata">[docs]</a><span class="k">def</span> <span class="nf">updateStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">changed</span><span class="p">):</span>
+
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;description&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;utteranceType&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;utteranceType&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;dateElicited&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;elicitor&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;speaker&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># Many-to-Many Data: tags &amp; forms</span>
+    <span class="c"># Update only if the user has made changes.</span>
+    <span class="n">formsToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;forms&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">tagsToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">formsToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">forms</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="n">formsToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="c"># Cause the entire file to be tagged as restricted if any one of its</span>
+        <span class="c"># forms are so tagged.</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">tags</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">forms</span><span class="p">]</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tagList</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tagList</span><span class="p">]</span>
+        <span class="n">restrictedTags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">restrictedTags</span><span class="p">:</span>
+            <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">restrictedTags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">restrictedTag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tagsToAdd</span><span class="p">:</span>
+                <span class="n">tagsToAdd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">tagsToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">tags</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">tagsToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">return</span> <span class="nb">file</span><span class="p">,</span> <span class="n">changed</span>
+</div>
+<div class="viewcode-block" id="updateFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.updateFile">[docs]</a><span class="k">def</span> <span class="nf">updateFile</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the input File model object using the JSON object of the request</span>
+<span class="sd">    body.  If changed is not set to true in the course of attribute setting,</span>
+<span class="sd">    then False is returned and no update occurs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">FileUpdateSchema</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">State</span><span class="p">()</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">full_dict</span> <span class="o">=</span> <span class="n">data</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+    <span class="nb">file</span><span class="p">,</span> <span class="n">changed</span> <span class="o">=</span> <span class="n">updateStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">file</span>
+    <span class="k">return</span> <span class="n">changed</span>
+</div>
+<div class="viewcode-block" id="updateSubintervalReferencingFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.updateSubintervalReferencingFile">[docs]</a><span class="k">def</span> <span class="nf">updateSubintervalReferencingFile</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the subinterval-referencing file model using the JSON object in</span>
+<span class="sd">    the request body.  If changed is not set to true in the course of attribute</span>
+<span class="sd">    setting, then False is returned and no update occurs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">FileSubintervalReferencingSchema</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+    <span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">u&#39;&#39;</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">State</span><span class="p">()</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">full_dict</span> <span class="o">=</span> <span class="n">data</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+    <span class="c"># Data unique to referencing subinterval files</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;parentFile&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;parentFile&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span> <span class="ow">or</span> <span class="nb">file</span><span class="o">.</span><span class="n">parentFile</span><span class="o">.</span><span class="n">filename</span><span class="p">),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;end&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;end&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="nb">file</span><span class="p">,</span> <span class="n">changed</span> <span class="o">=</span> <span class="n">updateStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">file</span>
+    <span class="k">return</span> <span class="n">changed</span>
+</div>
+<div class="viewcode-block" id="updateExternallyHostedFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.updateExternallyHostedFile">[docs]</a><span class="k">def</span> <span class="nf">updateExternallyHostedFile</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the externally hosted file model using the JSON object in</span>
+<span class="sd">    the request body.  If changed is not set to true in the course of attribute</span>
+<span class="sd">    setting, then False is returned and no update occurs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+    <span class="n">data</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;password&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">u&#39;&#39;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">FileExternallyHostedSchema</span><span class="p">()</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="c"># Data unique to referencing subinterval files</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;password&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;MIMEtype&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;MIMEtype&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="nb">file</span><span class="p">,</span> <span class="n">changed</span> <span class="o">=</span> <span class="n">updateStandardMetadata</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">file</span>
+    <span class="k">return</span> <span class="n">changed</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Delete File Functionality</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="deleteFile"><a class="viewcode-back" href="../../../api.html#old.controllers.files.deleteFile">[docs]</a><span class="k">def</span> <span class="nf">deleteFile</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Delete the file object from the database and the file from the filesystem.</span>
+<span class="sd">    If the file has a lossyFilename attribute, then files/reduced_files/&lt;lossyFilename&gt;</span>
+<span class="sd">    is deleted from the filesystem also</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;filename&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;app_conf&#39;</span><span class="p">][</span><span class="s">&#39;permanent_store&#39;</span><span class="p">],</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;lossyFilename&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;app_conf&#39;</span><span class="p">][</span><span class="s">&#39;permanent_store&#39;</span><span class="p">],</span>
+                                <span class="s">&#39;reduced_files&#39;</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">lossyFilename</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># New/Edit File Functionality</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="getNewEditFileData"><a class="viewcode-back" href="../../../api.html#old.controllers.files.getNewEditFileData">[docs]</a><span class="k">def</span> <span class="nf">getNewEditFileData</span><span class="p">(</span><span class="n">GET_params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new OLD file or update an existing</span>
+<span class="sd">    one.  The GET_params parameter is the request.GET dictionary-like object</span>
+<span class="sd">    generated by Pylons.</span>
+
+<span class="sd">    If no parameters are provided (i.e., GET_params is empty), then retrieve all</span>
+<span class="sd">    data (i.e., tags, speakers, etc.) from the db and return it.</span>
+
+<span class="sd">    If parameters are specified, then for each parameter whose value is a</span>
+<span class="sd">    non-empty string (and is not a valid ISO 8601 datetime), retrieve and</span>
+<span class="sd">    return the appropriate list of objects.</span>
+
+<span class="sd">    If the value of a parameter is a valid ISO 8601 datetime string,</span>
+<span class="sd">    retrieve and return the appropriate list of objects *only* if the</span>
+<span class="sd">    datetime param does *not* match the most recent datetimeModified value</span>
+<span class="sd">    of the relevant data store.  This makes sense because a non-match indicates</span>
+<span class="sd">    that the requester has out-of-date data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Map param names to the OLD model objects from which they are derived.</span>
+    <span class="n">paramName2ModelName</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="s">&#39;Tag&#39;</span><span class="p">,</span>
+        <span class="s">&#39;speakers&#39;</span><span class="p">:</span> <span class="s">&#39;Speaker&#39;</span><span class="p">,</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span>
+    <span class="p">}</span>
+
+    <span class="c"># map_ maps param names to functions that retrieve the appropriate data</span>
+    <span class="c"># from the db.</span>
+    <span class="n">map_</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Tag&#39;</span><span class="p">),</span>
+        <span class="s">&#39;speakers&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Speaker&#39;</span><span class="p">),</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c"># result is initialized as a dict with empty list values.</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">])</span>
+    <span class="n">result</span><span class="p">[</span><span class="s">&#39;utteranceTypes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">utteranceTypes</span>
+    <span class="n">result</span><span class="p">[</span><span class="s">&#39;allowedFileTypes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">allowedFileTypes</span>
+
+    <span class="c"># There are GET params, so we are selective in what we return.</span>
+    <span class="k">if</span> <span class="n">GET_params</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">GET_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="c"># Proceed so long as val is not an empty string.</span>
+            <span class="k">if</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">valAsDatetimeObj</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">datetimeString2datetime</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">valAsDatetimeObj</span><span class="p">:</span>
+                    <span class="c"># Value of param is an ISO 8601 datetime string that</span>
+                    <span class="c"># does not match the most recent datetimeModified of the</span>
+                    <span class="c"># relevant model in the db: therefore we return a list</span>
+                    <span class="c"># of objects/dicts.  If the datetimes do match, this</span>
+                    <span class="c"># indicates that the requester&#39;s own stores are</span>
+                    <span class="c"># up-to-date so we return nothing.</span>
+                    <span class="k">if</span> <span class="n">valAsDatetimeObj</span> <span class="o">!=</span> <span class="n">h</span><span class="o">.</span><span class="n">getMostRecentModificationDatetime</span><span class="p">(</span>
+                    <span class="n">paramName2ModelName</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+
+    <span class="c"># There are no GET params, so we get everything from the db and return it.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

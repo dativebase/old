@@ -1,0 +1,1086 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.lib.schemata &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.lib.schemata</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">formencode</span> <span class="kn">import</span> <span class="n">All</span>
+<span class="kn">from</span> <span class="nn">formencode.variabledecode</span> <span class="kn">import</span> <span class="n">NestedVariables</span>
+<span class="kn">from</span> <span class="nn">formencode.schema</span> <span class="kn">import</span> <span class="n">Schema</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">FancyValidator</span><span class="p">,</span> <span class="n">Int</span><span class="p">,</span> <span class="n">DateConverter</span><span class="p">,</span> \
+    <span class="n">UnicodeString</span><span class="p">,</span> <span class="n">OneOf</span><span class="p">,</span> <span class="n">Regex</span><span class="p">,</span> <span class="n">Email</span><span class="p">,</span> <span class="n">StringBoolean</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">URL</span><span class="p">,</span> <span class="n">Number</span>
+<span class="kn">from</span> <span class="nn">formencode.foreach</span> <span class="kn">import</span> <span class="n">ForEach</span>
+<span class="kn">from</span> <span class="nn">formencode.api</span> <span class="kn">import</span> <span class="n">NoDefault</span>
+<span class="kn">from</span> <span class="nn">old.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">import</span> <span class="nn">old.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">and_</span>
+<span class="kn">import</span> <span class="nn">old.lib.bibtex</span> <span class="kn">as</span> <span class="nn">bibtex</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">app_globals</span>
+<span class="kn">import</span> <span class="nn">old.model</span> <span class="kn">as</span> <span class="nn">model</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">base64</span> <span class="kn">import</span> <span class="n">b64decode</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">magic</span> <span class="kn">import</span> <span class="n">Magic</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Login Schemata</span>
+<span class="c">################################################################################</span>
+
+<div class="viewcode-block" id="LoginSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.LoginSchema">[docs]</a><span class="k">class</span> <span class="nc">LoginSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;LoginSchema validates that both username and password have been entered.&quot;&quot;&quot;</span> 
+
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PasswordResetSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.PasswordResetSchema">[docs]</a><span class="k">class</span> <span class="nc">PasswordResetSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;PasswordResetSchema validates that a username has been submitted.&quot;&quot;&quot;</span> 
+
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Form Schemata</span>
+<span class="c">################################################################################</span>
+
+</div>
+<div class="viewcode-block" id="ValidGlosses"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidGlosses">[docs]</a><span class="k">class</span> <span class="nc">ValidGlosses</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for glosses.  Ensures that there is at least one non-empty</span>
+<span class="sd">    gloss and that all glossGrammaticalities are valid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;one_gloss&#39;</span><span class="p">:</span> <span class="s">&#39;Please enter one or more glosses&#39;</span><span class="p">,</span>
+        <span class="s">&#39;invalid_grammaticality&#39;</span><span class="p">:</span> <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">u&#39;At least one submitted gloss &#39;</span><span class="p">,</span>
+                <span class="s">u&#39;grammaticality does not match any of the available options.&#39;</span><span class="p">])</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">createGloss</span><span class="p">(</span><span class="n">dict_</span><span class="p">):</span>
+            <span class="n">gloss</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Gloss</span><span class="p">()</span>
+            <span class="n">gloss</span><span class="o">.</span><span class="n">gloss</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">dict_</span><span class="p">[</span><span class="s">&#39;gloss&#39;</span><span class="p">]))</span>
+            <span class="n">gloss</span><span class="o">.</span><span class="n">glossGrammaticality</span> <span class="o">=</span> <span class="n">dict_</span><span class="p">[</span><span class="s">&#39;glossGrammaticality&#39;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">gloss</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">glosses</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">value</span> <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="s">&#39;gloss&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+            <span class="n">glossGrammaticalities</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="s">&#39;glossGrammaticality&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">value</span>
+                                     <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="s">&#39;glossGrammaticality&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="n">glosses</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">glossGrammaticalities</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">validGrammaticalities</span> <span class="o">=</span> <span class="n">getGrammaticalities</span><span class="p">()</span>
+        <span class="n">badGlossGrammaticalities</span> <span class="o">=</span> <span class="p">[</span><span class="n">gg</span> <span class="k">for</span> <span class="n">gg</span> <span class="ow">in</span> <span class="n">glossGrammaticalities</span>
+                                    <span class="k">if</span> <span class="n">gg</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">validGrammaticalities</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">glosses</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;one_gloss&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">badGlossGrammaticalities</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_grammaticality&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">createGloss</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">glosses</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="ValidOrthographicTranscription"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidOrthographicTranscription">[docs]</a><span class="k">class</span> <span class="nc">ValidOrthographicTranscription</span><span class="p">(</span><span class="n">UnicodeString</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Orthographic transcription validator.  If orthographic transcription</span>
+<span class="sd">    validation is set to &#39;Error&#39; in application settings, this validator will</span>
+<span class="sd">    forbid orthographic transcriptions that are not constructable using the</span>
+<span class="sd">    storage orthography and the specified punctuation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_transcription&#39;</span><span class="p">:</span>
+                <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">u&#39;The orthographic transcription you have entered &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;is not valid. Only graphemes from the specified &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;storage orthography, punctuation characters and &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;the space character are permitted.&#39;</span><span class="p">])}</span>
+
+<div class="viewcode-block" id="ValidOrthographicTranscription.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidOrthographicTranscription.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">transcription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">formIsForeignWord</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">full_dict</span><span class="p">)</span> <span class="ow">and</span> \
+        <span class="ow">not</span> <span class="n">transcriptionIsValid</span><span class="p">(</span><span class="n">transcription</span><span class="p">,</span> <span class="s">&#39;orthographicValidation&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;orthographicInventory&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_transcription&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="ValidNarrowPhoneticTranscription"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidNarrowPhoneticTranscription">[docs]</a><span class="k">class</span> <span class="nc">ValidNarrowPhoneticTranscription</span><span class="p">(</span><span class="n">UnicodeString</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Narrow phonetic transcription validator.  If narrow phonetic</span>
+<span class="sd">    transcription validation is set to &#39;Error&#39; in application settings, this</span>
+<span class="sd">    validator will forbid narrow phonetic transcriptions that are not</span>
+<span class="sd">    constructable using the narrow phonetic inventory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_transcription&#39;</span><span class="p">:</span>
+                <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">u&#39;The narrow phonetic transcription you have entered &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;is not valid. Only graphemes from the specified &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;narrow phonetic inventory and &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;the space character are permitted.&#39;</span><span class="p">])}</span>
+
+<div class="viewcode-block" id="ValidNarrowPhoneticTranscription.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidNarrowPhoneticTranscription.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">transcription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">formIsForeignWord</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">full_dict</span><span class="p">)</span> <span class="ow">and</span> \
+        <span class="ow">not</span> <span class="n">transcriptionIsValid</span><span class="p">(</span><span class="n">transcription</span><span class="p">,</span> <span class="s">&#39;narrowPhoneticValidation&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;narrowPhoneticInventory&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_transcription&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="ValidBroadPhoneticTranscription"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBroadPhoneticTranscription">[docs]</a><span class="k">class</span> <span class="nc">ValidBroadPhoneticTranscription</span><span class="p">(</span><span class="n">UnicodeString</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Broad phonetic transcription validator.  If broad phonetic</span>
+<span class="sd">    transcription validation is set to &#39;Error&#39; in application settings, this</span>
+<span class="sd">    validator will forbid broad phonetic transcriptions that are not</span>
+<span class="sd">    constructable using the broad phonetic inventory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_transcription&#39;</span><span class="p">:</span>
+                <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">u&#39;The broad phonetic transcription you have entered &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;is not valid. Only graphemes from the specified &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;broad phonetic inventory and &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;the space character are permitted.&#39;</span><span class="p">])}</span>
+
+<div class="viewcode-block" id="ValidBroadPhoneticTranscription.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBroadPhoneticTranscription.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">transcription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">formIsForeignWord</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">full_dict</span><span class="p">)</span> <span class="ow">and</span> \
+        <span class="ow">not</span> <span class="n">transcriptionIsValid</span><span class="p">(</span><span class="n">transcription</span><span class="p">,</span> <span class="s">&#39;broadPhoneticValidation&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;broadPhoneticInventory&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_transcription&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="ValidMorphemeBreakTranscription"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidMorphemeBreakTranscription">[docs]</a><span class="k">class</span> <span class="nc">ValidMorphemeBreakTranscription</span><span class="p">(</span><span class="n">UnicodeString</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Morpheme break input validator.  If morpheme break validation is set to</span>
+<span class="sd">    &#39;Error&#39; in application settings, this validator will forbid morpheme break</span>
+<span class="sd">    input that is not constructable using the relevant grapheme inventory (i.e.,</span>
+<span class="sd">    either the storage orthography or the phonemic inventory) and the specified</span>
+<span class="sd">    morpheme delimiters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_transcription&#39;</span><span class="p">:</span>
+                <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">u&#39;The morpheme segmentation you have entered &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;is not valid.  Only graphemes from the &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;</span><span class="si">%(inventory)s</span><span class="s">, the specified morpheme delimiters &#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;and the space character are permitted.&#39;</span><span class="p">])}</span>
+
+<div class="viewcode-block" id="ValidMorphemeBreakTranscription.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidMorphemeBreakTranscription.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">transcription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">morphemeBreakIsOrthographic</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span>
+                <span class="n">app_globals</span><span class="p">,</span> <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+                <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+                <span class="s">&#39;morphemeBreakIsOrthographic&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">morphemeBreakIsOrthographic</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">inventory</span> <span class="o">=</span> <span class="s">u&#39;phonemic inventory&#39;</span>
+        <span class="k">if</span> <span class="n">morphemeBreakIsOrthographic</span><span class="p">:</span>
+            <span class="n">inventory</span> <span class="o">=</span> <span class="s">u&#39;storage orthography&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">formIsForeignWord</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">full_dict</span><span class="p">)</span> <span class="ow">and</span> \
+        <span class="ow">not</span> <span class="n">transcriptionIsValid</span><span class="p">(</span><span class="n">transcription</span><span class="p">,</span> <span class="s">&#39;morphemeBreakValidation&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;morphemeBreakInventory&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_transcription&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span>
+                <span class="n">inventory</span><span class="o">=</span><span class="n">inventory</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="formIsForeignWord"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.formIsForeignWord">[docs]</a><span class="k">def</span> <span class="nf">formIsForeignWord</span><span class="p">(</span><span class="n">formDict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns False if the form being entered (as represented by the formDict)</span>
+<span class="sd">    is tagged as a foreign word; otherwise return True.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">tagIds</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">getInt</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">formDict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;tags&#39;</span><span class="p">,</span> <span class="p">[])]</span>
+    <span class="n">tagIds</span> <span class="o">=</span> <span class="p">[</span><span class="nb">id</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">tagIds</span> <span class="k">if</span> <span class="nb">id</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">foreignWordTagId</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getForeignWordTag</span><span class="p">()</span><span class="o">.</span><span class="n">id</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">foreignWordTagId</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">foreignWordTagId</span> <span class="ow">in</span> <span class="n">tagIds</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+</div>
+<div class="viewcode-block" id="transcriptionIsValid"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.transcriptionIsValid">[docs]</a><span class="k">def</span> <span class="nf">transcriptionIsValid</span><span class="p">(</span><span class="n">transcription</span><span class="p">,</span> <span class="n">validationName</span><span class="p">,</span> <span class="n">inventoryName</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a boolean indicating whether the transcription is valid according</span>
+<span class="sd">    to the appropriate Inventory object in the Application Settings meta object.</span>
+<span class="sd">    The validationName parameter is the name of the appropriate validation</span>
+<span class="sd">    attribute of the application settings model object, e.g.,</span>
+<span class="sd">    &#39;orthographicValidation&#39;.  The inventoryName parameter is the name of an</span>
+<span class="sd">    attribute of the Application Settings meta object whose value is the</span>
+<span class="sd">    appropriate Inventory object for the transcription.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">app_globals</span><span class="p">,</span> <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+    <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span> <span class="n">validationName</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="o">==</span> <span class="s">u&#39;Error&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">app_globals</span><span class="p">,</span> <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+            <span class="n">inventoryName</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span><span class="o">.</span><span class="n">stringIsValid</span><span class="p">(</span><span class="n">transcription</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">True</span>
+
+</div>
+<div class="viewcode-block" id="ValidGrammaticality"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidGrammaticality">[docs]</a><span class="k">class</span> <span class="nc">ValidGrammaticality</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_grammaticality&#39;</span><span class="p">:</span>
+        <span class="s">u&#39;The grammaticality submitted does not match any of the available options.&#39;</span><span class="p">}</span>
+
+<div class="viewcode-block" id="ValidGrammaticality.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidGrammaticality.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">validGrammaticalities</span> <span class="o">=</span> <span class="n">getGrammaticalities</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">validGrammaticalities</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_grammaticality&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="getGrammaticalities"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.getGrammaticalities">[docs]</a><span class="k">def</span> <span class="nf">getGrammaticalities</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">grammaticalities</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span>
+            <span class="n">app_globals</span><span class="p">,</span> <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span> <span class="s">&#39;grammaticalities&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s">u&#39;&#39;</span><span class="p">])</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c"># During testing, app_globals may not be present.</span>
+        <span class="n">grammaticalities</span> <span class="o">=</span> <span class="p">[</span><span class="s">u&#39;&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">grammaticalities</span>
+
+</div>
+<div class="viewcode-block" id="ValidOLDModelObject"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidOLDModelObject">[docs]</a><span class="k">class</span> <span class="nc">ValidOLDModelObject</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for input values that are integer ids (i.e., primary keys) of</span>
+<span class="sd">    OLD model objects.  Value must be int-able as well as the id of an existing</span>
+<span class="sd">    OLD of the type specified in the modelName kwarg.  If valid, the model</span>
+<span class="sd">    object is returned.  Example usage: ValidOLDModelObject(modelName=&#39;User&#39;).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;invalid_model&#39;</span><span class="p">:</span> <span class="s">u&#39;There is no </span><span class="si">%(modelNameEng)s</span><span class="s"> with id </span><span class="si">%(id)d</span><span class="s">.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;restricted_model&#39;</span><span class="p">:</span>
+            <span class="s">u&#39;You are not authorized to access the </span><span class="si">%(modelNameEng)s</span><span class="s"> with id </span><span class="si">%(id)d</span><span class="s">.&#39;</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">[</span><span class="s">u&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="n">Int</span><span class="p">()</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="n">modelObject</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">modelObject</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_model&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
+                    <span class="n">modelNameEng</span><span class="o">=</span><span class="n">h</span><span class="o">.</span><span class="n">camelCase2lowerSpace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">)),</span>
+                    <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="s">&#39;Collection&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+                    <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">modelObject</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="n">modelObject</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;restricted_model&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
+                            <span class="n">modelNameEng</span><span class="o">=</span><span class="n">h</span><span class="o">.</span><span class="n">camelCase2lowerSpace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">)),</span>
+                            <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">modelObject</span>
+
+</div>
+<div class="viewcode-block" id="FormSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FormSchema">[docs]</a><span class="k">class</span> <span class="nc">FormSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;FormSchema is a Schema for validating the data input upon a form</span>
+<span class="sd">    creation request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="n">transcription</span> <span class="o">=</span> <span class="n">ValidOrthographicTranscription</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">phoneticTranscription</span> <span class="o">=</span> <span class="n">ValidBroadPhoneticTranscription</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">narrowPhoneticTranscription</span> <span class="o">=</span> <span class="n">ValidNarrowPhoneticTranscription</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">morphemeBreak</span> <span class="o">=</span> <span class="n">ValidMorphemeBreakTranscription</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">grammaticality</span> <span class="o">=</span> <span class="n">ValidGrammaticality</span><span class="p">()</span>
+    <span class="n">morphemeGloss</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">glosses</span> <span class="o">=</span> <span class="n">ValidGlosses</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">comments</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">speakerComments</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">formStatuses</span><span class="p">)</span>
+    <span class="n">elicitationMethod</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;ElicitationMethod&#39;</span><span class="p">)</span>
+    <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;SyntacticCategory&#39;</span><span class="p">)</span>
+    <span class="n">speaker</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Speaker&#39;</span><span class="p">)</span>
+    <span class="n">elicitor</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="n">verifier</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Source&#39;</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Tag&#39;</span><span class="p">))</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;File&#39;</span><span class="p">))</span>
+    <span class="n">dateElicited</span> <span class="o">=</span> <span class="n">DateConverter</span><span class="p">(</span><span class="n">month_style</span><span class="o">=</span><span class="s">&#39;mm/dd/yyyy&#39;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="FormIdsSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FormIdsSchema">[docs]</a><span class="k">class</span> <span class="nc">FormIdsSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schema used to validate a JSON object of the form {&#39;forms&#39;: [1, 2, 3]}</span>
+<span class="sd">    where value[&#39;forms&#39;] can NOT be an empty array.  Used in the remember method</span>
+<span class="sd">    of controllers.forms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">forms</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Form&#39;</span><span class="p">),</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="FormIdsSchemaNullable"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FormIdsSchemaNullable">[docs]</a><span class="k">class</span> <span class="nc">FormIdsSchemaNullable</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schema used to validate a JSON object of the form {&#39;forms&#39;: [1, 2, 3]}</span>
+<span class="sd">    where value[&#39;forms&#39;] can be an empty array.  Used in the update method of</span>
+<span class="sd">    controllers.rememberedforms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">forms</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Form&#39;</span><span class="p">))</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># File Schemata</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="getMIMEtypeFromContents"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.getMIMEtypeFromContents">[docs]</a><span class="k">def</span> <span class="nf">getMIMEtypeFromContents</span><span class="p">(</span><span class="n">contents</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Magic</span><span class="p">(</span><span class="n">mime</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;application/ogg&#39;</span><span class="p">,</span> <span class="s">&#39;audio/ogg&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ValidBase64EncodedFile"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBase64EncodedFile">[docs]</a><span class="k">class</span> <span class="nc">ValidBase64EncodedFile</span><span class="p">(</span><span class="n">String</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for the base64EncodedFile attribute of a file create request.&quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;invalid_base64_encoded_file&#39;</span><span class="p">:</span> <span class="s">u&#39;The uploaded file must be base64 encoded.&#39;</span>
+    <span class="p">}</span>
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">b64decode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">UnicodeEncodeError</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid_base64_encoded_file&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ValidFileName"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidFileName">[docs]</a><span class="k">class</span> <span class="nc">ValidFileName</span><span class="p">(</span><span class="n">UnicodeString</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ensures that the filename of the file to be uploaded has a valid extension</span>
+<span class="sd">    given the allowed file types listed in lib/utils.py.  The </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_type&#39;</span><span class="p">:</span>
+                <span class="s">u&#39;The file upload failed because the file type </span><span class="si">%(MIMEtype)s</span><span class="s"> is not allowed.&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">MIMEtypeFromExt</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">guess_type</span><span class="p">(</span><span class="n">value</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">MIMEtypeFromExt</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">allowedFileTypes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">cleanAndSecureFilename</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid_type&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">MIMEtype</span><span class="o">=</span><span class="n">MIMEtypeFromExt</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FileUpdateSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FileUpdateSchema">[docs]</a><span class="k">class</span> <span class="nc">FileUpdateSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;FileUpdateSchema is a Schema for validating the data input upon a file</span>
+<span class="sd">    update request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">utteranceType</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">utteranceTypes</span><span class="p">)</span>
+    <span class="n">speaker</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Speaker&#39;</span><span class="p">)</span>
+    <span class="n">elicitor</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Tag&#39;</span><span class="p">))</span>
+    <span class="n">forms</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Form&#39;</span><span class="p">))</span>
+    <span class="n">dateElicited</span> <span class="o">=</span> <span class="n">DateConverter</span><span class="p">(</span><span class="n">month_style</span><span class="o">=</span><span class="s">&#39;mm/dd/yyyy&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AddMIMEtypeToValues"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.AddMIMEtypeToValues">[docs]</a><span class="k">class</span> <span class="nc">AddMIMEtypeToValues</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Guesses the MIMEtype based on the file contents and name and sets the</span>
+<span class="sd">    MIMEtype key in values.  If python-magic is installed, the system will guess</span>
+<span class="sd">    the type from the file contents and an error will be raised if the filename</span>
+<span class="sd">    extension is inaccurate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;mismatched_type&#39;</span><span class="p">:</span> <span class="s">u&#39;The file extension does not match the file</span><span class="se">\&#39;</span><span class="s">s true type (</span><span class="si">%(x)s</span><span class="s"> vs. </span><span class="si">%(y)s</span><span class="s">, respectively).&#39;</span>
+    <span class="p">}</span>
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">MIMEtypeFromFilename</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">guess_type</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s">&#39;filename&#39;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s">&#39;base64EncodedFile&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+            <span class="n">contents</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="s">&#39;base64EncodedFile&#39;</span><span class="p">][:</span><span class="mi">1024</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">contents</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="s">&#39;filedataFirstKB&#39;</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">MIMEtypeFromContents</span> <span class="o">=</span> <span class="n">getMIMEtypeFromContents</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">MIMEtypeFromContents</span> <span class="o">!=</span> <span class="n">MIMEtypeFromFilename</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;mismatched_type&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span>
+                    <span class="n">x</span><span class="o">=</span><span class="n">MIMEtypeFromFilename</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">MIMEtypeFromContents</span><span class="p">),</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">NameError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
+            <span class="k">pass</span>    <span class="c"># NameError because Magic is not installed; KeyError because PlainFile validation will lack a base64EncodedFile key</span>
+        <span class="n">values</span><span class="p">[</span><span class="s">&#39;MIMEtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">MIMEtypeFromFilename</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">values</span>
+</div>
+<div class="viewcode-block" id="FileCreateWithBase64EncodedFiledataSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FileCreateWithBase64EncodedFiledataSchema">[docs]</a><span class="k">class</span> <span class="nc">FileCreateWithBase64EncodedFiledataSchema</span><span class="p">(</span><span class="n">FileUpdateSchema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schema for validating the data input upon a file create request where a</span>
+<span class="sd">    base64EncodedFile attribute is present in the JSON request params.  The</span>
+<span class="sd">    base64EncodedFile and filename attributes can only be specified on the create</span>
+<span class="sd">    request (i.e., not on the update request).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">chained_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">AddMIMEtypeToValues</span><span class="p">()]</span>
+    <span class="n">base64EncodedFile</span> <span class="o">=</span> <span class="n">ValidBase64EncodedFile</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">ValidFileName</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">MIMEtype</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="FileCreateWithFiledataSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FileCreateWithFiledataSchema">[docs]</a><span class="k">class</span> <span class="nc">FileCreateWithFiledataSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schema for validating the data input upon a file create request where the</span>
+<span class="sd">    Content-Type is &#39;multipart/form-data&#39;.</span>
+
+<span class="sd">    Note the pre-validation NestedVariables call.  This causes certain key-value</span>
+<span class="sd">    patterns to be transformed to Python data structures.  In this case,</span>
+
+<span class="sd">        {&#39;forms-0&#39;: 1, &#39;forms-1&#39;: 33, &#39;tags-0&#39;: 2, &#39;tags-1&#39;: 4, &#39;tags-2&#39;: 5}</span>
+
+<span class="sd">    becomes</span>
+
+<span class="sd">        {&#39;forms&#39;: [1, 33], &#39;tags&#39;: [2, 4, 5]}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">pre_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">NestedVariables</span><span class="p">()]</span>
+    <span class="n">chained_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">AddMIMEtypeToValues</span><span class="p">()]</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">ValidFileName</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">filedataFirstKB</span> <span class="o">=</span> <span class="n">String</span><span class="p">()</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">utteranceType</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">utteranceTypes</span><span class="p">)</span>
+    <span class="n">speaker</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Speaker&#39;</span><span class="p">)</span>
+    <span class="n">elicitor</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Tag&#39;</span><span class="p">))</span>
+    <span class="n">forms</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Form&#39;</span><span class="p">))</span>
+    <span class="n">dateElicited</span> <span class="o">=</span> <span class="n">DateConverter</span><span class="p">(</span><span class="n">month_style</span><span class="o">=</span><span class="s">&#39;mm/dd/yyyy&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ValidAudioVideoFile"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidAudioVideoFile">[docs]</a><span class="k">class</span> <span class="nc">ValidAudioVideoFile</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for input values that are integer ids (i.e., primary keys) of</span>
+<span class="sd">    OLD File objects representing audio or video files.  Note that the referenced</span>
+<span class="sd">    A/V file must *not* itself be a subinterval-referencing file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;invalid_file&#39;</span><span class="p">:</span> <span class="s">u&#39;There is no file with id </span><span class="si">%(id)d</span><span class="s">.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;restricted_file&#39;</span><span class="p">:</span> <span class="s">u&#39;You are not authorized to access the file with id </span><span class="si">%(id)d</span><span class="s">.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;not_av&#39;</span><span class="p">:</span> <span class="s">u&#39;File </span><span class="si">%(id)d</span><span class="s"> is not an audio or a video file.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;empty&#39;</span><span class="p">:</span> <span class="s">u&#39;An id corresponding to an existing audio or video file must be provided.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;ref_ref&#39;</span><span class="p">:</span> <span class="s">u&#39;The parent file cannot itself be a subinterval-referencing file.&#39;</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">[</span><span class="s">u&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;empty&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="n">Int</span><span class="p">()</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="n">fileObject</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">File</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fileObject</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;invalid_file&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">isAudioVideoFile</span><span class="p">(</span><span class="n">fileObject</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">fileObject</span><span class="o">.</span><span class="n">parentFile</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">fileObject</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                            <span class="k">return</span> <span class="n">fileObject</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&quot;restricted_file&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">),</span>
+                                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;ref_ref&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;not_av&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ValidSubinterval"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidSubinterval">[docs]</a><span class="k">class</span> <span class="nc">ValidSubinterval</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator ensures that the float/int value of the &#39;start&#39; key is less</span>
+<span class="sd">    than the float/int value of the &#39;end&#39; key.  These values are also converted</span>
+<span class="sd">    to floats.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;invalid&#39;</span><span class="p">:</span> <span class="s">u&#39;The start value must be less than the end value.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;not_numbers&#39;</span><span class="p">:</span> <span class="s">u&#39;The start and end values must be numbers.&#39;</span>
+    <span class="p">}</span>
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">])</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> \
+        <span class="nb">type</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s">&#39;end&#39;</span><span class="p">])</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;not_numbers&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="n">values</span><span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">])</span>
+        <span class="n">values</span><span class="p">[</span><span class="s">&#39;end&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s">&#39;end&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">values</span><span class="p">[</span><span class="s">&#39;end&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">values</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FileSubintervalReferencingSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FileSubintervalReferencingSchema">[docs]</a><span class="k">class</span> <span class="nc">FileSubintervalReferencingSchema</span><span class="p">(</span><span class="n">FileUpdateSchema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validates input for subinterval-referencing file creation and update</span>
+<span class="sd">    requests.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">chained_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">ValidSubinterval</span><span class="p">()]</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">parentFile</span> <span class="o">=</span> <span class="n">ValidAudioVideoFile</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">Number</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">Number</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ValidMIMEtype"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidMIMEtype">[docs]</a><span class="k">class</span> <span class="nc">ValidMIMEtype</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator ensures that the user-supplied MIMEtype value is one of those</span>
+<span class="sd">    listed in hallowedFileTypes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;invalid_type&#39;</span><span class="p">:</span> <span class="s">u&#39;The file upload failed because the file type </span><span class="si">%(MIMEtype)s</span><span class="s"> is not allowed.&#39;</span><span class="p">}</span>
+<div class="viewcode-block" id="ValidMIMEtype.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidMIMEtype.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">allowedFileTypes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid_type&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">MIMEtype</span><span class="o">=</span><span class="n">value</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="FileExternallyHostedSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FileExternallyHostedSchema">[docs]</a><span class="k">class</span> <span class="nc">FileExternallyHostedSchema</span><span class="p">(</span><span class="n">FileUpdateSchema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validates input for files whose content is hosted elsewhere.&quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">URL</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">check_exists</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">add_http</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>       <span class="c"># add check_exists=True if desired</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">MIMEtype</span> <span class="o">=</span> <span class="n">ValidMIMEtype</span><span class="p">()</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># Collection Schemata</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="CollectionSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.CollectionSchema">[docs]</a><span class="k">class</span> <span class="nc">CollectionSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;CollectionSchema is a Schema for validating the data input upon</span>
+<span class="sd">    collection create and update requests.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="n">title</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">collectionTypes</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Regex</span><span class="p">(</span><span class="s">&#39;^[a-zA-Z0-9_/-]{0,255}$&#39;</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">markupLanguage</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">markupLanguages</span><span class="p">)</span>
+    <span class="n">contents</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">contentsUnpacked</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="c"># html = UnicodeString()      # uncomment to permit saving of client-side-generated html</span>
+    <span class="n">speaker</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Speaker&#39;</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Source&#39;</span><span class="p">)</span>
+    <span class="n">elicitor</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="n">enterer</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">)</span>
+    <span class="n">dateElicited</span> <span class="o">=</span> <span class="n">DateConverter</span><span class="p">(</span><span class="n">month_style</span><span class="o">=</span><span class="s">&#39;mm/dd/yyyy&#39;</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Tag&#39;</span><span class="p">))</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;File&#39;</span><span class="p">))</span>
+
+    <span class="c"># A forms attribute must be created using the contents attribute before validation occurs</span>
+    <span class="n">forms</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Form&#39;</span><span class="p">))</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># ApplicationSettings Schemata</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="GetMorphemeDelimiters"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.GetMorphemeDelimiters">[docs]</a><span class="k">class</span> <span class="nc">GetMorphemeDelimiters</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Remove redundant commas and whitespace from the string representing the</span>
+<span class="sd">    morpheme delimiters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">d</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="ApplicationSettingsSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ApplicationSettingsSchema">[docs]</a><span class="k">class</span> <span class="nc">ApplicationSettingsSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;ApplicationSettingsSchema is a Schema for validating the data</span>
+<span class="sd">    submitted to ApplicationsettingsController</span>
+<span class="sd">    (controllers/applicationsettings.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="n">validationValues</span> <span class="o">=</span> <span class="p">[</span><span class="s">u&#39;None&#39;</span><span class="p">,</span> <span class="s">u&#39;Warning&#39;</span><span class="p">,</span> <span class="s">u&#39;Error&#39;</span><span class="p">]</span>
+    <span class="n">objectLanguageName</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">objectLanguageId</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">metalanguageName</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">metalanguageId</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">metalanguageInventory</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">orthographicValidation</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">validationValues</span><span class="p">)</span>
+    <span class="n">narrowPhoneticInventory</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">narrowPhoneticValidation</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">validationValues</span><span class="p">)</span>
+    <span class="n">broadPhoneticInventory</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">broadPhoneticValidation</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">validationValues</span><span class="p">)</span>
+    <span class="n">morphemeBreakIsOrthographic</span> <span class="o">=</span> <span class="n">StringBoolean</span><span class="p">()</span>
+    <span class="n">morphemeBreakValidation</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">validationValues</span><span class="p">)</span>
+    <span class="n">phonemicInventory</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">morphemeDelimiters</span> <span class="o">=</span> <span class="n">GetMorphemeDelimiters</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">punctuation</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">grammaticalities</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;User&#39;</span><span class="p">))</span>
+    <span class="n">orthographies</span> <span class="o">=</span> <span class="n">ForEach</span><span class="p">(</span><span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Orthography&#39;</span><span class="p">))</span>
+    <span class="n">storageOrthography</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Orthography&#39;</span><span class="p">)</span>
+    <span class="n">inputOrthography</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Orthography&#39;</span><span class="p">)</span>
+    <span class="n">outputOrthography</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Orthography&#39;</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Source Validators</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="ValidBibTeXEntryType"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBibTeXEntryType">[docs]</a><span class="k">class</span> <span class="nc">ValidBibTeXEntryType</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for the source model&#39;s type field.  Value must be any case</span>
+<span class="sd">    permutation of BibTeX entry types (cf. bibtex.entryTypes).  The value is</span>
+<span class="sd">    returned all lowercase.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;invalid_bibtex_entry&#39;</span><span class="p">:</span>
+        <span class="s">&#39;</span><span class="si">%(submittedEntry)s</span><span class="s"> is not a valid BibTeX entry type&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">bibtex</span><span class="o">.</span><span class="n">entryTypes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid_bibtex_entry&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">submittedEntry</span><span class="o">=</span><span class="n">value</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ValidBibTexKey"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBibTexKey">[docs]</a><span class="k">class</span> <span class="nc">ValidBibTexKey</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for the source model&#39;s key field.  Value must be any unique</span>
+<span class="sd">    combination of ASCII letters, numerals and symbols (except the comma).  The</span>
+<span class="sd">    presence of an &#39;id&#39; attribute on the state object indicates that we are</span>
+<span class="sd">    updating an existing source and we nuance our check for uniqueness.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;invalid_bibtex_key_format&#39;</span><span class="p">:</span> <span class="s">&#39;Source keys can only contain letters, numerals and symbols (except the comma)&#39;</span><span class="p">,</span>
+        <span class="s">&#39;bibtex_key_not_unique&#39;</span><span class="p">:</span> <span class="s">&#39;The submitted source key is not unique&#39;</span>
+    <span class="p">}</span>
+
+<div class="viewcode-block" id="ValidBibTexKey.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBibTexKey.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!&quot;#$%&amp;</span><span class="se">\&#39;</span><span class="s">()*+-./:;&lt;=&gt;?@[</span><span class="se">\\</span><span class="s">]^_`{|}~&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">valid</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid_bibtex_key_format&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Source</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">id</span> <span class="ow">and</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">and_</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Source</span><span class="o">.</span><span class="n">key</span><span class="o">==</span><span class="n">value</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">Source</span><span class="o">.</span><span class="n">id</span><span class="o">!=</span><span class="nb">id</span><span class="p">))</span><span class="o">.</span><span class="n">first</span><span class="p">())</span> <span class="ow">or</span> \
+        <span class="p">(</span><span class="ow">not</span> <span class="nb">id</span> <span class="ow">and</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Source</span><span class="o">.</span><span class="n">key</span><span class="o">==</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;bibtex_key_not_unique&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="ValidBibTeXEntry"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBibTeXEntry">[docs]</a><span class="k">class</span> <span class="nc">ValidBibTeXEntry</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for a Source/BibTeX entry based on its type.  This validator is</span>
+<span class="sd">    run as a formencode &quot;chained validator&quot;, i.e., it is run after the validation</span>
+<span class="sd">    and conversion of the type and key attributes.  It uses the information in</span>
+<span class="sd">    lib/bibtex.entryTypes[type][&#39;required&#39;] to determine which attributes are</span>
+<span class="sd">    required for which types.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;invalid_entry&#39;</span><span class="p">:</span> <span class="s">&#39;</span><span class="si">%(msg)s</span><span class="s">&#39;</span><span class="p">}</span>
+
+<div class="viewcode-block" id="ValidBibTeXEntry.parseRequirements"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBibTeXEntry.parseRequirements">[docs]</a>    <span class="k">def</span> <span class="nf">parseRequirements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entryType</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a BibTeX entry type, return a tuple (a, b, c) where a is the</span>
+<span class="sd">        list of required fields, b is the list of disjunctively required fields</span>
+<span class="sd">        and c is a string expressing the requirements in English.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">coordinate</span><span class="p">(</span><span class="n">list_</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s">u&#39;</span><span class="si">%s</span><span class="s"> and </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="s">u&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">list_</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">list_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">list_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="s">u&#39;&#39;</span>
+        <span class="k">def</span> <span class="nf">conjugateValues</span><span class="p">(</span><span class="n">requiredFields</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">requiredFields</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s">&#39;values&#39;</span>
+            <span class="k">return</span> <span class="s">&#39;a value&#39;</span>
+
+        <span class="n">required</span> <span class="o">=</span> <span class="n">bibtex</span><span class="o">.</span><span class="n">entryTypes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">entryType</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;required&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">requiredFields</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">required</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">str</span><span class="p">)]</span>
+        <span class="n">disjunctivelyRequiredFields</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">required</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)]</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">u&#39;Sources of type </span><span class="si">%s</span><span class="s"> require </span><span class="si">%s</span><span class="s"> for </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">entryType</span><span class="p">,</span> <span class="n">conjugateValues</span><span class="p">(</span><span class="n">requiredFields</span><span class="p">),</span> <span class="n">coordinate</span><span class="p">(</span><span class="n">requiredFields</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">disjunctivelyRequiredFields</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">u&#39;</span><span class="si">%s</span><span class="s"> as well as a value for </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">msg</span><span class="p">,</span> 
+                <span class="n">coordinate</span><span class="p">([</span><span class="s">u&#39;at least one of </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">coordinate</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">dr</span> <span class="ow">in</span> <span class="n">disjunctivelyRequiredFields</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">requiredFields</span><span class="p">,</span> <span class="n">disjunctivelyRequiredFields</span><span class="p">,</span> <span class="s">u&#39;</span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="n">msg</span>
+</div>
+<div class="viewcode-block" id="ValidBibTeXEntry.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidBibTeXEntry.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">invalid</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="nb">type</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;type&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">requiredFields</span><span class="p">,</span> <span class="n">disjunctivelyRequiredFields</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parseRequirements</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
+        <span class="n">requiredFieldsValues</span> <span class="o">=</span> <span class="p">[</span><span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rf</span><span class="p">)</span> <span class="k">for</span> <span class="n">rf</span> <span class="ow">in</span> <span class="n">requiredFields</span> <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rf</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">requiredFieldsValues</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">requiredFields</span><span class="p">):</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">dr</span> <span class="ow">in</span> <span class="n">disjunctivelyRequiredFields</span><span class="p">:</span>
+                <span class="n">drValues</span> <span class="o">=</span> <span class="p">[</span><span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rf</span><span class="p">)</span> <span class="k">for</span> <span class="n">rf</span> <span class="ow">in</span> <span class="n">dr</span> <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rf</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">drValues</span><span class="p">:</span>
+                    <span class="n">invalid</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">invalid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;invalid_entry&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">msg</span><span class="p">),</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="SourceSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.SourceSchema">[docs]</a><span class="k">class</span> <span class="nc">SourceSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SourceSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    SourceController (controllers/source.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">chained_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">ValidBibTeXEntry</span><span class="p">()]</span>
+
+    <span class="nb">type</span> <span class="o">=</span> <span class="n">ValidBibTeXEntryType</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>   <span class="c"># OneOf lib.bibtex.entryTypes with any uppercase permutations</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">ValidBibTexKey</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c"># any combination of letters, numerals and symbols (except commas)</span>
+
+    <span class="nb">file</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;File&#39;</span><span class="p">)</span>
+
+    <span class="n">address</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">annote</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">booktitle</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">chapter</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">crossref</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">edition</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">editor</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">howpublished</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">institution</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">journal</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">keyField</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">month</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">note</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">number</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">organization</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">pages</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">publisher</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">school</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">series</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">typeField</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">URL</span><span class="p">(</span><span class="n">add_http</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">volume</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="n">Int</span><span class="p">(</span><span class="nb">min</span><span class="o">=-</span><span class="mi">8000</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span> <span class="c"># The dawn of recorded history to a millenium into the future!</span>
+
+    <span class="c"># Non-standard BibTeX fields</span>
+    <span class="n">affiliation</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">abstract</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">contents</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">copyright</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">ISBN</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">ISSN</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">keywords</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">language</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">LCCN</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">mrnumber</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
+    <span class="n">price</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Secondary Model Validators</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="UniqueUnicodeValue"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.UniqueUnicodeValue">[docs]</a><span class="k">class</span> <span class="nc">UniqueUnicodeValue</span><span class="p">(</span><span class="n">UnicodeString</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator ensures that the unicode string value is unique in its column.</span>
+<span class="sd">    The validator must be initialized with modelName and attributeName attributes,</span>
+<span class="sd">    e.g., UniqueUnicodeValue(modelName=&#39;ElicitationMethod&#39;, attributeName=&#39;name&#39;).</span>
+<span class="sd">    An &#39;id&#39; attribute on the state object indicates that we are updating and</span>
+<span class="sd">    should therefore nuance our test for uniqueness.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;not_unique&#39;</span><span class="p">:</span>
+        <span class="s">&#39;The submitted value for </span><span class="si">%(modelName)s</span><span class="s">.</span><span class="si">%(attributeName)s</span><span class="s"> is not unique.&#39;</span><span class="p">}</span>
+
+<div class="viewcode-block" id="UniqueUnicodeValue.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.UniqueUnicodeValue.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">model_</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">)</span>
+        <span class="n">attribute</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributeName</span><span class="p">)</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model_</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">id</span> <span class="ow">and</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">and_</span><span class="p">(</span><span class="n">attribute</span><span class="o">==</span><span class="n">value</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model_</span><span class="p">,</span> <span class="s">&#39;id&#39;</span><span class="p">)</span><span class="o">!=</span><span class="nb">id</span><span class="p">))</span><span class="o">.</span><span class="n">first</span><span class="p">())</span> <span class="ow">or</span> \
+        <span class="p">(</span><span class="ow">not</span> <span class="nb">id</span> <span class="ow">and</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">attribute</span><span class="o">==</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;not_unique&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span>
+                                <span class="n">modelName</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">attributeName</span><span class="p">),</span>
+                          <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="ElicitationMethodSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ElicitationMethodSchema">[docs]</a><span class="k">class</span> <span class="nc">ElicitationMethodSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;ElicitationMethodSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    ElicitationmethodsController (controllers/elicitationmethods.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UniqueUnicodeValue</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">modelName</span><span class="o">=</span><span class="s">&#39;ElicitationMethod&#39;</span><span class="p">,</span> <span class="n">attributeName</span><span class="o">=</span><span class="s">&#39;name&#39;</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ValidFormQuery"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidFormQuery">[docs]</a><span class="k">class</span> <span class="nc">ValidFormQuery</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validates a form search query using a SQLAQueryBuilder instance.  Returns</span>
+<span class="sd">    the query as JSON.&quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;query_error&#39;</span><span class="p">:</span> <span class="s">u&#39;The submitted query was invalid&#39;</span><span class="p">}</span>
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">queryBuilder</span><span class="o">.</span><span class="n">getSQLAQuery</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;query_error&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="FormSearchSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.FormSearchSchema">[docs]</a><span class="k">class</span> <span class="nc">FormSearchSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;FormSearchSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    FormsearchesController (controllers/formsearches.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UniqueUnicodeValue</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">modelName</span><span class="o">=</span><span class="s">&#39;FormSearch&#39;</span><span class="p">,</span> <span class="n">attributeName</span><span class="o">=</span><span class="s">&#39;name&#39;</span><span class="p">)</span>
+    <span class="n">search</span> <span class="o">=</span> <span class="n">ValidFormQuery</span><span class="p">()</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span>
+</div>
+<div class="viewcode-block" id="OrthographySchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.OrthographySchema">[docs]</a><span class="k">class</span> <span class="nc">OrthographySchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;OrthographySchema is a Schema for validating the data submitted to</span>
+<span class="sd">    OrthographyController (controllers/orthography.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">orthography</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">lowercase</span> <span class="o">=</span> <span class="n">StringBoolean</span><span class="p">()</span>
+    <span class="n">initialGlottalStops</span> <span class="o">=</span> <span class="n">StringBoolean</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="PageSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.PageSchema">[docs]</a><span class="k">class</span> <span class="nc">PageSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;PageSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    PagesController (controllers/pages.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">heading</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">markupLanguage</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">markupLanguages</span><span class="p">)</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SpeakerSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.SpeakerSchema">[docs]</a><span class="k">class</span> <span class="nc">SpeakerSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SpeakerSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    SpeakersController (controllers/speakers.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">firstName</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">lastName</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">dialect</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">pageContent</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SyntacticCategorySchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.SyntacticCategorySchema">[docs]</a><span class="k">class</span> <span class="nc">SyntacticCategorySchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SyntacticCategorySchema is a Schema for validating the data submitted to</span>
+<span class="sd">    SyntacticcategoriesController (controllers/syntacticcategories.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UniqueUnicodeValue</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">modelName</span><span class="o">=</span><span class="s">&#39;SyntacticCategory&#39;</span><span class="p">,</span> <span class="n">attributeName</span><span class="o">=</span><span class="s">&#39;name&#39;</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">syntacticCategoryTypes</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ValidTagName"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidTagName">[docs]</a><span class="k">class</span> <span class="nc">ValidTagName</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator ensures that tag names are unique and prevents the names</span>
+<span class="sd">    &#39;restricted&#39; and &#39;foreign word&#39; from being updated.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;unchangeable&#39;</span><span class="p">:</span>
+        <span class="s">&#39;The names of the restricted and foreign word tags cannot be changed.&#39;</span><span class="p">}</span>
+
+<div class="viewcode-block" id="ValidTagName.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidTagName.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;tag&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tag</span> <span class="ow">and</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;restricted&#39;</span><span class="p">,</span> <span class="s">&#39;foreign word&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;unchangeable&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">value</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="TagSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.TagSchema">[docs]</a><span class="k">class</span> <span class="nc">TagSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;TagSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    TagsController (controllers/tags.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">chained_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">ValidTagName</span><span class="p">()]</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">UniqueUnicodeValue</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Tag&#39;</span><span class="p">,</span> <span class="n">attributeName</span><span class="o">=</span><span class="s">&#39;name&#39;</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># User Validators</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="ValidUsernameAndPassword"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.ValidUsernameAndPassword">[docs]</a><span class="k">class</span> <span class="nc">ValidUsernameAndPassword</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validator for the username, password and password_confirm fields.  Unfortunately,</span>
+<span class="sd">    I do not know how to throw compound errors so these fields may contain multiple</span>
+<span class="sd">    errors yet only the first encountered will be returned.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;bad_password&#39;</span><span class="p">:</span> <span class="s">u&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+            <span class="s">u&#39;The submitted password is invalid; valid passwords contain at least 8 characters&#39;</span><span class="p">,</span>
+            <span class="s">u&#39;and either contain at least one character that is not in the printable ASCII range&#39;</span><span class="p">,</span>
+            <span class="s">u&#39;or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.&#39;</span><span class="p">]),</span>
+        <span class="s">&#39;no_password&#39;</span><span class="p">:</span> <span class="s">u&#39;A password is required when creating a new user.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;not_confirmed&#39;</span><span class="p">:</span> <span class="s">u&#39;The password and password_confirm values do not match.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;nonunique_username&#39;</span><span class="p">:</span> <span class="s">u&#39;The username </span><span class="si">%(username)s</span><span class="s"> is already taken.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;illegal_chars&#39;</span><span class="p">:</span> <span class="s">u&#39;The username </span><span class="si">%(username)s</span><span class="s"> is invalid; only letters of the English alphabet, numbers and the underscore are permitted.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;no_username&#39;</span><span class="p">:</span> <span class="s">u&#39;A username is required when creating a new user.&#39;</span><span class="p">,</span>
+        <span class="s">&#39;non_admin_username_update&#39;</span><span class="p">:</span> <span class="s">u&#39;Only administrators can update usernames.&#39;</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">userToUpdate</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;userToUpdate&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">userAttemptingUpdate</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">userToUpdate</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">weAreCreating</span> <span class="o">=</span> <span class="nb">id</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">True</span> <span class="ow">or</span> <span class="bp">False</span>
+        <span class="n">username</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;username&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">usernameIsANonEmptyString</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">username</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)</span> <span class="ow">and</span> <span class="n">username</span> <span class="o">!=</span> <span class="s">u&#39;&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;password&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">passwordIsANonEmptyString</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">)</span> <span class="ow">and</span> <span class="n">password</span> <span class="o">!=</span> <span class="s">u&#39;&#39;</span>
+        <span class="n">password_confirm</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;password_confirm&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">containsNonASCIIChars</span><span class="p">(</span><span class="n">password</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">password</span> <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">127</span><span class="p">)]</span> <span class="ow">and</span> <span class="bp">True</span> <span class="ow">or</span> <span class="bp">False</span>
+
+        <span class="k">def</span> <span class="nf">isHighEntropyASCII</span><span class="p">(</span><span class="n">password</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Returns True if the password has a lowercase character, an uppercase</span>
+<span class="sd">            character, a digit and a symbol.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">symbolPatt</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">u&#39;&#39;&#39;[-!$%^&amp;*()_+|~=`{}\[\]:&quot;;&#39;&lt;&gt;?,./]&#39;&#39;&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">&#39;[a-z]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+            <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">&#39;[A-Z]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+            <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">&#39;[0-9]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+            <span class="n">symbolPatt</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">passwordIsANonEmptyString</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">8</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="n">containsNonASCIIChars</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">isHighEntropyASCII</span><span class="p">(</span><span class="n">password</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;bad_password&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="s">&#39;password&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">password</span> <span class="o">!=</span> <span class="n">password_confirm</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;not_confirmed&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="s">&#39;password&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">password</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">weAreCreating</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;no_password&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="s">&#39;password&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">usernameIsANonEmptyString</span><span class="p">:</span>
+            <span class="n">User</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">User</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">&#39;[^\w]+&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+                <span class="c"># Only word characters are allowed</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;illegal_chars&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">),</span>
+                              <span class="s">&#39;username&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="nb">id</span> <span class="ow">and</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">and_</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="n">username</span><span class="p">,</span> <span class="n">User</span><span class="o">.</span><span class="n">id</span><span class="o">!=</span><span class="nb">id</span><span class="p">))</span><span class="o">.</span><span class="n">first</span><span class="p">())</span> <span class="ow">or</span> \
+            <span class="p">(</span><span class="ow">not</span> <span class="nb">id</span> <span class="ow">and</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()):</span>
+                <span class="c"># No duplicate usernames</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;nonunique_username&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">),</span>
+                              <span class="s">&#39;username&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">userToUpdate</span> <span class="ow">and</span> <span class="n">username</span> <span class="o">!=</span> <span class="n">userToUpdate</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">]</span> <span class="ow">and</span> \
+            <span class="n">userAttemptingUpdate</span><span class="p">[</span><span class="s">&#39;role&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">u&#39;administrator&#39;</span><span class="p">:</span>
+                <span class="c"># Non-admins cannot change their usernames</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;non_admin_username_update&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">),</span>
+                              <span class="s">&#39;username&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">weAreCreating</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;no_username&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="s">&#39;username&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">return</span> <span class="n">values</span>
+</div>
+<div class="viewcode-block" id="LicitRoleChange"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.LicitRoleChange">[docs]</a><span class="k">class</span> <span class="nc">LicitRoleChange</span><span class="p">(</span><span class="n">FancyValidator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ensures that the role is not being changed by a non-administrator.&quot;&quot;&quot;</span>
+
+    <span class="n">messages</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;non_admin_role_update&#39;</span><span class="p">:</span> <span class="s">u&#39;Only administrators can update roles.&#39;</span><span class="p">}</span>
+
+<div class="viewcode-block" id="LicitRoleChange.validate_python"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.LicitRoleChange.validate_python">[docs]</a>    <span class="k">def</span> <span class="nf">validate_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;role&#39;</span><span class="p">)</span>
+        <span class="n">userToUpdate</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;userToUpdate&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">userAttemptingUpdate</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="n">userToUpdate</span> <span class="ow">and</span> <span class="n">userToUpdate</span><span class="p">[</span><span class="s">&#39;role&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">role</span> <span class="ow">and</span> \
+        <span class="n">userAttemptingUpdate</span><span class="p">[</span><span class="s">&#39;role&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">u&#39;administrator&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Invalid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="s">&#39;non_admin_role_update&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="s">&#39;role&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="UserSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.UserSchema">[docs]</a><span class="k">class</span> <span class="nc">UserSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;UserSchema is a Schema for validating the data submitted to</span>
+<span class="sd">    UsersController (controllers/users.py).</span>
+<span class="sd">    </span>
+<span class="sd">    Note: non-admins should not be able to edit their usernames or roles</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">chained_validators</span> <span class="o">=</span> <span class="p">[</span><span class="n">ValidUsernameAndPassword</span><span class="p">(),</span> <span class="n">LicitRoleChange</span><span class="p">()]</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">password_confirm</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">firstName</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">lastName</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">Email</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">affiliation</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">role</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">userRoles</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">markupLanguage</span> <span class="o">=</span> <span class="n">OneOf</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">markupLanguages</span><span class="p">)</span>
+    <span class="n">pageContent</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">inputOrthography</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Orthography&#39;</span><span class="p">)</span>
+    <span class="n">outputOrthography</span> <span class="o">=</span> <span class="n">ValidOLDModelObject</span><span class="p">(</span><span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Orthography&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PhonologySchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.schemata.PhonologySchema">[docs]</a><span class="k">class</span> <span class="nc">PhonologySchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;PhonologySchema is a Schema for validating the data submitted to</span>
+<span class="sd">    PhonologiesController (controllers/phonologies.py).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="o">=</span> <span class="n">UniqueUnicodeValue</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Phonology&#39;</span><span class="p">,</span> <span class="n">attributeName</span><span class="o">=</span><span class="s">&#39;name&#39;</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
+    <span class="n">script</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

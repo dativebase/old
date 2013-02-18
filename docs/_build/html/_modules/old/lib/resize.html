@@ -1,0 +1,174 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.lib.resize &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.lib.resize</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;The resize module contains functionality for creating copies/versions of</span>
+<span class="sd">image and audio files with reduced sizes.</span>
+
+<span class="sd">1. Image resizing using PIL</span>
+<span class="sd">2. wav-2-ogg conversion using ffmpeg</span>
+
+<span class="sd">The meta-function saveReducedCopy provides an interface to this functionality</span>
+<span class="sd">that is used in the create action of the files controller.  It handles .wav and</span>
+<span class="sd">image files appropriately and returns None for other file types.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">paste.deploy.converters</span> <span class="kn">import</span> <span class="n">asbool</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">call</span>
+<span class="kn">from</span> <span class="nn">old.lib.utils</span> <span class="kn">import</span> <span class="n">ffmpegEncodes</span><span class="p">,</span> <span class="n">getSubprocess</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">Image</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="saveReducedCopy"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.resize.saveReducedCopy">[docs]</a><span class="k">def</span> <span class="nf">saveReducedCopy</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Save a smaller copy of the file in files/reduced_files.  Only works if</span>
+<span class="sd">    the file is a .wav file or an image.  Returns None or the reduced file filename,</span>
+<span class="sd">    depending on whether the reduction failed or succeeded, repectively.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;filename&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">asbool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;create_reduced_size_file_copies&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="n">filesPath</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;app_conf&#39;</span><span class="p">][</span><span class="s">&#39;permanent_store&#39;</span><span class="p">]</span>
+        <span class="n">reducedFilesPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesPath</span><span class="p">,</span> <span class="s">&#39;reduced_files&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s">u&#39;image&#39;</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">saveReducedSizeImage</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">filesPath</span><span class="p">,</span> <span class="n">reducedFilesPath</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="o">==</span> <span class="s">u&#39;audio/x-wav&#39;</span><span class="p">:</span>
+            <span class="n">format_</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;preferred_lossy_audio_format&#39;</span><span class="p">,</span> <span class="s">&#39;ogg&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">saveWavAs</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">format_</span><span class="p">,</span> <span class="n">filesPath</span><span class="p">,</span> <span class="n">reducedFilesPath</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="bp">None</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># Image Resizing using PIL</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="saveReducedSizeImage"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.resize.saveReducedSizeImage">[docs]</a><span class="k">def</span> <span class="nf">saveReducedSizeImage</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">filesPath</span><span class="p">,</span> <span class="n">reducedFilesPath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function saves a size-reduced copy of the image to</span>
+<span class="sd">    files/reduced_files.  Input is an OLD file model object.  Image formats are</span>
+<span class="sd">    retained.  If the file is already shorter or narrower than size (defaults to</span>
+<span class="sd">    500px x 500px), then no reduced copy is created and None is returned.  If</span>
+<span class="sd">    successful, the name of the reduced image is returned.  None is returned if</span>
+<span class="sd">    PIL is not installed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">inPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesPath</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">outPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reducedFilesPath</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">500</span>
+        <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">inPath</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="n">im</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">Image</span><span class="o">.</span><span class="n">ANTIALIAS</span><span class="p">)</span>
+        <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outPath</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># .wav-2-.ogg conversion using ffmpeg</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="saveWavAs"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.resize.saveWavAs">[docs]</a><span class="k">def</span> <span class="nf">saveWavAs</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">format_</span><span class="p">,</span> <span class="n">filesPath</span><span class="p">,</span> <span class="n">reducedFilesPath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Attempts to use ffmpeg to create a lossy copy of the contents of file in</span>
+<span class="sd">    files/reduced_files according to the format (i.e., &#39;ogg&#39; or &#39;mp3&#39;).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ffmpegEncodes</span><span class="p">(</span><span class="n">format_</span><span class="p">):</span>
+            <span class="n">format_</span> <span class="o">=</span> <span class="s">&#39;ogg&#39;</span>     <span class="c"># .ogg is the default</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ffmpegEncodes</span><span class="p">(</span><span class="n">format_</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">inPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filesPath</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+            <span class="n">outName</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">format_</span><span class="p">)</span>
+            <span class="n">outPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reducedFilesPath</span><span class="p">,</span> <span class="n">outName</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fnull</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">call</span><span class="p">([</span><span class="s">&#39;ffmpeg&#39;</span><span class="p">,</span> <span class="s">&#39;-i&#39;</span><span class="p">,</span> <span class="n">inPath</span><span class="p">,</span> <span class="n">outPath</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">fnull</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">fnull</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">outPath</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">outName</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

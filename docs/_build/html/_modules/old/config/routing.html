@@ -1,0 +1,180 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.config.routing &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.config.routing</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Routes configuration</span>
+
+<span class="sd">The more specific and detailed routes should be defined first so they</span>
+<span class="sd">may take precedent over the more generic routes. For more information</span>
+<span class="sd">refer to the routes manual at http://routes.groovie.org/docs/</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">routes</span> <span class="kn">import</span> <span class="n">Mapper</span>
+
+<div class="viewcode-block" id="searchConnect"><a class="viewcode-back" href="../../../api/old.config.html#old.config.routing.searchConnect">[docs]</a><span class="k">def</span> <span class="nf">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">controller</span> <span class="o">=</span> <span class="n">controller</span> <span class="ow">or</span> <span class="n">name</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="n">controller</span><span class="p">,</span>
+                <span class="n">action</span><span class="o">=</span><span class="s">&#39;search&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;SEARCH&#39;</span><span class="p">))</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/</span><span class="si">%s</span><span class="s">/search&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="n">controller</span><span class="p">,</span>
+                <span class="n">action</span><span class="o">=</span><span class="s">&#39;search&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">))</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/</span><span class="si">%s</span><span class="s">/new_search&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="n">controller</span><span class="p">,</span>
+                <span class="n">action</span><span class="o">=</span><span class="s">&#39;new_search&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;GET&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">map</span>
+</div>
+<div class="viewcode-block" id="make_map"><a class="viewcode-back" href="../../../api/old.config.html#old.config.routing.make_map">[docs]</a><span class="k">def</span> <span class="nf">make_map</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create, configure and return the routes Mapper&quot;&quot;&quot;</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">Mapper</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.paths&#39;</span><span class="p">][</span><span class="s">&#39;controllers&#39;</span><span class="p">],</span>
+                 <span class="n">always_scan</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;debug&#39;</span><span class="p">])</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">minimization</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">explicit</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="c"># The ErrorController route (handles 404/500 error pages); it should</span>
+    <span class="c"># likely stay at the top, ensuring it can always be resolved</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/error/{action}&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;error&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/error/{action}/{id}&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;error&#39;</span><span class="p">)</span>
+
+    <span class="c"># CUSTOM ROUTES HERE</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/collections/history/{id}&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;oldcollections&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;history&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/files/serve/{id}&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;files&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;serve&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/files/serve_reduced/{id}&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;files&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;serve_reduced&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/forms/history/{id}&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;forms&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;history&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/forms/remember&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;forms&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;remember&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/forms/update_morpheme_references&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;forms&#39;</span><span class="p">,</span>
+                <span class="n">action</span><span class="o">=</span><span class="s">&#39;update_morpheme_references&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;PUT&#39;</span><span class="p">))</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/login/authenticate&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;login&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;authenticate&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/login/logout&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;login&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;logout&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;/login/email_reset_password&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;login&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;email_reset_password&#39;</span><span class="p">)</span>
+
+    <span class="c"># SEARCH routes</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;collectionbackups&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;collections&#39;</span><span class="p">,</span> <span class="s">&#39;oldcollections&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;files&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;formbackups&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;forms&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;formsearches&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;languages&#39;</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="n">searchConnect</span><span class="p">(</span><span class="nb">map</span><span class="p">,</span> <span class="s">&#39;sources&#39;</span><span class="p">)</span>
+
+    <span class="c"># rememberedforms &quot;resource&quot;</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;rememberedforms&quot;</span><span class="p">,</span> <span class="s">&quot;/rememberedforms/{id}&quot;</span><span class="p">,</span>
+        <span class="n">controller</span><span class="o">=</span><span class="s">&quot;rememberedforms&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&quot;show&quot;</span><span class="p">,</span>
+        <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;GET&quot;</span><span class="p">]))</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;/rememberedforms/{id}&quot;</span><span class="p">,</span>
+        <span class="n">controller</span><span class="o">=</span><span class="s">&quot;rememberedforms&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&quot;update&quot;</span><span class="p">,</span>
+        <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;PUT&quot;</span><span class="p">]))</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;rememberedforms&quot;</span><span class="p">,</span> <span class="s">&quot;/rememberedforms/{id}&quot;</span><span class="p">,</span>
+        <span class="n">controller</span><span class="o">=</span><span class="s">&#39;rememberedforms&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;search&#39;</span><span class="p">,</span>
+        <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;SEARCH&#39;</span><span class="p">))</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;/rememberedforms/{id}/search&quot;</span><span class="p">,</span>
+        <span class="n">controller</span><span class="o">=</span><span class="s">&#39;rememberedforms&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;search&#39;</span><span class="p">,</span>
+        <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">))</span>
+
+    <span class="c"># RESTful resoure mappings</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;applicationsetting&#39;</span><span class="p">,</span> <span class="s">&#39;applicationsettings&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;collection&#39;</span><span class="p">,</span> <span class="s">&#39;collections&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;oldcollections&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;collectionbackup&#39;</span><span class="p">,</span> <span class="s">&#39;collectionbackups&#39;</span><span class="p">)</span>       <span class="c"># read-only</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;elicitationmethod&#39;</span><span class="p">,</span> <span class="s">&#39;elicitationmethods&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;file&#39;</span><span class="p">,</span> <span class="s">&#39;files&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;form&#39;</span><span class="p">,</span> <span class="s">&#39;forms&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;formsearch&#39;</span><span class="p">,</span> <span class="s">&#39;formsearches&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;formbackup&#39;</span><span class="p">,</span> <span class="s">&#39;formbackups&#39;</span><span class="p">)</span>       <span class="c"># read-only</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;gloss&#39;</span><span class="p">,</span> <span class="s">&#39;glosses&#39;</span><span class="p">)</span>                <span class="c"># read-only</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;language&#39;</span><span class="p">,</span> <span class="s">&#39;languages&#39;</span><span class="p">)</span>           <span class="c"># read-only</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;orthography&#39;</span><span class="p">,</span> <span class="s">&#39;orthographies&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;page&#39;</span><span class="p">,</span> <span class="s">&#39;pages&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;phonology&#39;</span><span class="p">,</span> <span class="s">&#39;phonologies&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;source&#39;</span><span class="p">,</span> <span class="s">&#39;sources&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;speaker&#39;</span><span class="p">,</span> <span class="s">&#39;speakers&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;syntacticcategory&#39;</span><span class="p">,</span> <span class="s">&#39;syntacticcategories&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;tag&#39;</span><span class="p">,</span> <span class="s">&#39;tags&#39;</span><span class="p">)</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="s">&#39;users&#39;</span><span class="p">)</span>
+
+    <span class="c"># Map &#39;/collections&#39; to oldcollections controller (conflict with Python</span>
+    <span class="c"># collections module).</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;collections&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="s">&#39;oldcollections&#39;</span><span class="p">)</span>
+
+    <span class="c"># Pylons Defaults</span>
+    <span class="c">#map.connect(&#39;/{controller}/{action}&#39;)</span>
+    <span class="c">#map.connect(&#39;/{controller}/{id}/{action}&#39;)</span>
+
+    <span class="k">return</span> <span class="nb">map</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

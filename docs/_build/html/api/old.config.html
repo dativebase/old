@@ -1,0 +1,172 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>config Package &mdash; OLD 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="OLD 1.0.0 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="config-package">
+<h1>config Package<a class="headerlink" href="#config-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-old.config.environment">
+<span id="environment-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">environment</span></tt> Module<a class="headerlink" href="#module-old.config.environment" title="Permalink to this headline">¶</a></h2>
+<p>Pylons environment configuration</p>
+<dl class="function">
+<dt id="old.config.environment.load_environment">
+<tt class="descclassname">old.config.environment.</tt><tt class="descname">load_environment</tt><big>(</big><em>global_conf</em>, <em>app_conf</em><big>)</big><a class="reference internal" href="../_modules/old/config/environment.html#load_environment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.config.environment.load_environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure the Pylons environment via the <tt class="docutils literal"><span class="pre">pylons.config</span></tt>
+object</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.config.middleware">
+<span id="middleware-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">middleware</span></tt> Module<a class="headerlink" href="#module-old.config.middleware" title="Permalink to this headline">¶</a></h2>
+<p>Pylons middleware initialization</p>
+<dl class="class">
+<dt id="old.config.middleware.HTML2JSONContentType">
+<em class="property">class </em><tt class="descclassname">old.config.middleware.</tt><tt class="descname">HTML2JSONContentType</tt><big>(</big><em>app</em><big>)</big><a class="reference internal" href="../_modules/old/config/middleware.html#HTML2JSONContentType"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.config.middleware.HTML2JSONContentType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Brute force text/html Content-Type in response to application/json.
+Take that Pylons!</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.config.middleware.make_app">
+<tt class="descclassname">old.config.middleware.</tt><tt class="descname">make_app</tt><big>(</big><em>global_conf</em>, <em>full_stack=False</em>, <em>static_files=True</em>, <em>**app_conf</em><big>)</big><a class="reference internal" href="../_modules/old/config/middleware.html#make_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.config.middleware.make_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Pylons WSGI application and return it</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">global_conf</span></tt></dt>
+<dd>The inherited configuration for this application. Normally from
+the [DEFAULT] section of the Paste ini file.</dd>
+<dt><tt class="docutils literal"><span class="pre">full_stack</span></tt></dt>
+<dd>Whether this application provides a full WSGI stack (by default,
+meaning it handles its own exceptions and errors). Disable
+full_stack when this application is &#8220;managed&#8221; by another WSGI
+middleware.</dd>
+<dt><tt class="docutils literal"><span class="pre">static_files</span></tt></dt>
+<dd>Whether this application serves its own static files; disable
+when another web server is responsible for serving them.</dd>
+<dt><tt class="docutils literal"><span class="pre">app_conf</span></tt></dt>
+<dd>The application&#8217;s local configuration. Normally specified in
+the [app:&lt;name&gt;] section of the Paste ini file (where &lt;name&gt;
+defaults to main).</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.config.routing">
+<span id="routing-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">routing</span></tt> Module<a class="headerlink" href="#module-old.config.routing" title="Permalink to this headline">¶</a></h2>
+<p>Routes configuration</p>
+<p>The more specific and detailed routes should be defined first so they
+may take precedent over the more generic routes. For more information
+refer to the routes manual at <a class="reference external" href="http://routes.groovie.org/docs/">http://routes.groovie.org/docs/</a></p>
+<dl class="function">
+<dt id="old.config.routing.make_map">
+<tt class="descclassname">old.config.routing.</tt><tt class="descname">make_map</tt><big>(</big><em>config</em><big>)</big><a class="reference internal" href="../_modules/old/config/routing.html#make_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.config.routing.make_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create, configure and return the routes Mapper</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.config.routing.searchConnect">
+<tt class="descclassname">old.config.routing.</tt><tt class="descname">searchConnect</tt><big>(</big><em>map</em>, <em>name</em>, <em>controller=None</em><big>)</big><a class="reference internal" href="../_modules/old/config/routing.html#searchConnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.config.routing.searchConnect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">config Package</a><ul>
+<li><a class="reference internal" href="#module-old.config.environment"><tt class="docutils literal"><span class="pre">environment</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.config.middleware"><tt class="docutils literal"><span class="pre">middleware</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.config.routing"><tt class="docutils literal"><span class="pre">routing</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/old.config.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

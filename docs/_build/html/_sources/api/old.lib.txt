@@ -1,0 +1,83 @@
+lib Package
+===========
+
+:mod:`SQLAQueryBuilder` Module
+------------------------------
+
+.. automodule:: old.lib.SQLAQueryBuilder
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`app_globals` Module
+-------------------------
+
+.. automodule:: old.lib.app_globals
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`auth` Module
+------------------
+
+.. automodule:: old.lib.auth
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`base` Module
+------------------
+
+.. automodule:: old.lib.base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`bibtex` Module
+--------------------
+
+.. automodule:: old.lib.bibtex
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`helpers` Module
+---------------------
+
+.. automodule:: old.lib.helpers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`orthography` Module
+-------------------------
+
+.. automodule:: old.lib.orthography
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`resize` Module
+--------------------
+
+.. automodule:: old.lib.resize
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`schemata` Module
+----------------------
+
+.. automodule:: old.lib.schemata
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`utils` Module
+-------------------
+
+.. automodule:: old.lib.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

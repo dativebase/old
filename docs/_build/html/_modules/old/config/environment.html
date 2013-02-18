@@ -1,0 +1,189 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.config.environment &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.config.environment</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Pylons environment configuration&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">mako.lookup</span> <span class="kn">import</span> <span class="n">TemplateLookup</span>
+<span class="kn">from</span> <span class="nn">pylons.configuration</span> <span class="kn">import</span> <span class="n">PylonsConfig</span>
+<span class="kn">from</span> <span class="nn">pylons.error</span> <span class="kn">import</span> <span class="n">handle_mako_error</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">engine_from_config</span>
+
+<span class="kn">import</span> <span class="nn">old.lib.app_globals</span> <span class="kn">as</span> <span class="nn">app_globals</span>
+<span class="kn">import</span> <span class="nn">old.lib.helpers</span>
+<span class="kn">from</span> <span class="nn">old.config.routing</span> <span class="kn">import</span> <span class="n">make_map</span>
+<span class="kn">from</span> <span class="nn">old.model</span> <span class="kn">import</span> <span class="n">init_model</span>
+
+<div class="viewcode-block" id="load_environment"><a class="viewcode-back" href="../../../api/old.config.html#old.config.environment.load_environment">[docs]</a><span class="k">def</span> <span class="nf">load_environment</span><span class="p">(</span><span class="n">global_conf</span><span class="p">,</span> <span class="n">app_conf</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Configure the Pylons environment via the ``pylons.config``</span>
+<span class="sd">    object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">PylonsConfig</span><span class="p">()</span>
+    
+    <span class="c"># Pylons paths</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">)))</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">,</span>
+                 <span class="n">controllers</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s">&#39;controllers&#39;</span><span class="p">),</span>
+                 <span class="n">static_files</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s">&#39;public&#39;</span><span class="p">),</span>
+                 <span class="n">templates</span><span class="o">=</span><span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s">&#39;templates&#39;</span><span class="p">)])</span>
+
+    <span class="c"># Initialize config with the basic options</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">global_conf</span><span class="p">,</span> <span class="n">app_conf</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="s">&#39;old&#39;</span><span class="p">,</span> <span class="n">paths</span><span class="o">=</span><span class="n">paths</span><span class="p">)</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="s">&#39;routes.map&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_map</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.app_globals&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">app_globals</span><span class="o">.</span><span class="n">Globals</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.h&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">old</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">helpers</span>
+    
+    <span class="c"># Setup cache object as early as possible</span>
+    <span class="kn">import</span> <span class="nn">pylons</span>
+    <span class="n">pylons</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">_push_object</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.app_globals&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">cache</span><span class="p">)</span>
+
+    <span class="c"># Create the Mako TemplateLookup, with the default auto-escaping</span>
+    <span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.app_globals&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mako_lookup</span> <span class="o">=</span> <span class="n">TemplateLookup</span><span class="p">(</span>
+        <span class="n">directories</span><span class="o">=</span><span class="n">paths</span><span class="p">[</span><span class="s">&#39;templates&#39;</span><span class="p">],</span>
+        <span class="n">error_handler</span><span class="o">=</span><span class="n">handle_mako_error</span><span class="p">,</span>
+        <span class="n">module_directory</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app_conf</span><span class="p">[</span><span class="s">&#39;cache_dir&#39;</span><span class="p">],</span> <span class="s">&#39;templates&#39;</span><span class="p">),</span>
+        <span class="n">input_encoding</span><span class="o">=</span><span class="s">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">default_filters</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;escape&#39;</span><span class="p">],</span>
+        <span class="n">imports</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;from webhelpers.html import escape&#39;</span><span class="p">])</span>
+
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">engine_from_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s">&#39;sqlalchemy.&#39;</span><span class="p">)</span>
+
+    <span class="c"># CONFIGURATION OPTIONS HERE (note: all config options will override</span>
+    <span class="c"># any Pylons config options)</span>
+
+    <span class="c"># Patch the SQLAlchemy database engine if SQLite is the RDBMS.  Add a REGEXP</span>
+    <span class="c"># function and make LIKE searches case-sensitive.</span>
+    <span class="n">RDBMSName</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;sqlalchemy.url&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">app_globals</span><span class="o">.</span><span class="n">RDBMSName</span> <span class="o">=</span> <span class="n">RDBMSName</span>
+    <span class="k">if</span> <span class="n">RDBMSName</span> <span class="o">==</span> <span class="s">&#39;sqlite&#39;</span><span class="p">:</span>
+        <span class="c"># Try to use the event API of SQLA&gt;=0.7; otherwise use a PoolListener a l SQLA ca. 0.5.8</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">event</span>
+            <span class="kn">from</span> <span class="nn">sqlalchemy.engine</span> <span class="kn">import</span> <span class="n">Engine</span>
+            <span class="nd">@event.listens_for</span><span class="p">(</span><span class="n">Engine</span><span class="p">,</span> <span class="s">&#39;connect&#39;</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">sqlite_patches</span><span class="p">(</span><span class="n">dbapi_connection</span><span class="p">,</span> <span class="n">connection_record</span><span class="p">):</span>
+                <span class="c"># Define a regexp function for SQLite,</span>
+                <span class="k">def</span> <span class="nf">regexp</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+                    <span class="sd">&quot;&quot;&quot;This is the Python re-based regexp function that we provide</span>
+<span class="sd">                    for SQLite.  Note that searches will be case-sensitive by</span>
+<span class="sd">                    default.  Such behaviour is assured in MySQL by inserting</span>
+<span class="sd">                    COLLATE expressions into the query (cf. in SQLAQueryBuilder.py).</span>
+<span class="sd">                    &quot;&quot;&quot;</span>
+                    <span class="n">patt</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">item</span> <span class="ow">and</span> <span class="n">patt</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+                    <span class="c"># This will make regexp searches work on int, date &amp; datetime fields.</span>
+                    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">item</span> <span class="ow">and</span> <span class="n">patt</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+                <span class="n">dbapi_connection</span><span class="o">.</span><span class="n">create_function</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">regexp</span><span class="p">)</span>
+                <span class="c"># Make LIKE searches case-sensitive in SQLite.</span>
+                <span class="n">cursor</span> <span class="o">=</span> <span class="n">dbapi_connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;PRAGMA case_sensitive_like=ON&quot;</span><span class="p">)</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sqlalchemy.interfaces</span> <span class="kn">import</span> <span class="n">PoolListener</span>
+            <span class="n">engine</span> <span class="o">=</span> <span class="n">engine_from_config</span><span class="p">(</span>
+                <span class="n">config</span><span class="p">,</span> <span class="s">&#39;sqlalchemy.&#39;</span><span class="p">,</span> <span class="n">listeners</span><span class="o">=</span><span class="p">[</span><span class="n">SQLiteSetup</span><span class="p">()])</span>
+            <span class="c"># Make LIKE searches case sensitive in SQLite</span>
+            <span class="n">engine</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&#39;PRAGMA case_sensitive_like=ON&#39;</span><span class="p">)</span>        
+            <span class="k">class</span> <span class="nc">SQLiteSetup</span><span class="p">(</span><span class="n">PoolListener</span><span class="p">):</span>
+                <span class="sd">&quot;&quot;&quot;A PoolListener used to provide the SQLite dbapi with a regexp function.</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+                <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn_record</span><span class="p">):</span>
+                    <span class="n">conn</span><span class="o">.</span><span class="n">create_function</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">regexp</span><span class="p">)</span>
+            
+                <span class="k">def</span> <span class="nf">regexp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expr</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+                    <span class="sd">&quot;&quot;&quot;This is the Python re-based regexp function that we provide for SQLite.</span>
+<span class="sd">                    Note that searches will be case-sensitive by default, which may not be</span>
+<span class="sd">                    the default for the MySQL regexp, depending on the collation.&quot;&quot;&quot;</span>
+                    <span class="n">patt</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">item</span> <span class="ow">and</span> <span class="n">patt</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+                    <span class="c"># This will make regexp searches work on int, date &amp; datetime fields.</span>
+                    <span class="c"># I think this is desirable ...</span>
+                    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">item</span> <span class="ow">and</span> <span class="n">patt</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+
+    <span class="n">init_model</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

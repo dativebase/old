@@ -1,0 +1,153 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.model.user &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="old.model" href="../model.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../model.html" accesskey="U">old.model</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.model.user</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;User model&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="kn">import</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">Unicode</span><span class="p">,</span> <span class="n">UnicodeText</span><span class="p">,</span> <span class="n">Date</span><span class="p">,</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">relation</span><span class="p">,</span> <span class="n">backref</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Base</span><span class="p">,</span> <span class="n">now</span>
+
+<div class="viewcode-block" id="UserForm"><a class="viewcode-back" href="../../../api/old.model.html#old.model.user.UserForm">[docs]</a><span class="k">class</span> <span class="nc">UserForm</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;userform&#39;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;mysql_charset&#39;</span><span class="p">:</span> <span class="s">&#39;utf8&#39;</span><span class="p">}</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">(</span><span class="s">&#39;userform_seq_id&#39;</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">form_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;form.id&#39;</span><span class="p">))</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;user.id&#39;</span><span class="p">))</span>
+    <span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="User"><a class="viewcode-back" href="../../../api/old.model.html#old.model.user.User">[docs]</a><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;user&#39;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;mysql_charset&#39;</span><span class="p">:</span> <span class="s">&#39;utf8&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;User (</span><span class="si">%s</span><span class="s">)&gt;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">(</span><span class="s">&#39;user_seq_id&#39;</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">salt</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">firstName</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">lastName</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">affiliation</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">role</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">markupLanguage</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">pageContent</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">inputOrthography_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;orthography.id&#39;</span><span class="p">))</span>
+    <span class="n">inputOrthography</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;Orthography&#39;</span><span class="p">,</span>
+        <span class="n">primaryjoin</span><span class="o">=</span><span class="s">&#39;User.inputOrthography_id==Orthography.id&#39;</span><span class="p">)</span>
+    <span class="n">outputOrthography_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;orthography.id&#39;</span><span class="p">))</span>
+    <span class="n">outputOrthography</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;Orthography&#39;</span><span class="p">,</span>
+        <span class="n">primaryjoin</span><span class="o">=</span><span class="s">&#39;User.outputOrthography_id==Orthography.id&#39;</span><span class="p">)</span>
+    <span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
+    <span class="n">rememberedForms</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="n">UserForm</span><span class="o">.</span><span class="n">__table__</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="s">&#39;memorizers&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="User.getDict"><a class="viewcode-back" href="../../../api/old.model.html#old.model.user.User.getDict">[docs]</a>    <span class="k">def</span> <span class="nf">getDict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s">&#39;firstName&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">firstName</span><span class="p">,</span>
+            <span class="s">&#39;lastName&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">lastName</span><span class="p">,</span>
+            <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+            <span class="s">&#39;affiliation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">affiliation</span><span class="p">,</span>
+            <span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">role</span><span class="p">,</span>
+            <span class="s">&#39;markupLanguage&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">markupLanguage</span><span class="p">,</span>
+            <span class="s">&#39;pageContent&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pageContent</span><span class="p">,</span>
+            <span class="s">&#39;html&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">html</span><span class="p">,</span>
+            <span class="s">&#39;inputOrthography&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMiniOrthographyDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="p">),</span>
+            <span class="s">&#39;outputOrthography&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMiniOrthographyDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span><span class="p">),</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">datetimeModified</span>
+        <span class="p">}</span>
+</div>
+<div class="viewcode-block" id="User.getFullDict"><a class="viewcode-back" href="../../../api/old.model.html#old.model.user.User.getFullDict">[docs]</a>    <span class="k">def</span> <span class="nf">getFullDict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">userDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+        <span class="n">userDict</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span>
+        <span class="k">return</span> <span class="n">userDict</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  <li><a href="../model.html">old.model</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

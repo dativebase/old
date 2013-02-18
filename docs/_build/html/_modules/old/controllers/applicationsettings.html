@@ -1,0 +1,404 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.controllers.applicationsettings &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.controllers.applicationsettings</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">desc</span><span class="p">,</span> <span class="n">asc</span>
+<span class="kn">from</span> <span class="nn">old.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">old.lib.schemata</span> <span class="kn">import</span> <span class="n">ApplicationSettingsSchema</span>
+<span class="kn">import</span> <span class="nn">old.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">old.model</span> <span class="kn">import</span> <span class="n">ApplicationSettings</span><span class="p">,</span> <span class="n">Orthography</span><span class="p">,</span> <span class="n">User</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ApplicationsettingsController"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController">[docs]</a><span class="k">class</span> <span class="nc">ApplicationsettingsController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;REST Controller styled on the Atom Publishing Protocol.</span>
+<span class="sd">    </span>
+<span class="sd">    Note: the application settings are an unusual resource.  There is only</span>
+<span class="sd">    really one item that is relevant: the most recent one.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="ApplicationsettingsController.index"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /applicationsettings: return all application settings models as</span>
+<span class="sd">        JSON objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadApplicationSettings</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">ApplicationSettings</span><span class="p">))</span>\
+                    <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">asc</span><span class="p">(</span><span class="n">ApplicationSettings</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="ApplicationsettingsController.create"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;POST /applicationsettings: Create a new application settings record.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">ApplicationSettingsSchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">createNewApplicationSettings</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">app_globals</span><span class="o">.</span><span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">applicationSettings</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="ApplicationsettingsController.new"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /applicationsettings/new: Return the data necessary to create a new application settings.</span>
+
+<span class="sd">        Return a JSON object with the following properties: &#39;languages&#39;,</span>
+<span class="sd">        &#39;users&#39; and &#39;orthographies&#39;, the value of each of which is an array that</span>
+<span class="sd">        is either empty or contains the appropriate objects.</span>
+
+<span class="sd">        See the getNewApplicationSettingsData function to understand how the GET</span>
+<span class="sd">        params can affect the contents of the arrays.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">getNewApplicationSettingsData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="ApplicationsettingsController.update"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;PUT /applicationsettings/id: Update an existing application settings.&quot;&quot;&quot;</span>
+        <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadApplicationSettings</span><span class="p">(</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">ApplicationSettings</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">applicationSettings</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">schema</span> <span class="o">=</span> <span class="n">ApplicationSettingsSchema</span><span class="p">()</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                <span class="c"># Try to create an updated ApplicationSetting object.</span>
+                <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">updateApplicationSettings</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                <span class="c"># applicationSettings will be False if there are no changes</span>
+                <span class="k">if</span> <span class="n">applicationSettings</span><span class="p">:</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">)</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="n">app_globals</span><span class="o">.</span><span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">applicationSettings</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+            <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+            <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no application settings with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="ApplicationsettingsController.delete"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;DELETE /applicationsettings/id: Delete an existing application settings.&quot;&quot;&quot;</span>
+        <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadApplicationSettings</span><span class="p">(</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">ApplicationSettings</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">applicationSettings</span><span class="p">:</span>
+            <span class="n">activeApplicationSettingsId</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">getApplicationSettings</span><span class="p">(),</span> <span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="n">toBeDeletedApplicationSettingsId</span> <span class="o">=</span> <span class="n">applicationSettings</span><span class="o">.</span><span class="n">id</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">activeApplicationSettingsId</span> <span class="o">==</span> <span class="n">toBeDeletedApplicationSettingsId</span><span class="p">:</span>
+                <span class="n">app_globals</span><span class="o">.</span><span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">applicationSettings</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no application settings with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="ApplicationsettingsController.show"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /applicationsettings/id: Return a JSON object representation of</span>
+<span class="sd">        the application settings with id=id.</span>
+
+<span class="sd">        If the id is invalid, &#39;null&#39; (None) will be returned.  If the</span>
+<span class="sd">        id is unspecified, a &#39;404 Not Found&#39; status code will be returned along</span>
+<span class="sd">        with a JSON.stringified {error: &#39;404 Not Found&#39;} object (see the</span>
+<span class="sd">        error.py controller).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadApplicationSettings</span><span class="p">(</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">ApplicationSettings</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">applicationSettings</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">applicationSettings</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no application settings with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="ApplicationsettingsController.edit"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.ApplicationsettingsController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /applicationsettings/id/edit: Return the data necessary to update</span>
+<span class="sd">        an existing application settings, i.e., the application settings&#39;</span>
+<span class="sd">        properties and the necessary additional data, i.e., orthographies,</span>
+<span class="sd">        languages, and users.</span>
+
+<span class="sd">        This action can be thought of as a combination of the &#39;show&#39; and &#39;new&#39;</span>
+<span class="sd">        actions.  The output will be a JSON object of the form</span>
+
+<span class="sd">            {applicationSettings: {...}, data: {...}},</span>
+
+<span class="sd">        where output.applicationSettings is an object containing the application</span>
+<span class="sd">        settings&#39; properties (cf. the output of show) and output.data is an</span>
+<span class="sd">        object containing the data required to add a new application settings</span>
+<span class="sd">        (cf. the output of new).</span>
+
+<span class="sd">        GET parameters will affect the value of output.data in the same way as</span>
+<span class="sd">        for the new action, i.e., no params will result in all the necessary</span>
+<span class="sd">        output.data being retrieved from the db while specified params will</span>
+<span class="sd">        result in selective retrieval (see getNewApplicationSettingsData for</span>
+<span class="sd">        details).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadApplicationSettings</span><span class="p">(</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">ApplicationSettings</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">applicationSettings</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="n">getNewApplicationSettingsData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span>
+                    <span class="s">&#39;applicationSettings&#39;</span><span class="p">:</span> <span class="n">applicationSettings</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no application settings with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+
+</div></div>
+<div class="viewcode-block" id="getNewApplicationSettingsData"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.getNewApplicationSettingsData">[docs]</a><span class="k">def</span> <span class="nf">getNewApplicationSettingsData</span><span class="p">(</span><span class="n">GET_params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new ApplicationSettings or update</span>
+<span class="sd">    an existing one.  The GET_params parameter is the request.GET dictionary-</span>
+<span class="sd">    like object generated by Pylons.</span>
+
+<span class="sd">    If no parameters are provided (i.e., GET_params is empty), then retrieve all</span>
+<span class="sd">    data (i.e., users, orthographies and languages) from the db and return them.</span>
+
+<span class="sd">    If parameters are specified, then for each parameter whose value is a</span>
+<span class="sd">    non-empty string (and is not a valid ISO 8601 datetime), retrieve and</span>
+<span class="sd">    return the appropriate list of objects.</span>
+
+<span class="sd">    If the value of a parameter is a valid ISO 8601 datetime string,</span>
+<span class="sd">    retrieve and return the appropriate list of objects *only* if the</span>
+<span class="sd">    datetime param does *not* match the most recent datetimeModified value</span>
+<span class="sd">    of the relevant data store.  This makes sense because a non-match indicates</span>
+<span class="sd">    that the requester has out-of-date data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># modelNameMap maps param names to the OLD model objects from which they are</span>
+    <span class="c"># derived.</span>
+    <span class="n">modelNameMap</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span>
+        <span class="s">&#39;orthographies&#39;</span><span class="p">:</span> <span class="s">&#39;Orthography&#39;</span><span class="p">,</span>
+        <span class="s">&#39;languages&#39;</span><span class="p">:</span> <span class="s">&#39;Language&#39;</span>
+    <span class="p">}</span>
+
+    <span class="c"># getterMap maps param names to getter functions that retrieve the</span>
+    <span class="c"># appropriate data from the db.</span>
+    <span class="n">getterMap</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">),</span>
+        <span class="s">&#39;orthographies&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Orthography&#39;</span><span class="p">),</span>
+        <span class="s">&#39;languages&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getLanguages</span>
+    <span class="p">}</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getDataForNewAction</span><span class="p">(</span><span class="n">GET_params</span><span class="p">,</span> <span class="n">getterMap</span><span class="p">,</span> <span class="n">modelNameMap</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+</div>
+<div class="viewcode-block" id="createNewApplicationSettings"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.createNewApplicationSettings">[docs]</a><span class="k">def</span> <span class="nf">createNewApplicationSettings</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a new ApplicationSettings model object given a data dictionary</span>
+<span class="sd">    provided by the user (as a JSON object).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Create the applicationSettings model object.</span>
+    <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">ApplicationSettings</span><span class="p">()</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">objectLanguageName</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;objectLanguageName&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">objectLanguageId</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;objectLanguageId&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">metalanguageName</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;metalanguageName&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">metalanguageId</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;metalanguageId&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">metalanguageInventory</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">&#39;metalanguageInventory&#39;</span><span class="p">]))</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">orthographicValidation</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;orthographicValidation&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">narrowPhoneticInventory</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">&#39;narrowPhoneticInventory&#39;</span><span class="p">]))</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">narrowPhoneticValidation</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;narrowPhoneticValidation&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">broadPhoneticInventory</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">&#39;broadPhoneticInventory&#39;</span><span class="p">]))</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">broadPhoneticValidation</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;broadPhoneticValidation&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">morphemeBreakIsOrthographic</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span>
+        <span class="s">&#39;morphemeBreakIsOrthographic&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">morphemeBreakValidation</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeBreakValidation&#39;</span><span class="p">]</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">phonemicInventory</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">&#39;phonemicInventory&#39;</span><span class="p">]))</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">morphemeDelimiters</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeDelimiters&#39;</span><span class="p">])</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">punctuation</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">&#39;punctuation&#39;</span><span class="p">]))</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">grammaticalities</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">&#39;grammaticalities&#39;</span><span class="p">]))</span>
+
+    <span class="c"># Many-to-One</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;storageOrthography&#39;</span><span class="p">]:</span>
+        <span class="n">applicationSettings</span><span class="o">.</span><span class="n">storageOrthography</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;storageOrthography&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;inputOrthography&#39;</span><span class="p">]:</span>
+        <span class="n">applicationSettings</span><span class="o">.</span><span class="n">inputOrthography</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;inputOrthography&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;outputOrthography&#39;</span><span class="p">]:</span>
+        <span class="n">applicationSettings</span><span class="o">.</span><span class="n">outputOrthography</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;outputOrthography&#39;</span><span class="p">]</span>
+
+    <span class="c"># Many-to-Many Data: unrestrictedUsers</span>
+    <span class="n">applicationSettings</span><span class="o">.</span><span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="p">[</span><span class="n">u</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;unrestrictedUsers&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">u</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">applicationSettings</span>
+
+</div>
+<div class="viewcode-block" id="updateApplicationSettings"><a class="viewcode-back" href="../../../api.html#old.controllers.applicationsettings.updateApplicationSettings">[docs]</a><span class="k">def</span> <span class="nf">updateApplicationSettings</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the input ApplicationSettings model object given a data dictionary</span>
+<span class="sd">    provided by the user (as a JSON object).  If changed is not set to true in</span>
+<span class="sd">    the course of attribute setting, then None is returned and no update occurs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="c"># Unicode Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;objectLanguageName&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;objectLanguageName&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;objectLanguageId&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;objectLanguageId&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;metalanguageName&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;metalanguageName&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;metalanguageId&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;metalanguageId&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;metalanguageInventory&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;metalanguageInventory&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;orthographicValidation&#39;</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">[</span><span class="s">&#39;orthographicValidation&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;narrowPhoneticInventory&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;narrowPhoneticInventory&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;narrowPhoneticValidation&#39;</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">[</span><span class="s">&#39;narrowPhoneticValidation&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;broadPhoneticInventory&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;broadPhoneticInventory&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;broadPhoneticValidation&#39;</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">[</span><span class="s">&#39;broadPhoneticValidation&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;morphemeBreakIsOrthographic&#39;</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeBreakIsOrthographic&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;morphemeBreakValidation&#39;</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeBreakValidation&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;phonemicInventory&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;phonemicInventory&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;morphemeDelimiters&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeDelimiters&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;punctuation&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;punctuation&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;grammaticalities&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;grammaticalities&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># Many-to-One</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;storageOrthography&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;storageOrthography&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;inputOrthography&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;inputOrthography&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">applicationSettings</span><span class="p">,</span> <span class="s">&#39;outputOrthography&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;outputOrthography&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># Many-to-Many Data: unrestrictedUsers</span>
+    <span class="c"># First check if the user has made any changes. If there are changes, just</span>
+    <span class="c"># delete all and replace with new.</span>
+    <span class="n">unrestrictedUsersToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">u</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;unrestrictedUsers&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">u</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">unrestrictedUsersToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">applicationSettings</span><span class="o">.</span><span class="n">unrestrictedUsers</span><span class="p">):</span>
+        <span class="n">applicationSettings</span><span class="o">.</span><span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">unrestrictedUsersToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">applicationSettings</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">applicationSettings</span>
+    <span class="k">return</span> <span class="n">changed</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

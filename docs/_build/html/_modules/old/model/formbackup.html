@@ -1,0 +1,302 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.model.formbackup &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="old.model" href="../model.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../model.html" accesskey="U">old.model</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.model.formbackup</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;FormBackup model</span>
+
+<span class="sd">Used to save Form data that has been updated or deleted.  This is a</span>
+<span class="sd">non-relational table, because keeping a copy of every single change relationally</span>
+<span class="sd">seemed like more trouble than it&#39;s worth.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="kn">import</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">Unicode</span><span class="p">,</span> <span class="n">UnicodeText</span><span class="p">,</span> <span class="n">Date</span><span class="p">,</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">relation</span><span class="p">,</span> <span class="n">backref</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Base</span><span class="p">,</span> <span class="n">now</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<div class="viewcode-block" id="FormBackup"><a class="viewcode-back" href="../../../api/old.model.html#old.model.formbackup.FormBackup">[docs]</a><span class="k">class</span> <span class="nc">FormBackup</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for creating OLD FormBackup models.</span>
+
+<span class="sd">    The vivify method takes a Form and a User object as input and populates a</span>
+<span class="sd">    number of Form-like attributes, converting relational attributes to JSON</span>
+<span class="sd">    objects.</span>
+
+<span class="sd">    The load method converts the JSON objects into Python Column objects, thus</span>
+<span class="sd">    allowing the FormBackup to behave more like a Form object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&quot;formbackup&quot;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;mysql_charset&#39;</span><span class="p">:</span> <span class="s">&#39;utf8&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;FormBackup (</span><span class="si">%s</span><span class="s">)&gt;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">(</span><span class="s">&#39;formbackup_seq_id&#39;</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">form_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">)</span>
+    <span class="n">UUID</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">36</span><span class="p">))</span>
+    <span class="n">transcription</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">phoneticTranscription</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">narrowPhoneticTranscription</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">morphemeBreak</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">morphemeGloss</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">comments</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">speakerComments</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">grammaticality</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">dateElicited</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Date</span><span class="p">)</span>
+    <span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">)</span>
+    <span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
+    <span class="n">syntacticCategoryString</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">morphemeBreakIDs</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">morphemeGlossIDs</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">breakGlossCategory</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">1023</span><span class="p">))</span>
+    <span class="n">elicitor</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">enterer</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">verifier</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">speaker</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">elicitationMethod</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">glosses</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span> 
+    <span class="n">backuper</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FormBackup.vivify"><a class="viewcode-back" href="../../../api/old.model.html#old.model.formbackup.FormBackup.vivify">[docs]</a>    <span class="k">def</span> <span class="nf">vivify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formDict</span><span class="p">,</span> <span class="n">backuper</span><span class="p">,</span> <span class="n">datetimeModified</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The vivify method gives life to FormBackup by specifying its</span>
+<span class="sd">        attributes using the to-be-backed-up form (formDict) and the backuper</span>
+<span class="sd">        (current user).  The relational attributes of the to-be-backed-up form</span>
+<span class="sd">        are converted into (truncated) JSON objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;UUID&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">form_id</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transcription</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;transcription&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phoneticTranscription</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;phoneticTranscription&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">narrowPhoneticTranscription</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">morphemeBreak</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">morphemeGloss</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grammaticality</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;grammaticality&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comments</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;comments&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">speakerComments</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;speakerComments&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dateElicited</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;datetimeEntered&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">datetimeModified</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetimeModified</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategoryString</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;syntacticCategoryString&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">morphemeBreakIDs</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;morphemeBreakIDs&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">morphemeGlossIDs</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;morphemeGlossIDs&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">breakGlossCategory</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;breakGlossCategory&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;elicitationMethod&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;syntacticCategory&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enterer</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;enterer&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verifier</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;verifier&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backuper</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getMiniUserDict</span><span class="p">(</span><span class="n">backuper</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">glosses</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;glosses&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">formDict</span><span class="p">[</span><span class="s">&#39;files&#39;</span><span class="p">]))</span>
+</div>
+<div class="viewcode-block" id="FormBackup.getDict"><a class="viewcode-back" href="../../../api/old.model.html#old.model.formbackup.FormBackup.getDict">[docs]</a>    <span class="k">def</span> <span class="nf">getDict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s">&#39;UUID&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span>
+            <span class="s">&#39;form_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">form_id</span><span class="p">,</span>
+            <span class="s">&#39;transcription&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">transcription</span><span class="p">,</span>
+            <span class="s">&#39;phoneticTranscription&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">phoneticTranscription</span><span class="p">,</span>
+            <span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">narrowPhoneticTranscription</span><span class="p">,</span>
+            <span class="s">&#39;morphemeBreak&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="p">,</span>
+            <span class="s">&#39;morphemeGloss&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="p">,</span>
+            <span class="s">&#39;grammaticality&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammaticality</span><span class="p">,</span>
+            <span class="s">&#39;comments&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">comments</span><span class="p">,</span>
+            <span class="s">&#39;speakerComments&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">speakerComments</span><span class="p">,</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dateElicited</span><span class="p">,</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">datetimeEntered</span><span class="p">,</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">datetimeModified</span><span class="p">,</span>
+            <span class="s">&#39;syntacticCategoryString&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategoryString</span><span class="p">,</span>
+            <span class="s">&#39;morphemeBreakIDs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">morphemeBreakIDs</span><span class="p">),</span>
+            <span class="s">&#39;morphemeGlossIDs&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">morphemeGlossIDs</span><span class="p">),</span>
+            <span class="s">&#39;breakGlossCategory&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">breakGlossCategory</span><span class="p">,</span>
+            <span class="s">&#39;elicitationMethod&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span><span class="p">),</span>
+            <span class="s">&#39;syntacticCategory&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">),</span>
+            <span class="s">&#39;source&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">),</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">),</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="p">),</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="p">),</span>
+            <span class="s">&#39;verifier&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verifier</span><span class="p">),</span>
+            <span class="s">&#39;backuper&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backuper</span><span class="p">),</span>
+            <span class="s">&#39;glosses&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">glosses</span><span class="p">),</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
+            <span class="s">&#39;files&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonLoads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+        <span class="p">}</span>
+</div>
+<div class="viewcode-block" id="FormBackup.load"><a class="viewcode-back" href="../../../api/old.model.html#old.model.formbackup.FormBackup.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert the JSON objects back into Column objects, thus making the</span>
+<span class="sd">        FormBackup behave just like a Form object.  Almost.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span><span class="p">:</span>
+            <span class="n">elicitationMethod</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">elicitationMethod</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitationMethod</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">elicitationMethod</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">:</span>
+            <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">syntacticCategory</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">syntacticCategory</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">authorFirstName</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s">&#39;authorFirstName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">authorLastName</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s">&#39;authorLastName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">fullReference</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s">&#39;fullReference&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">:</span>
+            <span class="n">speaker</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">speaker</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="n">speaker</span><span class="p">[</span><span class="s">&#39;firstName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="n">speaker</span><span class="p">[</span><span class="s">&#39;lastName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">dialect</span> <span class="o">=</span> <span class="n">speaker</span><span class="p">[</span><span class="s">&#39;dialect&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="p">:</span>
+            <span class="n">elicitor</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">elicitor</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="n">elicitor</span><span class="p">[</span><span class="s">&#39;firstName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="n">elicitor</span><span class="p">[</span><span class="s">&#39;lastName&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="p">:</span>
+            <span class="n">enterer</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enterer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">enterer</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="n">enterer</span><span class="p">[</span><span class="s">&#39;firstName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="n">enterer</span><span class="p">[</span><span class="s">&#39;lastName&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verifier</span><span class="p">:</span>
+            <span class="n">verifier</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verifier</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verifier</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verifier</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">verifier</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verifier</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="n">verifier</span><span class="p">[</span><span class="s">&#39;firstName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verifier</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="n">verifier</span><span class="p">[</span><span class="s">&#39;lastName&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">glosses</span><span class="p">:</span>
+            <span class="n">glosses</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">glosses</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">glosses</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">glossDict</span> <span class="ow">in</span> <span class="n">glosses</span><span class="p">:</span>
+                <span class="n">gloss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+                <span class="n">gloss</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">glossDict</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+                <span class="n">gloss</span><span class="o">.</span><span class="n">gloss</span> <span class="o">=</span> <span class="n">glossDict</span><span class="p">[</span><span class="s">&#39;gloss&#39;</span><span class="p">]</span>
+                <span class="n">gloss</span><span class="o">.</span><span class="n">glossGrammaticality</span> <span class="o">=</span> <span class="n">glossDict</span><span class="p">[</span><span class="s">&#39;glossGrammaticality&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">glosses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gloss</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+            <span class="n">tags</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">tagDict</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+                <span class="n">tag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+                <span class="n">tag</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">tagDict</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+                <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">tagDict</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">fileDict</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                <span class="nb">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">fileDict</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fileDict</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">embeddedFileMarkup</span> <span class="o">=</span> <span class="n">fileDict</span><span class="p">[</span><span class="s">&#39;embeddedFileMarkup&#39;</span><span class="p">]</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">embeddedFilePassword</span> <span class="o">=</span> <span class="n">fileDict</span><span class="p">[</span><span class="s">&#39;embeddedFilePassword&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backuper</span><span class="p">:</span>
+            <span class="n">backuper</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backuper</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">backuper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Column</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">backuper</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">backuper</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">backuper</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="n">backuper</span><span class="p">[</span><span class="s">&#39;firstName&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">backuper</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="n">backuper</span><span class="p">[</span><span class="s">&#39;lastName&#39;</span><span class="p">]</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  <li><a href="../model.html">old.model</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

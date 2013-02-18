@@ -1,0 +1,27 @@
+config Package
+==============
+
+:mod:`environment` Module
+-------------------------
+
+.. automodule:: old.config.environment
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`middleware` Module
+------------------------
+
+.. automodule:: old.config.middleware
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`routing` Module
+---------------------
+
+.. automodule:: old.config.routing
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

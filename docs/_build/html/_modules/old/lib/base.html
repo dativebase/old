@@ -1,0 +1,155 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.lib.base &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.lib.base</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;The base Controller API</span>
+
+<span class="sd">Provides the BaseController class for subclassing.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">pylons.controllers</span> <span class="kn">import</span> <span class="n">WSGIController</span>
+<span class="kn">from</span> <span class="nn">pylons.templating</span> <span class="kn">import</span> <span class="n">render_mako</span> <span class="k">as</span> <span class="n">render</span>
+
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">old.model</span> <span class="kn">import</span> <span class="n">User</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span>
+<span class="kn">import</span> <span class="nn">old.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BaseController"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.base.BaseController">[docs]</a><span class="k">class</span> <span class="nc">BaseController</span><span class="p">(</span><span class="n">WSGIController</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Invoke the Controller&quot;&quot;&quot;</span>
+        <span class="c"># WSGIController.__call__ dispatches to the Controller method</span>
+        <span class="c"># the request is routed to. This routing information is</span>
+        <span class="c"># available in environ[&#39;pylons.routes_dict&#39;]</span>
+        <span class="c"># environ[&#39;paste.content_type&#39;] = &#39;application/json&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">WSGIController</span><span class="o">.</span><span class="n">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">__before__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method is called before each controller action is called.  It is</span>
+<span class="sd">        being used here for Pylons functional testing.  Specifically, it is</span>
+<span class="sd">        being used to control the session and app_globals from within tests.</span>
+<span class="sd">        </span>
+<span class="sd">        If present, environ[&#39;test.authentication.role&#39;] will evaluate to a user</span>
+<span class="sd">        role that can be used to retrieve a user with that role from the db and</span>
+<span class="sd">        put it in the (Beaker) session.  This permits simulation of</span>
+<span class="sd">        authentication and authorization. See https://groups.google.com/forum/?fromgroups=#!searchin/pylons-discuss/test$20session/pylons-discuss/wiwOQBIxDw8/0yR3z3YiYzYJ</span>
+<span class="sd">        for the origin of this hack.</span>
+
+<span class="sd">        If present, setting environ[&#39;test.applicationSettings&#39;] to a truthy</span>
+<span class="sd">        value will result in app_globals.applicationSettings being set to an</span>
+<span class="sd">        ApplicationSettings instance.  This permits simulation of the</span>
+<span class="sd">        application settings cache in app_globals which is used for</span>
+<span class="sd">        inventory-based validation.  One issue with this approach is that the</span>
+<span class="sd">        app_globals.applicationSettings attribute is not unset after the test is</span>
+<span class="sd">        run.  Therefore, the __after__ method (see below) deletes the attribute</span>
+<span class="sd">        when environ[&#39;test.applicationSettings&#39;] is truthy.</span>
+
+<span class="sd">        WARNING: overwriting __before__ (or __after__) in a controller class</span>
+<span class="sd">        (without calling their super methods) will cause nosetests to fail en</span>
+<span class="sd">        masse.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="s">&#39;test.authentication.role&#39;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="n">role</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;test.authentication.role&#39;</span><span class="p">])</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">role</span><span class="o">==</span><span class="n">role</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+                <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user</span>
+        <span class="k">if</span> <span class="s">&#39;test.authentication.id&#39;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;test.authentication.id&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+                <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user</span>
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;test.applicationSettings&#39;</span><span class="p">):</span>
+            <span class="n">app_globals</span><span class="o">.</span><span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__after__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;test.applicationSettings&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+        <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;test.retainApplicationSettings&#39;</span><span class="p">):</span>
+            <span class="k">del</span> <span class="n">app_globals</span><span class="o">.</span><span class="n">applicationSettings</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

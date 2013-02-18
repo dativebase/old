@@ -1,0 +1,171 @@
+controllers Package
+===================
+
+:mod:`controllers` Package
+--------------------------
+
+.. automodule:: old.controllers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`applicationsettings` Module
+---------------------------------
+
+.. automodule:: old.controllers.applicationsettings
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`collectionbackups` Module
+-------------------------------
+
+.. automodule:: old.controllers.collectionbackups
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`elicitationmethods` Module
+--------------------------------
+
+.. automodule:: old.controllers.elicitationmethods
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`error` Module
+-------------------
+
+.. automodule:: old.controllers.error
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`files` Module
+-------------------
+
+.. automodule:: old.controllers.files
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`formbackups` Module
+-------------------------
+
+.. automodule:: old.controllers.formbackups
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`forms` Module
+-------------------
+
+.. automodule:: old.controllers.forms
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`formsearches` Module
+--------------------------
+
+.. automodule:: old.controllers.formsearches
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`languages` Module
+-----------------------
+
+.. automodule:: old.controllers.languages
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`login` Module
+-------------------
+
+.. automodule:: old.controllers.login
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`oldcollections` Module
+----------------------------
+
+.. automodule:: old.controllers.oldcollections
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`orthographies` Module
+---------------------------
+
+.. automodule:: old.controllers.orthographies
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`pages` Module
+-------------------
+
+.. automodule:: old.controllers.pages
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`phonologies` Module
+-------------------------
+
+.. automodule:: old.controllers.phonologies
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`rememberedforms` Module
+-----------------------------
+
+.. automodule:: old.controllers.rememberedforms
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`sources` Module
+---------------------
+
+.. automodule:: old.controllers.sources
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`speakers` Module
+----------------------
+
+.. automodule:: old.controllers.speakers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`syntacticcategories` Module
+---------------------------------
+
+.. automodule:: old.controllers.syntacticcategories
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`tags` Module
+------------------
+
+.. automodule:: old.controllers.tags
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`users` Module
+-------------------
+
+.. automodule:: old.controllers.users
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

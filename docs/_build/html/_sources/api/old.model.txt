@@ -1,0 +1,171 @@
+model Package
+=============
+
+:mod:`model` Package
+--------------------
+
+.. automodule:: old.model
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`applicationsettings` Module
+---------------------------------
+
+.. automodule:: old.model.applicationsettings
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`collection` Module
+------------------------
+
+.. automodule:: old.model.collection
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`collectionbackup` Module
+------------------------------
+
+.. automodule:: old.model.collectionbackup
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`elicitationmethod` Module
+-------------------------------
+
+.. automodule:: old.model.elicitationmethod
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`file` Module
+------------------
+
+.. automodule:: old.model.file
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`form` Module
+------------------
+
+.. automodule:: old.model.form
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`formbackup` Module
+------------------------
+
+.. automodule:: old.model.formbackup
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`formsearch` Module
+------------------------
+
+.. automodule:: old.model.formsearch
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`gloss` Module
+-------------------
+
+.. automodule:: old.model.gloss
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`language` Module
+----------------------
+
+.. automodule:: old.model.language
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`meta` Module
+------------------
+
+.. automodule:: old.model.meta
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`model` Module
+-------------------
+
+.. automodule:: old.model.model
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`orthography` Module
+-------------------------
+
+.. automodule:: old.model.orthography
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`page` Module
+------------------
+
+.. automodule:: old.model.page
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`phonology` Module
+-----------------------
+
+.. automodule:: old.model.phonology
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`source` Module
+--------------------
+
+.. automodule:: old.model.source
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`speaker` Module
+---------------------
+
+.. automodule:: old.model.speaker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`syntacticcategory` Module
+-------------------------------
+
+.. automodule:: old.model.syntacticcategory
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`tag` Module
+-----------------
+
+.. automodule:: old.model.tag
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`user` Module
+------------------
+
+.. automodule:: old.model.user
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

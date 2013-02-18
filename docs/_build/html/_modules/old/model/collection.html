@@ -1,0 +1,183 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.model.collection &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="old.model" href="../model.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../model.html" accesskey="U">old.model</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.model.collection</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Collection model&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="kn">import</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">Unicode</span><span class="p">,</span> <span class="n">UnicodeText</span><span class="p">,</span> <span class="n">Date</span><span class="p">,</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">relation</span><span class="p">,</span> <span class="n">backref</span>
+<span class="kn">from</span> <span class="nn">old.model.meta</span> <span class="kn">import</span> <span class="n">Base</span><span class="p">,</span> <span class="n">now</span>
+
+<span class="n">collectionfile_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="s">&#39;collectionfile&#39;</span><span class="p">,</span> <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">(</span><span class="s">&#39;collectionfile_seq_id&#39;</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;collection_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;collection.id&#39;</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;file_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;file.id&#39;</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">(),</span> <span class="n">default</span><span class="o">=</span><span class="n">now</span><span class="p">),</span>
+    <span class="n">mysql_charset</span><span class="o">=</span><span class="s">&#39;utf8&#39;</span>
+<span class="p">)</span>
+
+<span class="n">collectiontag_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="s">&#39;collectiontag&#39;</span><span class="p">,</span> <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">(</span><span class="s">&#39;collectiontag_seq_id&#39;</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;collection_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;collection.id&#39;</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;tag_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;tag.id&#39;</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">(),</span> <span class="n">default</span><span class="o">=</span><span class="n">now</span><span class="p">),</span>
+    <span class="n">mysql_charset</span><span class="o">=</span><span class="s">&#39;utf8&#39;</span>
+<span class="p">)</span>
+
+<div class="viewcode-block" id="Collection"><a class="viewcode-back" href="../../../api/old.model.html#old.model.collection.Collection">[docs]</a><span class="k">class</span> <span class="nc">Collection</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;collection&#39;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;mysql_charset&#39;</span><span class="p">:</span> <span class="s">&#39;utf8&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;Collection (</span><span class="si">%s</span><span class="s">)&gt;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">(</span><span class="s">&#39;collection_seq_id&#39;</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">UUID</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">36</span><span class="p">))</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">markupLanguage</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Unicode</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">contents</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+    <span class="n">speaker_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;speaker.id&#39;</span><span class="p">))</span>
+    <span class="n">speaker</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;Speaker&#39;</span><span class="p">)</span>
+    <span class="n">source_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;source.id&#39;</span><span class="p">))</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;Source&#39;</span><span class="p">)</span>
+    <span class="n">elicitor_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;user.id&#39;</span><span class="p">))</span>
+    <span class="n">elicitor</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="n">primaryjoin</span><span class="o">=</span><span class="s">&#39;Collection.elicitor_id==User.id&#39;</span><span class="p">)</span>
+    <span class="n">enterer_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;user.id&#39;</span><span class="p">))</span>
+    <span class="n">enterer</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="n">primaryjoin</span><span class="o">=</span><span class="s">&#39;Collection.enterer_id==User.id&#39;</span><span class="p">)</span>
+    <span class="n">dateElicited</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Date</span><span class="p">)</span>
+    <span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">)</span>
+    <span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;Tag&#39;</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="n">collectiontag_table</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="n">collectionfile_table</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="s">&#39;collections&#39;</span><span class="p">)</span>
+    <span class="c"># forms attribute is defined in a relation/backref in the form model</span>
+
+    <span class="c"># The contentsUnpacked column holds the contents of the collection where all</span>
+    <span class="c"># collection references in the contents field are replaced with the contents</span>
+    <span class="c"># of the referred-to collections.  These referred-to collections can refer</span>
+    <span class="c"># to others in turn.  The forms related to a collection are calculated by</span>
+    <span class="c"># gathering the form references from contentsUnpacked.  The result of all</span>
+    <span class="c"># this is that the contents (and form references) of a collection can be</span>
+    <span class="c"># altered by updates to another collection; however, these updates will not</span>
+    <span class="c"># propagate until the collection in question is itself updated.</span>
+    <span class="n">contentsUnpacked</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UnicodeText</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Collection.getDict"><a class="viewcode-back" href="../../../api/old.model.html#old.model.collection.Collection.getDict">[docs]</a>    <span class="k">def</span> <span class="nf">getDict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a Python dictionary representation of the Collection.  This</span>
+<span class="sd">        facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational</span>
+<span class="sd">        data are truncated, e.g., collectionDict[&#39;elicitor&#39;] is a dict with keys</span>
+<span class="sd">        for &#39;id&#39;, &#39;firstName&#39; and &#39;lastName&#39; (cf. getMiniUserDict above) and</span>
+<span class="sd">        lacks keys for other attributes such as &#39;username&#39;,</span>
+<span class="sd">        &#39;personalPageContent&#39;, etc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s">&#39;UUID&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span>
+            <span class="s">&#39;title&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+            <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="s">&#39;markupLanguage&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">markupLanguage</span><span class="p">,</span>
+            <span class="s">&#39;contents&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contents</span><span class="p">,</span>
+            <span class="s">&#39;contentsUnpacked&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contentsUnpacked</span><span class="p">,</span>
+            <span class="s">&#39;html&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">html</span><span class="p">,</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dateElicited</span><span class="p">,</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">datetimeEntered</span><span class="p">,</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">datetimeModified</span><span class="p">,</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMiniSpeakerDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">),</span>
+            <span class="s">&#39;source&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMiniSourceDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">),</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMiniUserDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elicitor</span><span class="p">),</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMiniUserDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enterer</span><span class="p">),</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTagsList</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
+            <span class="s">&#39;files&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFilesList</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">),</span>
+            <span class="s">&#39;forms&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFormsList</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="p">)</span>
+        <span class="p">}</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  <li><a href="../model.html">old.model</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

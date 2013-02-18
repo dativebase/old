@@ -1,0 +1,274 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Architecture Overview &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="index.html" />
+    <link rel="next" title="Models" href="models.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="models.html" title="Models"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">OLD 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="architecture-overview">
+<h1>Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permalink to this headline">¶</a></h1>
+<p>An OLD web service is, at its core, a database with a particular schema (data
+structure) and an interface for interacting with the data stored in the database.
+The core features of the OLD: user authentication and authorization; resource
+creation, retrieval, update and deletion; input validation; data processing; and
+search.</p>
+<p>The OLD exposes REST-ful interface styled on the Atom Publishing Protocol.  This
+means that all of the &#8220;resources&#8221; of the OLD (e.g., forms, files, collections,
+sources, users, syntactic categories, etc.) are <strong>c</strong>reated, <strong>r</strong>ead,
+<strong>u</strong>pdated and <strong>d</strong>eleted in a standard way.  The HTTP protocol defines a
+small set of &#8220;methods&#8221; for classifying requests to web servers; relevant to us
+here are the POST, GET, PUT and DELETE methods.  Requests to create a new
+resource use the POST method, read requests use the GET method, update requests
+the PUT method and delete requests the DELETE method.  The table below
+illustrates this pattern for the forms resource.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="14%" />
+<col width="18%" />
+<col width="38%" />
+<col width="30%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">HTTP Method</th>
+<th class="head">URL</th>
+<th class="head">Effect</th>
+<th class="head">Parameters</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>POST</td>
+<td>/forms</td>
+<td>Create a new form</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/forms</td>
+<td>Read all forms</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-even"><td>GET</td>
+<td>/forms/id</td>
+<td>Read form with id=id</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/forms/new</td>
+<td>Get data for creating a new form</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-even"><td>GET</td>
+<td>/forms/id/edit</td>
+<td>Get data for editing form id</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-odd"><td>PUT</td>
+<td>/forms/id</td>
+<td>Update form with id=id</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-even"><td>DELETE</td>
+<td>/forms/id</td>
+<td>Delete form with id=id</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p>Assuming an OLD web service served at <a class="reference external" href="http://www.xyz-old.org">http://www.xyz-old.org</a>, an HTTP request to
+<a class="reference external" href="http://www.xyz-old.org/forms">http://www.xyz-old.org/forms</a> with method POST would result in the system
+attempting to create a new linguistic form in the database using the data passed
+as JavaScript Object Notation (JSON) in the body of the request.  If the input
+data are valid, the system will respond with a JSON representation of the form
+with additional (server-generated) attributes (e.g., datetimeModified) included.
+If the input data are invalid (or if the user was not authorized to create a
+form or some other error occured), the system will respond with an HTTP error
+status code and a JSON object in the response body that gives more information
+about the error.</p>
+<p>As a general rule, the OLD communicates via JSON.  JSON is a widely-used
+standard for converting certain data types and (nested) data structures to and from
+strings.  Strings, numbers, arrays (lists) and associative arrays (dictionaries)
+can all be serialized to a JSON string.  For example, a Python dictionary, i.e.,
+a set of key/value pairs such as <cite>{&#8216;transcription&#8217;: &#8216;dog&#8217;, &#8216;gloss&#8217;: &#8216;chien&#8217;}</cite>
+when converted to JSON would be <cite>&#8216;{&#8220;transcription&#8221;: &#8220;dog&#8221;, &#8220;gloss&#8221;: &#8220;chien&#8221;}&#8217;</cite>.
+In most cases, when an OLD web service requires user input, that input will be
+expected to be JSON in the request body.  (In contrast to POST, PUT and DELETE
+requests, HTTP GET requests do not, canonically, possess contentful request
+bodies; therefore, when optional parameters are permissible on such requests,
+the OLD will expect GET parameters in the URL string.)</p>
+<p>The application logic of the OLD is written in Python (2.6).  The system uses
+the Pylons (1.0) web framework.  Pylons facilitates parsing of HTTP requests and
+generation of HTTP responses.  It advocates a Model-View-Controller architecture
+where, in the context of the OLD, each resource possesses a model, which governs
+the storage and retrieval of a persisted object or resource (e.g., a linguistic
+form), as well as a controller, which generates responses to user requests, i.e.,
+controls authentication, input validation, data processing, etc.</p>
+<p>OLD objects are stored in a relational database.  The system has been tested on
+both MySQL and SQLite, though the latter is not suited to a concurrent multi-
+user production environment.  The system uses SQLAlchemy (a python module) to
+map Python objects to relational database tables.  The FormEncode Python module
+is used to validate user input.</p>
+<p>The OLD prescribes a particular data structure for organizing linguistic
+fieldwork data.  The three core objects are forms, files and collections.  In
+brief, forms are textual representations of language data (e.g., morphemes,
+words, phrases, sentences)</p>
+<p>The OLD prescribes a particular data structure or schema for linguistic
+fieldwork data; it validates user input against that schema and ...</p>
+<p>A web service is a web-based application
+that, unlike a traditional web application, does not require a particular user
+interface.  An OLD web service can be accessed via a browser-based application,
+a traditional desktop application, an application on a mobile device, a command
+line application or even another web application.  As long as the front-end
+application can send and receive JSON (JavaScript Object Notation) using the
+HTTP protocol and store cookies, the OLD will happily interact with it.</p>
+<blockquote>
+<div>Note that this is a break from previous versions of the OLD.  In versions 0.1
+through 0.2.7, the OLD was a traditional web application, i.e., it served HTML
+pages as user interface and expected user input as HTML form requests.</div></blockquote>
+<p>The OLD exposes REST-ful interface styled on the Atom Publishing Protocol.  This
+means that all of the &#8220;resources&#8221; of the OLD (e.g., forms, files, collections,
+sources, users, syntactic categories, etc.) are <strong>c</strong>reated, <strong>r</strong>ead,
+<strong>u</strong>pdated and <strong>d</strong>eleted in the same way.  The HTTP protocol defines a
+small set of &#8220;methods&#8221; for classifying requests to web servers; relevant to us
+here are the POST, GET, PUT and DELETE methods.  Requests to create a new
+resource use the POST method, read requests use the GET method, update requests
+the PUT method and delete requests the DELETE method.  The table below
+illustrates this pattern for the forms resource.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="14%" />
+<col width="18%" />
+<col width="38%" />
+<col width="30%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">HTTP Method</th>
+<th class="head">URL</th>
+<th class="head">Effect</th>
+<th class="head">Parameters</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>POST</td>
+<td>/forms</td>
+<td>Create a new form</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/forms</td>
+<td>Read all forms</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-even"><td>GET</td>
+<td>/forms/id</td>
+<td>Read form with id=id</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/forms/new</td>
+<td>Get data for creating a new form</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-even"><td>GET</td>
+<td>/forms/id/edit</td>
+<td>Get data for editing form id</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-odd"><td>PUT</td>
+<td>/forms/id</td>
+<td>Update form with id=id</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-even"><td>DELETE</td>
+<td>/forms/id</td>
+<td>Delete form with id=id</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="models.html" title="next chapter">Models</a></li>
+  </ul></li>
+</ul>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/architecture.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

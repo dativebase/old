@@ -1,0 +1,2243 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>controllers Package &mdash; OLD 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="OLD 1.0.0 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="controllers-package">
+<h1>controllers Package<a class="headerlink" href="#controllers-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">controllers</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-old.controllers"></span><p>OLD controllers process user requests and return responses.  The response
+body invariable consists of a JSON object.</p>
+</div>
+<div class="section" id="module-old.controllers.applicationsettings">
+<span id="applicationsettings-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">applicationsettings</span></tt> Module<a class="headerlink" href="#module-old.controllers.applicationsettings" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.applicationsettings.</tt><tt class="descname">ApplicationsettingsController</tt><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol.</p>
+<p>Note: the application settings are an unusual resource.  There is only
+really one item that is relevant: the most recent one.</p>
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /applicationsettings: Create a new application settings record.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /applicationsettings/id: Delete an existing application settings.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /applicationsettings/id/edit: Return the data necessary to update
+an existing application settings, i.e., the application settings&#8217;
+properties and the necessary additional data, i.e., orthographies,
+languages, and users.</p>
+<p>This action can be thought of as a combination of the &#8216;show&#8217; and &#8216;new&#8217;
+actions.  The output will be a JSON object of the form</p>
+<blockquote>
+<div>{applicationSettings: {...}, data: {...}},</div></blockquote>
+<p>where output.applicationSettings is an object containing the application
+settings&#8217; properties (cf. the output of show) and output.data is an
+object containing the data required to add a new application settings
+(cf. the output of new).</p>
+<p>GET parameters will affect the value of output.data in the same way as
+for the new action, i.e., no params will result in all the necessary
+output.data being retrieved from the db while specified params will
+result in selective retrieval (see getNewApplicationSettingsData for
+details).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /applicationsettings: return all application settings models as
+JSON objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /applicationsettings/new: Return the data necessary to create a new application settings.</p>
+<p>Return a JSON object with the following properties: &#8216;languages&#8217;,
+&#8216;users&#8217; and &#8216;orthographies&#8217;, the value of each of which is an array that
+is either empty or contains the appropriate objects.</p>
+<p>See the getNewApplicationSettingsData function to understand how the GET
+params can affect the contents of the arrays.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /applicationsettings/id: Return a JSON object representation of
+the application settings with id=id.</p>
+<p>If the id is invalid, &#8216;null&#8217; (None) will be returned.  If the
+id is unspecified, a &#8216;404 Not Found&#8217; status code will be returned along
+with a JSON.stringified {error: &#8216;404 Not Found&#8217;} object (see the
+error.py controller).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.applicationsettings.ApplicationsettingsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#ApplicationsettingsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.ApplicationsettingsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /applicationsettings/id: Update an existing application settings.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.applicationsettings.createNewApplicationSettings">
+<tt class="descclassname">old.controllers.applicationsettings.</tt><tt class="descname">createNewApplicationSettings</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#createNewApplicationSettings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.createNewApplicationSettings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new ApplicationSettings model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.applicationsettings.getNewApplicationSettingsData">
+<tt class="descclassname">old.controllers.applicationsettings.</tt><tt class="descname">getNewApplicationSettingsData</tt><big>(</big><em>GET_params</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#getNewApplicationSettingsData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.getNewApplicationSettingsData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the data necessary to create a new ApplicationSettings or update
+an existing one.  The GET_params parameter is the request.GET dictionary-
+like object generated by Pylons.</p>
+<p>If no parameters are provided (i.e., GET_params is empty), then retrieve all
+data (i.e., users, orthographies and languages) from the db and return them.</p>
+<p>If parameters are specified, then for each parameter whose value is a
+non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+return the appropriate list of objects.</p>
+<p>If the value of a parameter is a valid ISO 8601 datetime string,
+retrieve and return the appropriate list of objects <em>only</em> if the
+datetime param does <em>not</em> match the most recent datetimeModified value
+of the relevant data store.  This makes sense because a non-match indicates
+that the requester has out-of-date data.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.applicationsettings.updateApplicationSettings">
+<tt class="descclassname">old.controllers.applicationsettings.</tt><tt class="descname">updateApplicationSettings</tt><big>(</big><em>applicationSettings</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/applicationsettings.html#updateApplicationSettings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.applicationsettings.updateApplicationSettings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input ApplicationSettings model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.collectionbackups">
+<span id="collectionbackups-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">collectionbackups</span></tt> Module<a class="headerlink" href="#module-old.controllers.collectionbackups" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.collectionbackups.</tt><tt class="descname">CollectionbackupsController</tt><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<p>Collection backups are created when updating and deleting collections; they
+cannot be created directly and they should never be deleted.  This
+controller facilitates searching and getting of collection backups only.</p>
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em>, <em>format='html'</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collectionbackups: Return all collection backups.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.new">
+<tt class="descname">new</tt><big>(</big><em>format='html'</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collectionbackups/new_search: Return the data necessary to inform a search
+on the collection backups resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0x9a13d4c&gt;</em><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /collectionbackups: Return all collection backups matching the filter passed as JSON in the request body.
+Note: POST /collectionbackups/search also routes to this action. The request body must be
+a JSON object with a &#8216;query&#8217; attribute; a &#8216;paginator&#8217; attribute is
+optional.  The &#8216;query&#8217; object is passed to the getSQLAQuery() method of
+an SQLAQueryBuilder instance and an SQLA query is returned or an error
+is raised.  The &#8216;query&#8217; object requires a &#8216;filter&#8217; attribute; an
+&#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collectionbackups/id: Return a JSON object representation of the
+collection backup with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.collectionbackups.CollectionbackupsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/collectionbackups.html#CollectionbackupsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.collectionbackups.CollectionbackupsController.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.elicitationmethods">
+<span id="elicitationmethods-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">elicitationmethods</span></tt> Module<a class="headerlink" href="#module-old.controllers.elicitationmethods" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.elicitationmethods.</tt><tt class="descname">ElicitationmethodsController</tt><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /elicitationmethods: Create a new elicitation method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /elicitationmethods/id: Delete an existing elicitation method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /elicitationmethods/id/edit: Return the data necessary to update an existing
+OLD elicitation method; here we return only the elicitation method and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /elicitationmethods: Return all elicitation methods.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /elicitationmethods/new: Return the data necessary to create a new OLD
+elicitation method.  NOTHING TO RETURN HERE ...</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0x9a8128c&gt;</em><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /elicitationmethods/id: Return a JSON object representation of the elicitation
+method with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.elicitationmethods.ElicitationmethodsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#ElicitationmethodsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.ElicitationmethodsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /elicitationmethods/id: Update an existing elicitation method.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.elicitationmethods.createNewElicitationMethod">
+<tt class="descclassname">old.controllers.elicitationmethods.</tt><tt class="descname">createNewElicitationMethod</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#createNewElicitationMethod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.createNewElicitationMethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new elicitation method model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.elicitationmethods.updateElicitationMethod">
+<tt class="descclassname">old.controllers.elicitationmethods.</tt><tt class="descname">updateElicitationMethod</tt><big>(</big><em>elicitationMethod</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/elicitationmethods.html#updateElicitationMethod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.elicitationmethods.updateElicitationMethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input elicitation method model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.error">
+<span id="error-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">error</span></tt> Module<a class="headerlink" href="#module-old.controllers.error" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.error.ErrorController">
+<em class="property">class </em><tt class="descclassname">old.controllers.error.</tt><tt class="descname">ErrorController</tt><a class="reference internal" href="../_modules/old/controllers/error.html#ErrorController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.error.ErrorController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>Generates error documents as and when they are required.</p>
+<p>The ErrorDocuments middleware forwards to ErrorController when error
+related status codes are returned from the application.</p>
+<p>This behaviour can be altered by changing the parameters to the
+ErrorDocuments middleware in your config/middleware.py file.</p>
+<dl class="method">
+<dt id="old.controllers.error.ErrorController.document">
+<tt class="descname">document</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/error.html#ErrorController.document"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.error.ErrorController.document" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instead of returning an HTML error document (the Pylons default),
+return the JSON object that the controller has specified for the
+response body.  If the response body is not valid JSON, then it has been
+created by Routes and we need to make it into valid JSON (just to be
+consistent).  A bit hacky...</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.files">
+<span id="files-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">files</span></tt> Module<a class="headerlink" href="#module-old.controllers.files" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.files.FilesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.files.</tt><tt class="descname">FilesController</tt><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.files.FilesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /files: Create a new file.  There are four ways to create a new
+file:</p>
+<ol class="arabic simple">
+<li>Plain File:<ul>
+<li>Upload filedata via a POST request with Content-Type set to
+&#8216;multipart/form-data&#8217;.  A filename POST param should also be present.</li>
+</ul>
+</li>
+<li>Base64-encoded File with JSON Metadata:<ul>
+<li>Upload the filedata (base64 encoded) and metadata all within a JSON
+POST request, i.e., Content-Type=&#8217;application/json&#8217;.  This permits
+the uploading of everything in one go (all via JSON), the downside
+being the processing time required to encode to and decode from base64.</li>
+</ul>
+</li>
+<li>Audio/Video Subinterval-Referencing File:<ul>
+<li>Upload file metadata in a JSON POST request and specify the id of an
+existing <em>audio/video</em> &#8216;parentFile&#8217; as well as &#8216;start&#8217; and &#8216;end&#8217;
+attributes (in seconds as ints/floats) in the JSON request params.
+Here the name attribute is user-specifiable.</li>
+</ul>
+</li>
+<li>Externally Hosted File:<ul>
+<li>JSON POST body of request must contain a url attribute; name,
+MIMEtype and password attributes are optional.</li>
+</ul>
+</li>
+</ol>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /files/id: Delete an existing file.  Only the enterer and
+administrators can delete a file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /files/id/edit: Return the data necessary to update an existing
+OLD file, i.e., the file&#8217;s properties and the necessary additional data,
+i.e., users, speakers, etc.</p>
+<p>This action can be thought of as a combination of the &#8216;show&#8217; and &#8216;new&#8217;
+actions.  The output will be a JSON object of the form</p>
+<blockquote>
+<div>{file: {...}, data: {...}},</div></blockquote>
+<p>where output.file is an object containing the file&#8217;s properties (cf. the
+output of show) and output.data is an object containing the data
+required to add a new file (cf. the output of new).</p>
+<p>GET parameters will affect the value of output.data in the same way as
+for the new action, i.e., no params will result in all the necessary
+output.data being retrieved from the db while specified params will
+result in selective retrieval (see getNewEditFileData for details).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /files: Return all files.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /new_file: Return the data necessary to create a new OLD file.</p>
+<p>Return a JSON object with the following properties: &#8216;tags&#8217;,
+&#8216;utteranceTypes&#8217;, &#8216;speakers&#8217; and &#8216;users&#8217;, the value of each of which is
+an array that is either empty or contains the appropriate objects.</p>
+<p>See the getNewEditFileData function to understand how the GET params can
+affect the contents of the arrays.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /files/new_search: Return the data necessary to inform a search
+on the files resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.files.FilesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0x9c682ec&gt;</em><a class="headerlink" href="#old.controllers.files.FilesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /files: Return all files matching the filter passed as JSON in
+the request body.  Note: POST /files/search also routes to this action.
+The request body must be a JSON object with a &#8216;query&#8217; attribute; a
+&#8216;paginator&#8217; attribute is optional.  The &#8216;query&#8217; object is passed to the
+getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+is returned or an error is raised.  The &#8216;query&#8217; object requires a
+&#8216;filter&#8217; attribute; an &#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.serve">
+<tt class="descname">serve</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.serve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.serve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the file data (binary stream) for the file in files/ with
+id=id or an error message if the file does not exist or the user is
+not authorized to access it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.serve_reduced">
+<tt class="descname">serve_reduced</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.serve_reduced"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.serve_reduced" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the reduced-size file data (i.e., resized image or ogg/mp3-
+converted wav) for the file in files/ with id=id or an error message if
+the file does not exist or the user is not authorized to access it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /files/id: Return a JSON object representation of the file with
+id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.files.FilesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#FilesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.FilesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /files/id: Update an existing file.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="old.controllers.files.InvalidFieldStorageObjectError">
+<em class="property">exception </em><tt class="descclassname">old.controllers.files.</tt><tt class="descname">InvalidFieldStorageObjectError</tt><a class="reference internal" href="../_modules/old/controllers/files.html#InvalidFieldStorageObjectError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.InvalidFieldStorageObjectError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.addStandardMetadata">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">addStandardMetadata</tt><big>(</big><em>file</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#addStandardMetadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.addStandardMetadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the metadata that all JSON-created file creation requests can add.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.createBase64File">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">createBase64File</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#createBase64File"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.createBase64File" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and return an OLD file model generated from a data dict that
+contains a &#8216;base64EncodedFile&#8217; key whose value should be a base64 encoded
+file.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.createExternallyHostedFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">createExternallyHostedFile</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#createExternallyHostedFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.createExternallyHostedFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and return an OLD file model generated from a data dict that
+contains a &#8216;url&#8217; key whose value should be a valid url where the file is
+served.  Optional attributes: name, password, MIMEtype.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.createPlainFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">createPlainFile</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#createPlainFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.createPlainFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an OLD file model generated from POST params (not JSON formatted).
+The usual file metadata can be submitted.  Unique to this method is the
+filedata key and the treatment of the filename value.</p>
+<ol class="arabic simple">
+<li>&#8216;filedata&#8217;, a  cgi.FieldStorage object containing the file data.</li>
+<li>&#8216;filename&#8217;, a string (optional but encouraged, i.e., if not provided, the
+system will attempt to create one from the file path)</li>
+</ol>
+<p>Note that the schema expects not &#8216;forms&#8217; and &#8216;files&#8217; keys but &#8216;forms-0&#8217;,
+&#8216;forms-1&#8217;, etc., as per the formencode.variabledecode.NestedVariables format.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.createSubintervalReferencingFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">createSubintervalReferencingFile</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#createSubintervalReferencingFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.createSubintervalReferencingFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and return an OLD file model generated from a data dict that
+contains a &#8216;parentFile&#8217; key whose value must be a foreign key id that
+references another file, which file must be an audio or video file.  The
+data dict should also contain a &#8216;name&#8217; key whose value can be a name that is
+distinct from the filename value of the parent file (the child/referencing
+file has no value for filename.)  The referencing subinterval file must also
+contain float values for the &#8216;start&#8217; and &#8216;end&#8217; attributes which indicate the
+subinterval of the parent file that constitute the content of the
+referencing file.</p>
+<p>As with files created from base64-encoded file data (cf. createBase64File
+above), creation requests for referencing subinterval files may contain
+metadata such as a description, an utterance type, etc.</p>
+<p>Note that referencing files have no filename or size attributes.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.deleteFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">deleteFile</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#deleteFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.deleteFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the file object from the database and the file from the filesystem.
+If the file has a lossyFilename attribute, then files/reduced_files/&lt;lossyFilename&gt;
+is deleted from the filesystem also</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.getNewEditFileData">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">getNewEditFileData</tt><big>(</big><em>GET_params</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#getNewEditFileData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.getNewEditFileData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the data necessary to create a new OLD file or update an existing
+one.  The GET_params parameter is the request.GET dictionary-like object
+generated by Pylons.</p>
+<p>If no parameters are provided (i.e., GET_params is empty), then retrieve all
+data (i.e., tags, speakers, etc.) from the db and return it.</p>
+<p>If parameters are specified, then for each parameter whose value is a
+non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+return the appropriate list of objects.</p>
+<p>If the value of a parameter is a valid ISO 8601 datetime string,
+retrieve and return the appropriate list of objects <em>only</em> if the
+datetime param does <em>not</em> match the most recent datetimeModified value
+of the relevant data store.  This makes sense because a non-match indicates
+that the requester has out-of-date data.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.getUniqueFilePath">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">getUniqueFilePath</tt><big>(</big><em>filePath</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#getUniqueFilePath"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.getUniqueFilePath" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function ensures a unique file path (without race conditions) by
+attempting to create the file using os.open.  If the file exists, an OS
+error is raised (or if the file is too long, an IO error is raised), and
+a new file path/name is generated until a unique one is found.  Returns
+an ordered pair: (&lt;file object&gt;, &lt;unique file path&gt;).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.restrictFileByForms">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">restrictFileByForms</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#restrictFileByForms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.restrictFileByForms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restrict the entire file if it is associated to restricted forms.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.serveFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">serveFile</tt><big>(</big><em>id</em>, <em>reduced=False</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#serveFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.serveFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use FileApp to serve the content (binary data) of the file with id=id.  If
+reduced is True, then try to serve /files/reduced_files/&lt;filename&gt; where
+filename is file.lossyFilename.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.updateExternallyHostedFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">updateExternallyHostedFile</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#updateExternallyHostedFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.updateExternallyHostedFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the externally hosted file model using the JSON object in
+the request body.  If changed is not set to true in the course of attribute
+setting, then False is returned and no update occurs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.updateFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">updateFile</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#updateFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.updateFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input File model object using the JSON object of the request
+body.  If changed is not set to true in the course of attribute setting,
+then False is returned and no update occurs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.updateStandardMetadata">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">updateStandardMetadata</tt><big>(</big><em>file</em>, <em>data</em>, <em>changed</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#updateStandardMetadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.updateStandardMetadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.files.updateSubintervalReferencingFile">
+<tt class="descclassname">old.controllers.files.</tt><tt class="descname">updateSubintervalReferencingFile</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/files.html#updateSubintervalReferencingFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.files.updateSubintervalReferencingFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the subinterval-referencing file model using the JSON object in
+the request body.  If changed is not set to true in the course of attribute
+setting, then False is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.formbackups">
+<span id="formbackups-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">formbackups</span></tt> Module<a class="headerlink" href="#module-old.controllers.formbackups" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.formbackups.FormbackupsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.formbackups.</tt><tt class="descname">FormbackupsController</tt><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<p>Form backups are created when updating and deleting forms; they
+cannot be created directly and they should never be deleted.  This
+controller facilitates searching and getting of form backups only.</p>
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em>, <em>format='html'</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formbackups: Return all form backups.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formbackups/new_search: Return the data necessary to inform a search
+on the form backups resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.formbackups.FormbackupsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0x98696ec&gt;</em><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /formbackups: Return all form backups matching the filter passed as JSON in the request body.
+Note: POST /formbackups/search also routes to this action. The request body must be
+a JSON object with a &#8216;query&#8217; attribute; a &#8216;paginator&#8217; attribute is
+optional.  The &#8216;query&#8217; object is passed to the getSQLAQuery() method of
+an SQLAQueryBuilder instance and an SQLA query is returned or an error
+is raised.  The &#8216;query&#8217; object requires a &#8216;filter&#8217; attribute; an
+&#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formbackups/id: Return a JSON object representation of the
+form backup with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formbackups.FormbackupsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formbackups.html#FormbackupsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formbackups.FormbackupsController.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.forms">
+<span id="forms-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">forms</span></tt> Module<a class="headerlink" href="#module-old.controllers.forms" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.forms.FormsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.forms.</tt><tt class="descname">FormsController</tt><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol.</p>
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /forms: Create a new form.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /forms/id: Delete an existing form.  Only the enterer and
+administrators can delete a form.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /forms/id/edit: Return the data necessary to update an existing
+OLD form, i.e., the form&#8217;s properties and the necessary additional data,
+i.e., grammaticalities, speakers, etc.</p>
+<p>This action can be thought of as a combination of the &#8216;show&#8217; and &#8216;new&#8217;
+actions.  The output will be a JSON object of the form</p>
+<blockquote>
+<div>{form: {...}, data: {...}},</div></blockquote>
+<p>where output.form is an object containing the form&#8217;s properties (cf. the
+output of show) and output.data is an object containing the data
+required to add a new form (cf. the output of new).</p>
+<p>GET parameters will affect the value of output.data in the same way as
+for the new action, i.e., no params will result in all the necessary
+output.data being retrieved from the db while specified params will
+result in selective retrieval (see getNewEditFormData for details).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.history">
+<tt class="descname">history</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.history"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.history" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /forms/history/id: Return a JSON object representation of the form and its previous versions.</p>
+<p>The id parameter can be either an integer id or a UUID.  If no form and
+no form backups match id, then a 404 is returned.  Otherwise a 200 is
+returned (or a 403 if the restricted keyword is relevant).  See below:</p>
+<p>form                None    None          form       form
+previousVersions    []      [1, 2,...]    []         [1, 2,...]
+response            404     200/403       200/403    200/403</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /forms: Return all forms.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /new_form: Return the data necessary to create a new OLD form.</p>
+<p>Return a JSON object with the following properties: &#8216;grammaticalities&#8217;,
+&#8216;elicitationMethods&#8217;, &#8216;tags&#8217;, &#8216;syntacticCategories&#8217;, &#8216;speakers&#8217;,
+&#8216;users&#8217; and &#8216;sources&#8217;, the value of each of which is an array that is
+either empty or contains the appropriate objects.</p>
+<p>See the getNewEditFormData function to understand how the GET params can
+affect the contents of the arrays.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /forms/new_search: Return the data necessary to inform a search
+on the forms resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.forms.FormsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0x974ddac&gt;</em><a class="headerlink" href="#old.controllers.forms.FormsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.remember">
+<tt class="descname">remember</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.remember"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.remember" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store references to the forms passed as input (via id) in the logged
+in user&#8217;s rememberedForms array.  The input is a JSON object of the form
+{&#8216;forms&#8217;: [id1, id2, ...]}.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /forms: Return all forms matching the filter passed as JSON in
+the request body.  Note: POST /forms/search also routes to this action.
+The request body must be a JSON object with a &#8216;query&#8217; attribute; a
+&#8216;paginator&#8217; attribute is optional.  The &#8216;query&#8217; object is passed to the
+getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+is returned or an error is raised.  The &#8216;query&#8217; object requires a
+&#8216;filter&#8217; attribute; an &#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /forms/id: Return a JSON object representation of the form with
+id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /forms/id: Update an existing form.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.forms.FormsController.update_morpheme_references">
+<tt class="descname">update_morpheme_references</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#FormsController.update_morpheme_references"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.FormsController.update_morpheme_references" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update all of the morpheme references (i.e., the morphemeBreakIDs,
+morphemeGlossIDs and syntacticCategoryString fields) by calling
+updateForm on each form in the database.  Return a list of ids
+corresponding to the forms that were updated.</p>
+<p>Note 1: this functionality should probably be replaced by client-side
+logic that makes multiple requests to PUT /forms/id since the current
+implementation may overtax memory resources when the database is quite
+large.</p>
+<p>Note 2: if this function is to be executed as a scheduled task, we need
+to decide what to do about the backuper attribute.</p>
+<p>Note 3: updateFormsContainingThisFormAsMorpheme is effective on create,
+update and delete requests, then the update_morpheme_references
+functionality may be rendered obsolete ...</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.backupForm">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">backupForm</tt><big>(</big><em>formDict</em>, <em>datetimeModified=None</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#backupForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.backupForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>When a form is updated or deleted, it is first added to the formbackup
+table.  When backing up a form that is being updated, set update to True.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.compileMorphemicAnalysis">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">compileMorphemicAnalysis</tt><big>(</big><em>form</em>, <em>morphemeDelimiters=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#compileMorphemicAnalysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.compileMorphemicAnalysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper arround _compileMorphemicAnalysis that softens errors :)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.createNewForm">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">createNewForm</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#createNewForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.createNewForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new Form model object given a data dictionary provided by the
+user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.getFormAndPreviousVersions">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">getFormAndPreviousVersions</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#getFormAndPreviousVersions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.getFormAndPreviousVersions" title="Permalink to this definition">¶</a></dt>
+<dd><p>The id parameter is a string representing either an integer id or a UUID.
+Return the form such that form.id==id or form.UUID==UUID (if there is one)
+as well as all form backups such that formBackup.UUID==id or
+formBackup.form_id==id.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.getNewEditFormData">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">getNewEditFormData</tt><big>(</big><em>GET_params</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#getNewEditFormData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.getNewEditFormData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the data necessary to create a new OLD form or update an existing
+one.  The GET_params parameter is the request.GET dictionary-like object
+generated by Pylons.</p>
+<p>If no parameters are provided (i.e., GET_params is empty), then retrieve all
+data (i.e., grammaticalities, speakers, etc.) from the db and return it.</p>
+<p>If parameters are specified, then for each parameter whose value is a
+non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+return the appropriate list of objects.</p>
+<p>If the value of a parameter is a valid ISO 8601 datetime string,
+retrieve and return the appropriate list of objects <em>only</em> if the
+datetime param does <em>not</em> match the most recent datetimeModified value
+of the relevant data store.  This makes sense because a non-match indicates
+that the requester has out-of-date data.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.updateApplicationSettingsIfFormIsForeignWord">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">updateApplicationSettingsIfFormIsForeignWord</tt><big>(</big><em>form</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#updateApplicationSettingsIfFormIsForeignWord"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.updateApplicationSettingsIfFormIsForeignWord" title="Permalink to this definition">¶</a></dt>
+<dd><p>If the input form is a foreign word, attempt to update the attributes in
+app_globals.applicationSettings.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.updateForm">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">updateForm</tt><big>(</big><em>form</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#updateForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.updateForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input Form model object given a data dictionary provided by
+the user (as a JSON object).  If changed is not set to true in the course
+of attribute setting, then False is returned and no update occurs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.updateFormsContainingThisFormAsMorpheme">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">updateFormsContainingThisFormAsMorpheme</tt><big>(</big><em>form</em>, <em>change='create'</em>, <em>previousVersion=None</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#updateFormsContainingThisFormAsMorpheme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.updateFormsContainingThisFormAsMorpheme" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function updates the morphemeBreadIDs, morphemeGlossIDs,
+syntacticCategoryString, and breakGlossCategory attributes of each form that
+contains the input form, i.e., each form whose morphemeBreak line contains
+the input form&#8217;s morphemeBreak line as a morpheme or whose morphemeGloss line
+contains the input form&#8217;s morphemeGloss line as a gloss.  Note that if the
+input form is not lexical (i.e., if it contains the space character or a
+morpheme delimiter), then no changes will be made.</p>
+<p>This function is called in each of the create, update and delete actions whenever
+they succeed.  The change parameter signifies the type of action.  The
+previousVersion parameter contains a dict representation of an updated form&#8217;s
+previous state.  This function is also the one called in the syntacticcategories
+controller when a lexical category is deleted or has its name changed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.updateHasChangedTheAnalysis">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">updateHasChangedTheAnalysis</tt><big>(</big><em>form</em>, <em>formDict</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#updateHasChangedTheAnalysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.updateHasChangedTheAnalysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if the update from formDict to form has changed the analysis
+of the form, i.e., if the morphemeBreak, morphemeGloss or syncat name have changed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.updateMorphemeReferencesOfForm">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">updateMorphemeReferencesOfForm</tt><big>(</big><em>form</em>, <em>validDelimiters=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#updateMorphemeReferencesOfForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.updateMorphemeReferencesOfForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function behaves just like updateForm() above except that it doesn&#8217;t
+take a dict of form data as input; it rather attempts to update the morpheme
+reference data by calling compileMorphemicAnalysis.</p>
+<p>If specified, lexicalItems should be a list of lexical forms with which the
+new morphemic analyses should (exclusively) be constructed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.forms.updateMorphemeReferencesOfForms">
+<tt class="descclassname">old.controllers.forms.</tt><tt class="descname">updateMorphemeReferencesOfForms</tt><big>(</big><em>forms</em>, <em>validDelimiters</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/forms.html#updateMorphemeReferencesOfForms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.forms.updateMorphemeReferencesOfForms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calls updateMorphemeReferencesOfForm for each form in forms, commits any
+changes, backs up the form (if necessary) and returns a list of ids corresponding
+to the updated forms.</p>
+<p>If specified, lexicalItems should be a list of lexical forms with which the
+new morphemic analyses of all forms should (exclusively) be constructed.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.formsearches">
+<span id="formsearches-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">formsearches</span></tt> Module<a class="headerlink" href="#module-old.controllers.formsearches" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.formsearches.FormsearchesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.formsearches.</tt><tt class="descname">FormsearchesController</tt><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /formsearches: Create a new form search.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /formsearches/id: Delete an existing form search.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formsearches/id/edit: Return the data necessary to update an existing
+OLD form search.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formsearches: Return all form searches.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formsearches/new: Return the data necessary to create a new OLD
+form search.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formsearches/new_search: Return the data necessary to inform a search
+on the form searches resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.formsearches.FormsearchesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa2d58ac&gt;</em><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /formsearches: Return all form searches matching the filter passed as JSON in
+the request body.  Note: POST /formsearches/search also routes to this action.
+The request body must be a JSON object with a &#8216;query&#8217; attribute; a
+&#8216;paginator&#8217; attribute is optional.  The &#8216;query&#8217; object is passed to the
+getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+is returned or an error is raised.  The &#8216;query&#8217; object requires a
+&#8216;filter&#8217; attribute; an &#8216;orderBy&#8217; attribute is optional.</p>
+<p>Yes, that&#8217;s right, you can search form searches.  Can you search searches
+of form searches?  No, not yet...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /formsearches/id: Return a JSON object representation of the formsearch with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.formsearches.FormsearchesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#FormsearchesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.FormsearchesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /formsearches/id: Update an existing form search.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.formsearches.createNewFormSearch">
+<tt class="descclassname">old.controllers.formsearches.</tt><tt class="descname">createNewFormSearch</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#createNewFormSearch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.createNewFormSearch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new form search model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.formsearches.updateFormSearch">
+<tt class="descclassname">old.controllers.formsearches.</tt><tt class="descname">updateFormSearch</tt><big>(</big><em>formSearch</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/formsearches.html#updateFormSearch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.formsearches.updateFormSearch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input form  search model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.languages">
+<span id="languages-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">languages</span></tt> Module<a class="headerlink" href="#module-old.controllers.languages" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.languages.LanguagesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.languages.</tt><tt class="descname">LanguagesController</tt><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<p>The language table is populated from an ISO 639-3 file upon application setup.
+The Language resouces is read-only.  This controller facilitates searching
+and getting of languages only.</p>
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em>, <em>format='html'</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /languages: Return all languages.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /languages/new_search: Return the data necessary to inform a search
+on the languages resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.languages.LanguagesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa5b306c&gt;</em><a class="headerlink" href="#old.controllers.languages.LanguagesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /languages: Return all languages matching the filter passed as JSON in the request body.
+Note: POST /languages/search also routes to this action. The request body must be
+a JSON object with a &#8216;query&#8217; attribute; a &#8216;paginator&#8217; attribute is
+optional.  The &#8216;query&#8217; object is passed to the getSQLAQuery() method of
+an SQLAQueryBuilder instance and an SQLA query is returned or an error
+is raised.  The &#8216;query&#8217; object requires a &#8216;filter&#8217; attribute; an
+&#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /languages/id: Return a JSON object representation of the
+language with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.languages.LanguagesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/languages.html#LanguagesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.languages.LanguagesController.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="login-module">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">login</span></tt> Module<a class="headerlink" href="#login-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-old.controllers.oldcollections">
+<span id="oldcollections-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">oldcollections</span></tt> Module<a class="headerlink" href="#module-old.controllers.oldcollections" title="Permalink to this headline">¶</a></h2>
+<dl class="exception">
+<dt id="old.controllers.oldcollections.CircularCollectionReferenceError">
+<em class="property">exception </em><tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">CircularCollectionReferenceError</tt><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#CircularCollectionReferenceError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.CircularCollectionReferenceError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="old.controllers.oldcollections.InvalidCollectionReferenceError">
+<em class="property">exception </em><tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">InvalidCollectionReferenceError</tt><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#InvalidCollectionReferenceError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.InvalidCollectionReferenceError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="old.controllers.oldcollections.OldcollectionsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">OldcollectionsController</tt><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol.</p>
+<p>The collections controller is one of the more complex.  A great deal of this
+complexity arised from the fact that collections can reference forms and
+other collections in the value of their contents attribute.  The propagation
+of restricted tags and associated forms and the generation of the html from
+these contents-with-references, necessitates some complex logic for updates.</p>
+<p>There is a potential issue with collection-collection reference.  A
+restricted user can restrict their own collection A and that restriction
+would be propagated up the reference chain, possibly causing another
+collection B (that was not created by the updater) to become restricted.
+That is, collection-collection reference permits restricted users to
+restrict collections they would otherwise not be permitted to restrict. This
+will be bothersome to other restricted users since they can no longer access
+the newly restricted collection B.  A user authorized to update collection
+B will be able to remove this restriction.</p>
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /collections: Create a new collection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /collections/id: Delete an existing collection.  Only the
+enterer and administrators can delete a collection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collections/id/edit: Return the data necessary to update an
+existing OLD collection, i.e., the collection&#8217;s properties and the
+necessary additional data, i.e., users, speakers, etc.</p>
+<p>This action can be thought of as a combination of the &#8216;show&#8217; and &#8216;new&#8217;
+actions.  The output will be a JSON object of the form</p>
+<blockquote>
+<div>{collection: {...}, data: {...}},</div></blockquote>
+<p>where output.collection is an object containing the collection&#8217;s
+properties (cf. the output of show) and output.data is an object
+containing the data required to add a new collection (cf. the output of
+new).</p>
+<p>GET parameters will affect the value of output.data in the same way as
+for the new action, i.e., no params will result in all the necessary
+output.data being retrieved from the db while specified params will
+result in selective retrieval (see getNewEditCollectionData for details).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.history">
+<tt class="descname">history</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.history"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.history" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collections/history/id: Return a JSON object representation of the collection and its previous versions.</p>
+<p>The id parameter can be either an integer id or a UUID.  If no collection and
+no collection backups match id, then a 404 is returned.  Otherwise a 200 is
+returned (or a 403 if the restricted keyword is relevant).  See below:</p>
+<p>collection          None    None          collection collection
+previousVersions    []      [1, 2,...]    []         [1, 2,...]
+response            404     200/403       200/403    200/403</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collections: Return all collections.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /new_collection: Return the data necessary to create a new OLD collection.</p>
+<p>Return a JSON object with the following properties: &#8216;collectionTypes&#8217;,
+&#8216;markupLanguages&#8217;, &#8216;tags&#8217;, &#8216;speakers&#8217;, &#8216;users&#8217; and &#8216;sources&#8217;, the value
+of each of which is an array that is either empty or contains the
+appropriate objects.</p>
+<p>See the getNewEditCollectionData function to understand how the GET params can
+affect the contents of the arrays.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collections/new_search: Return the data necessary to inform a search
+on the collections resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.oldcollections.OldcollectionsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa7d4e6c&gt;</em><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /collections: Return all collections matching the filter passed as JSON in
+the request body.  Note: POST /collections/search also routes to this action.
+The request body must be a JSON object with a &#8216;query&#8217; attribute; a
+&#8216;paginator&#8217; attribute is optional.  The &#8216;query&#8217; object is passed to the
+getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+is returned or an error is raised.  The &#8216;query&#8217; object requires a
+&#8216;filter&#8217; attribute; an &#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /collections/id: Return a JSON object representation of the collection with
+id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.oldcollections.OldcollectionsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#OldcollectionsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.OldcollectionsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /collections/id: Update an existing collection.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="old.controllers.oldcollections.UnauthorizedCollectionReferenceError">
+<em class="property">exception </em><tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">UnauthorizedCollectionReferenceError</tt><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#UnauthorizedCollectionReferenceError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.UnauthorizedCollectionReferenceError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.addContentsUnpackedToValues">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">addContentsUnpackedToValues</tt><big>(</big><em>values</em>, <em>collectionsReferenced</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#addContentsUnpackedToValues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.addContentsUnpackedToValues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a &#8216;contentsUnpacked&#8217; value to values and return values.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.addFormIdsListToValues">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">addFormIdsListToValues</tt><big>(</big><em>values</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#addFormIdsListToValues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.addFormIdsListToValues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a list of form ids (extracted from contentsUnpacked) to the values
+dict and return values.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.backupCollection">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">backupCollection</tt><big>(</big><em>collectionDict</em>, <em>datetimeModified=None</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#backupCollection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.backupCollection" title="Permalink to this definition">¶</a></dt>
+<dd><p>When a collection is updated or deleted, it is first added to the
+collectionbackup table.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.createNewCollection">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">createNewCollection</tt><big>(</big><em>data</em>, <em>collectionsReferenced</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#createNewCollection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.createNewCollection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new Collection model object given a data dictionary provided by the
+user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.generateContentsUnpacked">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">generateContentsUnpacked</tt><big>(</big><em>contents</em>, <em>collectionsReferenced</em>, <em>patt=None</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#generateContentsUnpacked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.generateContentsUnpacked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the value for the contentsUnpacked attribute for a collection
+based on the value of its contents attribute.  This function calls itself
+recursively.  The collectionsReferenced dict is generated earlier and
+obviates repeated database queries.  Note also that circular, invalid and
+unauthorized reference chains are caught in the generation of collectionsReferenced.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getCollection">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getCollection</tt><big>(</big><em>collectionId</em>, <em>user</em>, <em>unrestrictedUsers</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getCollection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getCollection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the collection with collectionId or, if the collection does not
+exist or is restricted, raise an appropriate error.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getCollectionAndPreviousVersions">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getCollectionAndPreviousVersions</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getCollectionAndPreviousVersions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getCollectionAndPreviousVersions" title="Permalink to this definition">¶</a></dt>
+<dd><p>The id parameter is a string representing either an integer id or a UUID.
+Return the collection such that collection.id==id or collection.UUID==UUID
+(if there is one) as well as all collection backups such that
+collectionBackup.UUID==id or collectionBackup.collection_id==id.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getCollectionsReferenced">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getCollectionsReferenced</tt><big>(</big><em>contents</em>, <em>user=None</em>, <em>unrestrictedUsers=None</em>, <em>collectionId=None</em>, <em>patt=None</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getCollectionsReferenced"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getCollectionsReferenced" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dict of the form {id: collection} where the keys are the ids of
+all the collections referenced in the contents and all of the collection ids
+referenced in those collections, etc., and the values are the collection
+objects themselves.  This function is called recursively.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getCollectionsReferencedInContents">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getCollectionsReferencedInContents</tt><big>(</big><em>collection</em>, <em>collectionsReferenced</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getCollectionsReferencedInContents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getCollectionsReferencedInContents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list of collections referenced in the contents field of the
+input collection.  collectionsReferenced is a pre-generated dict from ids to
+collections that obviates the need to query the database.  The output of this
+function is useful in determining whether directly referenced collections are
+restricted and deciding, on that basis, whether to restrict the present collection.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getCollectionsReferencingThisCollection">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getCollectionsReferencingThisCollection</tt><big>(</big><em>collection</em>, <em>queryBuilder</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getCollectionsReferencingThisCollection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getCollectionsReferencingThisCollection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getContents">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getContents</tt><big>(</big><em>collectionId</em>, <em>collectionsReferenced</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getContents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getContents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempt to return the contents of the collection with id=collectionId.
+If the collection id is invalid or the collection has no stringy contents,
+return an appropriate warning message.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getNewEditCollectionData">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getNewEditCollectionData</tt><big>(</big><em>GET_params</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getNewEditCollectionData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getNewEditCollectionData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the data necessary to create a new OLD collection or update an existing
+one.  The GET_params parameter is the request.GET dictionary-like object
+generated by Pylons.</p>
+<p>If no parameters are provided (i.e., GET_params is empty), then retrieve all
+data (i.e., users, speakers, etc.) from the db and return it.</p>
+<p>If parameters are specified, then for each parameter whose value is a
+non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+return the appropriate list of objects.</p>
+<p>If the value of a parameter is a valid ISO 8601 datetime string,
+retrieve and return the appropriate list of objects <em>only</em> if the
+datetime param does <em>not</em> match the most recent datetimeModified value
+of the relevant data store.  This makes sense because a non-match indicates
+that the requester has out-of-date data.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.getUnicode">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">getUnicode</tt><big>(</big><em>key</em>, <em>dict_</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#getUnicode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.getUnicode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dict_[key], making sure it defaults to a unicode string.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.updateCollection">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">updateCollection</tt><big>(</big><em>collection</em>, <em>data</em>, <em>collectionsReferenced</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#updateCollection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.updateCollection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input Collection model object given a data dictionary provided by
+the user (as a JSON object).  If changed is not set to true in the course
+of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.oldcollections.updateCollectionsThatReferenceThisCollection">
+<tt class="descclassname">old.controllers.oldcollections.</tt><tt class="descname">updateCollectionsThatReferenceThisCollection</tt><big>(</big><em>collection</em>, <em>queryBuilder</em>, <em>restricted</em>, <em>contents_changed</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/oldcollections.html#updateCollectionsThatReferenceThisCollection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.oldcollections.updateCollectionsThatReferenceThisCollection" title="Permalink to this definition">¶</a></dt>
+<dd><p>If the contents of this collection have changed (i.e., contents_changed=True)
+or this collection has just been tagged as restricted (i.e., restricted=True),
+then retrieve all collections that reference this collection and all collections
+that reference those referers, etc., and (1) tag them as restricted (if
+appropriate), (2) update their contentsUnpacked and html attributes (if
+appropriate) and (3) update their datetimeModified attribute.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.orthographies">
+<span id="orthographies-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">orthographies</span></tt> Module<a class="headerlink" href="#module-old.controllers.orthographies" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.orthographies.OrthographiesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.orthographies.</tt><tt class="descname">OrthographiesController</tt><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /orthographies: Create a new orthography.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /orthographies/id: Delete an existing orthography.  Note that
+contributors can only update orthographies that are not used in the
+active application settings.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /orthographies/id/edit: Return the data necessary to update an existing
+OLD orthography; here we return only the orthography and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /orthographies: Return all orthographies.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /orthographies/new: Return the data necessary to create a new OLD
+orthography.  NOTHING TO RETURN HERE ...</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.orthographies.OrthographiesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa89b86c&gt;</em><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /orthographies/id: Return a JSON object representation of the orthography with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.orthographies.OrthographiesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#OrthographiesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.OrthographiesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /orthographies/id: Update an existing orthography.  Note that
+contributors can only update orthographies that are not used in the
+active application settings.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.orthographies.createNewOrthography">
+<tt class="descclassname">old.controllers.orthographies.</tt><tt class="descname">createNewOrthography</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#createNewOrthography"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.createNewOrthography" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new orthography model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.orthographies.updateOrthography">
+<tt class="descclassname">old.controllers.orthographies.</tt><tt class="descname">updateOrthography</tt><big>(</big><em>orthography</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/orthographies.html#updateOrthography"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.orthographies.updateOrthography" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input orthography model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.pages">
+<span id="pages-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">pages</span></tt> Module<a class="headerlink" href="#module-old.controllers.pages" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.pages.PagesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.pages.</tt><tt class="descname">PagesController</tt><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /pages: Create a new page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /pages/id: Delete an existing page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /pages/id/edit: Return the data necessary to update an existing
+OLD page; here we return only the page and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /pages: Return all pages.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /pages/new: Return the data necessary to create a new OLD
+page.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.pages.PagesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa19e22c&gt;</em><a class="headerlink" href="#old.controllers.pages.PagesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /pages/id: Return a JSON object representation of the page with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.pages.PagesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#PagesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.PagesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /pages/id: Update an existing page.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.pages.createNewPage">
+<tt class="descclassname">old.controllers.pages.</tt><tt class="descname">createNewPage</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#createNewPage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.createNewPage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new page model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.pages.updatePage">
+<tt class="descclassname">old.controllers.pages.</tt><tt class="descname">updatePage</tt><big>(</big><em>page</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/pages.html#updatePage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.pages.updatePage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input page model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.phonologies">
+<span id="phonologies-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">phonologies</span></tt> Module<a class="headerlink" href="#module-old.controllers.phonologies" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.phonologies.PhonologiesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.phonologies.</tt><tt class="descname">PhonologiesController</tt><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /phonologies: Create a new phonology.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /phonologies/id: Delete an existing phonology.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /phonologies/id/edit: Return the data necessary to update an existing
+OLD phonology; here we return only the phonology and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /phonologies: Return all phonologies.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /phonologies/new: Return the data necessary to create a new OLD
+phonology.  NOTHING TO RETURN HERE ...</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.phonologies.PhonologiesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa425b4c&gt;</em><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /phonologies/id: Return a JSON object representation of the phonology with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.phonologies.PhonologiesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#PhonologiesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.PhonologiesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /phonologies/id: Update an existing phonology.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.phonologies.createNewPhonology">
+<tt class="descclassname">old.controllers.phonologies.</tt><tt class="descname">createNewPhonology</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#createNewPhonology"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.createNewPhonology" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new phonology model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.phonologies.updatePhonology">
+<tt class="descclassname">old.controllers.phonologies.</tt><tt class="descname">updatePhonology</tt><big>(</big><em>phonology</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/phonologies.html#updatePhonology"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.phonologies.updatePhonology" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input phonology model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.rememberedforms">
+<span id="rememberedforms-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">rememberedforms</span></tt> Module<a class="headerlink" href="#module-old.controllers.rememberedforms" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.rememberedforms.RememberedformsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.rememberedforms.</tt><tt class="descname">RememberedformsController</tt><a class="reference internal" href="../_modules/old/controllers/rememberedforms.html#RememberedformsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.rememberedforms.RememberedformsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>A pseudo-REST-ful resource.  Remembered forms are stored in the userform
+many-to-many table (cf. model/user.py) which defines the contents of
+User(id).rememberedForms (and Form(id).memorizers).  A user&#8217;s remembered
+forms are not affected by requests to the user resource.  Instead, the
+rememberedforms resource handles modification, retrieval and search of a
+user&#8217;s remembered forms.</p>
+<p>Here is the API:</p>
+<p>GET /rememberedforms/id &#8211; return all forms remembered by the user with
+id=id.  Action: show(id).</p>
+<p>UPDATE /rememberedforms/id &#8211; set the user with id=id&#8217;s remembered forms to
+the set of forms corresponding to the JSON array of form ids sent in the
+request body; (accomplishes CUD; same as controllers/forms.remember).
+Action: update(id).</p>
+<p>SEARCH /rememberedforms/id &#8211; return all forms remembered by the user with
+id=id and which match the JSON search filter passed in the request body.
+Action: search(id)</p>
+<dl class="attribute">
+<dt id="old.controllers.rememberedforms.RememberedformsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa366f4c&gt;</em><a class="headerlink" href="#old.controllers.rememberedforms.RememberedformsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.rememberedforms.RememberedformsController.search">
+<tt class="descname">search</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/rememberedforms.html#RememberedformsController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.rememberedforms.RememberedformsController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /forms: Return all forms in the user with id=id&#8217;s remembered
+forms that match the filter passed as JSON in the request body.  Note:
+POST /rememberedForms/id/search also routes to this action.</p>
+<p>The request body must be a JSON object with a &#8216;query&#8217; attribute; a
+&#8216;paginator&#8217; attribute is optional.  The &#8216;query&#8217; object is passed to the
+getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+is returned or an error is raised.  The &#8216;query&#8217; object requires a
+&#8216;filter&#8217; attribute; an &#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.rememberedforms.RememberedformsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/rememberedforms.html#RememberedformsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.rememberedforms.RememberedformsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a JSON array of the forms remembered by the user with id=id.
+Note that any authenticated user is authorized to access this array.
+Restricted forms are filtered from the array on a per-user basis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.rememberedforms.RememberedformsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/rememberedforms.html#RememberedformsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.rememberedforms.RememberedformsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the user with id=id&#8217;s rememberedForms to the forms referenced by
+the array of form ids passed in the request body.  This action is very
+similar to the remember action in the forms controller, the difference
+being that remember only appends forms to the logged in user&#8217;s remembered
+forms list while the present action can modify an arbitrary user&#8217;s
+remembered forms without restriction (i.e., clear, append, remove).
+Admins can update any user&#8217;s remembered forms; non-admins can only
+update their own.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.sources">
+<span id="sources-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">sources</span></tt> Module<a class="headerlink" href="#module-old.controllers.sources" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.sources.SourcesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.sources.</tt><tt class="descname">SourcesController</tt><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /sources: Create a new source.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /sources/id: Delete an existing source.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /sources/id/edit: Return the data necessary to update an existing
+OLD source, i.e., the source&#8217;s properties and the list of entry types.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /sources: Return all sources.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /sources/new: Return the data necessary to create a new OLD source.
+All that is returned here is the list of valid BibTeX entry types.  GET
+params are ignored.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.new_search">
+<tt class="descname">new_search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.new_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.new_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /sources/new_search: Return the data necessary to inform a search
+on the sources resource.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.sources.SourcesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa20260c&gt;</em><a class="headerlink" href="#old.controllers.sources.SourcesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.search">
+<tt class="descname">search</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>SEARCH /sources: Return all sources matching the filter passed as JSON in
+the request body.  Note: POST /sources/search also routes to this action.
+The request body must be a JSON object with a &#8216;query&#8217; attribute; a
+&#8216;paginator&#8217; attribute is optional.  The &#8216;query&#8217; object is passed to the
+getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
+is returned or an error is raised.  The &#8216;query&#8217; object requires a
+&#8216;filter&#8217; attribute; an &#8216;orderBy&#8217; attribute is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /sources/id: Return a JSON object representation of the source with
+id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+<p>A source associated to a restricted file will still return a subset of the
+restricted file&#8217;s metadata.  However, restricted users will be unable to
+retrieve the binary content of the file because of the authorization logic
+the retrieve action of the files controller.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.sources.SourcesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#SourcesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.SourcesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /sources/id: Update an existing source.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.sources.createNewSource">
+<tt class="descclassname">old.controllers.sources.</tt><tt class="descname">createNewSource</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#createNewSource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.createNewSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new source model object given a data dictionary provided by the
+user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.sources.updateSource">
+<tt class="descclassname">old.controllers.sources.</tt><tt class="descname">updateSource</tt><big>(</big><em>source</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/sources.html#updateSource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.sources.updateSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input Source model object given a data dictionary provided by
+the user (as a JSON object).  If changed is not set to true in the course
+of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.speakers">
+<span id="speakers-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">speakers</span></tt> Module<a class="headerlink" href="#module-old.controllers.speakers" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.speakers.SpeakersController">
+<em class="property">class </em><tt class="descclassname">old.controllers.speakers.</tt><tt class="descname">SpeakersController</tt><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /speakers: Create a new speaker.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /speakers/id: Delete an existing speaker.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /speakers/id/edit: Return the data necessary to update an existing
+OLD speaker; here we return only the speaker and an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /speakers: Return all speakers.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /speakers/new: Return the data necessary to create a new OLD
+speaker.  NOTHING TO RETURN HERE ...</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.speakers.SpeakersController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa9e3e8c&gt;</em><a class="headerlink" href="#old.controllers.speakers.SpeakersController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /speakers/id: Return a JSON object representation of the speaker
+with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.speakers.SpeakersController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#SpeakersController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.SpeakersController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /speakers/id: Update an existing speaker.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.speakers.createNewSpeaker">
+<tt class="descclassname">old.controllers.speakers.</tt><tt class="descname">createNewSpeaker</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#createNewSpeaker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.createNewSpeaker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new speaker model object given a data dictionary provided by the
+user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.speakers.updateSpeaker">
+<tt class="descclassname">old.controllers.speakers.</tt><tt class="descname">updateSpeaker</tt><big>(</big><em>speaker</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/speakers.html#updateSpeaker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.speakers.updateSpeaker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input speaker model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.syntacticcategories">
+<span id="syntacticcategories-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">syntacticcategories</span></tt> Module<a class="headerlink" href="#module-old.controllers.syntacticcategories" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController">
+<em class="property">class </em><tt class="descclassname">old.controllers.syntacticcategories.</tt><tt class="descname">SyntacticcategoriesController</tt><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /syntacticcategories: Create a new syntactic category.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /syntacticcategories/id: Delete an existing syntactic category.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /syntacticcategories/id/edit: Return the data necessary to update an existing
+OLD syntactic category; here we return only the syntactic category and
+the list of syntactic category types defined in lib/utils.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /syntacticcategories: Return all syntactic categories.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /syntacticcategories/new: Return the data necessary to create a new OLD
+syntactic category.  Here we simply return the list of syntactic category
+types defined in lib/utils.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0x990a8ec&gt;</em><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /syntacticcategories/id: Return a JSON object representation of
+the syntactic category with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.syntacticcategories.SyntacticcategoriesController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#SyntacticcategoriesController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.SyntacticcategoriesController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /syntacticcategories/id: Update an existing syntactic category.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.syntacticcategories.createNewSyntacticCategory">
+<tt class="descclassname">old.controllers.syntacticcategories.</tt><tt class="descname">createNewSyntacticCategory</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#createNewSyntacticCategory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.createNewSyntacticCategory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new syntactic category model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.syntacticcategories.updateFormsReferencingThisCategory">
+<tt class="descclassname">old.controllers.syntacticcategories.</tt><tt class="descname">updateFormsReferencingThisCategory</tt><big>(</big><em>syntacticCategory</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#updateFormsReferencingThisCategory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.updateFormsReferencingThisCategory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.syntacticcategories.updateSyntacticCategory">
+<tt class="descclassname">old.controllers.syntacticcategories.</tt><tt class="descname">updateSyntacticCategory</tt><big>(</big><em>syntacticCategory</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/syntacticcategories.html#updateSyntacticCategory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.syntacticcategories.updateSyntacticCategory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input syntactic category model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.tags">
+<span id="tags-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">tags</span></tt> Module<a class="headerlink" href="#module-old.controllers.tags" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.tags.TagsController">
+<em class="property">class </em><tt class="descclassname">old.controllers.tags.</tt><tt class="descname">TagsController</tt><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /tags: Create a new tag.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /tags/id: Delete an existing tag.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags/id/edit: Return the data necessary to update an existing
+OLD tag; here we return only the tag and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags: Return all tags.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags/new: Return the data necessary to create a new OLD
+tag.  NOTHING TO RETURN HERE ...</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.tags.TagsController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa765b8c&gt;</em><a class="headerlink" href="#old.controllers.tags.TagsController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /tags/id: Return a JSON object representation of the tag with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.tags.TagsController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#TagsController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.TagsController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /tags/id: Update an existing tag.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.tags.createNewTag">
+<tt class="descclassname">old.controllers.tags.</tt><tt class="descname">createNewTag</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#createNewTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.createNewTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new tag model object given a data dictionary provided by the
+user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.tags.updateTag">
+<tt class="descclassname">old.controllers.tags.</tt><tt class="descname">updateTag</tt><big>(</big><em>tag</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/tags.html#updateTag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.tags.updateTag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input tag model object given a data dictionary provided by the
+user (as a JSON object).  If changed is not set to true in the course of
+attribute setting, then False is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.controllers.users">
+<span id="users-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">users</span></tt> Module<a class="headerlink" href="#module-old.controllers.users" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="old.controllers.users.UsersController">
+<em class="property">class </em><tt class="descclassname">old.controllers.users.</tt><tt class="descname">UsersController</tt><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="old.lib.html#old.lib.base.BaseController" title="old.lib.base.BaseController"><tt class="xref py py-class docutils literal"><span class="pre">old.lib.base.BaseController</span></tt></a></p>
+<p>REST Controller styled on the Atom Publishing Protocol</p>
+<dl class="method">
+<dt id="old.controllers.users.UsersController.create">
+<tt class="descname">create</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST /users: Create a new user.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.users.UsersController.delete">
+<tt class="descname">delete</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE /users/id: Delete an existing user.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.users.UsersController.edit">
+<tt class="descname">edit</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.edit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.edit" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /users/id/edit: Return the data necessary to update an existing
+OLD user; here we return only the user and
+an empty JSON object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.users.UsersController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /users: Return all users.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.users.UsersController.new">
+<tt class="descname">new</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /users/new: Return the data necessary to create a new OLD user.</p>
+<p>Return a JSON object with the following properties: roles, orthographies,
+markupLanguages, the value of each of which is an array that
+is either empty or contains the appropriate objects.</p>
+<p>See the getNewUserData function to understand how the GET
+params can affect the contents of the arrays.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.controllers.users.UsersController.queryBuilder">
+<tt class="descname">queryBuilder</tt><em class="property"> = &lt;old.lib.SQLAQueryBuilder.SQLAQueryBuilder object at 0xa2008ac&gt;</em><a class="headerlink" href="#old.controllers.users.UsersController.queryBuilder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.users.UsersController.show">
+<tt class="descname">show</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET /users/id: Return a JSON object representation of the user with id=id.</p>
+<p>If the id is invalid, the header will contain a 404 status int and a
+JSON object will be returned.  If the id is unspecified, then Routes
+will put a 404 status int into the header and the default 404 JSON
+object defined in controllers/error.py will be returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.controllers.users.UsersController.update">
+<tt class="descname">update</tt><big>(</big><em>id</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#UsersController.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.UsersController.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT /users/id: Update an existing user.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.users.createNewUser">
+<tt class="descclassname">old.controllers.users.</tt><tt class="descname">createNewUser</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#createNewUser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.createNewUser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new user model object given a data dictionary
+provided by the user (as a JSON object).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.users.getNewUserData">
+<tt class="descclassname">old.controllers.users.</tt><tt class="descname">getNewUserData</tt><big>(</big><em>GET_params</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#getNewUserData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.getNewUserData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the data necessary to create a new user or update
+an existing one.  The GET_params parameter is the request.GET dictionary-
+like object generated by Pylons.</p>
+<p>If no parameters are provided (i.e., GET_params is empty), then retrieve all
+data (i.e., roles, orthographies and markupLanguages) and return them.</p>
+<p>If parameters are specified, then for each parameter whose value is a
+non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+return the appropriate list of objects.</p>
+<p>If the value of a parameter is a valid ISO 8601 datetime string,
+retrieve and return the appropriate list of objects <em>only</em> if the
+datetime param does <em>not</em> match the most recent datetimeModified value
+of the relevant data store.  This makes sense because a non-match indicates
+that the requester has out-of-date data.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="old.controllers.users.updateUser">
+<tt class="descclassname">old.controllers.users.</tt><tt class="descname">updateUser</tt><big>(</big><em>user</em>, <em>data</em><big>)</big><a class="reference internal" href="../_modules/old/controllers/users.html#updateUser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.controllers.users.updateUser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the input user model object given a data dictionary
+provided by the user (as a JSON object).  If changed is not set to true in
+the course of attribute setting, then None is returned and no update occurs.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">controllers Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">controllers</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-old.controllers.applicationsettings"><tt class="docutils literal"><span class="pre">applicationsettings</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.collectionbackups"><tt class="docutils literal"><span class="pre">collectionbackups</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.elicitationmethods"><tt class="docutils literal"><span class="pre">elicitationmethods</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.error"><tt class="docutils literal"><span class="pre">error</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.files"><tt class="docutils literal"><span class="pre">files</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.formbackups"><tt class="docutils literal"><span class="pre">formbackups</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.forms"><tt class="docutils literal"><span class="pre">forms</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.formsearches"><tt class="docutils literal"><span class="pre">formsearches</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.languages"><tt class="docutils literal"><span class="pre">languages</span></tt> Module</a></li>
+<li><a class="reference internal" href="#login-module"><tt class="docutils literal"><span class="pre">login</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.oldcollections"><tt class="docutils literal"><span class="pre">oldcollections</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.orthographies"><tt class="docutils literal"><span class="pre">orthographies</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.pages"><tt class="docutils literal"><span class="pre">pages</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.phonologies"><tt class="docutils literal"><span class="pre">phonologies</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.rememberedforms"><tt class="docutils literal"><span class="pre">rememberedforms</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.sources"><tt class="docutils literal"><span class="pre">sources</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.speakers"><tt class="docutils literal"><span class="pre">speakers</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.syntacticcategories"><tt class="docutils literal"><span class="pre">syntacticcategories</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.tags"><tt class="docutils literal"><span class="pre">tags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.controllers.users"><tt class="docutils literal"><span class="pre">users</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/old.controllers.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

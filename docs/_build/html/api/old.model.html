@@ -1,0 +1,2082 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>model Package &mdash; OLD 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="OLD 1.0.0 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="model-package">
+<h1>model Package<a class="headerlink" href="#model-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">model</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-old.model"></span><p>The application&#8217;s model objects</p>
+<dl class="function">
+<dt id="old.model.init_model">
+<tt class="descclassname">old.model.</tt><tt class="descname">init_model</tt><big>(</big><em>engine</em><big>)</big><a class="reference internal" href="../_modules/old/model.html#init_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.init_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call me before using any of the tables or classes in the model</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.applicationsettings">
+<span id="applicationsettings-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">applicationsettings</span></tt> Module<a class="headerlink" href="#module-old.model.applicationsettings" title="Permalink to this headline">¶</a></h2>
+<p>ApplicationSettings model</p>
+<dl class="class">
+<dt id="old.model.applicationsettings.ApplicationSettings">
+<em class="property">class </em><tt class="descclassname">old.model.applicationsettings.</tt><tt class="descname">ApplicationSettings</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/applicationsettings.html#ApplicationSettings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.broadPhoneticInventory">
+<tt class="descname">broadPhoneticInventory</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.broadPhoneticInventory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.broadPhoneticValidation">
+<tt class="descname">broadPhoneticValidation</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.broadPhoneticValidation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.applicationsettings.ApplicationSettings.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/applicationsettings.html#ApplicationSettings.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.getDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Python dictionary representation of the ApplicationSettings.
+This facilitates JSON-stringification, cf. utils.JSONOLDEncoder.
+Relational data are truncated, e.g., applicationSettings.getDict()[&#8216;storageOrthography&#8217;]
+is a dict with keys that are a subset of an orthography&#8217;s attributes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.grammaticalities">
+<tt class="descname">grammaticalities</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.grammaticalities" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.inputOrthography">
+<tt class="descname">inputOrthography</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.inputOrthography" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.inputOrthography_id">
+<tt class="descname">inputOrthography_id</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.inputOrthography_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.metalanguageId">
+<tt class="descname">metalanguageId</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.metalanguageId" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.metalanguageInventory">
+<tt class="descname">metalanguageInventory</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.metalanguageInventory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.metalanguageName">
+<tt class="descname">metalanguageName</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.metalanguageName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.morphemeBreakIsOrthographic">
+<tt class="descname">morphemeBreakIsOrthographic</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.morphemeBreakIsOrthographic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.morphemeBreakValidation">
+<tt class="descname">morphemeBreakValidation</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.morphemeBreakValidation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.morphemeDelimiters">
+<tt class="descname">morphemeDelimiters</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.morphemeDelimiters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.narrowPhoneticInventory">
+<tt class="descname">narrowPhoneticInventory</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.narrowPhoneticInventory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.narrowPhoneticValidation">
+<tt class="descname">narrowPhoneticValidation</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.narrowPhoneticValidation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.objectLanguageId">
+<tt class="descname">objectLanguageId</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.objectLanguageId" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.objectLanguageName">
+<tt class="descname">objectLanguageName</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.objectLanguageName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.orthographicValidation">
+<tt class="descname">orthographicValidation</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.orthographicValidation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.outputOrthography">
+<tt class="descname">outputOrthography</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.outputOrthography" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.outputOrthography_id">
+<tt class="descname">outputOrthography_id</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.outputOrthography_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.phonemicInventory">
+<tt class="descname">phonemicInventory</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.phonemicInventory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.punctuation">
+<tt class="descname">punctuation</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.punctuation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.storageOrthography">
+<tt class="descname">storageOrthography</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.storageOrthography" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.storageOrthography_id">
+<tt class="descname">storageOrthography_id</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.storageOrthography_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.applicationsettings.ApplicationSettings.unrestrictedUsers">
+<tt class="descname">unrestrictedUsers</tt><a class="headerlink" href="#old.model.applicationsettings.ApplicationSettings.unrestrictedUsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.model.applicationsettings.deleteKey">
+<tt class="descclassname">old.model.applicationsettings.</tt><tt class="descname">deleteKey</tt><big>(</big><em>dict_</em>, <em>key_</em><big>)</big><a class="reference internal" href="../_modules/old/model/applicationsettings.html#deleteKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.applicationsettings.deleteKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to delete the <a href="#id2"><span class="problematic" id="id3">key_</span></a> from the <a href="#id4"><span class="problematic" id="id5">dict_</span></a>; then return the <a href="#id6"><span class="problematic" id="id7">dict_</span></a>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.collection">
+<span id="collection-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">collection</span></tt> Module<a class="headerlink" href="#module-old.model.collection" title="Permalink to this headline">¶</a></h2>
+<p>Collection model</p>
+<dl class="class">
+<dt id="old.model.collection.Collection">
+<em class="property">class </em><tt class="descclassname">old.model.collection.</tt><tt class="descname">Collection</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/collection.html#Collection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.collection.Collection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.collection.Collection.UUID">
+<tt class="descname">UUID</tt><a class="headerlink" href="#old.model.collection.Collection.UUID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.contents">
+<tt class="descname">contents</tt><a class="headerlink" href="#old.model.collection.Collection.contents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.contentsUnpacked">
+<tt class="descname">contentsUnpacked</tt><a class="headerlink" href="#old.model.collection.Collection.contentsUnpacked" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.dateElicited">
+<tt class="descname">dateElicited</tt><a class="headerlink" href="#old.model.collection.Collection.dateElicited" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.datetimeEntered">
+<tt class="descname">datetimeEntered</tt><a class="headerlink" href="#old.model.collection.Collection.datetimeEntered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.collection.Collection.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.collection.Collection.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.elicitor">
+<tt class="descname">elicitor</tt><a class="headerlink" href="#old.model.collection.Collection.elicitor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.elicitor_id">
+<tt class="descname">elicitor_id</tt><a class="headerlink" href="#old.model.collection.Collection.elicitor_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.enterer">
+<tt class="descname">enterer</tt><a class="headerlink" href="#old.model.collection.Collection.enterer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.enterer_id">
+<tt class="descname">enterer_id</tt><a class="headerlink" href="#old.model.collection.Collection.enterer_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.files">
+<tt class="descname">files</tt><a class="headerlink" href="#old.model.collection.Collection.files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.collection.Collection.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/collection.html#Collection.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.collection.Collection.getDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Python dictionary representation of the Collection.  This
+facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
+data are truncated, e.g., collectionDict[&#8216;elicitor&#8217;] is a dict with keys
+for &#8216;id&#8217;, &#8216;firstName&#8217; and &#8216;lastName&#8217; (cf. getMiniUserDict above) and
+lacks keys for other attributes such as &#8216;username&#8217;,
+&#8216;personalPageContent&#8217;, etc.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.html">
+<tt class="descname">html</tt><a class="headerlink" href="#old.model.collection.Collection.html" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.collection.Collection.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.markupLanguage">
+<tt class="descname">markupLanguage</tt><a class="headerlink" href="#old.model.collection.Collection.markupLanguage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.source">
+<tt class="descname">source</tt><a class="headerlink" href="#old.model.collection.Collection.source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.source_id">
+<tt class="descname">source_id</tt><a class="headerlink" href="#old.model.collection.Collection.source_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.speaker">
+<tt class="descname">speaker</tt><a class="headerlink" href="#old.model.collection.Collection.speaker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.speaker_id">
+<tt class="descname">speaker_id</tt><a class="headerlink" href="#old.model.collection.Collection.speaker_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.tags">
+<tt class="descname">tags</tt><a class="headerlink" href="#old.model.collection.Collection.tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.title">
+<tt class="descname">title</tt><a class="headerlink" href="#old.model.collection.Collection.title" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.type">
+<tt class="descname">type</tt><a class="headerlink" href="#old.model.collection.Collection.type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collection.Collection.url">
+<tt class="descname">url</tt><a class="headerlink" href="#old.model.collection.Collection.url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.collectionbackup">
+<span id="collectionbackup-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">collectionbackup</span></tt> Module<a class="headerlink" href="#module-old.model.collectionbackup" title="Permalink to this headline">¶</a></h2>
+<p>CollectionBackup model</p>
+<p>Used to save Collection data that has been updated or deleted.  This is a
+non-relational table, because keeping a copy of every single change relationally
+seemed like more trouble than it&#8217;s worth.</p>
+<dl class="class">
+<dt id="old.model.collectionbackup.CollectionBackup">
+<em class="property">class </em><tt class="descclassname">old.model.collectionbackup.</tt><tt class="descname">CollectionBackup</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/collectionbackup.html#CollectionBackup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.UUID">
+<tt class="descname">UUID</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.UUID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.backuper">
+<tt class="descname">backuper</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.backuper" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.collection_id">
+<tt class="descname">collection_id</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.collection_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.contents">
+<tt class="descname">contents</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.contents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.dateElicited">
+<tt class="descname">dateElicited</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.dateElicited" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.datetimeEntered">
+<tt class="descname">datetimeEntered</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.datetimeEntered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.elicitor">
+<tt class="descname">elicitor</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.elicitor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.enterer">
+<tt class="descname">enterer</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.enterer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.files">
+<tt class="descname">files</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.forms">
+<tt class="descname">forms</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.forms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.collectionbackup.CollectionBackup.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/collectionbackup.html#CollectionBackup.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.html">
+<tt class="descname">html</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.html" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.markupLanguage">
+<tt class="descname">markupLanguage</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.markupLanguage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.source">
+<tt class="descname">source</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.speaker">
+<tt class="descname">speaker</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.speaker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.tags">
+<tt class="descname">tags</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.title">
+<tt class="descname">title</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.title" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.type">
+<tt class="descname">type</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.collectionbackup.CollectionBackup.url">
+<tt class="descname">url</tt><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.collectionbackup.CollectionBackup.vivify">
+<tt class="descname">vivify</tt><big>(</big><em>collectionDict</em>, <em>backuper</em>, <em>datetimeModified=None</em><big>)</big><a class="reference internal" href="../_modules/old/model/collectionbackup.html#CollectionBackup.vivify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.collectionbackup.CollectionBackup.vivify" title="Permalink to this definition">¶</a></dt>
+<dd><p>The vivify method gives life to CollectionBackup by specifying its
+attributes using the to-be-backed-up collection (collectionDict) and the
+backuper (current user).  The relational attributes of the
+to-be-backed-up collection are converted into (truncated) JSON objects.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.elicitationmethod">
+<span id="elicitationmethod-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">elicitationmethod</span></tt> Module<a class="headerlink" href="#module-old.model.elicitationmethod" title="Permalink to this headline">¶</a></h2>
+<p>ElicitationMethod model</p>
+<dl class="class">
+<dt id="old.model.elicitationmethod.ElicitationMethod">
+<em class="property">class </em><tt class="descclassname">old.model.elicitationmethod.</tt><tt class="descname">ElicitationMethod</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/elicitationmethod.html#ElicitationMethod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.elicitationmethod.ElicitationMethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.elicitationmethod.ElicitationMethod.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.elicitationmethod.ElicitationMethod.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.elicitationmethod.ElicitationMethod.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.elicitationmethod.ElicitationMethod.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.elicitationmethod.ElicitationMethod.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.elicitationmethod.ElicitationMethod.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.elicitationmethod.ElicitationMethod.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.elicitationmethod.ElicitationMethod.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.file">
+<span id="file-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">file</span></tt> Module<a class="headerlink" href="#module-old.model.file" title="Permalink to this headline">¶</a></h2>
+<p>File model</p>
+<dl class="class">
+<dt id="old.model.file.File">
+<em class="property">class </em><tt class="descclassname">old.model.file.</tt><tt class="descname">File</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/file.html#File"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.file.File" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<p>There are 3 types of file:</p>
+<ol class="arabic simple">
+<li>Standard files: their content is a file in /files/filename.  These files
+have a filename attribute.</li>
+<li>Subinterval-referring A/V files: these refer to another OLD file for
+their content.  These files have a parentFile attribute (as well as start
+and end attributes.)</li>
+<li>Externally hosted files: these refer to a file hosted on another server.
+They have a url attribute (and optionally a password attribute as well.)</li>
+</ol>
+<dl class="attribute">
+<dt id="old.model.file.File.MIMEtype">
+<tt class="descname">MIMEtype</tt><a class="headerlink" href="#old.model.file.File.MIMEtype" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.dateElicited">
+<tt class="descname">dateElicited</tt><a class="headerlink" href="#old.model.file.File.dateElicited" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.datetimeEntered">
+<tt class="descname">datetimeEntered</tt><a class="headerlink" href="#old.model.file.File.datetimeEntered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.file.File.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.file.File.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.elicitor">
+<tt class="descname">elicitor</tt><a class="headerlink" href="#old.model.file.File.elicitor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.elicitor_id">
+<tt class="descname">elicitor_id</tt><a class="headerlink" href="#old.model.file.File.elicitor_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.end">
+<tt class="descname">end</tt><a class="headerlink" href="#old.model.file.File.end" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.enterer">
+<tt class="descname">enterer</tt><a class="headerlink" href="#old.model.file.File.enterer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.enterer_id">
+<tt class="descname">enterer_id</tt><a class="headerlink" href="#old.model.file.File.enterer_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.filename">
+<tt class="descname">filename</tt><a class="headerlink" href="#old.model.file.File.filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.file.File.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/file.html#File.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.file.File.getDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Python dictionary representation of the File.  This
+facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
+data are truncated.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.file.File.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.lossyFilename">
+<tt class="descname">lossyFilename</tt><a class="headerlink" href="#old.model.file.File.lossyFilename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.file.File.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.parentFile">
+<tt class="descname">parentFile</tt><a class="headerlink" href="#old.model.file.File.parentFile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.parentFile_id">
+<tt class="descname">parentFile_id</tt><a class="headerlink" href="#old.model.file.File.parentFile_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.password">
+<tt class="descname">password</tt><a class="headerlink" href="#old.model.file.File.password" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.size">
+<tt class="descname">size</tt><a class="headerlink" href="#old.model.file.File.size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.speaker">
+<tt class="descname">speaker</tt><a class="headerlink" href="#old.model.file.File.speaker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.speaker_id">
+<tt class="descname">speaker_id</tt><a class="headerlink" href="#old.model.file.File.speaker_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.start">
+<tt class="descname">start</tt><a class="headerlink" href="#old.model.file.File.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.tags">
+<tt class="descname">tags</tt><a class="headerlink" href="#old.model.file.File.tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.url">
+<tt class="descname">url</tt><a class="headerlink" href="#old.model.file.File.url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.file.File.utteranceType">
+<tt class="descname">utteranceType</tt><a class="headerlink" href="#old.model.file.File.utteranceType" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.form">
+<span id="form-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">form</span></tt> Module<a class="headerlink" href="#module-old.model.form" title="Permalink to this headline">¶</a></h2>
+<p>Form model</p>
+<dl class="class">
+<dt id="old.model.form.Form">
+<em class="property">class </em><tt class="descclassname">old.model.form.</tt><tt class="descname">Form</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/form.html#Form"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.form.Form" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.form.Form.UUID">
+<tt class="descname">UUID</tt><a class="headerlink" href="#old.model.form.Form.UUID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.breakGlossCategory">
+<tt class="descname">breakGlossCategory</tt><a class="headerlink" href="#old.model.form.Form.breakGlossCategory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.collections">
+<tt class="descname">collections</tt><a class="headerlink" href="#old.model.form.Form.collections" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.comments">
+<tt class="descname">comments</tt><a class="headerlink" href="#old.model.form.Form.comments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.dateElicited">
+<tt class="descname">dateElicited</tt><a class="headerlink" href="#old.model.form.Form.dateElicited" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.datetimeEntered">
+<tt class="descname">datetimeEntered</tt><a class="headerlink" href="#old.model.form.Form.datetimeEntered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.form.Form.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.elicitationMethod">
+<tt class="descname">elicitationMethod</tt><a class="headerlink" href="#old.model.form.Form.elicitationMethod" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.elicitationmethod_id">
+<tt class="descname">elicitationmethod_id</tt><a class="headerlink" href="#old.model.form.Form.elicitationmethod_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.elicitor">
+<tt class="descname">elicitor</tt><a class="headerlink" href="#old.model.form.Form.elicitor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.elicitor_id">
+<tt class="descname">elicitor_id</tt><a class="headerlink" href="#old.model.form.Form.elicitor_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.enterer">
+<tt class="descname">enterer</tt><a class="headerlink" href="#old.model.form.Form.enterer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.enterer_id">
+<tt class="descname">enterer_id</tt><a class="headerlink" href="#old.model.form.Form.enterer_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.files">
+<tt class="descname">files</tt><a class="headerlink" href="#old.model.form.Form.files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.form.Form.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/form.html#Form.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.form.Form.getDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Python dictionary representation of the Form.  This
+facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
+data are truncated, e.g., formDict[&#8216;elicitor&#8217;] is a dict with keys for
+&#8216;id&#8217;, &#8216;firstName&#8217; and &#8216;lastName&#8217; (cf. getMiniUserDict above) and lacks
+keys for other attributes such as &#8216;username&#8217;, &#8216;personalPageContent&#8217;, etc.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.glosses">
+<tt class="descname">glosses</tt><a class="headerlink" href="#old.model.form.Form.glosses" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.grammaticality">
+<tt class="descname">grammaticality</tt><a class="headerlink" href="#old.model.form.Form.grammaticality" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.form.Form.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.morphemeBreak">
+<tt class="descname">morphemeBreak</tt><a class="headerlink" href="#old.model.form.Form.morphemeBreak" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.morphemeBreakIDs">
+<tt class="descname">morphemeBreakIDs</tt><a class="headerlink" href="#old.model.form.Form.morphemeBreakIDs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.morphemeGloss">
+<tt class="descname">morphemeGloss</tt><a class="headerlink" href="#old.model.form.Form.morphemeGloss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.morphemeGlossIDs">
+<tt class="descname">morphemeGlossIDs</tt><a class="headerlink" href="#old.model.form.Form.morphemeGlossIDs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.narrowPhoneticTranscription">
+<tt class="descname">narrowPhoneticTranscription</tt><a class="headerlink" href="#old.model.form.Form.narrowPhoneticTranscription" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.phoneticTranscription">
+<tt class="descname">phoneticTranscription</tt><a class="headerlink" href="#old.model.form.Form.phoneticTranscription" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.semantics">
+<tt class="descname">semantics</tt><a class="headerlink" href="#old.model.form.Form.semantics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.source">
+<tt class="descname">source</tt><a class="headerlink" href="#old.model.form.Form.source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.source_id">
+<tt class="descname">source_id</tt><a class="headerlink" href="#old.model.form.Form.source_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.speaker">
+<tt class="descname">speaker</tt><a class="headerlink" href="#old.model.form.Form.speaker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.speakerComments">
+<tt class="descname">speakerComments</tt><a class="headerlink" href="#old.model.form.Form.speakerComments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.speaker_id">
+<tt class="descname">speaker_id</tt><a class="headerlink" href="#old.model.form.Form.speaker_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.status">
+<tt class="descname">status</tt><a class="headerlink" href="#old.model.form.Form.status" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.syntacticCategory">
+<tt class="descname">syntacticCategory</tt><a class="headerlink" href="#old.model.form.Form.syntacticCategory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.syntacticCategoryString">
+<tt class="descname">syntacticCategoryString</tt><a class="headerlink" href="#old.model.form.Form.syntacticCategoryString" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.syntacticcategory_id">
+<tt class="descname">syntacticcategory_id</tt><a class="headerlink" href="#old.model.form.Form.syntacticcategory_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.syntax">
+<tt class="descname">syntax</tt><a class="headerlink" href="#old.model.form.Form.syntax" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.tags">
+<tt class="descname">tags</tt><a class="headerlink" href="#old.model.form.Form.tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.transcription">
+<tt class="descname">transcription</tt><a class="headerlink" href="#old.model.form.Form.transcription" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.verifier">
+<tt class="descname">verifier</tt><a class="headerlink" href="#old.model.form.Form.verifier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.Form.verifier_id">
+<tt class="descname">verifier_id</tt><a class="headerlink" href="#old.model.form.Form.verifier_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="old.model.form.FormFile">
+<em class="property">class </em><tt class="descclassname">old.model.form.</tt><tt class="descname">FormFile</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/form.html#FormFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.form.FormFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.form.FormFile.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.form.FormFile.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.FormFile.file_id">
+<tt class="descname">file_id</tt><a class="headerlink" href="#old.model.form.FormFile.file_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.FormFile.form_id">
+<tt class="descname">form_id</tt><a class="headerlink" href="#old.model.form.FormFile.form_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.form.FormFile.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.form.FormFile.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.formbackup">
+<span id="formbackup-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">formbackup</span></tt> Module<a class="headerlink" href="#module-old.model.formbackup" title="Permalink to this headline">¶</a></h2>
+<p>FormBackup model</p>
+<p>Used to save Form data that has been updated or deleted.  This is a
+non-relational table, because keeping a copy of every single change relationally
+seemed like more trouble than it&#8217;s worth.</p>
+<dl class="class">
+<dt id="old.model.formbackup.FormBackup">
+<em class="property">class </em><tt class="descclassname">old.model.formbackup.</tt><tt class="descname">FormBackup</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/formbackup.html#FormBackup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.formbackup.FormBackup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<p>Class for creating OLD FormBackup models.</p>
+<p>The vivify method takes a Form and a User object as input and populates a
+number of Form-like attributes, converting relational attributes to JSON
+objects.</p>
+<p>The load method converts the JSON objects into Python Column objects, thus
+allowing the FormBackup to behave more like a Form object.</p>
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.UUID">
+<tt class="descname">UUID</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.UUID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.backuper">
+<tt class="descname">backuper</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.backuper" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.breakGlossCategory">
+<tt class="descname">breakGlossCategory</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.breakGlossCategory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.comments">
+<tt class="descname">comments</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.comments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.dateElicited">
+<tt class="descname">dateElicited</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.dateElicited" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.datetimeEntered">
+<tt class="descname">datetimeEntered</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.datetimeEntered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.elicitationMethod">
+<tt class="descname">elicitationMethod</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.elicitationMethod" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.elicitor">
+<tt class="descname">elicitor</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.elicitor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.enterer">
+<tt class="descname">enterer</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.enterer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.files">
+<tt class="descname">files</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.form_id">
+<tt class="descname">form_id</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.form_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.formbackup.FormBackup.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/formbackup.html#FormBackup.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.formbackup.FormBackup.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.glosses">
+<tt class="descname">glosses</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.glosses" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.grammaticality">
+<tt class="descname">grammaticality</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.grammaticality" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.formbackup.FormBackup.load">
+<tt class="descname">load</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/formbackup.html#FormBackup.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.formbackup.FormBackup.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the JSON objects back into Column objects, thus making the
+FormBackup behave just like a Form object.  Almost.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.morphemeBreak">
+<tt class="descname">morphemeBreak</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.morphemeBreak" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.morphemeBreakIDs">
+<tt class="descname">morphemeBreakIDs</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.morphemeBreakIDs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.morphemeGloss">
+<tt class="descname">morphemeGloss</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.morphemeGloss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.morphemeGlossIDs">
+<tt class="descname">morphemeGlossIDs</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.morphemeGlossIDs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.narrowPhoneticTranscription">
+<tt class="descname">narrowPhoneticTranscription</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.narrowPhoneticTranscription" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.phoneticTranscription">
+<tt class="descname">phoneticTranscription</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.phoneticTranscription" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.source">
+<tt class="descname">source</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.speaker">
+<tt class="descname">speaker</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.speaker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.speakerComments">
+<tt class="descname">speakerComments</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.speakerComments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.syntacticCategory">
+<tt class="descname">syntacticCategory</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.syntacticCategory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.syntacticCategoryString">
+<tt class="descname">syntacticCategoryString</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.syntacticCategoryString" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.tags">
+<tt class="descname">tags</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.tags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.transcription">
+<tt class="descname">transcription</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.transcription" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formbackup.FormBackup.verifier">
+<tt class="descname">verifier</tt><a class="headerlink" href="#old.model.formbackup.FormBackup.verifier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.formbackup.FormBackup.vivify">
+<tt class="descname">vivify</tt><big>(</big><em>formDict</em>, <em>backuper</em>, <em>datetimeModified=None</em><big>)</big><a class="reference internal" href="../_modules/old/model/formbackup.html#FormBackup.vivify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.formbackup.FormBackup.vivify" title="Permalink to this definition">¶</a></dt>
+<dd><p>The vivify method gives life to FormBackup by specifying its
+attributes using the to-be-backed-up form (formDict) and the backuper
+(current user).  The relational attributes of the to-be-backed-up form
+are converted into (truncated) JSON objects.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.formsearch">
+<span id="formsearch-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">formsearch</span></tt> Module<a class="headerlink" href="#module-old.model.formsearch" title="Permalink to this headline">¶</a></h2>
+<p>FormSearch model</p>
+<dl class="class">
+<dt id="old.model.formsearch.FormSearch">
+<em class="property">class </em><tt class="descclassname">old.model.formsearch.</tt><tt class="descname">FormSearch</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/formsearch.html#FormSearch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.formsearch.FormSearch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.search">
+<tt class="descname">search</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.search" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.searcher">
+<tt class="descname">searcher</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.searcher" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.formsearch.FormSearch.searcher_id">
+<tt class="descname">searcher_id</tt><a class="headerlink" href="#old.model.formsearch.FormSearch.searcher_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.gloss">
+<span id="gloss-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">gloss</span></tt> Module<a class="headerlink" href="#module-old.model.gloss" title="Permalink to this headline">¶</a></h2>
+<p>Gloss model</p>
+<dl class="class">
+<dt id="old.model.gloss.Gloss">
+<em class="property">class </em><tt class="descclassname">old.model.gloss.</tt><tt class="descname">Gloss</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/gloss.html#Gloss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.gloss.Gloss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.gloss.Gloss.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.gloss.Gloss.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.gloss.Gloss.form_id">
+<tt class="descname">form_id</tt><a class="headerlink" href="#old.model.gloss.Gloss.form_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.gloss.Gloss.gloss">
+<tt class="descname">gloss</tt><a class="headerlink" href="#old.model.gloss.Gloss.gloss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.gloss.Gloss.glossGrammaticality">
+<tt class="descname">glossGrammaticality</tt><a class="headerlink" href="#old.model.gloss.Gloss.glossGrammaticality" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.gloss.Gloss.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.gloss.Gloss.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.language">
+<span id="language-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">language</span></tt> Module<a class="headerlink" href="#module-old.model.language" title="Permalink to this headline">¶</a></h2>
+<p>Language model</p>
+<dl class="class">
+<dt id="old.model.language.Language">
+<em class="property">class </em><tt class="descclassname">old.model.language.</tt><tt class="descname">Language</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/language.html#Language"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.language.Language" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.language.Language.Comment">
+<tt class="descname">Comment</tt><a class="headerlink" href="#old.model.language.Language.Comment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Id">
+<tt class="descname">Id</tt><a class="headerlink" href="#old.model.language.Language.Id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Part1">
+<tt class="descname">Part1</tt><a class="headerlink" href="#old.model.language.Language.Part1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Part2B">
+<tt class="descname">Part2B</tt><a class="headerlink" href="#old.model.language.Language.Part2B" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Part2T">
+<tt class="descname">Part2T</tt><a class="headerlink" href="#old.model.language.Language.Part2T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Ref_Name">
+<tt class="descname">Ref_Name</tt><a class="headerlink" href="#old.model.language.Language.Ref_Name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Scope">
+<tt class="descname">Scope</tt><a class="headerlink" href="#old.model.language.Language.Scope" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.Type">
+<tt class="descname">Type</tt><a class="headerlink" href="#old.model.language.Language.Type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.language.Language.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.language.Language.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.meta">
+<span id="meta-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">meta</span></tt> Module<a class="headerlink" href="#module-old.model.meta" title="Permalink to this headline">¶</a></h2>
+<p>SQLAlchemy Metadata and Session object</p>
+<dl class="class">
+<dt id="old.model.meta.Base">
+<em class="property">class </em><tt class="descclassname">old.model.meta.</tt><tt class="descname">Base</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#old.model.meta.Base" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#old.model.model.Model" title="old.model.model.Model"><tt class="xref py py-class docutils literal"><span class="pre">old.model.model.Model</span></tt></a></p>
+<dl class="attribute">
+<dt id="old.model.meta.Base.metadata">
+<tt class="descname">metadata</tt><em class="property"> = MetaData(bind=None)</em><a class="headerlink" href="#old.model.meta.Base.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="old.model.meta.now">
+<tt class="descclassname">old.model.meta.</tt><tt class="descname">now</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/meta.html#now"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.meta.now" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-old.model.model">
+<span id="model-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">model</span></tt> Module<a class="headerlink" href="#module-old.model.model" title="Permalink to this headline">¶</a></h2>
+<p>Model model</p>
+<dl class="class">
+<dt id="old.model.model.Model">
+<em class="property">class </em><tt class="descclassname">old.model.model.</tt><tt class="descname">Model</tt><a class="reference internal" href="../_modules/old/model/model.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>The Model class holds methods needed (potentially) by all models.  All
+OLD models inherit both from model.model.Model and model.meta.Base (cf.
+model.meta).</p>
+<dl class="class">
+<dt id="old.model.model.Model.Column">
+<em class="property">class </em><tt class="descname">Column</tt><a class="reference internal" href="../_modules/old/model/model.html#Model.Column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.Column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Empty class that can be used to convert JSON objects into Python
+ones.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getDictFromModel">
+<tt class="descclassname">Model.</tt><tt class="descname">getDictFromModel</tt><big>(</big><em>model</em>, <em>attrs</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getDictFromModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getDictFromModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>attrs is a list of attribute names (non-relational); returns a dict
+containing all of these attributes and their values.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getFilesList">
+<tt class="descclassname">Model.</tt><tt class="descname">getFilesList</tt><big>(</big><em>files</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getFilesList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getFilesList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getFormsList">
+<tt class="descclassname">Model.</tt><tt class="descname">getFormsList</tt><big>(</big><em>forms</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getFormsList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getFormsList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getGlossesList">
+<tt class="descclassname">Model.</tt><tt class="descname">getGlossesList</tt><big>(</big><em>glosses</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getGlossesList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getGlossesList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniDict</tt><big>(</big><em>model=None</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniDictFor">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniDictFor</tt><big>(</big><em>model</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniDictFor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniDictFor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniElicitationMethodDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniElicitationMethodDict</tt><big>(</big><em>elicitationMethod</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniElicitationMethodDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniElicitationMethodDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniFileDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniFileDict</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniFileDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniFileDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniGlossDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniGlossDict</tt><big>(</big><em>gloss</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniGlossDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniGlossDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniList">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniList</tt><big>(</big><em>listOfModels</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniOrthographyDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniOrthographyDict</tt><big>(</big><em>orthography</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniOrthographyDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniOrthographyDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniSourceDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniSourceDict</tt><big>(</big><em>source</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniSourceDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniSourceDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniSpeakerDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniSpeakerDict</tt><big>(</big><em>speaker</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniSpeakerDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniSpeakerDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniSyntacticCategoryDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniSyntacticCategoryDict</tt><big>(</big><em>syntacticCategory</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniSyntacticCategoryDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniSyntacticCategoryDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniTagDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniTagDict</tt><big>(</big><em>tag</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniTagDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniTagDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getMiniUserDict">
+<tt class="descclassname">Model.</tt><tt class="descname">getMiniUserDict</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getMiniUserDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getMiniUserDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getOrthographiesList">
+<tt class="descclassname">Model.</tt><tt class="descname">getOrthographiesList</tt><big>(</big><em>orthographies</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getOrthographiesList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getOrthographiesList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getTagsList">
+<tt class="descclassname">Model.</tt><tt class="descname">getTagsList</tt><big>(</big><em>tags</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getTagsList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getTagsList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.getUsersList">
+<tt class="descclassname">Model.</tt><tt class="descname">getUsersList</tt><big>(</big><em>users</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.getUsersList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.getUsersList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.model.Model.jsonLoads">
+<tt class="descclassname">Model.</tt><tt class="descname">jsonLoads</tt><big>(</big><em>JSONString</em><big>)</big><a class="reference internal" href="../_modules/old/model/model.html#Model.jsonLoads"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.model.Model.jsonLoads" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.model.Model.tableName2coreAttributes">
+<tt class="descclassname">Model.</tt><tt class="descname">tableName2coreAttributes</tt><em class="property"> = {'source': ['id', 'type', 'key', 'journal', 'editor', 'chapter', 'pages', 'publisher', 'booktitle', 'school', 'institution', 'year', 'author', 'title', 'note'], 'tag': ['id', 'name'], 'speaker': ['id', 'firstName', 'lastName', 'dialect'], 'elicitationmethod': ['id', 'name'], 'file': ['id', 'name', 'filename', 'MIMEtype', 'size', 'url', 'lossyFilename'], 'syntacticcategory': ['id', 'name'], 'orthography': ['id', 'name', 'orthography', 'lowercase', 'initialGlottalStops'], 'gloss': ['id', 'gloss', 'glossGrammaticality'], 'user': ['id', 'firstName', 'lastName', 'role']}</em><a class="headerlink" href="#old.model.model.Model.tableName2coreAttributes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.orthography">
+<span id="orthography-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">orthography</span></tt> Module<a class="headerlink" href="#module-old.model.orthography" title="Permalink to this headline">¶</a></h2>
+<p>Orthography model</p>
+<dl class="class">
+<dt id="old.model.orthography.Orthography">
+<em class="property">class </em><tt class="descclassname">old.model.orthography.</tt><tt class="descname">Orthography</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/orthography.html#Orthography"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.orthography.Orthography" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.orthography.Orthography.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.orthography.Orthography.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.orthography.Orthography.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.orthography.Orthography.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.orthography.Orthography.initialGlottalStops">
+<tt class="descname">initialGlottalStops</tt><a class="headerlink" href="#old.model.orthography.Orthography.initialGlottalStops" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.orthography.Orthography.lowercase">
+<tt class="descname">lowercase</tt><a class="headerlink" href="#old.model.orthography.Orthography.lowercase" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.orthography.Orthography.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.orthography.Orthography.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.orthography.Orthography.orthography">
+<tt class="descname">orthography</tt><a class="headerlink" href="#old.model.orthography.Orthography.orthography" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.page">
+<span id="page-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">page</span></tt> Module<a class="headerlink" href="#module-old.model.page" title="Permalink to this headline">¶</a></h2>
+<p>Page model</p>
+<dl class="class">
+<dt id="old.model.page.Page">
+<em class="property">class </em><tt class="descclassname">old.model.page.</tt><tt class="descname">Page</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/page.html#Page"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.page.Page" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.page.Page.content">
+<tt class="descname">content</tt><a class="headerlink" href="#old.model.page.Page.content" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.page.Page.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.page.Page.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.page.Page.heading">
+<tt class="descname">heading</tt><a class="headerlink" href="#old.model.page.Page.heading" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.page.Page.html">
+<tt class="descname">html</tt><a class="headerlink" href="#old.model.page.Page.html" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.page.Page.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.page.Page.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.page.Page.markupLanguage">
+<tt class="descname">markupLanguage</tt><a class="headerlink" href="#old.model.page.Page.markupLanguage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.page.Page.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.page.Page.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.phonology">
+<span id="phonology-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">phonology</span></tt> Module<a class="headerlink" href="#module-old.model.phonology" title="Permalink to this headline">¶</a></h2>
+<p>Phonology model</p>
+<dl class="class">
+<dt id="old.model.phonology.Phonology">
+<em class="property">class </em><tt class="descclassname">old.model.phonology.</tt><tt class="descname">Phonology</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/phonology.html#Phonology"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.phonology.Phonology" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.datetimeEntered">
+<tt class="descname">datetimeEntered</tt><a class="headerlink" href="#old.model.phonology.Phonology.datetimeEntered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.phonology.Phonology.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.phonology.Phonology.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.enterer">
+<tt class="descname">enterer</tt><a class="headerlink" href="#old.model.phonology.Phonology.enterer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.enterer_id">
+<tt class="descname">enterer_id</tt><a class="headerlink" href="#old.model.phonology.Phonology.enterer_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.phonology.Phonology.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/phonology.html#Phonology.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.phonology.Phonology.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.phonology.Phonology.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.modifier">
+<tt class="descname">modifier</tt><a class="headerlink" href="#old.model.phonology.Phonology.modifier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.modifier_id">
+<tt class="descname">modifier_id</tt><a class="headerlink" href="#old.model.phonology.Phonology.modifier_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.phonology.Phonology.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.phonology.Phonology.script">
+<tt class="descname">script</tt><a class="headerlink" href="#old.model.phonology.Phonology.script" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.source">
+<span id="source-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">source</span></tt> Module<a class="headerlink" href="#module-old.model.source" title="Permalink to this headline">¶</a></h2>
+<p>Source model</p>
+<dl class="class">
+<dt id="old.model.source.Source">
+<em class="property">class </em><tt class="descclassname">old.model.source.</tt><tt class="descname">Source</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/source.html#Source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.source.Source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.source.Source.ISBN">
+<tt class="descname">ISBN</tt><a class="headerlink" href="#old.model.source.Source.ISBN" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.ISSN">
+<tt class="descname">ISSN</tt><a class="headerlink" href="#old.model.source.Source.ISSN" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.LCCN">
+<tt class="descname">LCCN</tt><a class="headerlink" href="#old.model.source.Source.LCCN" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.abstract">
+<tt class="descname">abstract</tt><a class="headerlink" href="#old.model.source.Source.abstract" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.address">
+<tt class="descname">address</tt><a class="headerlink" href="#old.model.source.Source.address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.affiliation">
+<tt class="descname">affiliation</tt><a class="headerlink" href="#old.model.source.Source.affiliation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.annote">
+<tt class="descname">annote</tt><a class="headerlink" href="#old.model.source.Source.annote" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.author">
+<tt class="descname">author</tt><a class="headerlink" href="#old.model.source.Source.author" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.booktitle">
+<tt class="descname">booktitle</tt><a class="headerlink" href="#old.model.source.Source.booktitle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.chapter">
+<tt class="descname">chapter</tt><a class="headerlink" href="#old.model.source.Source.chapter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.contents">
+<tt class="descname">contents</tt><a class="headerlink" href="#old.model.source.Source.contents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.copyright">
+<tt class="descname">copyright</tt><a class="headerlink" href="#old.model.source.Source.copyright" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.crossref">
+<tt class="descname">crossref</tt><a class="headerlink" href="#old.model.source.Source.crossref" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.source.Source.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.edition">
+<tt class="descname">edition</tt><a class="headerlink" href="#old.model.source.Source.edition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.editor">
+<tt class="descname">editor</tt><a class="headerlink" href="#old.model.source.Source.editor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.file">
+<tt class="descname">file</tt><a class="headerlink" href="#old.model.source.Source.file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.file_id">
+<tt class="descname">file_id</tt><a class="headerlink" href="#old.model.source.Source.file_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.source.Source.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/source.html#Source.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.source.Source.getDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Python dictionary representation of the Source.  This
+facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
+data are truncated, e.g., sourceDict[&#8216;file&#8217;] is a dict with keys for
+&#8216;name&#8217;, &#8216;size&#8217;, etc. (cf. getMiniUserDict of the model superclass) and
+lacks keys for some attributes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.howpublished">
+<tt class="descname">howpublished</tt><a class="headerlink" href="#old.model.source.Source.howpublished" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.source.Source.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.institution">
+<tt class="descname">institution</tt><a class="headerlink" href="#old.model.source.Source.institution" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.journal">
+<tt class="descname">journal</tt><a class="headerlink" href="#old.model.source.Source.journal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.key">
+<tt class="descname">key</tt><a class="headerlink" href="#old.model.source.Source.key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.keyField">
+<tt class="descname">keyField</tt><a class="headerlink" href="#old.model.source.Source.keyField" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.keywords">
+<tt class="descname">keywords</tt><a class="headerlink" href="#old.model.source.Source.keywords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.language">
+<tt class="descname">language</tt><a class="headerlink" href="#old.model.source.Source.language" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.location">
+<tt class="descname">location</tt><a class="headerlink" href="#old.model.source.Source.location" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.month">
+<tt class="descname">month</tt><a class="headerlink" href="#old.model.source.Source.month" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.mrnumber">
+<tt class="descname">mrnumber</tt><a class="headerlink" href="#old.model.source.Source.mrnumber" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.note">
+<tt class="descname">note</tt><a class="headerlink" href="#old.model.source.Source.note" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.number">
+<tt class="descname">number</tt><a class="headerlink" href="#old.model.source.Source.number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.organization">
+<tt class="descname">organization</tt><a class="headerlink" href="#old.model.source.Source.organization" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.pages">
+<tt class="descname">pages</tt><a class="headerlink" href="#old.model.source.Source.pages" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.price">
+<tt class="descname">price</tt><a class="headerlink" href="#old.model.source.Source.price" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.publisher">
+<tt class="descname">publisher</tt><a class="headerlink" href="#old.model.source.Source.publisher" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.school">
+<tt class="descname">school</tt><a class="headerlink" href="#old.model.source.Source.school" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.series">
+<tt class="descname">series</tt><a class="headerlink" href="#old.model.source.Source.series" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.size">
+<tt class="descname">size</tt><a class="headerlink" href="#old.model.source.Source.size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.title">
+<tt class="descname">title</tt><a class="headerlink" href="#old.model.source.Source.title" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.type">
+<tt class="descname">type</tt><a class="headerlink" href="#old.model.source.Source.type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.typeField">
+<tt class="descname">typeField</tt><a class="headerlink" href="#old.model.source.Source.typeField" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.url">
+<tt class="descname">url</tt><a class="headerlink" href="#old.model.source.Source.url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.volume">
+<tt class="descname">volume</tt><a class="headerlink" href="#old.model.source.Source.volume" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.source.Source.year">
+<tt class="descname">year</tt><a class="headerlink" href="#old.model.source.Source.year" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.speaker">
+<span id="speaker-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">speaker</span></tt> Module<a class="headerlink" href="#module-old.model.speaker" title="Permalink to this headline">¶</a></h2>
+<p>Speaker model</p>
+<dl class="class">
+<dt id="old.model.speaker.Speaker">
+<em class="property">class </em><tt class="descclassname">old.model.speaker.</tt><tt class="descname">Speaker</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/speaker.html#Speaker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.speaker.Speaker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.speaker.Speaker.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.speaker.Speaker.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.speaker.Speaker.dialect">
+<tt class="descname">dialect</tt><a class="headerlink" href="#old.model.speaker.Speaker.dialect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.speaker.Speaker.firstName">
+<tt class="descname">firstName</tt><a class="headerlink" href="#old.model.speaker.Speaker.firstName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.speaker.Speaker.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/speaker.html#Speaker.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.speaker.Speaker.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.speaker.Speaker.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.speaker.Speaker.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.speaker.Speaker.lastName">
+<tt class="descname">lastName</tt><a class="headerlink" href="#old.model.speaker.Speaker.lastName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.speaker.Speaker.pageContent">
+<tt class="descname">pageContent</tt><a class="headerlink" href="#old.model.speaker.Speaker.pageContent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.syntacticcategory">
+<span id="syntacticcategory-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">syntacticcategory</span></tt> Module<a class="headerlink" href="#module-old.model.syntacticcategory" title="Permalink to this headline">¶</a></h2>
+<p>SyntacticCategory model</p>
+<dl class="class">
+<dt id="old.model.syntacticcategory.SyntacticCategory">
+<em class="property">class </em><tt class="descclassname">old.model.syntacticcategory.</tt><tt class="descname">SyntacticCategory</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/syntacticcategory.html#SyntacticCategory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.syntacticcategory.SyntacticCategory.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.syntacticcategory.SyntacticCategory.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.syntacticcategory.SyntacticCategory.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/syntacticcategory.html#SyntacticCategory.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.syntacticcategory.SyntacticCategory.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.syntacticcategory.SyntacticCategory.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.syntacticcategory.SyntacticCategory.type">
+<tt class="descname">type</tt><a class="headerlink" href="#old.model.syntacticcategory.SyntacticCategory.type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.tag">
+<span id="tag-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">tag</span></tt> Module<a class="headerlink" href="#module-old.model.tag" title="Permalink to this headline">¶</a></h2>
+<p>Tag model</p>
+<dl class="class">
+<dt id="old.model.tag.Tag">
+<em class="property">class </em><tt class="descclassname">old.model.tag.</tt><tt class="descname">Tag</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/tag.html#Tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.tag.Tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.tag.Tag.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.tag.Tag.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.tag.Tag.description">
+<tt class="descname">description</tt><a class="headerlink" href="#old.model.tag.Tag.description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.tag.Tag.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/tag.html#Tag.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.tag.Tag.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.tag.Tag.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.tag.Tag.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.tag.Tag.name">
+<tt class="descname">name</tt><a class="headerlink" href="#old.model.tag.Tag.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-old.model.user">
+<span id="user-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">user</span></tt> Module<a class="headerlink" href="#module-old.model.user" title="Permalink to this headline">¶</a></h2>
+<p>User model</p>
+<dl class="class">
+<dt id="old.model.user.User">
+<em class="property">class </em><tt class="descclassname">old.model.user.</tt><tt class="descname">User</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/user.html#User"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.user.User" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.user.User.affiliation">
+<tt class="descname">affiliation</tt><a class="headerlink" href="#old.model.user.User.affiliation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.user.User.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.email">
+<tt class="descname">email</tt><a class="headerlink" href="#old.model.user.User.email" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.firstName">
+<tt class="descname">firstName</tt><a class="headerlink" href="#old.model.user.User.firstName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.user.User.getDict">
+<tt class="descname">getDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/user.html#User.getDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.user.User.getDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="old.model.user.User.getFullDict">
+<tt class="descname">getFullDict</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/old/model/user.html#User.getFullDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.user.User.getFullDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.html">
+<tt class="descname">html</tt><a class="headerlink" href="#old.model.user.User.html" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.user.User.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.inputOrthography">
+<tt class="descname">inputOrthography</tt><a class="headerlink" href="#old.model.user.User.inputOrthography" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.inputOrthography_id">
+<tt class="descname">inputOrthography_id</tt><a class="headerlink" href="#old.model.user.User.inputOrthography_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.lastName">
+<tt class="descname">lastName</tt><a class="headerlink" href="#old.model.user.User.lastName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.markupLanguage">
+<tt class="descname">markupLanguage</tt><a class="headerlink" href="#old.model.user.User.markupLanguage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.outputOrthography">
+<tt class="descname">outputOrthography</tt><a class="headerlink" href="#old.model.user.User.outputOrthography" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.outputOrthography_id">
+<tt class="descname">outputOrthography_id</tt><a class="headerlink" href="#old.model.user.User.outputOrthography_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.pageContent">
+<tt class="descname">pageContent</tt><a class="headerlink" href="#old.model.user.User.pageContent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.password">
+<tt class="descname">password</tt><a class="headerlink" href="#old.model.user.User.password" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.rememberedForms">
+<tt class="descname">rememberedForms</tt><a class="headerlink" href="#old.model.user.User.rememberedForms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.role">
+<tt class="descname">role</tt><a class="headerlink" href="#old.model.user.User.role" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.salt">
+<tt class="descname">salt</tt><a class="headerlink" href="#old.model.user.User.salt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.User.username">
+<tt class="descname">username</tt><a class="headerlink" href="#old.model.user.User.username" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="old.model.user.UserForm">
+<em class="property">class </em><tt class="descclassname">old.model.user.</tt><tt class="descname">UserForm</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/old/model/user.html#UserForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#old.model.user.UserForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.ext.declarative.Base</span></tt></p>
+<dl class="attribute">
+<dt id="old.model.user.UserForm.datetimeModified">
+<tt class="descname">datetimeModified</tt><a class="headerlink" href="#old.model.user.UserForm.datetimeModified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.UserForm.form_id">
+<tt class="descname">form_id</tt><a class="headerlink" href="#old.model.user.UserForm.form_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.UserForm.id">
+<tt class="descname">id</tt><a class="headerlink" href="#old.model.user.UserForm.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="old.model.user.UserForm.user_id">
+<tt class="descname">user_id</tt><a class="headerlink" href="#old.model.user.UserForm.user_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">model Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">model</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-old.model.applicationsettings"><tt class="docutils literal"><span class="pre">applicationsettings</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.collection"><tt class="docutils literal"><span class="pre">collection</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.collectionbackup"><tt class="docutils literal"><span class="pre">collectionbackup</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.elicitationmethod"><tt class="docutils literal"><span class="pre">elicitationmethod</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.file"><tt class="docutils literal"><span class="pre">file</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.form"><tt class="docutils literal"><span class="pre">form</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.formbackup"><tt class="docutils literal"><span class="pre">formbackup</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.formsearch"><tt class="docutils literal"><span class="pre">formsearch</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.gloss"><tt class="docutils literal"><span class="pre">gloss</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.language"><tt class="docutils literal"><span class="pre">language</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.meta"><tt class="docutils literal"><span class="pre">meta</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.model"><tt class="docutils literal"><span class="pre">model</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.orthography"><tt class="docutils literal"><span class="pre">orthography</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.page"><tt class="docutils literal"><span class="pre">page</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.phonology"><tt class="docutils literal"><span class="pre">phonology</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.source"><tt class="docutils literal"><span class="pre">source</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.speaker"><tt class="docutils literal"><span class="pre">speaker</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.syntacticcategory"><tt class="docutils literal"><span class="pre">syntacticcategory</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.tag"><tt class="docutils literal"><span class="pre">tag</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-old.model.user"><tt class="docutils literal"><span class="pre">user</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/old.model.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">OLD 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

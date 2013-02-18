@@ -1,0 +1,34 @@
+.. _installation-section:
+
+================================================================================
+Installation
+================================================================================
+
+Get it
+--------------------------------------------------------------------------------
+
+* PYPI
+* Github
+
+Installation & configuration
+--------------------------------------------------------------------------------
+
+* virtualenv
+* setup-app
+* required programs
+* optional programs
+* configuration via the config file
+
+Serve it
+--------------------------------------------------------------------------------
+
+* cf. Pylons book deployment
+* Apache proxy to Paster server
+* Admin scripts (include?)
+
+
+Test it
+--------------------------------------------------------------------------------
+
+* WebTests
+* Requests tests

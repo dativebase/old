@@ -1,0 +1,216 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>About &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="#" />
+    <link rel="top" title="OLD 1.0 documentation" href="index.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="Documentation Overview" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Documentation Overview"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">OLD 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="about">
+<h1>About<a class="headerlink" href="#about" title="Permalink to this headline">¶</a></h1>
+<p>The Online Linguistic Database (OLD) is software that facilitates collaborative
+storing, searching, processing and analyzing of linguistic fieldwork data.</p>
+<p>Linguistic fieldwork, i.e., the process of gathering, analyzing and processing
+natural language data, stands to benefit significantly from inter-researcher
+collaboration and data-sharing.  The OLD arose as a response to a lack of
+multi-user cross-platform tools for language documentation and analysis.</p>
+<div class="section" id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>The OLD seeks to facilitate achievement of the following objectives.</p>
+<ol class="arabic simple">
+<li>Language data can be shared easily between researchers.</li>
+<li>Language data are intelligently structured (balancing an allowance for
+theoretical and methodological variation with capability for easy retrieval
+and re-purposing.)</li>
+<li>Language data are highly searchable.</li>
+<li>Access to language data can be controlled via authentication and
+authorization.</li>
+<li>Language data can be re-purposed.  E.g., word list data recorded, transcribed
+and analyzed by a phonetician can be used by a syntactician, anthropologist,
+educator and/or community member.</li>
+<li>Language data are digitized and available for digital processing, e.g.,
+parsing, automated information extraction, corpus analysis, comparative
+cross-linguistic analysis.</li>
+</ol>
+</div>
+<div class="section" id="but-what-is-it">
+<h2>But, what is it?<a class="headerlink" href="#but-what-is-it" title="Permalink to this headline">¶</a></h2>
+<p>The OLD is a program for creating a collaborative language documentation <em>web
+service</em>.  A web service is like a web site or web application, insofar as it
+runs on a web server and responds to HTTP requests.  However, a web service
+differs from a traditional web application in that it expects to communicate
+with other programs and not, directly, with human users.</p>
+<p>The benefit of this design strategy is that a single web service can form a
+useful component of a variety of different applications with different goals.
+For example, an OLD web service for language L could serve data to a mobile
+application that helps users to learn L.  At the same time, researchers could
+be collaboratively entering, searching and processing data on the OLD web
+service via a desktop application and/or a browser-based one.</p>
+<p>The OLD will be packaged with an in-browser user-friendly application.  However,
+since these two applications will not be interdependent their documentation will
+be kept separate also.</p>
+<p>The OLD is intended to be setup on a web server.  However, it can also easily be
+installed on a personal computer for, say, developmental or experimental
+purposes.  For detailed installation instructions see the
+<a class="reference internal" href="installation.html#installation-section"><em>Installation</em></a> section.</p>
+<p>The OLD is, at its core, a database-driven application.  It is essentially an
+interface to a relational database with a specific data structure, or schema.
+The schema was designed with the goals of linguistic fieldwork in mind.  An OLD
+web service receives input in the form of HTTP requests with parameters encoded
+(usually) as JavaScript Object Notation (JSON).  The application logic
+authenticates and authorizes the request and then, depending on the type of
+request, queries or updates the database and returns an HTTP response with JSON
+in the response body.  This is illustrated in the diagram below.</p>
+<img alt="_images/OLD_diagram_high_level.png" class="align-center" src="_images/OLD_diagram_high_level.png" />
+</div>
+<div class="section" id="core-features">
+<h2>Core features<a class="headerlink" href="#core-features" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>User authentication and authorization.</li>
+<li>Multi-user resource creation, retrieval, update and deletion (where a
+&#8220;resource&#8221; is something like a linguistic form or a syntactic category).</li>
+<li>Input validation (e.g., ensuring that morpheme segmentation strings do not
+contain characters outside of a specified phonemic inventory and set of
+morpheme delimiters).</li>
+<li>Application-wide settings, i.e., validation settings, specifications of
+inventories &amp; orthographies, object and meta-language identification, etc.</li>
+<li>Data processing (e.g., copying and reduction of image and audio files,
+generation of category strings based on the categories of component
+morphemes, phrase-morpheme linking, orthography conversion, etc.)</li>
+<li>Resource search, i.e., open-ended, nested boolean search with substring,
+exact and regular expression matches against specified fields.</li>
+<li>(Linguistic analysis: phonology &amp; corpora specification, automatic
+morphological modeling and morphological parser creation, syntactic parser
+specification &amp; generation.)</li>
+</ol>
+</div>
+<div class="section" id="technologies">
+<h2>Technologies<a class="headerlink" href="#technologies" title="Permalink to this headline">¶</a></h2>
+<p>The OLD is written in Python, using the Pylons web framework.  The OLD exposes
+a RESTful interface based on the Atom Publishing Protocol, as implemented by the
+Routes URL routing component of Pylons.  The relational database management
+system (RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
+SQLAlchemy provides a Pythonic interface (ORM) to the RDBMS.</p>
+</div>
+<div class="section" id="who-should-read-this-manual">
+<h2>Who should read this manual?<a class="headerlink" href="#who-should-read-this-manual" title="Permalink to this headline">¶</a></h2>
+<p>This document will be of use to anyone wishing to understand the inner workings
+of the OLD.</p>
+<p>It will be useful, in particular, to system administrators who want to know how
+to acquire, configure, install and serve an OLD web service.</p>
+<p>It will also be useful to developers who would like to contribute to the code or
+create user-facing applications that interact with OLD web services.  Developers
+will also benefit from reading the API documentation.</p>
+<p>End users who wish to know more about the data structures of the OLD or its
+linguistic analysis and language processing components will also find this
+manual helpful.  Typically, end users
+of an OLD-based system will interact with an OLD web service not directly but
+via a user interface-focused application.  Such users are advised to consult the
+documentation for the latter application before exploring the present document.</p>
+<p>The next two sections describe the objectives, architecture and technologies
+that determine the properties of the system.</p>
+</div>
+<div class="section" id="license">
+<h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<p>The OLD is licensed under ... Well, it&#8217;ll be open source but not GPL ...</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">About</a><ul>
+<li><a class="reference internal" href="#purpose">Purpose</a></li>
+<li><a class="reference internal" href="#but-what-is-it">But, what is it?</a></li>
+<li><a class="reference internal" href="#core-features">Core features</a></li>
+<li><a class="reference internal" href="#technologies">Technologies</a></li>
+<li><a class="reference internal" href="#who-should-read-this-manual">Who should read this manual?</a></li>
+<li><a class="reference internal" href="#license">License</a></li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Documentation Overview</a></li>
+      <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
+  </ul></li>
+</ul>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/about.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

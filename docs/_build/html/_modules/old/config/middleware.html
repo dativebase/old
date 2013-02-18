@@ -1,0 +1,175 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.config.middleware &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.config.middleware</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Pylons middleware initialization&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">beaker.middleware</span> <span class="kn">import</span> <span class="n">SessionMiddleware</span>
+<span class="kn">from</span> <span class="nn">paste.cascade</span> <span class="kn">import</span> <span class="n">Cascade</span>
+<span class="kn">from</span> <span class="nn">paste.registry</span> <span class="kn">import</span> <span class="n">RegistryManager</span>
+<span class="kn">from</span> <span class="nn">paste.urlparser</span> <span class="kn">import</span> <span class="n">StaticURLParser</span>
+<span class="kn">from</span> <span class="nn">paste.deploy.converters</span> <span class="kn">import</span> <span class="n">asbool</span>
+<span class="kn">from</span> <span class="nn">pylons.middleware</span> <span class="kn">import</span> <span class="n">ErrorHandler</span><span class="p">,</span> <span class="n">StatusCodeRedirect</span>
+<span class="kn">from</span> <span class="nn">pylons.wsgiapp</span> <span class="kn">import</span> <span class="n">PylonsApp</span>
+<span class="kn">from</span> <span class="nn">routes.middleware</span> <span class="kn">import</span> <span class="n">RoutesMiddleware</span>
+<span class="kn">from</span> <span class="nn">old.config.environment</span> <span class="kn">import</span> <span class="n">load_environment</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="HTML2JSONContentType"><a class="viewcode-back" href="../../../api/old.config.html#old.config.middleware.HTML2JSONContentType">[docs]</a><span class="k">class</span> <span class="nc">HTML2JSONContentType</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Brute force text/html Content-Type in response to application/json.</span>
+<span class="sd">    Take that Pylons!</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">app</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">custom_start_response</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">dict</span><span class="p">(</span><span class="n">headers</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;Content-Type&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;text/html; charset=utf-8&#39;</span><span class="p">:</span>
+                <span class="n">newHeaders</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">headers</span><span class="p">)</span>
+                <span class="n">newHeaders</span><span class="p">[</span><span class="s">&#39;Content-Type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;application/json&#39;</span>
+                <span class="n">headers</span> <span class="o">=</span> <span class="n">newHeaders</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">start_response</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">exc_info</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="p">(</span><span class="n">environ</span><span class="p">,</span> <span class="n">custom_start_response</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="make_app"><a class="viewcode-back" href="../../../api/old.config.html#old.config.middleware.make_app">[docs]</a><span class="k">def</span> <span class="nf">make_app</span><span class="p">(</span><span class="n">global_conf</span><span class="p">,</span> <span class="n">full_stack</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">static_files</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">app_conf</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a Pylons WSGI application and return it</span>
+
+<span class="sd">    ``global_conf``</span>
+<span class="sd">        The inherited configuration for this application. Normally from</span>
+<span class="sd">        the [DEFAULT] section of the Paste ini file.</span>
+
+<span class="sd">    ``full_stack``</span>
+<span class="sd">        Whether this application provides a full WSGI stack (by default,</span>
+<span class="sd">        meaning it handles its own exceptions and errors). Disable</span>
+<span class="sd">        full_stack when this application is &quot;managed&quot; by another WSGI</span>
+<span class="sd">        middleware.</span>
+
+<span class="sd">    ``static_files``</span>
+<span class="sd">        Whether this application serves its own static files; disable</span>
+<span class="sd">        when another web server is responsible for serving them.</span>
+
+<span class="sd">    ``app_conf``</span>
+<span class="sd">        The application&#39;s local configuration. Normally specified in</span>
+<span class="sd">        the [app:&lt;name&gt;] section of the Paste ini file (where &lt;name&gt;</span>
+<span class="sd">        defaults to main).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Configure the Pylons environment</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_environment</span><span class="p">(</span><span class="n">global_conf</span><span class="p">,</span> <span class="n">app_conf</span><span class="p">)</span>
+
+    <span class="c"># The Pylons WSGI app</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">PylonsApp</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="c"># Routing/Session Middleware</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">RoutesMiddleware</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;routes.map&#39;</span><span class="p">],</span> <span class="n">singleton</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">SessionMiddleware</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+    <span class="c"># At some point it seems that Pylons converts the Content-Type of any</span>
+    <span class="c"># response without a 200 OK status to &#39;text/html; charset=utf-8&#39;.  Well</span>
+    <span class="c"># no more motherfucker!  The HTML2JSONContentType middleware zaps those</span>
+    <span class="c"># nasty text/html content types and converts them to application/json!</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">HTML2JSONContentType</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">asbool</span><span class="p">(</span><span class="n">full_stack</span><span class="p">):</span>
+        <span class="c"># Handle Python exceptions</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">ErrorHandler</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">global_conf</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.errorware&#39;</span><span class="p">])</span>
+
+        <span class="c"># Display error documents for 401, 403, 404 status codes (and</span>
+        <span class="c"># 500 when debug is disabled)</span>
+        <span class="k">if</span> <span class="n">asbool</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;debug&#39;</span><span class="p">]):</span>
+            <span class="n">app</span> <span class="o">=</span> <span class="n">StatusCodeRedirect</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">app</span> <span class="o">=</span> <span class="n">StatusCodeRedirect</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="p">[</span><span class="mi">400</span><span class="p">,</span> <span class="mi">401</span><span class="p">,</span> <span class="mi">403</span><span class="p">,</span> <span class="mi">404</span><span class="p">,</span> <span class="mi">500</span><span class="p">])</span>
+
+    <span class="c"># Establish the Registry for this application</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">RegistryManager</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">asbool</span><span class="p">(</span><span class="n">static_files</span><span class="p">):</span>
+        <span class="c"># Serve static files</span>
+        <span class="n">static_app</span> <span class="o">=</span> <span class="n">StaticURLParser</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;pylons.paths&#39;</span><span class="p">][</span><span class="s">&#39;static_files&#39;</span><span class="p">])</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">Cascade</span><span class="p">([</span><span class="n">static_app</span><span class="p">,</span> <span class="n">app</span><span class="p">])</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+    <span class="k">return</span> <span class="n">app</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

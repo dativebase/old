@@ -1,0 +1,438 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>old.lib.orthography &mdash; OLD 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for old.lib.orthography</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Orthography module describes an Orthography class that represents the</span>
+<span class="sd">orthography of a given language.</span>
+
+<span class="sd">OrthographyTranslator facilitates conversion of text in orthography A into</span>
+<span class="sd">orthography B; takes two Orthography objects at initialization.</span>
+
+<span class="sd">This module is adapted and generalized from one written by Patrick Littell</span>
+<span class="sd">for the conversion of Kwak&#39;wala strings between its many orthographies.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+
+
+<div class="viewcode-block" id="Orthography"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.Orthography">[docs]</a><span class="k">class</span> <span class="nc">Orthography</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;The Orthography class represents an orthography used to transcribe a</span>
+<span class="sd">    language.</span>
+<span class="sd">    </span>
+<span class="sd">    Required as input is a comma-delimited string of graphs.  Graphs are</span>
+<span class="sd">    represented by strings of one or more unicode characters.  Order of graphs</span>
+<span class="sd">    is important for sorting words or Forms of the language under study.</span>
+<span class="sd">    </span>
+<span class="sd">    Graph variants (allographs?) should be grouped together with brackets.</span>
+<span class="sd">    </span>
+<span class="sd">    E.g., orthographyAsString = u&#39;[a,a\u0301],b,c,d&#39;</span>
+<span class="sd">    </span>
+<span class="sd">    The above orthography string represents an orthography where u&#39;a&#39; and</span>
+<span class="sd">    u&#39;a\u0301&#39; are both ranked first, u&#39;b&#39; second, u&#39;c&#39; third, etc.</span>
+<span class="sd">    </span>
+<span class="sd">    Idiosyncratic arguments are in **kwargs, e.g.,:</span>
+<span class="sd">     - lowercase: whether or not the orthography is all-lowercase</span>
+<span class="sd">     - initialGlottalStops: whether it represents glottal stops (assumed to be</span>
+<span class="sd">       u&#39;7&#39; in the input orthography) word initially.</span>
+<span class="sd">       </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Orthography.removeAllWhiteSpace"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.Orthography.removeAllWhiteSpace">[docs]</a>    <span class="k">def</span> <span class="nf">removeAllWhiteSpace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove all spaces, newlines and tabs.&quot;&quot;&quot;</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span> 
+        <span class="k">return</span> <span class="n">string</span>
+    </div>
+<div class="viewcode-block" id="Orthography.str2bool"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.Orthography.str2bool">[docs]</a>    <span class="k">def</span> <span class="nf">str2bool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">string</span> <span class="o">==</span> <span class="s">&#39;1&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">elif</span> <span class="n">string</span> <span class="o">==</span> <span class="s">&#39;0&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">string</span>
+</div>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orthographyAsString</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get core attributes; primarily, the orthography in various datatypes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsString</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">removeAllWhiteSpace</span><span class="p">(</span><span class="n">orthographyAsString</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsList</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getOrthographyAsList</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsString</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getOrthographyAsDict</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsString</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lowercase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getKwargsArg</span><span class="p">(</span><span class="n">kwargs</span><span class="p">,</span> <span class="s">&#39;lowercase&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialGlottalStops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getKwargsArg</span><span class="p">(</span><span class="n">kwargs</span><span class="p">,</span>
+                                                    <span class="s">&#39;initialGlottalStops&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;Orthography Object</span><span class="se">\n\t</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="se">\n\t</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="se">\n\n</span><span class="si">%s</span><span class="se">\n\n</span><span class="si">%s</span><span class="se">\n\n</span><span class="si">%s</span><span class="se">\n\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s">&#39;# graph types&#39;</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">),</span>
+            <span class="s">&#39;# graphs&#39;</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsDict</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsString</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orthographyAsDict</span><span class="p">)</span>
+        <span class="p">)</span>
+        
+<div class="viewcode-block" id="Orthography.getOrthographyAsList"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.Orthography.getOrthographyAsList">[docs]</a>    <span class="k">def</span> <span class="nf">getOrthographyAsList</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orthography</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns orthography as a list of lists.</span>
+
+<span class="sd">        E.g.,   u&#39;[a,a\u0301],b,c,d&#39;    becomes</span>
+<span class="sd">                [[u&#39;a&#39;,u&#39;a\u0301&#39;],[u&#39;b&#39;],[u&#39;c&#39;],[u&#39;d&#39;]]</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">inBrackets</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">orthography</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s">u&#39;[&#39;</span><span class="p">:</span>
+                <span class="n">inBrackets</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">char</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+            <span class="k">elif</span> <span class="n">char</span> <span class="o">==</span> <span class="s">u&#39;]&#39;</span><span class="p">:</span>
+                <span class="n">inBrackets</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">char</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+            <span class="k">if</span> <span class="n">inBrackets</span> <span class="ow">and</span> <span class="n">char</span> <span class="o">==</span> <span class="s">u&#39;,&#39;</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="s">u&#39;|&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="n">char</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;|&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">temp</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="Orthography.getOrthographyAsDict"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.Orthography.getOrthographyAsDict">[docs]</a>    <span class="k">def</span> <span class="nf">getOrthographyAsDict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orthography</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns orthography as a dictionary of graphs to ranks.</span>
+<span class="sd">        </span>
+<span class="sd">        E.g.,   u&#39;[a,a\u0301],b,c,d&#39;    becomes</span>
+<span class="sd">                {u&#39;a&#39;: 0, u&#39;a\u0301&#39;: 0, u&#39;b&#39;: 1, u&#39;c&#39;: 2, u&#39;d&#39;: 3}</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">inBrackets</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">orthography</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s">u&#39;[&#39;</span><span class="p">:</span>
+                <span class="n">inBrackets</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">char</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+            <span class="k">elif</span> <span class="n">char</span> <span class="o">==</span> <span class="s">u&#39;]&#39;</span><span class="p">:</span>
+                <span class="n">inBrackets</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">char</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
+            <span class="k">if</span> <span class="n">inBrackets</span> <span class="ow">and</span> <span class="n">char</span> <span class="o">==</span> <span class="s">u&#39;,&#39;</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="s">u&#39;|&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="n">char</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">temp</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;|&#39;</span><span class="p">):</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="Orthography.getKwargsArg"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.Orthography.getKwargsArg">[docs]</a>    <span class="k">def</span> <span class="nf">getKwargsArg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return **kwargs[key] as a boolean, else return default.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">str2bool</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">default</span>
+
+</div></div>
+<div class="viewcode-block" id="OrthographyTranslator"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator">[docs]</a><span class="k">class</span> <span class="nc">OrthographyTranslator</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Takes two Orthography instances and generates a translate method</span>
+<span class="sd">    for converting strings form the first orthography to the second.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputOrthography</span><span class="p">,</span> <span class="n">outputOrthography</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span> <span class="o">=</span> <span class="n">inputOrthography</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span> <span class="o">=</span> <span class="n">outputOrthography</span>
+
+        <span class="c"># If input and output orthography objects are incompatible for</span>
+        <span class="c">#  translation, raise an OrthographyCompatibilityError.</span>
+        
+        <span class="k">if</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">]</span> <span class="o">!=</span> \
+            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="n">OrthographyCompatibilityError</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prepareRegexes</span><span class="p">()</span>
+
+<div class="viewcode-block" id="OrthographyTranslator.print_"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.print_">[docs]</a>    <span class="k">def</span> <span class="nf">print_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&#39;</span><span class="si">%s</span><span class="se">\t</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            </div>
+<div class="viewcode-block" id="OrthographyTranslator.getReplacements"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.getReplacements">[docs]</a>    <span class="k">def</span> <span class="nf">getReplacements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a dictionary with a key for each graph in the input</span>
+<span class="sd">        orthography; each such key has as value a graph in the output orthography.</span>
+
+<span class="sd">        Note: the input orthography may have more than one correspondent in the</span>
+<span class="sd">        output orthography.  If this is the case, the default is for the system</span>
+<span class="sd">        to use the first correspondent and ignore all subsequent ones.  This</span>
+<span class="sd">        means that the order of graphs entered by the user on the Settings page</span>
+<span class="sd">        may have unintended consequences for translation...</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">replacements</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">)):</span>
+            <span class="n">graphTypeList</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">graphTypeList</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">graphTypeList</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">replacements</span><span class="p">:</span>
+                    <span class="n">replacements</span><span class="p">[</span><span class="n">graphTypeList</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="o">=</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span><span class="o">.</span><span class="n">orthographyAsList</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span> <span class="o">=</span> <span class="n">replacements</span>
+        </div>
+<div class="viewcode-block" id="OrthographyTranslator.makeReplacementsCaseSensitive"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.makeReplacementsCaseSensitive">[docs]</a>    <span class="k">def</span> <span class="nf">makeReplacementsCaseSensitive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update replacements to contain (programmatically) capitalized inputs</span>
+<span class="sd">        and outputs.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">newReplacements</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isCapital</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                <span class="n">capital</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">capital</span> <span class="ow">and</span> <span class="n">capital</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">:</span>
+                    <span class="c"># if output orthography is lc, map uc input orthography</span>
+                    <span class="c">#  graphs to lc outputs, otherwise to uc outputs</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span><span class="o">.</span><span class="n">lowercase</span><span class="p">:</span>
+                        <span class="n">newReplacements</span><span class="p">[</span><span class="n">capital</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">newReplacements</span><span class="p">[</span><span class="n">capital</span><span class="p">]</span> <span class="o">=</span> \
+                            <span class="bp">self</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">newReplacements</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OrthographyTranslator.prepareRegexes"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.prepareRegexes">[docs]</a>    <span class="k">def</span> <span class="nf">prepareRegexes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate the regular expressions for doing character substitutions</span>
+<span class="sd">        on the input string that will convert it into the output orthography.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c"># build a dictionary representing the mapping between input and output</span>
+        <span class="c">#  orthographies</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">getReplacements</span><span class="p">()</span>
+        
+        <span class="c"># 4 Possibilities for .lowercase attribute:</span>
+        <span class="c">#  1. io.lc = True, oo.lc = True: do nothing (Default)</span>
+        <span class="c">#  2. io.lc = True, oo.lc = False: do nothing (I guess we could</span>
+        <span class="c">#   capitalize the first word of sentences, but I&#39;m not gonna right now ...)</span>
+        <span class="c">#  3. io.lc = False, oo.lc = True: map lc to lc and uc to lc</span>
+        <span class="c">#  4. io.lc = False, oo.lc = False: map lc to lc and uc to uc</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">lowercase</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">makeReplacementsCaseSensitive</span><span class="p">()</span>
+        
+        <span class="c"># Sort the keys according to length, longest words first, to prevent</span>
+        <span class="c">#  parts of n-graphs from being found-n-replaced before the n-graph is.</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">replacementKeys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">replacementKeys</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        
+        <span class="c"># This is the pattern that does most of the work</span>
+        <span class="c">#  It matches a string in metalanguage tags (&quot;&lt;ml&gt;&quot; and &quot;&lt;/ml&gt;&quot;) or</span>
+        <span class="c">#  a key from self.replacements</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+            <span class="s">&quot;&lt;ml&gt;.*?&lt;/ml&gt;|(&quot;</span> <span class="o">+</span> <span class="s">&quot;|&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">replacementKeys</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span>
+        <span class="p">)</span>
+        
+        <span class="c"># If the output orthography doesn&#39;t represent initial glottal stops,</span>
+        <span class="c">#  but the input orthography does, compile a regex to remove them from</span>
+        <span class="c">#  the input orthography.  That way, the replacement operation won&#39;t</span>
+        <span class="c">#  create initial glottal stops in the output (Glottal stops are assumed</span>
+        <span class="c">#  to be represented by &quot;7&quot;.)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">initialGlottalStops</span> <span class="ow">and</span> \
+            <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span><span class="o">.</span><span class="n">initialGlottalStops</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">initialGlottalStopRemover</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&quot;&quot;&quot;( |^|(^| )&#39;|&quot;)7&quot;&quot;&quot;</span><span class="p">)</span>
+    
+    <span class="c"># This and the constructor will be the only functions other modules will</span>
+    <span class="c">#  need to use;</span>
+    <span class="c">#  given a string in the input orthography,</span>
+    <span class="c">#  returns the string in the output orthography.</span>
+    </div>
+<div class="viewcode-block" id="OrthographyTranslator.translate"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.translate">[docs]</a>    <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Takes text as input and returns it in the output orthography.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">lowercase</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">makeLowercase</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputOrthography</span><span class="o">.</span><span class="n">initialGlottalStops</span> <span class="ow">and</span> \
+            <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputOrthography</span><span class="o">.</span><span class="n">initialGlottalStops</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialGlottalStopRemover</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">1&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">regex</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">getReplacement</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">group</span><span class="p">()),</span> <span class="n">text</span><span class="p">)</span>
+
+    <span class="c"># We can&#39;t just replace each match from self.regex with its value in</span>
+    <span class="c">#  self.replacements, because some matches are metalangauge strings that</span>
+    <span class="c">#  should not be altered (except to remove the &lt;ml&gt; tags...)</span>
+    </div>
+<div class="viewcode-block" id="OrthographyTranslator.getReplacement"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.getReplacement">[docs]</a>    <span class="k">def</span> <span class="nf">getReplacement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If string DOES NOT begin with &quot;&lt;ml&gt;&quot; and end with &quot;&lt;/ml&gt;&quot;, then treat</span>
+<span class="sd">        it as an object language input orthography graph and return</span>
+<span class="sd">        self.replacements[string].</span>
+<span class="sd">        </span>
+<span class="sd">        If string DOES begin with &quot;&lt;ml&gt;&quot; and end with &quot;&lt;/ml&gt;&quot;, then treat it as </span>
+<span class="sd">        a metalanguage string and return it with the &quot;&lt;ml&gt;&quot; and &quot;&lt;/ml&gt;&quot; tags.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">string</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;&lt;ml&gt;&#39;</span> <span class="ow">and</span> <span class="n">string</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span> <span class="o">==</span> <span class="s">&#39;&lt;/ml&gt;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">string</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacements</span><span class="p">[</span><span class="n">string</span><span class="p">]</span>
+
+    <span class="c"># The built-in methods lower(), upper(), isupper(), capitalize(), etc.</span>
+    <span class="c">#  don&#39;t do exactly what we need here</span>
+</div>
+<div class="viewcode-block" id="OrthographyTranslator.makeLowercase"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.makeLowercase">[docs]</a>    <span class="k">def</span> <span class="nf">makeLowercase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the string in lowercase except for the substrings enclosed</span>
+<span class="sd">        in metalanguage tags.&quot;&quot;&quot;</span>
+        <span class="n">patt</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&quot;&lt;ml&gt;.*?&lt;/ml&gt;|.&quot;</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">getReplacement</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">string</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;&lt;ml&gt;&#39;</span> <span class="ow">and</span> <span class="n">string</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span> <span class="o">==</span> <span class="s">&#39;&lt;/ml&gt;&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">string</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">string</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">patt</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">getReplacement</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">group</span><span class="p">()),</span> <span class="n">string</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OrthographyTranslator.capitalize"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.capitalize">[docs]</a>    <span class="k">def</span> <span class="nf">capitalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If str contains an alpha character, return str with first alpha</span>
+<span class="sd">        capitalized; else, return empty string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">isalpha</span><span class="p">():</span> <span class="k">return</span> <span class="nb">str</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="nb">str</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="OrthographyTranslator.isCapital"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyTranslator.isCapital">[docs]</a>    <span class="k">def</span> <span class="nf">isCapital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns true only if first alpha character found is uppercase.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">char</span><span class="o">.</span><span class="n">isalpha</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">char</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+</div></div>
+<div class="viewcode-block" id="OrthographyCompatibilityError"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.OrthographyCompatibilityError">[docs]</a><span class="k">class</span> <span class="nc">OrthographyCompatibilityError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;An OrthographyTranslator could not be created: the two input &#39;</span> <span class="o">+</span> \
+        <span class="s">&#39;orthographies are incompatible.&#39;</span>
+
+</div>
+<div class="viewcode-block" id="CustomSorter"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.CustomSorter">[docs]</a><span class="k">class</span> <span class="nc">CustomSorter</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Takes an Orthography instance and generates a method for sorting a list</span>
+<span class="sd">    of Forms according to the order of graphs in the orthography.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orthography</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orthography</span> <span class="o">=</span> <span class="n">orthography</span>
+        
+<div class="viewcode-block" id="CustomSorter.removeWhiteSpace"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.CustomSorter.removeWhiteSpace">[docs]</a>    <span class="k">def</span> <span class="nf">removeWhiteSpace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">word</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">word</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CustomSorter.getIntegerTuple"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.CustomSorter.getIntegerTuple">[docs]</a>    <span class="k">def</span> <span class="nf">getIntegerTuple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">word</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Takes a word and returns a tuple of integers representing the rank of</span>
+<span class="sd">        each graph in the word.  A list of such tuples can then be quickly</span>
+<span class="sd">        sorted by a Pythonic list&#39;s sort() method.</span>
+<span class="sd">        </span>
+<span class="sd">        Since graphs are not necessarily Python characters, we have to replace</span>
+<span class="sd">        each graph with its rank, starting with the longest graphs first.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">graphs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthography</span><span class="o">.</span><span class="n">orthographyAsDict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">graphs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+        <span class="n">graphs</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+         
+        <span class="k">for</span> <span class="n">graph</span> <span class="ow">in</span> <span class="n">graphs</span><span class="p">:</span> 
+            <span class="n">word</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">word</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span>
+                            <span class="s">&#39;</span><span class="si">%s</span><span class="s">,&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthography</span><span class="o">.</span><span class="n">orthographyAsDict</span><span class="p">[</span><span class="n">graph</span><span class="p">]))</span>
+
+        <span class="c"># Filter out anything that is not a digit or a comma</span>
+        <span class="n">word</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="s">&#39;01234546789,&#39;</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">word</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="CustomSorter.sort"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.orthography.CustomSorter.sort">[docs]</a>    <span class="k">def</span> <span class="nf">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">forms</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Take a list of OLD Forms and return it sorted according to the order</span>
+<span class="sd">        of graphs in CustomSorter().orthography.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">getIntegerTuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">removeWhiteSpace</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">transcription</span><span class="p">)),</span>
+                 <span class="n">form</span><span class="p">)</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">forms</span><span class="p">]</span>
+        <span class="n">temp</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">temp</span><span class="p">]</span>
+        </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

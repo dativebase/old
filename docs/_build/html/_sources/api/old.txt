@@ -1,0 +1,22 @@
+old Package
+===========
+
+:mod:`websetup` Module
+----------------------
+
+.. automodule:: old.websetup
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+
+    old.config
+    old.controllers
+    old.lib
+    old.model
+    old.tests
+
