@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,15 +7,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>old.lib.utils &mdash; OLD 1.0.0 documentation</title>
+    <title>old.lib.utils &mdash; OLD 1.0 documentation</title>
     
-    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '1.0.0',
+        VERSION:     '1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +24,8 @@
     <script type="text/javascript" src="../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
-    <link rel="top" title="OLD 1.0.0 documentation" href="../../../index.html" />
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
   </head>
   <body>
@@ -35,10 +35,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../../../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../../index.html">OLD 1.0.0 documentation</a> &raquo;</li>
+        <li><a href="../../../index.html">OLD 1.0 documentation</a> &raquo;</li>
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -109,7 +106,7 @@
 <span class="c"># Get data for &#39;new&#39; action</span>
 <span class="c">################################################################################</span>
 
-<div class="viewcode-block" id="getDataForNewAction"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getDataForNewAction">[docs]</a><span class="k">def</span> <span class="nf">getDataForNewAction</span><span class="p">(</span><span class="n">GET_params</span><span class="p">,</span> <span class="n">getterMap</span><span class="p">,</span> <span class="n">modelNameMap</span><span class="p">):</span>
+<div class="viewcode-block" id="getDataForNewAction"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getDataForNewAction">[docs]</a><span class="k">def</span> <span class="nf">getDataForNewAction</span><span class="p">(</span><span class="n">GET_params</span><span class="p">,</span> <span class="n">getterMap</span><span class="p">,</span> <span class="n">modelNameMap</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return a dictionary whose values are lists of OLD model objects.</span>
 <span class="sd">    GET_params is the dict-like object created by Pylons that is created on a</span>
 <span class="sd">    GET request.  The getterMap param is a dict from key names (e.g., &#39;users&#39;)</span>
@@ -168,7 +165,7 @@
 <span class="c">################################################################################</span>
 
 </div>
-<div class="viewcode-block" id="deleteKey"><a class="viewcode-back" href="../../../api.html#old.lib.utils.deleteKey">[docs]</a><span class="k">def</span> <span class="nf">deleteKey</span><span class="p">(</span><span class="n">dict_</span><span class="p">,</span> <span class="n">key_</span><span class="p">):</span>
+<div class="viewcode-block" id="deleteKey"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.deleteKey">[docs]</a><span class="k">def</span> <span class="nf">deleteKey</span><span class="p">(</span><span class="n">dict_</span><span class="p">,</span> <span class="n">key_</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Try to delete the key_ from the dict_; then return the dict_.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">del</span> <span class="n">dict_</span><span class="p">[</span><span class="n">key_</span><span class="p">]</span>
@@ -177,7 +174,7 @@
     <span class="k">return</span> <span class="n">dict_</span>
 
 </div>
-<div class="viewcode-block" id="JSONOLDEncoder"><a class="viewcode-back" href="../../../api.html#old.lib.utils.JSONOLDEncoder">[docs]</a><span class="k">class</span> <span class="nc">JSONOLDEncoder</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONEncoder</span><span class="p">):</span>
+<div class="viewcode-block" id="JSONOLDEncoder"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.JSONOLDEncoder">[docs]</a><span class="k">class</span> <span class="nc">JSONOLDEncoder</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONEncoder</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Permits the jsonification of an OLD class instance obj via</span>
 
 <span class="sd">        jsonString = json.dumps(obj, cls=JSONOLDEncoder)</span>
@@ -185,7 +182,7 @@
 <span class="sd">    Note: support for additional OLD classes will be implemented as needed ...</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+<div class="viewcode-block" id="JSONOLDEncoder.default"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.JSONOLDEncoder.default">[docs]</a>    <span class="k">def</span> <span class="nf">default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONEncoder</span><span class="o">.</span><span class="n">default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
@@ -199,12 +196,12 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="bp">None</span>
 
-</div>
+</div></div>
 <span class="n">JSONDecodeErrorResponse</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;JSON decode error: the parameters provided were not valid JSON.&#39;</span><span class="p">}</span>
 
 
 <span class="nd">@decorator</span>
-<div class="viewcode-block" id="jsonify"><a class="viewcode-back" href="../../../api.html#old.lib.utils.jsonify">[docs]</a><span class="k">def</span> <span class="nf">jsonify</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="jsonify"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.jsonify">[docs]</a><span class="k">def</span> <span class="nf">jsonify</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Action decorator that formats output for JSON</span>
 
 <span class="sd">    Given a function that will return content, this decorator will turn</span>
@@ -220,7 +217,7 @@
     <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">cls</span><span class="o">=</span><span class="n">JSONOLDEncoder</span><span class="p">)</span>
 
 </div>
-<div class="viewcode-block" id="restrict"><a class="viewcode-back" href="../../../api.html#old.lib.utils.restrict">[docs]</a><span class="k">def</span> <span class="nf">restrict</span><span class="p">(</span><span class="o">*</span><span class="n">methods</span><span class="p">):</span>
+<div class="viewcode-block" id="restrict"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.restrict">[docs]</a><span class="k">def</span> <span class="nf">restrict</span><span class="p">(</span><span class="o">*</span><span class="n">methods</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Restricts access to the function depending on HTTP method</span>
 
 <span class="sd">    Just like pylons.decorators.rest.restrict except it returns JSON.</span>
@@ -241,7 +238,7 @@
 <span class="c"># File system functions</span>
 <span class="c">################################################################################</span>
 </div>
-<div class="viewcode-block" id="getConfig"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getConfig">[docs]</a><span class="k">def</span> <span class="nf">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="getConfig"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getConfig">[docs]</a><span class="k">def</span> <span class="nf">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Try desperately to get a Pylons config object.  The best thing is if a</span>
 <span class="sd">    config object is passed in kwargs[&#39;config&#39;].</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -264,7 +261,7 @@
                     <span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">config</span>
                     <span class="k">return</span> <span class="n">config</span>
 </div>
-<div class="viewcode-block" id="createResearcherDirectory"><a class="viewcode-back" href="../../../api.html#old.lib.utils.createResearcherDirectory">[docs]</a><span class="k">def</span> <span class="nf">createResearcherDirectory</span><span class="p">(</span><span class="n">researcher</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="createResearcherDirectory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.createResearcherDirectory">[docs]</a><span class="k">def</span> <span class="nf">createResearcherDirectory</span><span class="p">(</span><span class="n">researcher</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Creates a directory named researcher.username in files/researchers/.&quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -274,7 +271,7 @@
     <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;The config object was inadequate.&#39;</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="destroyResearcherDirectory"><a class="viewcode-back" href="../../../api.html#old.lib.utils.destroyResearcherDirectory">[docs]</a><span class="k">def</span> <span class="nf">destroyResearcherDirectory</span><span class="p">(</span><span class="n">researcher</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="destroyResearcherDirectory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.destroyResearcherDirectory">[docs]</a><span class="k">def</span> <span class="nf">destroyResearcherDirectory</span><span class="p">(</span><span class="n">researcher</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Destroys a directory named researcher.username in files/researchers/.&quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -284,7 +281,7 @@
     <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;The config object was inadequate.&#39;</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="destroyAllResearcherDirectories"><a class="viewcode-back" href="../../../api.html#old.lib.utils.destroyAllResearcherDirectories">[docs]</a><span class="k">def</span> <span class="nf">destroyAllResearcherDirectories</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="destroyAllResearcherDirectories"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.destroyAllResearcherDirectories">[docs]</a><span class="k">def</span> <span class="nf">destroyAllResearcherDirectories</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Removes all directories from files/researchers/.&quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -296,7 +293,7 @@
     <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;The config object was inadequate.&#39;</span><span class="p">)</span>
 </div>
-<span class="k">def</span> <span class="nf">renameResearcherDirectory</span><span class="p">(</span><span class="n">oldName</span><span class="p">,</span> <span class="n">newName</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="renameResearcherDirectory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.renameResearcherDirectory">[docs]</a><span class="k">def</span> <span class="nf">renameResearcherDirectory</span><span class="p">(</span><span class="n">oldName</span><span class="p">,</span> <span class="n">newName</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">oldPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;permanent_store&#39;</span><span class="p">],</span> <span class="s">&#39;researchers&#39;</span><span class="p">,</span> <span class="n">oldName</span><span class="p">)</span>
@@ -307,8 +304,8 @@
             <span class="n">makeDirectorySafely</span><span class="p">(</span><span class="n">newPath</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;The config object was inadequate.&#39;</span><span class="p">)</span>
-
-<div class="viewcode-block" id="makeDirectorySafely"><a class="viewcode-back" href="../../../api.html#old.lib.utils.makeDirectorySafely">[docs]</a><span class="k">def</span> <span class="nf">makeDirectorySafely</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="makeDirectorySafely"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.makeDirectorySafely">[docs]</a><span class="k">def</span> <span class="nf">makeDirectorySafely</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Create a directory and avoid race conditions.  Taken from </span>
 <span class="sd">    http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write.</span>
 <span class="sd">    Listed as make_sure_path_exists.</span>
@@ -320,7 +317,7 @@
         <span class="k">if</span> <span class="n">exception</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
             <span class="k">raise</span>
 </div>
-<div class="viewcode-block" id="secureFilename"><a class="viewcode-back" href="../../../api.html#old.lib.utils.secureFilename">[docs]</a><span class="k">def</span> <span class="nf">secureFilename</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="secureFilename"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.secureFilename">[docs]</a><span class="k">def</span> <span class="nf">secureFilename</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Removes null bytes, path.sep and path.altsep from a path.</span>
 <span class="sd">    From http://lucumr.pocoo.org/2010/12/24/common-mistakes-as-web-developer/</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -328,15 +325,15 @@
         <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">altsep</span> <span class="ow">or</span> <span class="s">&#39;&#39;</span><span class="p">])))</span>
     <span class="k">return</span> <span class="n">patt</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 </div>
-<span class="k">def</span> <span class="nf">cleanAndSecureFilename</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="cleanAndSecureFilename"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.cleanAndSecureFilename">[docs]</a><span class="k">def</span> <span class="nf">cleanAndSecureFilename</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">secureFilename</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;_&#39;</span><span class="p">)</span>
 
 
 <span class="c">################################################################################</span>
 <span class="c"># String functions</span>
 <span class="c">################################################################################</span>
-
-<div class="viewcode-block" id="toSingleSpace"><a class="viewcode-back" href="../../../api.html#old.lib.utils.toSingleSpace">[docs]</a><span class="k">def</span> <span class="nf">toSingleSpace</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="toSingleSpace"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.toSingleSpace">[docs]</a><span class="k">def</span> <span class="nf">toSingleSpace</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Remove leading and trailing whitespace and replace newlines, tabs and</span>
 <span class="sd">    sequences of 2 or more space to one space.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -345,12 +342,12 @@
     <span class="k">return</span> <span class="n">patt</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">string</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">))</span>
 
 </div>
-<div class="viewcode-block" id="removeAllWhiteSpace"><a class="viewcode-back" href="../../../api.html#old.lib.utils.removeAllWhiteSpace">[docs]</a><span class="k">def</span> <span class="nf">removeAllWhiteSpace</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="removeAllWhiteSpace"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.removeAllWhiteSpace">[docs]</a><span class="k">def</span> <span class="nf">removeAllWhiteSpace</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Remove all spaces, newlines and tabs.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
 
 </div>
-<div class="viewcode-block" id="escREMetaChars"><a class="viewcode-back" href="../../../api.html#old.lib.utils.escREMetaChars">[docs]</a><span class="k">def</span> <span class="nf">escREMetaChars</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="escREMetaChars"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.escREMetaChars">[docs]</a><span class="k">def</span> <span class="nf">escREMetaChars</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Escapes regex metacharacters so that we can formulate an SQL regular</span>
 <span class="sd">    expression based on an arbitrary, user-specified inventory of</span>
 <span class="sd">    graphemes/polygraphs.</span>
@@ -367,7 +364,7 @@
     <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">esc</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">string</span><span class="p">])</span>
 
 </div>
-<span class="k">def</span> <span class="nf">camelCase2lowerSpace</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+<div class="viewcode-block" id="camelCase2lowerSpace"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.camelCase2lowerSpace">[docs]</a><span class="k">def</span> <span class="nf">camelCase2lowerSpace</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
     <span class="n">s1</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;(.)([A-Z][a-z]+)&#39;</span><span class="p">,</span> <span class="s">r&#39;\1 \2&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;([a-z0-9])([A-Z])&#39;</span><span class="p">,</span> <span class="s">r&#39;\1 \2&#39;</span><span class="p">,</span> <span class="n">s1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
@@ -376,8 +373,8 @@
 <span class="c"># Unicode functions</span>
 <span class="c">################################################################################</span>
 
-
-<div class="viewcode-block" id="normalize"><a class="viewcode-back" href="../../../api.html#old.lib.utils.normalize">[docs]</a><span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">unistr</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="normalize"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.normalize">[docs]</a><span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">unistr</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return a unistr using canonical decompositional normalization (NFD).&quot;&quot;&quot;</span>
 
     <span class="k">try</span><span class="p">:</span>
@@ -388,7 +385,7 @@
         <span class="k">return</span> <span class="n">unistr</span>
 
 </div>
-<div class="viewcode-block" id="getUnicodeNames"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getUnicodeNames">[docs]</a><span class="k">def</span> <span class="nf">getUnicodeNames</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="getUnicodeNames"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getUnicodeNames">[docs]</a><span class="k">def</span> <span class="nf">getUnicodeNames</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns a string of comma-delimited unicode character names corresponding</span>
 <span class="sd">    to the characters in the input string.</span>
 
@@ -403,7 +400,7 @@
         <span class="k">return</span> <span class="n">string</span>
 
 </div>
-<div class="viewcode-block" id="getUnicodeCodePoints"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getUnicodeCodePoints">[docs]</a><span class="k">def</span> <span class="nf">getUnicodeCodePoints</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="getUnicodeCodePoints"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getUnicodeCodePoints">[docs]</a><span class="k">def</span> <span class="nf">getUnicodeCodePoints</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns a string of comma-delimited unicode code points corresponding</span>
 <span class="sd">    to the characters in the input string.</span>
 
@@ -413,7 +410,7 @@
 
 
 </div>
-<div class="viewcode-block" id="normalizeDict"><a class="viewcode-back" href="../../../api.html#old.lib.utils.normalizeDict">[docs]</a><span class="k">def</span> <span class="nf">normalizeDict</span><span class="p">(</span><span class="n">dict_</span><span class="p">):</span>
+<div class="viewcode-block" id="normalizeDict"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.normalizeDict">[docs]</a><span class="k">def</span> <span class="nf">normalizeDict</span><span class="p">(</span><span class="n">dict_</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;NFD normalize all unicode values in dict_.</span>
 <span class="sd">    </span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -430,7 +427,7 @@
 <span class="c"># ApplicationSettings</span>
 <span class="c">################################################################################</span>
 </div>
-<div class="viewcode-block" id="ApplicationSettings"><a class="viewcode-back" href="../../../api.html#old.lib.utils.ApplicationSettings">[docs]</a><span class="k">class</span> <span class="nc">ApplicationSettings</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="ApplicationSettings"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.ApplicationSettings">[docs]</a><span class="k">class</span> <span class="nc">ApplicationSettings</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;ApplicationSettings is a class that adds functionality to a</span>
 <span class="sd">    ApplicationSettings object.</span>
 
@@ -445,7 +442,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">applicationSettings</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">getAttributes</span><span class="p">()</span>
 
-<div class="viewcode-block" id="ApplicationSettings.getAttributes"><a class="viewcode-back" href="../../../api.html#old.lib.utils.ApplicationSettings.getAttributes">[docs]</a>    <span class="k">def</span> <span class="nf">getAttributes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ApplicationSettings.getAttributes"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.ApplicationSettings.getAttributes">[docs]</a>    <span class="k">def</span> <span class="nf">getAttributes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Generate some higher-level data structures for the application</span>
 <span class="sd">        settings model, providing sensible defaults where appropriate.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -500,7 +497,7 @@
 <span class="c"># Inventory</span>
 <span class="c">################################################################################</span>
 </div></div>
-<div class="viewcode-block" id="Inventory"><a class="viewcode-back" href="../../../api.html#old.lib.utils.Inventory">[docs]</a><span class="k">class</span> <span class="nc">Inventory</span><span class="p">:</span>
+<div class="viewcode-block" id="Inventory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.Inventory">[docs]</a><span class="k">class</span> <span class="nc">Inventory</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;An inventory is a set of graphemes/polygraphs/characters.  Initialization</span>
 <span class="sd">    requires a list.</span>
 
@@ -528,17 +525,17 @@
     <span class="k">def</span> <span class="nf">_compileRegexValidator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regexValidator</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">compiledRegexValidator</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">regexValidator</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">getInputList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Inventory.getInputList"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.Inventory.getInputList">[docs]</a>    <span class="k">def</span> <span class="nf">getInputList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputList</span>
-
-<div class="viewcode-block" id="Inventory.getRegexValidator"><a class="viewcode-back" href="../../../api.html#old.lib.utils.Inventory.getRegexValidator">[docs]</a>    <span class="k">def</span> <span class="nf">getRegexValidator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">substr</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="Inventory.getRegexValidator"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.Inventory.getRegexValidator">[docs]</a>    <span class="k">def</span> <span class="nf">getRegexValidator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">substr</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Returns a regex that matches only strings composed of zero or more</span>
 <span class="sd">        of the graphemes in the inventory (plus the space character).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">regexValidator</span>
 </div>
-<div class="viewcode-block" id="Inventory.getNonMatchingSubstrings"><a class="viewcode-back" href="../../../api.html#old.lib.utils.Inventory.getNonMatchingSubstrings">[docs]</a>    <span class="k">def</span> <span class="nf">getNonMatchingSubstrings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="Inventory.getNonMatchingSubstrings"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.Inventory.getNonMatchingSubstrings">[docs]</a>    <span class="k">def</span> <span class="nf">getNonMatchingSubstrings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return a list of substrings of string that are not constructable</span>
 <span class="sd">        using the inventory.  This is useful for showing invalid substrings.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -550,7 +547,7 @@
         <span class="n">nonMatchingSubstrings</span> <span class="o">=</span> <span class="p">[</span><span class="n">escREMetaChars</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">list_</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">nonMatchingSubstrings</span>
 </div>
-<div class="viewcode-block" id="Inventory.stringIsValid"><a class="viewcode-back" href="../../../api.html#old.lib.utils.Inventory.stringIsValid">[docs]</a>    <span class="k">def</span> <span class="nf">stringIsValid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="Inventory.stringIsValid"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.Inventory.stringIsValid">[docs]</a>    <span class="k">def</span> <span class="nf">stringIsValid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return False if string cannot be generated by concatenating the</span>
 <span class="sd">        elements of the orthography; otherwise, return True.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -565,7 +562,7 @@
 <span class="c"># EventHook -- NOT BEING USED (YET?)</span>
 <span class="c">################################################################################</span>
 </div></div>
-<div class="viewcode-block" id="EventHook"><a class="viewcode-back" href="../../../api.html#old.lib.utils.EventHook">[docs]</a><span class="k">class</span> <span class="nc">EventHook</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="EventHook"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.EventHook">[docs]</a><span class="k">class</span> <span class="nc">EventHook</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;EventHook is for event-based (PubSub) stuff in Python.  It is taken from</span>
 <span class="sd">    http://www.voidspace.org.uk/python/weblog/arch_d7_2007_02_03.shtml#e616.</span>
 <span class="sd">    See also http://stackoverflow.com/questions/1092531/event-system-in-python.</span>
@@ -584,11 +581,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">__handlers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">fire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">keywargs</span><span class="p">):</span>
+<div class="viewcode-block" id="EventHook.fire"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.EventHook.fire">[docs]</a>    <span class="k">def</span> <span class="nf">fire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">keywargs</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">handler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__handlers</span><span class="p">:</span>
             <span class="n">handler</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">keywargs</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">clearObjectHandlers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inObject</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="EventHook.clearObjectHandlers"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.EventHook.clearObjectHandlers">[docs]</a>    <span class="k">def</span> <span class="nf">clearObjectHandlers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inObject</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">theHandler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__handlers</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">theHandler</span><span class="o">.</span><span class="n">im_self</span> <span class="o">==</span> <span class="n">inObject</span><span class="p">:</span>
                 <span class="bp">self</span> <span class="o">-=</span> <span class="n">theHandler</span>
@@ -600,8 +597,8 @@
 <span class="c"># Foreign word functions</span>
 <span class="c">################################################################################</span>
 
-</div>
-<div class="viewcode-block" id="getForeignWords"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getForeignWords">[docs]</a><span class="k">def</span> <span class="nf">getForeignWords</span><span class="p">():</span>
+</div></div>
+<div class="viewcode-block" id="getForeignWords"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getForeignWords">[docs]</a><span class="k">def</span> <span class="nf">getForeignWords</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;Return the forms that are tagged with a &#39;foreign word&#39; tag.  This is</span>
 <span class="sd">    useful for input validation as foreign words may contain otherwise illicit</span>
 <span class="sd">    characters/graphemes.</span>
@@ -615,7 +612,7 @@
         <span class="k">return</span> <span class="n">getForms</span><span class="p">()</span>
 
 </div>
-<div class="viewcode-block" id="getForeignWordTranscriptions"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getForeignWordTranscriptions">[docs]</a><span class="k">def</span> <span class="nf">getForeignWordTranscriptions</span><span class="p">():</span>
+<div class="viewcode-block" id="getForeignWordTranscriptions"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getForeignWordTranscriptions">[docs]</a><span class="k">def</span> <span class="nf">getForeignWordTranscriptions</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;Returns a 4-tuple (fWNarrPhonTranscrs, fWBroadPhonTranscrs,</span>
 <span class="sd">    fWOrthTranscrs, fWMorphTranscrs) where each element is a list of</span>
 <span class="sd">    transcriptions (narrow phonetic, broad phonetic, orthographic, morphemic)</span>
@@ -640,29 +637,29 @@
 
 
 </div>
-<span class="k">def</span> <span class="nf">formIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+<div class="viewcode-block" id="formIsForeignWord"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.formIsForeignWord">[docs]</a><span class="k">def</span> <span class="nf">formIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
     <span class="n">foreignWordTag</span> <span class="o">=</span> <span class="n">getForeignWordTag</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">foreignWordTag</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">True</span>
     <span class="k">return</span> <span class="bp">False</span>
 
-
-<span class="k">def</span> <span class="nf">getForeignWordTagId</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getForeignWordTagId"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getForeignWordTagId">[docs]</a><span class="k">def</span> <span class="nf">getForeignWordTagId</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">getForeignWordTag</span><span class="p">()</span><span class="o">.</span><span class="n">id</span>
 
 
 <span class="c">################################################################################</span>
 <span class="c"># Query Convenience Functions</span>
 <span class="c">################################################################################</span>
-
-<span class="k">def</span> <span class="nf">getGrammaticalities</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getGrammaticalities"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getGrammaticalities">[docs]</a><span class="k">def</span> <span class="nf">getGrammaticalities</span><span class="p">():</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">getApplicationSettings</span><span class="p">()</span><span class="o">.</span><span class="n">grammaticalities</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
                                                             <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
-
-<div class="viewcode-block" id="getMorphemeDelimiters"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getMorphemeDelimiters">[docs]</a><span class="k">def</span> <span class="nf">getMorphemeDelimiters</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getMorphemeDelimiters"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getMorphemeDelimiters">[docs]</a><span class="k">def</span> <span class="nf">getMorphemeDelimiters</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;Return the morpheme delimiters from app settings as a list.&quot;&quot;&quot;</span>
     <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">getApplicationSettings</span><span class="p">()</span>
     <span class="k">try</span><span class="p">:</span>
@@ -674,7 +671,7 @@
     <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
 </div>
-<div class="viewcode-block" id="isLexical"><a class="viewcode-back" href="../../../api.html#old.lib.utils.isLexical">[docs]</a><span class="k">def</span> <span class="nf">isLexical</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+<div class="viewcode-block" id="isLexical"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.isLexical">[docs]</a><span class="k">def</span> <span class="nf">isLexical</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return True if the input form is lexical, i.e, if neither its morpheme</span>
 <span class="sd">    break nor its morpheme gloss lines contain the space character or any of the</span>
 <span class="sd">    morpheme delimiters.  Note: designed to work on dict representations of forms</span>
@@ -692,33 +689,33 @@
     <span class="k">except</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">False</span>
 </div>
-<span class="k">def</span> <span class="nf">getApplicationSettings</span><span class="p">():</span>
+<div class="viewcode-block" id="getApplicationSettings"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getApplicationSettings">[docs]</a><span class="k">def</span> <span class="nf">getApplicationSettings</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span>
         <span class="n">desc</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">getOrthographies</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getOrthographies"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getOrthographies">[docs]</a><span class="k">def</span> <span class="nf">getOrthographies</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Orthography&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getFormSearches</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getFormSearches"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getFormSearches">[docs]</a><span class="k">def</span> <span class="nf">getFormSearches</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;FormSearch&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getPages</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getPages"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getPages">[docs]</a><span class="k">def</span> <span class="nf">getPages</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Page&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getPhonologies</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getPhonologies"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getPhonologies">[docs]</a><span class="k">def</span> <span class="nf">getPhonologies</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Phonology&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getLanguages</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getLanguages"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getLanguages">[docs]</a><span class="k">def</span> <span class="nf">getLanguages</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Language&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getElicitationMethods</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getElicitationMethods"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getElicitationMethods">[docs]</a><span class="k">def</span> <span class="nf">getElicitationMethods</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;ElicitationMethod&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getStartAndEndFromPaginator</span><span class="p">(</span><span class="n">paginator</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getStartAndEndFromPaginator"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getStartAndEndFromPaginator">[docs]</a><span class="k">def</span> <span class="nf">getStartAndEndFromPaginator</span><span class="p">(</span><span class="n">paginator</span><span class="p">):</span>
     <span class="n">start</span> <span class="o">=</span> <span class="p">(</span><span class="n">paginator</span><span class="p">[</span><span class="s">&#39;page&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">paginator</span><span class="p">[</span><span class="s">&#39;itemsPerPage&#39;</span><span class="p">]</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">start</span> <span class="o">+</span> <span class="n">paginator</span><span class="p">[</span><span class="s">&#39;itemsPerPage&#39;</span><span class="p">])</span>
-
-<span class="k">def</span> <span class="nf">filterRestrictedModels</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="filterRestrictedModels"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.filterRestrictedModels">[docs]</a><span class="k">def</span> <span class="nf">filterRestrictedModels</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="n">user</span> <span class="o">=</span> <span class="n">user</span> <span class="ow">or</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
     <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">getUnrestrictedUsers</span><span class="p">()</span>
     <span class="n">userIsUnrestricted_</span> <span class="o">=</span> <span class="n">userIsUnrestricted</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)</span>
@@ -726,8 +723,8 @@
         <span class="k">return</span> <span class="n">query</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">filterRestrictedModelsFromQuery</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">filterRestrictedModelsFromQuery</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="filterRestrictedModelsFromQuery"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.filterRestrictedModelsFromQuery">[docs]</a><span class="k">def</span> <span class="nf">filterRestrictedModelsFromQuery</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
     <span class="n">model_</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">modelName</span> <span class="ow">in</span> <span class="p">(</span><span class="s">u&#39;FormBackup&#39;</span><span class="p">,</span> <span class="s">u&#39;CollectionBackup&#39;</span><span class="p">):</span>
         <span class="n">entererCondition</span> <span class="o">=</span> <span class="n">model_</span><span class="o">.</span><span class="n">enterer</span><span class="o">.</span><span class="n">like</span><span class="p">(</span><span class="s">u&#39;%&#39;</span> <span class="o">+</span> <span class="s">u&#39;&quot;id&quot;: </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="o">+</span> <span class="s">u&#39;%&#39;</span><span class="p">)</span>
@@ -737,16 +734,16 @@
         <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">getRestrictedTag</span><span class="p">()</span>
         <span class="n">unrestrictedCondition</span> <span class="o">=</span> <span class="n">not_</span><span class="p">(</span><span class="n">model_</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">or_</span><span class="p">(</span><span class="n">entererCondition</span><span class="p">,</span> <span class="n">unrestrictedCondition</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">getFormsUserCanAccess</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">paginator</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getFormsUserCanAccess"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getFormsUserCanAccess">[docs]</a><span class="k">def</span> <span class="nf">getFormsUserCanAccess</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">paginator</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="n">query</span> <span class="o">=</span> <span class="n">filterRestrictedModelsFromQuery</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">),</span> <span class="n">user</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span>
         <span class="n">asc</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">paginator</span><span class="p">:</span>
         <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">getStartAndEndFromPaginator</span><span class="p">(</span><span class="n">paginator</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">getForms</span><span class="p">(</span><span class="n">paginator</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">eagerload</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getForms"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getForms">[docs]</a><span class="k">def</span> <span class="nf">getForms</span><span class="p">(</span><span class="n">paginator</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">eagerload</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="n">formQuery</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">asc</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">eagerload</span><span class="p">:</span>
         <span class="n">formQuery</span> <span class="o">=</span> <span class="n">eagerloadForm</span><span class="p">(</span><span class="n">formQuery</span><span class="p">)</span>
@@ -754,28 +751,28 @@
         <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">getStartAndEndFromPaginator</span><span class="p">(</span><span class="n">paginator</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">formQuery</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">formQuery</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
-
-<div class="viewcode-block" id="getFormByUUID"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getFormByUUID">[docs]</a><span class="k">def</span> <span class="nf">getFormByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getFormByUUID"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getFormByUUID">[docs]</a><span class="k">def</span> <span class="nf">getFormByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return the first (and only, hopefully) Form model with UUID.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">UUID</span><span class="o">==</span><span class="n">UUID</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="getCollectionByUUID"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getCollectionByUUID">[docs]</a><span class="k">def</span> <span class="nf">getCollectionByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
+<div class="viewcode-block" id="getCollectionByUUID"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getCollectionByUUID">[docs]</a><span class="k">def</span> <span class="nf">getCollectionByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return the first (and only, hopefully) Collection model with UUID.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Collection</span><span class="o">.</span><span class="n">UUID</span><span class="o">==</span><span class="n">UUID</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="getFormBackupsByUUID"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getFormBackupsByUUID">[docs]</a><span class="k">def</span> <span class="nf">getFormBackupsByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
+<div class="viewcode-block" id="getFormBackupsByUUID"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getFormBackupsByUUID">[docs]</a><span class="k">def</span> <span class="nf">getFormBackupsByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return all FormBackup models with UUID = UUID.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">FormBackup</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
         <span class="n">FormBackup</span><span class="o">.</span><span class="n">UUID</span><span class="o">==</span><span class="n">UUID</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span>
         <span class="n">FormBackup</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="getCollectionBackupsByUUID"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getCollectionBackupsByUUID">[docs]</a><span class="k">def</span> <span class="nf">getCollectionBackupsByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
+<div class="viewcode-block" id="getCollectionBackupsByUUID"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getCollectionBackupsByUUID">[docs]</a><span class="k">def</span> <span class="nf">getCollectionBackupsByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return all CollectionBackup models with UUID = UUID.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">CollectionBackup</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
         <span class="n">CollectionBackup</span><span class="o">.</span><span class="n">UUID</span><span class="o">==</span><span class="n">UUID</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span>
         <span class="n">CollectionBackup</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="getFormBackupsByFormId"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getFormBackupsByFormId">[docs]</a><span class="k">def</span> <span class="nf">getFormBackupsByFormId</span><span class="p">(</span><span class="n">formId</span><span class="p">):</span>
+<div class="viewcode-block" id="getFormBackupsByFormId"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getFormBackupsByFormId">[docs]</a><span class="k">def</span> <span class="nf">getFormBackupsByFormId</span><span class="p">(</span><span class="n">formId</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return all FormBackup models with form_id = formId.  WARNING: unexpected</span>
 <span class="sd">    data may be returned (on an SQLite backend) if primary key ids of deleted</span>
 <span class="sd">    forms are recycled.</span>
@@ -784,7 +781,7 @@
         <span class="n">FormBackup</span><span class="o">.</span><span class="n">form_id</span><span class="o">==</span><span class="n">formId</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span>
         <span class="n">FormBackup</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="getCollectionBackupsByCollectionId"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getCollectionBackupsByCollectionId">[docs]</a><span class="k">def</span> <span class="nf">getCollectionBackupsByCollectionId</span><span class="p">(</span><span class="n">collectionId</span><span class="p">):</span>
+<div class="viewcode-block" id="getCollectionBackupsByCollectionId"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getCollectionBackupsByCollectionId">[docs]</a><span class="k">def</span> <span class="nf">getCollectionBackupsByCollectionId</span><span class="p">(</span><span class="n">collectionId</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return all CollectionBackup models with collection_id = collectionId.</span>
 <span class="sd">    WARNING: unexpected data may be returned (on an SQLite backend) if primary</span>
 <span class="sd">    key ids of deleted collections are recycled.</span>
@@ -793,55 +790,55 @@
         <span class="n">CollectionBackup</span><span class="o">.</span><span class="n">collection_id</span><span class="o">==</span><span class="n">collectionId</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span>
         <span class="n">CollectionBackup</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 </div>
-<span class="k">def</span> <span class="nf">getCollections</span><span class="p">():</span>
+<div class="viewcode-block" id="getCollections"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getCollections">[docs]</a><span class="k">def</span> <span class="nf">getCollections</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getTags</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getTags"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getTags">[docs]</a><span class="k">def</span> <span class="nf">getTags</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Tag&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getFiles</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getFiles"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getFiles">[docs]</a><span class="k">def</span> <span class="nf">getFiles</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getForeignWordTag</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getForeignWordTag"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getForeignWordTag">[docs]</a><span class="k">def</span> <span class="nf">getForeignWordTag</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Tag</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
         <span class="n">model</span><span class="o">.</span><span class="n">Tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;foreign word&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">getRestrictedTag</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getRestrictedTag"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getRestrictedTag">[docs]</a><span class="k">def</span> <span class="nf">getRestrictedTag</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Tag</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
         <span class="n">model</span><span class="o">.</span><span class="n">Tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">getSyntacticCategories</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getSyntacticCategories"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getSyntacticCategories">[docs]</a><span class="k">def</span> <span class="nf">getSyntacticCategories</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;SyntacticCategory&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getSpeakers</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getSpeakers"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getSpeakers">[docs]</a><span class="k">def</span> <span class="nf">getSpeakers</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Speaker&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getUsers</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getUsers"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getUsers">[docs]</a><span class="k">def</span> <span class="nf">getUsers</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getMiniDictsGetter</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getMiniDictsGetter"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getMiniDictsGetter">[docs]</a><span class="k">def</span> <span class="nf">getMiniDictsGetter</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">func</span><span class="p">():</span>
         <span class="n">models</span> <span class="o">=</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">getMiniDict</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">models</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">func</span>
-
-<span class="k">def</span> <span class="nf">getSources</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getSources"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getSources">[docs]</a><span class="k">def</span> <span class="nf">getSources</span><span class="p">(</span><span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="s">&#39;Source&#39;</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getModelNames</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getModelNames"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getModelNames">[docs]</a><span class="k">def</span> <span class="nf">getModelNames</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">mn</span> <span class="k">for</span> <span class="n">mn</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> <span class="k">if</span> <span class="n">mn</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span>
             <span class="ow">and</span> <span class="n">mn</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;Model&#39;</span><span class="p">,</span> <span class="s">&#39;Base&#39;</span><span class="p">,</span> <span class="s">&#39;Session&#39;</span><span class="p">)]</span>
-
-<span class="k">def</span> <span class="nf">getModelsByName</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getModelsByName"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getModelsByName">[docs]</a><span class="k">def</span> <span class="nf">getModelsByName</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">getQueryByModelName</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">getQueryByModelName</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getQueryByModelName"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getQueryByModelName">[docs]</a><span class="k">def</span> <span class="nf">getQueryByModelName</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">sortByIdAsc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="n">model_</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">sortByIdAsc</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model_</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">asc</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model_</span><span class="p">,</span> <span class="s">&#39;id&#39;</span><span class="p">)))</span>
     <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">model_</span><span class="p">)</span>
-
-<div class="viewcode-block" id="clearAllModels"><a class="viewcode-back" href="../../../api.html#old.lib.utils.clearAllModels">[docs]</a><span class="k">def</span> <span class="nf">clearAllModels</span><span class="p">(</span><span class="n">retain</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;Language&#39;</span><span class="p">]):</span>
+</div>
+<div class="viewcode-block" id="clearAllModels"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.clearAllModels">[docs]</a><span class="k">def</span> <span class="nf">clearAllModels</span><span class="p">(</span><span class="n">retain</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;Language&#39;</span><span class="p">]):</span>
     <span class="sd">&quot;&quot;&quot;Convenience function for removing all OLD models from the database.</span>
 <span class="sd">    The retain parameter is a list of model names that should not be cleared.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -852,10 +849,10 @@
                 <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
     <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </div>
-<span class="k">def</span> <span class="nf">getAllModels</span><span class="p">():</span>
+<div class="viewcode-block" id="getAllModels"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getAllModels">[docs]</a><span class="k">def</span> <span class="nf">getAllModels</span><span class="p">():</span>
     <span class="k">return</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">mn</span><span class="p">,</span> <span class="n">getModelsByName</span><span class="p">(</span><span class="n">mn</span><span class="p">))</span> <span class="k">for</span> <span class="n">mn</span> <span class="ow">in</span> <span class="n">getModelNames</span><span class="p">()])</span>
-
-<span class="k">def</span> <span class="nf">getPaginatedQueryResults</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">paginator</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getPaginatedQueryResults"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getPaginatedQueryResults">[docs]</a><span class="k">def</span> <span class="nf">getPaginatedQueryResults</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">paginator</span><span class="p">):</span>
     <span class="k">if</span> <span class="s">&#39;count&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">paginator</span><span class="p">:</span>
         <span class="n">paginator</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
     <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">getStartAndEndFromPaginator</span><span class="p">(</span><span class="n">paginator</span><span class="p">)</span>
@@ -863,16 +860,16 @@
         <span class="s">&#39;paginator&#39;</span><span class="p">:</span> <span class="n">paginator</span><span class="p">,</span>
         <span class="s">&#39;items&#39;</span><span class="p">:</span> <span class="n">query</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
     <span class="p">}</span>
-
-<span class="k">def</span> <span class="nf">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">paginator</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="addPagination"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.addPagination">[docs]</a><span class="k">def</span> <span class="nf">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">paginator</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">paginator</span> <span class="ow">and</span> <span class="n">paginator</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;page&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
     <span class="n">paginator</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;itemsPerPage&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
         <span class="n">paginator</span> <span class="o">=</span> <span class="n">PaginatorSchema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">paginator</span><span class="p">)</span>    <span class="c"># raises formencode.Invalid if paginator is invalid</span>
         <span class="k">return</span> <span class="n">getPaginatedQueryResults</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">paginator</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
-
-<div class="viewcode-block" id="addOrderBy"><a class="viewcode-back" href="../../../api.html#old.lib.utils.addOrderBy">[docs]</a><span class="k">def</span> <span class="nf">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">orderByParams</span><span class="p">,</span> <span class="n">queryBuilder</span><span class="p">,</span> <span class="n">primaryKey</span><span class="o">=</span><span class="s">&#39;id&#39;</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="addOrderBy"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.addOrderBy">[docs]</a><span class="k">def</span> <span class="nf">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">orderByParams</span><span class="p">,</span> <span class="n">queryBuilder</span><span class="p">,</span> <span class="n">primaryKey</span><span class="o">=</span><span class="s">&#39;id&#39;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Add an ORDER BY clause to the query using the getSQLAOrderBy method of</span>
 <span class="sd">    the supplied queryBuilder (if possible) or using a default ORDER BY &lt;primaryKey&gt; ASC.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -893,7 +890,7 @@
 <span class="c"># OLD model objects getters: for defaults and testing</span>
 <span class="c">################################################################################</span>
 </div>
-<span class="k">def</span> <span class="nf">generateDefaultAdministrator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="generateDefaultAdministrator"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultAdministrator">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultAdministrator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">admin</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">User</span><span class="p">()</span>
     <span class="n">admin</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="s">u&#39;Admin&#39;</span>
     <span class="n">admin</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="s">u&#39;Admin&#39;</span>
@@ -907,8 +904,8 @@
     <span class="n">admin</span><span class="o">.</span><span class="n">pageContent</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
     <span class="n">createResearcherDirectory</span><span class="p">(</span><span class="n">admin</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">admin</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultContributor</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="generateDefaultContributor"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultContributor">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultContributor</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">contributor</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">User</span><span class="p">()</span>
     <span class="n">contributor</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="s">u&#39;Contributor&#39;</span>
     <span class="n">contributor</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="s">u&#39;Contributor&#39;</span>
@@ -922,8 +919,8 @@
     <span class="n">contributor</span><span class="o">.</span><span class="n">pageContent</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
     <span class="n">createResearcherDirectory</span><span class="p">(</span><span class="n">contributor</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">contributor</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultViewer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="generateDefaultViewer"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultViewer">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultViewer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">viewer</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">User</span><span class="p">()</span>
     <span class="n">viewer</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="s">u&#39;Viewer&#39;</span>
     <span class="n">viewer</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="s">u&#39;Viewer&#39;</span>
@@ -937,8 +934,8 @@
     <span class="n">viewer</span><span class="o">.</span><span class="n">pageContent</span> <span class="o">=</span> <span class="s">u&#39;&#39;</span>
     <span class="n">createResearcherDirectory</span><span class="p">(</span><span class="n">viewer</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">viewer</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultHomePage</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultHomePage"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultHomePage">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultHomePage</span><span class="p">():</span>
     <span class="n">homepage</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Page</span><span class="p">()</span>
     <span class="n">homepage</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;home&#39;</span>
     <span class="n">homepage</span><span class="o">.</span><span class="n">heading</span> <span class="o">=</span> <span class="s">u&#39;Welcome to the OLD&#39;</span>
@@ -949,8 +946,8 @@
 <span class="s">        &quot;&quot;&quot;</span>
     <span class="n">homepage</span><span class="o">.</span><span class="n">markup</span> <span class="o">=</span> <span class="s">u&#39;restructuredtext&#39;</span>
     <span class="k">return</span> <span class="n">homepage</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultHelpPage</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultHelpPage"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultHelpPage">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultHelpPage</span><span class="p">():</span>
     <span class="n">helppage</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Page</span><span class="p">()</span>
     <span class="n">helppage</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;help&#39;</span>
     <span class="n">helppage</span><span class="o">.</span><span class="n">heading</span> <span class="o">=</span> <span class="s">u&#39;OLD Application Help&#39;</span>
@@ -962,24 +959,24 @@
 <span class="s">        &quot;&quot;&quot;</span>
     <span class="n">helppage</span><span class="o">.</span><span class="n">markup</span> <span class="o">=</span> <span class="s">u&#39;restructuredtext&#39;</span>
     <span class="k">return</span> <span class="n">helppage</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultOrthography1</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultOrthography1"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultOrthography1">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultOrthography1</span><span class="p">():</span>
     <span class="n">orthography1</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Orthography</span><span class="p">()</span>
     <span class="n">orthography1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;Sample Orthography 1&#39;</span>
     <span class="n">orthography1</span><span class="o">.</span><span class="n">orthography</span> <span class="o">=</span> <span class="s">u&#39;p,t,k,m,s,[i,i_],[a,a_],[o,o_]&#39;</span>
     <span class="n">orthography1</span><span class="o">.</span><span class="n">lowercase</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="n">orthography1</span><span class="o">.</span><span class="n">initialGlottalStops</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="k">return</span> <span class="n">orthography1</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultOrthography2</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultOrthography2"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultOrthography2">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultOrthography2</span><span class="p">():</span>
     <span class="n">orthography2</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Orthography</span><span class="p">()</span>
     <span class="n">orthography2</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;Sample Orthography 2&#39;</span>
     <span class="n">orthography2</span><span class="o">.</span><span class="n">orthography</span> <span class="o">=</span> <span class="s">u&#39;b,d,g,m,s,[i,i</span><span class="se">\u0301</span><span class="s">],[a,a</span><span class="se">\u0301</span><span class="s">],[o,o</span><span class="se">\u0301</span><span class="s">]&#39;</span>
     <span class="n">orthography2</span><span class="o">.</span><span class="n">lowercase</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="n">orthography2</span><span class="o">.</span><span class="n">initialGlottalStops</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="k">return</span> <span class="n">orthography2</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultApplicationSettings</span><span class="p">(</span><span class="n">orthographies</span><span class="o">=</span><span class="p">[],</span> <span class="n">unrestrictedUsers</span><span class="o">=</span><span class="p">[]):</span>
+</div>
+<div class="viewcode-block" id="generateDefaultApplicationSettings"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultApplicationSettings">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultApplicationSettings</span><span class="p">(</span><span class="n">orthographies</span><span class="o">=</span><span class="p">[],</span> <span class="n">unrestrictedUsers</span><span class="o">=</span><span class="p">[]):</span>
     <span class="n">englishOrthography</span> <span class="o">=</span> <span class="s">u&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">ascii_lowercase</span><span class="p">))</span>
     <span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">()</span>
     <span class="n">applicationSettings</span><span class="o">.</span><span class="n">objectLanguageName</span> <span class="o">=</span> <span class="s">u&#39;Unspecified&#39;</span>
@@ -1005,8 +1002,8 @@
     <span class="n">applicationSettings</span><span class="o">.</span><span class="n">outputOrthography</span> <span class="o">=</span> <span class="n">orthographies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">orthographies</span><span class="p">)</span> <span class="k">else</span> <span class="bp">None</span>
     <span class="n">applicationSettings</span><span class="o">.</span><span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">unrestrictedUsers</span>
     <span class="k">return</span> <span class="n">applicationSettings</span>
-
-<span class="k">def</span> <span class="nf">generateRestrictedTag</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateRestrictedTag"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateRestrictedTag">[docs]</a><span class="k">def</span> <span class="nf">generateRestrictedTag</span><span class="p">():</span>
     <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Tag</span><span class="p">()</span>
     <span class="n">restrictedTag</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;restricted&#39;</span>
     <span class="n">restrictedTag</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;&#39;&#39;Forms tagged with the tag &#39;restricted&#39;</span>
@@ -1016,8 +1013,8 @@
 <span class="s">Note: the restricted tag cannot be deleted and its name cannot be changed.</span>
 <span class="s">&#39;&#39;&#39;</span>
     <span class="k">return</span> <span class="n">restrictedTag</span>
-
-<span class="k">def</span> <span class="nf">generateForeignWordTag</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateForeignWordTag"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateForeignWordTag">[docs]</a><span class="k">def</span> <span class="nf">generateForeignWordTag</span><span class="p">():</span>
     <span class="n">foreignWordTag</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Tag</span><span class="p">()</span>
     <span class="n">foreignWordTag</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;foreign word&#39;</span>
     <span class="n">foreignWordTag</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;&#39;&#39;Use this tag for lexical entries that are</span>
@@ -1031,8 +1028,8 @@
 <span class="s">Note: the foreign word tag cannot be deleted and its name cannot be changed.</span>
 <span class="s">&#39;&#39;&#39;</span>
     <span class="k">return</span> <span class="n">foreignWordTag</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultForm</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultForm"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultForm">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultForm</span><span class="p">():</span>
     <span class="n">form</span> <span class="o">=</span> <span class="n">Form</span><span class="p">()</span>
     <span class="n">form</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
     <span class="n">form</span><span class="o">.</span><span class="n">transcription</span> <span class="o">=</span> <span class="s">u&#39;test transcription&#39;</span>
@@ -1043,8 +1040,8 @@
     <span class="n">gloss</span><span class="o">.</span><span class="n">gloss</span> <span class="o">=</span> <span class="s">u&#39;test gloss&#39;</span>
     <span class="n">form</span><span class="o">.</span><span class="n">glosses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gloss</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">form</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultFile</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultFile"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultFile">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultFile</span><span class="p">():</span>
     <span class="nb">file</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">File</span><span class="p">()</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;test_file_name&#39;</span> <span class="c"># VARCHAR 255, UNIQUE</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="o">=</span> <span class="s">u&#39;image/jpeg&#39;</span> <span class="c"># VARCHAR 255</span>
@@ -1058,46 +1055,46 @@
     <span class="c">#embeddedFileMarkup # TEXT</span>
     <span class="c">#embeddedFilePassword # VARCHAR 255</span>
     <span class="k">return</span> <span class="nb">file</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultElicitationMethod</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultElicitationMethod"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultElicitationMethod">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultElicitationMethod</span><span class="p">():</span>
     <span class="n">elicitationMethod</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">ElicitationMethod</span><span class="p">()</span>
     <span class="n">elicitationMethod</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;test elicitation method&#39;</span>
     <span class="n">elicitationMethod</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;test elicitation method description&#39;</span>
     <span class="k">return</span> <span class="n">elicitationMethod</span>
-
-<span class="k">def</span> <span class="nf">generateSSyntacticCategory</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateSSyntacticCategory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateSSyntacticCategory">[docs]</a><span class="k">def</span> <span class="nf">generateSSyntacticCategory</span><span class="p">():</span>
     <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">SyntacticCategory</span><span class="p">()</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;S&#39;</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;Tag sentences with S.&#39;</span>
     <span class="k">return</span> <span class="n">syntacticCategory</span>
-
-<span class="k">def</span> <span class="nf">generateNSyntacticCategory</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateNSyntacticCategory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateNSyntacticCategory">[docs]</a><span class="k">def</span> <span class="nf">generateNSyntacticCategory</span><span class="p">():</span>
     <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">SyntacticCategory</span><span class="p">()</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;N&#39;</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;Tag nouns with N.&#39;</span>
     <span class="k">return</span> <span class="n">syntacticCategory</span>
-
-<span class="k">def</span> <span class="nf">generateVSyntacticCategory</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateVSyntacticCategory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateVSyntacticCategory">[docs]</a><span class="k">def</span> <span class="nf">generateVSyntacticCategory</span><span class="p">():</span>
     <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">SyntacticCategory</span><span class="p">()</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;V&#39;</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;Tag verbs with V.&#39;</span>
     <span class="k">return</span> <span class="n">syntacticCategory</span>
-
-<span class="k">def</span> <span class="nf">generateNumSyntacticCategory</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateNumSyntacticCategory"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateNumSyntacticCategory">[docs]</a><span class="k">def</span> <span class="nf">generateNumSyntacticCategory</span><span class="p">():</span>
     <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">SyntacticCategory</span><span class="p">()</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">u&#39;Num&#39;</span>
     <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">u&#39;Tag number morphology with Num.&#39;</span>
     <span class="k">return</span> <span class="n">syntacticCategory</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultSpeaker</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultSpeaker"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultSpeaker">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultSpeaker</span><span class="p">():</span>
     <span class="n">speaker</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Speaker</span><span class="p">()</span>
     <span class="n">speaker</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="s">u&#39;test speaker first name&#39;</span>
     <span class="n">speaker</span><span class="o">.</span><span class="n">lastName</span> <span class="o">=</span> <span class="s">u&#39;test speaker last name&#39;</span>
     <span class="n">speaker</span><span class="o">.</span><span class="n">dialect</span> <span class="o">=</span> <span class="s">u&#39;test speaker dialect&#39;</span>
     <span class="n">speaker</span><span class="o">.</span><span class="n">pageContent</span> <span class="o">=</span> <span class="s">u&#39;test speaker page content&#39;</span>
     <span class="k">return</span> <span class="n">speaker</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultUser</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultUser"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultUser">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultUser</span><span class="p">():</span>
     <span class="n">user</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">User</span><span class="p">()</span>
     <span class="n">user</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="s">u&#39;test user username&#39;</span>
     <span class="n">user</span><span class="o">.</span><span class="n">firstName</span> <span class="o">=</span> <span class="s">u&#39;test user first name&#39;</span>
@@ -1107,8 +1104,8 @@
     <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">=</span> <span class="s">u&#39;contributor&#39;</span>
     <span class="n">user</span><span class="o">.</span><span class="n">pageContent</span> <span class="o">=</span> <span class="s">u&#39;test user page content&#39;</span>
     <span class="k">return</span> <span class="n">user</span>
-
-<span class="k">def</span> <span class="nf">generateDefaultSource</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="generateDefaultSource"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateDefaultSource">[docs]</a><span class="k">def</span> <span class="nf">generateDefaultSource</span><span class="p">():</span>
     <span class="n">source</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">Source</span><span class="p">()</span>
     <span class="n">source</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">u&#39;book&#39;</span>
     <span class="n">source</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
@@ -1123,12 +1120,12 @@
 <span class="c"># Date &amp; Time-related Functions</span>
 <span class="c">################################################################################</span>
 
-
-<span class="k">def</span> <span class="nf">now</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="now"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.now">[docs]</a><span class="k">def</span> <span class="nf">now</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
 
-
-<div class="viewcode-block" id="getMostRecentModificationDatetime"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getMostRecentModificationDatetime">[docs]</a><span class="k">def</span> <span class="nf">getMostRecentModificationDatetime</span><span class="p">(</span><span class="n">modelName</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getMostRecentModificationDatetime"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getMostRecentModificationDatetime">[docs]</a><span class="k">def</span> <span class="nf">getMostRecentModificationDatetime</span><span class="p">(</span><span class="n">modelName</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return the most recent datetimeModified attribute for the model with the</span>
 <span class="sd">    provided modelName.  If the modelName is not recognized, return None.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1140,7 +1137,7 @@
     <span class="k">return</span> <span class="n">OLDModel</span>
 
 </div>
-<div class="viewcode-block" id="datetimeString2datetime"><a class="viewcode-back" href="../../../api.html#old.lib.utils.datetimeString2datetime">[docs]</a><span class="k">def</span> <span class="nf">datetimeString2datetime</span><span class="p">(</span><span class="n">datetimeString</span><span class="p">):</span>
+<div class="viewcode-block" id="datetimeString2datetime"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.datetimeString2datetime">[docs]</a><span class="k">def</span> <span class="nf">datetimeString2datetime</span><span class="p">(</span><span class="n">datetimeString</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Parse an ISO 8601-formatted datetime into a Python datetime object.</span>
 <span class="sd">    Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds</span>
 
@@ -1161,7 +1158,7 @@
         <span class="k">return</span> <span class="n">datetimeObject</span>
 
 </div>
-<div class="viewcode-block" id="dateString2date"><a class="viewcode-back" href="../../../api.html#old.lib.utils.dateString2date">[docs]</a><span class="k">def</span> <span class="nf">dateString2date</span><span class="p">(</span><span class="n">dateString</span><span class="p">):</span>
+<div class="viewcode-block" id="dateString2date"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.dateString2date">[docs]</a><span class="k">def</span> <span class="nf">dateString2date</span><span class="p">(</span><span class="n">dateString</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Parse an ISO 8601-formatted date into a Python date object.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">dateString</span><span class="p">,</span> <span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
@@ -1173,16 +1170,16 @@
 <span class="c"># Miscellaneous Functions &amp; Classes</span>
 <span class="c">################################################################################</span>
 </div>
-<span class="k">def</span> <span class="nf">getInt</span><span class="p">(</span><span class="n">int_</span><span class="p">):</span>
+<div class="viewcode-block" id="getInt"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getInt">[docs]</a><span class="k">def</span> <span class="nf">getInt</span><span class="p">(</span><span class="n">int_</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">int_</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">None</span>
-
-<span class="k">class</span> <span class="nc">FakeForm</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="FakeForm"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.FakeForm">[docs]</a><span class="k">class</span> <span class="nc">FakeForm</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">pass</span>
-
-<div class="viewcode-block" id="State"><a class="viewcode-back" href="../../../api.html#old.lib.utils.State">[docs]</a><span class="k">class</span> <span class="nc">State</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="State"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.State">[docs]</a><span class="k">class</span> <span class="nc">State</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Empty class used to create a state instance with a &#39;full_dict&#39; attribute</span>
 <span class="sd">    that points to a dict of values being validated by a schema.  For example,</span>
 <span class="sd">    the call to FormSchema().to_python in controllers/forms.py requires this</span>
@@ -1191,7 +1188,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">pass</span>
 </div>
-<div class="viewcode-block" id="getStateObject"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getStateObject">[docs]</a><span class="k">def</span> <span class="nf">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+<div class="viewcode-block" id="getStateObject"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getStateObject">[docs]</a><span class="k">def</span> <span class="nf">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return a State instance with some special attributes needed in the forms</span>
 <span class="sd">    and oldcollections controllers.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1204,7 +1201,7 @@
 <span class="c"># Authorization Functions</span>
 <span class="c">################################################################################</span>
 </div>
-<div class="viewcode-block" id="userIsAuthorizedToAccessModel"><a class="viewcode-back" href="../../../api.html#old.lib.utils.userIsAuthorizedToAccessModel">[docs]</a><span class="k">def</span> <span class="nf">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">modelObject</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+<div class="viewcode-block" id="userIsAuthorizedToAccessModel"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.userIsAuthorizedToAccessModel">[docs]</a><span class="k">def</span> <span class="nf">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">modelObject</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return True if the user is authorized to access the model object.  Models</span>
 <span class="sd">    tagged with the &#39;restricted&#39; tag are only accessible to administrators, their</span>
 <span class="sd">    enterers and unrestricted users.</span>
@@ -1226,7 +1223,7 @@
         <span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">entererId</span>
 
 </div>
-<div class="viewcode-block" id="userIsUnrestricted"><a class="viewcode-back" href="../../../api.html#old.lib.utils.userIsUnrestricted">[docs]</a><span class="k">def</span> <span class="nf">userIsUnrestricted</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+<div class="viewcode-block" id="userIsUnrestricted"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.userIsUnrestricted">[docs]</a><span class="k">def</span> <span class="nf">userIsUnrestricted</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return True if the user is an administrator, unrestricted or there is no</span>
 <span class="sd">    restricted tag.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1235,7 +1232,7 @@
                                            <span class="n">user</span> <span class="ow">in</span> <span class="n">unrestrictedUsers</span>
 
 </div>
-<div class="viewcode-block" id="getUnrestrictedUsers"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getUnrestrictedUsers">[docs]</a><span class="k">def</span> <span class="nf">getUnrestrictedUsers</span><span class="p">():</span>
+<div class="viewcode-block" id="getUnrestrictedUsers"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getUnrestrictedUsers">[docs]</a><span class="k">def</span> <span class="nf">getUnrestrictedUsers</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;Return the list of unrestricted users in</span>
 <span class="sd">    app_globals.applicationSettings.applicationSettings.unrestrictedUsers.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1246,7 +1243,7 @@
 <span class="n">unauthorizedMsg</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;You are not authorized to access this resource.&#39;</span><span class="p">}</span>
 
 
-<span class="k">def</span> <span class="nf">getRDBMSName</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="getRDBMSName"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getRDBMSName">[docs]</a><span class="k">def</span> <span class="nf">getRDBMSName</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">SQLAlchemyURL</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;sqlalchemy.url&#39;</span><span class="p">]</span>
@@ -1258,14 +1255,14 @@
 <span class="c">################################################################################</span>
 <span class="c"># Some simple and ubiquitously used schemata</span>
 <span class="c">################################################################################</span>
-
-<div class="viewcode-block" id="PaginatorSchema"><a class="viewcode-back" href="../../../api.html#old.lib.utils.PaginatorSchema">[docs]</a><span class="k">class</span> <span class="nc">PaginatorSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="PaginatorSchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.PaginatorSchema">[docs]</a><span class="k">class</span> <span class="nc">PaginatorSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
     <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">False</span>
     <span class="n">itemsPerPage</span> <span class="o">=</span> <span class="n">Int</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">page</span> <span class="o">=</span> <span class="n">Int</span><span class="p">(</span><span class="n">not_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="OrderBySchema"><a class="viewcode-back" href="../../../api.html#old.lib.utils.OrderBySchema">[docs]</a><span class="k">class</span> <span class="nc">OrderBySchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+<div class="viewcode-block" id="OrderBySchema"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.OrderBySchema">[docs]</a><span class="k">class</span> <span class="nc">OrderBySchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
     <span class="n">allow_extra_fields</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="n">filter_extra_fields</span> <span class="o">=</span> <span class="bp">False</span>
     <span class="n">orderByModel</span> <span class="o">=</span> <span class="n">UnicodeString</span><span class="p">()</span>
@@ -1297,9 +1294,9 @@
     <span class="s">u&#39;video/x-ms-wmv&#39;</span>
 <span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">isAudioVideoFile</span><span class="p">(</span><span class="n">file_</span><span class="p">):</span>
+<div class="viewcode-block" id="isAudioVideoFile"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.isAudioVideoFile">[docs]</a><span class="k">def</span> <span class="nf">isAudioVideoFile</span><span class="p">(</span><span class="n">file_</span><span class="p">):</span>
     <span class="k">return</span> <span class="s">u&#39;audio&#39;</span> <span class="ow">in</span> <span class="n">file_</span><span class="o">.</span><span class="n">MIMEtype</span> <span class="ow">or</span> <span class="s">u&#39;video&#39;</span> <span class="ow">in</span> <span class="n">file_</span><span class="o">.</span><span class="n">MIMEtype</span>
-
+</div>
 <span class="n">utteranceTypes</span> <span class="o">=</span> <span class="p">(</span>
     <span class="s">u&#39;None&#39;</span><span class="p">,</span>
     <span class="s">u&#39;Object Language Utterance&#39;</span><span class="p">,</span>
@@ -1309,7 +1306,7 @@
 
 <span class="n">guess_type</span> <span class="o">=</span> <span class="n">guess_type</span>
 
-<div class="viewcode-block" id="clearDirectoryOfFiles"><a class="viewcode-back" href="../../../api.html#old.lib.utils.clearDirectoryOfFiles">[docs]</a><span class="k">def</span> <span class="nf">clearDirectoryOfFiles</span><span class="p">(</span><span class="n">directoryPath</span><span class="p">):</span>
+<div class="viewcode-block" id="clearDirectoryOfFiles"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.clearDirectoryOfFiles">[docs]</a><span class="k">def</span> <span class="nf">clearDirectoryOfFiles</span><span class="p">(</span><span class="n">directoryPath</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Removes all files from the directory path but leaves the directory.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">fileName</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directoryPath</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directoryPath</span><span class="p">,</span> <span class="n">fileName</span><span class="p">)):</span>
@@ -1335,9 +1332,9 @@
 <span class="c">#collectionReferencePattern = re.compile(&#39;[cC]ollection[\(\[](\d+)[\)\]]&#39;)</span>
 <span class="n">collectionReferencePattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&#39;[cC]ollection[\[\(](\d+)[\]\)]&#39;</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">rst2html</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<div class="viewcode-block" id="rst2html"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.rst2html">[docs]</a><span class="k">def</span> <span class="nf">rst2html</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">publish_parts</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="n">writer_name</span><span class="o">=</span><span class="s">&#39;html&#39;</span><span class="p">)[</span><span class="s">&#39;html_body&#39;</span><span class="p">]</span>
-
+</div>
 <span class="n">markupLanguageToFunc</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s">&#39;markdown&#39;</span><span class="p">:</span> <span class="n">Markdown</span><span class="p">()</span><span class="o">.</span><span class="n">convert</span><span class="p">,</span>
     <span class="s">&#39;reStructuredText&#39;</span><span class="p">:</span> <span class="n">rst2html</span>
@@ -1345,11 +1342,11 @@
 
 <span class="n">markupLanguages</span> <span class="o">=</span> <span class="n">markupLanguageToFunc</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
 
-<span class="k">def</span> <span class="nf">getHTMLFromContents</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">markupLanguage</span><span class="p">):</span>
+<div class="viewcode-block" id="getHTMLFromContents"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getHTMLFromContents">[docs]</a><span class="k">def</span> <span class="nf">getHTMLFromContents</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">markupLanguage</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">markupLanguageToFunc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">markupLanguage</span><span class="p">,</span> <span class="n">rst2html</span><span class="p">)(</span><span class="n">contents</span><span class="p">)</span>
 
 
-<span class="c"># Subject to change!  Or maybe these should be user-definable ...</span>
+<span class="c"># Subject to change!  Or maybe these should be user-definable ...</span></div>
 <span class="n">syntacticCategoryTypes</span> <span class="o">=</span> <span class="p">(</span>
     <span class="s">u&#39;lexical&#39;</span><span class="p">,</span>
     <span class="s">u&#39;phrasal&#39;</span><span class="p">,</span>
@@ -1364,16 +1361,16 @@
     <span class="s">u&#39;administrator&#39;</span>
 <span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">generateSalt</span><span class="p">():</span>
+<div class="viewcode-block" id="generateSalt"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generateSalt">[docs]</a><span class="k">def</span> <span class="nf">generateSalt</span><span class="p">():</span>
     <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">)</span>
-
-<div class="viewcode-block" id="encryptPassword"><a class="viewcode-back" href="../../../api.html#old.lib.utils.encryptPassword">[docs]</a><span class="k">def</span> <span class="nf">encryptPassword</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">salt</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="encryptPassword"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.encryptPassword">[docs]</a><span class="k">def</span> <span class="nf">encryptPassword</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">salt</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Use PassLib&#39;s pbkdf2 implementation to generate a hash from a password.</span>
 <span class="sd">    Cf. http://packages.python.org/passlib/lib/passlib.hash.pbkdf2_digest.html#passlib.hash.pbkdf2_sha512</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">pbkdf2_sha512</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">salt</span><span class="o">=</span><span class="n">salt</span><span class="p">)</span>
 </div>
-<span class="k">def</span> <span class="nf">generatePassword</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
+<div class="viewcode-block" id="generatePassword"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.generatePassword">[docs]</a><span class="k">def</span> <span class="nf">generatePassword</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
     <span class="n">lcLetters</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">letters</span><span class="p">[:</span><span class="mi">26</span><span class="p">]</span>
     <span class="n">ucLetters</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">letters</span><span class="p">[</span><span class="mi">26</span><span class="p">:]</span>
     <span class="n">digits</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span>
@@ -1385,8 +1382,8 @@
     <span class="n">shuffle</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
     <span class="k">return</span> <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="getSearchParameters"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getSearchParameters">[docs]</a><span class="k">def</span> <span class="nf">getSearchParameters</span><span class="p">(</span><span class="n">queryBuilder</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getSearchParameters"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getSearchParameters">[docs]</a><span class="k">def</span> <span class="nf">getSearchParameters</span><span class="p">(</span><span class="n">queryBuilder</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Given an SQLAQueryBuilder instance, return (relative to the model being</span>
 <span class="sd">    searched) the list of attributes and their aliases and licit relations</span>
 <span class="sd">    relevant to searching.</span>
@@ -1401,13 +1398,13 @@
 <span class="c"># Email Functionality</span>
 <span class="c">################################################################################</span>
 </div>
-<span class="k">def</span> <span class="nf">getValueFromGmailConfig</span><span class="p">(</span><span class="n">gmailConfig</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="getValueFromGmailConfig"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getValueFromGmailConfig">[docs]</a><span class="k">def</span> <span class="nf">getValueFromGmailConfig</span><span class="p">(</span><span class="n">gmailConfig</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">gmailConfig</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;DEFAULT&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
     <span class="k">except</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">default</span>
-
-<span class="k">def</span> <span class="nf">getGmailConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="getGmailConfig"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getGmailConfig">[docs]</a><span class="k">def</span> <span class="nf">getGmailConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">getConfig</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">here</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;here&#39;</span><span class="p">]</span>
@@ -1420,11 +1417,11 @@
         <span class="k">return</span> <span class="n">gmailConfig</span>
     <span class="k">except</span> <span class="n">ConfigParser</span><span class="o">.</span><span class="n">Error</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">None</span>
-
-<span class="k">def</span> <span class="nf">getObjectLanguageId</span><span class="p">():</span>
+</div>
+<div class="viewcode-block" id="getObjectLanguageId"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getObjectLanguageId">[docs]</a><span class="k">def</span> <span class="nf">getObjectLanguageId</span><span class="p">():</span>
     <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">getApplicationSettings</span><span class="p">(),</span> <span class="s">&#39;objectLanguageId&#39;</span><span class="p">,</span> <span class="s">&#39;old&#39;</span><span class="p">)</span>
-
-<div class="viewcode-block" id="sendPasswordResetEmailTo"><a class="viewcode-back" href="../../../api.html#old.lib.utils.sendPasswordResetEmailTo">[docs]</a><span class="k">def</span> <span class="nf">sendPasswordResetEmailTo</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">newPassword</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="sendPasswordResetEmailTo"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.sendPasswordResetEmailTo">[docs]</a><span class="k">def</span> <span class="nf">sendPasswordResetEmailTo</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">newPassword</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Send the &quot;password reset&quot; email to the user.  **kwargs should contain a</span>
 <span class="sd">    config object (with &#39;config&#39; as key) or a config file name (e.g.,</span>
 <span class="sd">    &#39;production.ini&#39; with &#39;configFilename&#39; as key).  If</span>
@@ -1469,7 +1466,7 @@
     <span class="k">return</span> <span class="n">failures</span>
 
 </div>
-<div class="viewcode-block" id="compile_query"><a class="viewcode-back" href="../../../api.html#old.lib.utils.compile_query">[docs]</a><span class="k">def</span> <span class="nf">compile_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="compile_query"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.compile_query">[docs]</a><span class="k">def</span> <span class="nf">compile_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return the SQLAlchemy query as a bona fide MySQL query.  Taken from</span>
 <span class="sd">    http://stackoverflow.com/questions/4617291/how-do-i-get-a-raw-compiled-sql-query-from-a-sqlalchemy-expression.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1497,7 +1494,7 @@
 <span class="c"># Command-line processes</span>
 <span class="c">################################################################################</span>
 </div>
-<div class="viewcode-block" id="getSubprocess"><a class="viewcode-back" href="../../../api.html#old.lib.utils.getSubprocess">[docs]</a><span class="k">def</span> <span class="nf">getSubprocess</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
+<div class="viewcode-block" id="getSubprocess"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getSubprocess">[docs]</a><span class="k">def</span> <span class="nf">getSubprocess</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return a subprocess process.  The command argument is a list.  See</span>
 <span class="sd">    http://docs.python.org/2/library/subprocess.html</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1506,14 +1503,14 @@
     <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">None</span>
 </div>
-<div class="viewcode-block" id="commandLineProgramInstalled"><a class="viewcode-back" href="../../../api.html#old.lib.utils.commandLineProgramInstalled">[docs]</a><span class="k">def</span> <span class="nf">commandLineProgramInstalled</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
+<div class="viewcode-block" id="commandLineProgramInstalled"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.commandLineProgramInstalled">[docs]</a><span class="k">def</span> <span class="nf">commandLineProgramInstalled</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Command is the list representing the command-line utility.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">getSubprocess</span><span class="p">(</span><span class="n">command</span><span class="p">))</span>
     <span class="k">except</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">False</span>
 </div>
-<div class="viewcode-block" id="ffmpegInstalled"><a class="viewcode-back" href="../../../api.html#old.lib.utils.ffmpegInstalled">[docs]</a><span class="k">def</span> <span class="nf">ffmpegInstalled</span><span class="p">():</span>
+<div class="viewcode-block" id="ffmpegInstalled"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.ffmpegInstalled">[docs]</a><span class="k">def</span> <span class="nf">ffmpegInstalled</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;Check if the ffmpeg command-line utility is installed on the host.  Check</span>
 <span class="sd">    first if the answer to this question is cached in app_globals.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1524,7 +1521,7 @@
         <span class="n">app_globals</span><span class="o">.</span><span class="n">ffmpegInstalled</span> <span class="o">=</span> <span class="n">ffmpegInstalled</span>
         <span class="k">return</span> <span class="n">ffmpegInstalled</span>
 </div>
-<div class="viewcode-block" id="ffmpegEncodes"><a class="viewcode-back" href="../../../api.html#old.lib.utils.ffmpegEncodes">[docs]</a><span class="k">def</span> <span class="nf">ffmpegEncodes</span><span class="p">(</span><span class="n">format_</span><span class="p">):</span>
+<div class="viewcode-block" id="ffmpegEncodes"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.ffmpegEncodes">[docs]</a><span class="k">def</span> <span class="nf">ffmpegEncodes</span><span class="p">(</span><span class="n">format_</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Check if ffmpeg encodes the input format.  First check if it&#39;s installed.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">ffmpegInstalled</span><span class="p">():</span>
         <span class="k">try</span><span class="p">:</span>
@@ -1550,7 +1547,7 @@
 <span class="c"># scalars is pointless if not wasteful.  However, collections that will always be</span>
 <span class="c"># accessed should always be eager loaded.</span>
 </div>
-<span class="k">def</span> <span class="nf">eagerloadForm</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+<div class="viewcode-block" id="eagerloadForm"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadForm">[docs]</a><span class="k">def</span> <span class="nf">eagerloadForm</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span>
         <span class="c">#subqueryload(model.Form.elicitor),</span>
         <span class="n">subqueryload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">enterer</span><span class="p">),</span>   <span class="c"># All forms *should* have enterers</span>
@@ -1562,15 +1559,15 @@
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">glosses</span><span class="p">),</span>
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">files</span><span class="p">),</span>
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">tags</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">eagerloadApplicationSettings</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="eagerloadApplicationSettings"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadApplicationSettings">[docs]</a><span class="k">def</span> <span class="nf">eagerloadApplicationSettings</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span>
         <span class="c">#subqueryload(model.ApplicationSettings.inputOrthography),</span>
         <span class="c">#subqueryload(model.ApplicationSettings.outputOrthography),</span>
         <span class="c">#subqueryload(model.ApplicationSettings.storageOrthography)</span>
     <span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">eagerloadCollection</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="eagerloadCollection"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadCollection">[docs]</a><span class="k">def</span> <span class="nf">eagerloadCollection</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span>
         <span class="c">#subqueryload(model.Collection.speaker),</span>
         <span class="c">#subqueryload(model.Collection.elicitor),</span>
@@ -1579,38 +1576,44 @@
         <span class="n">subqueryload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Collection</span><span class="o">.</span><span class="n">forms</span><span class="p">),</span>
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Collection</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Collection</span><span class="o">.</span><span class="n">files</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">eagerloadFile</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="eagerloadFile"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadFile">[docs]</a><span class="k">def</span> <span class="nf">eagerloadFile</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span>
         <span class="n">subqueryload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">File</span><span class="o">.</span><span class="n">enterer</span><span class="p">),</span>
         <span class="c">#subqueryload(model.File.elicitor),</span>
         <span class="c">#subqueryload(model.File.speaker),</span>
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">File</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
         <span class="n">joinedload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">File</span><span class="o">.</span><span class="n">forms</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">eagerloadFormSearch</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="eagerloadFormSearch"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadFormSearch">[docs]</a><span class="k">def</span> <span class="nf">eagerloadFormSearch</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span><span class="n">subqueryload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">FormSearch</span><span class="o">.</span><span class="n">searcher</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">eagerloadPhonology</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="eagerloadPhonology"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadPhonology">[docs]</a><span class="k">def</span> <span class="nf">eagerloadPhonology</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span>
         <span class="n">subqueryload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Phonology</span><span class="o">.</span><span class="n">enterer</span><span class="p">),</span>
         <span class="n">subqueryload</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Phonology</span><span class="o">.</span><span class="n">modifier</span><span class="p">))</span>
-
-<span class="k">def</span> <span class="nf">eagerloadUser</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="eagerloadUser"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.eagerloadUser">[docs]</a><span class="k">def</span> <span class="nf">eagerloadUser</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">options</span><span class="p">(</span>
         <span class="c">#subqueryload(model.User.inputOrthography),</span>
         <span class="c">#subqueryload(model.User.outputOrthography)</span>
     <span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">getUserFullName</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
-    <span class="k">return</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">firstName</span><span class="p">,</span> <span class="n">user</span><span class="o">.</span><span class="n">lastName</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="getUserFullName"><a class="viewcode-back" href="../../../api/old.lib.html#old.lib.utils.getUserFullName">[docs]</a><span class="k">def</span> <span class="nf">getUserFullName</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">firstName</span><span class="p">,</span> <span class="n">user</span><span class="o">.</span><span class="n">lastName</span><span class="p">)</span></div>
 </pre></div>
 
           </div>
         </div>
       </div>
       <div class="sphinxsidebar">
-        <div class="sphinxsidebarwrapper">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
@@ -1628,22 +1631,9 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="../../../genindex.html" title="General Index"
-             >index</a></li>
-        <li class="right" >
-          <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../../index.html">OLD 1.0.0 documentation</a> &raquo;</li>
-          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
-      </ul>
-    </div>
     <div class="footer">
-        &copy; Copyright 2013, Joel Dunham.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
     </div>
   </body>
 </html>

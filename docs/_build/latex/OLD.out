@@ -1,7 +1,8 @@
-\BOOKMARK [0][-]{chapter.1}{1 \040 OLD User Guide}{}
-\BOOKMARK [0][-]{chapter.2}{2 \040 About the OLD}{}
-\BOOKMARK [1][-]{section.2.1}{2.1 \040 What the OLD Will Allow You To:}{chapter.2}
-\BOOKMARK [1][-]{section.2.2}{2.2 \040 Technical Specifications:}{chapter.2}
+\BOOKMARK [0][-]{chapter.1}{1 \040 Structure}{}
+\BOOKMARK [0][-]{chapter.2}{2 \040 Introduction}{}
+\BOOKMARK [1][-]{section.2.1}{2.1 \040 Objectives}{chapter.2}
+\BOOKMARK [1][-]{section.2.2}{2.2 \040 What the OLD Will Allow You To:}{chapter.2}
+\BOOKMARK [1][-]{section.2.3}{2.3 \040 Technical Specifications:}{chapter.2}
 \BOOKMARK [0][-]{chapter.3}{3 \040 How to Get the OLD}{}
 \BOOKMARK [0][-]{chapter.4}{4 \040 How to Use the OLD}{}
 \BOOKMARK [1][-]{section.4.1}{4.1 \040 Basics}{chapter.4}
@@ -69,10 +70,5 @@
 \BOOKMARK [1][-]{section.23.1}{23.1 \040 Priorities}{chapter.23}
 \BOOKMARK [1][-]{section.23.2}{23.2 \040 Relatively Easy Projects}{chapter.23}
 \BOOKMARK [1][-]{section.23.3}{23.3 \040 Big Projects}{chapter.23}
-\BOOKMARK [0][-]{chapter.24}{Developer Guide}{}
-\BOOKMARK [0][-]{chapter.25}{API Documentation}{}
-\BOOKMARK [1][-]{section.25.1}{The simplesite Module}{chapter.25}
-\BOOKMARK [1][-]{section.25.2}{The controllers Module}{chapter.25}
-\BOOKMARK [1][-]{section.25.3}{The utils Module}{chapter.25}
-\BOOKMARK [0][-]{chapter.26}{Indices and tables}{}
-\BOOKMARK [0][-]{section*.61}{Python Module Index}{}
+\BOOKMARK [0][-]{chapter.24}{API Documentation}{}
+\BOOKMARK [0][-]{chapter.25}{Indices and tables}{}

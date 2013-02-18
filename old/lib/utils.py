@@ -1202,8 +1202,8 @@ def getRDBMSName(**kwargs):
         return SQLAlchemyURL.split(':')[0]
     except (TypeError, KeyError):
         # WARNING The exception below should be raised -- I've replaced it with this log just to allow Sphinx to import my controllers ...
-        #log.warn('The config object was inadequate.')
-        raise Exception('The config object was inadequate.')
+        log.warn('The config object was inadequate.')
+        #raise Exception('The config object was inadequate.')
 
 
 ################################################################################

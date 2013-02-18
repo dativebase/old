@@ -6,11 +6,12 @@ except ImportError:
     from setuptools import setup, find_packages
 
 setup(
-    name='old',
-    version='0.1',
-    description='',
-    author='',
-    author_email='',
+    name='onlinelinguisticdatabase',
+    version='1.0a',
+    description='''A program for building a web service that facilitates collaborative
+storing, searching, processing and analyzing of linguistic fieldwork data.''',
+    author='Joel Dunham',
+    author_email='jrwdunham@gmail.com',
     url='',
     install_requires=[
         "Pylons>=1.0,<=1.0.99",
@@ -19,13 +20,12 @@ setup(
         "Markdown",
         "PassLib",
         "docutils>=0.10"
-    ],  # These libs will be used if available, but are not required: python-magic, PIL, ...
-    # QUESTION: do I need to include docutils in the required installs? ...
+    ],
     setup_requires=["PasteScript>=1.6.3"],
     packages=find_packages(exclude=['ez_setup']),
     include_package_data=True,
     test_suite='nose.collector',
-    package_data={'old': ['i18n/*/LC_MESSAGES/*.mo']},
+    package_data={'onlinelinguisticdatabase': ['i18n/*/LC_MESSAGES/*.mo']},
     #message_extractors={'old': [
     #        ('**.py', 'python', None),
     #        ('templates/**.mako', 'mako', {'input_encoding': 'utf-8'}),
@@ -39,4 +39,9 @@ setup(
     [paste.app_install]
     main = pylons.util:PylonsInstaller
     """,
+    extras_require = {
+        'MySQL': ["mysql-python>-1.2"],
+        'magic': ["python-magic"],   # interface to libmagic for guessing file type based on contents
+        'PIL': ["PIL"]  # Python Imaginc Library (note: easy_install PIL fails for me ...)
+    }
 )
