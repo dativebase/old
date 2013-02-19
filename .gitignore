@@ -6,6 +6,7 @@
 *.sql
 *.cache
 *.lock
+*.log
 TODO.txt
 
 # Some Pylons-generated directories that should be ignored
