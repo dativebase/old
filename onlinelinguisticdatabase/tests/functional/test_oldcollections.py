@@ -117,7 +117,7 @@ class TestOldcollectionsController(TestController):
         extra_environ['test.applicationSettings'] = True
         response = self.app.get(url('forms'), extra_environ=extra_environ)
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /collections returns a JSON array of collections with expected values."""
 
@@ -350,7 +350,7 @@ class TestOldcollectionsController(TestController):
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /collections correctly creates a new collection."""
 
@@ -632,7 +632,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
 
-    #@nottest
+    @nottest
     def test_create_invalid(self):
         """Tests that POST /collections with invalid input returns an appropriate error."""
 
@@ -765,7 +765,7 @@ class TestOldcollectionsController(TestController):
         assert resp['elicitor']['firstName'] == contributor.firstName
         assert newCollectionCount == collectionCount + 1
 
-    #@nottest
+    @nottest
     def test_relational_restrictions(self):
         """Tests that the restricted tag works correctly with respect to relational attributes of collections.
 
@@ -1029,7 +1029,7 @@ class TestOldcollectionsController(TestController):
 
         h.clearDirectoryOfFiles(self.filesPath)
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /collection/new returns an appropriate JSON object for creating a new OLD collection.
 
@@ -1114,7 +1114,7 @@ class TestOldcollectionsController(TestController):
         assert resp['users'] == []
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /collections/id correctly updates an existing collection."""
 
@@ -1391,7 +1391,7 @@ class TestOldcollectionsController(TestController):
         assert u'Please enter an integer value' in resp['errors']['tags']
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /collections/id deletes the collection with id=id and returns a JSON representation.
 
@@ -1546,7 +1546,7 @@ class TestOldcollectionsController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /collection/id returns a JSON collection object, null or 404
         depending on whether the id is valid, invalid or unspecified, respectively.
@@ -1666,7 +1666,7 @@ class TestOldcollectionsController(TestController):
                         headers=self.json_headers, extra_environ=extra_environ)
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /collections/id/edit returns a JSON object of data necessary to edit the collection with id=id.
 
@@ -1790,7 +1790,7 @@ class TestOldcollectionsController(TestController):
                             extra_environ=self.extra_environ_admin, status=404)
         assert u'There is no collection with id %s' % id in json.loads(response.body)['error']
 
-    #@nottest
+    @nottest
     def test_history(self):
         """Tests that GET /collections/id/history returns the collection with id=id and its previous incarnations.
 
@@ -2062,7 +2062,7 @@ class TestOldcollectionsController(TestController):
         assert resp['collection']['title'] == u'2nd collection unrestricted updated'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_new_search(self):
         """Tests that GET /collections/new_search returns the search parameters for searching the collections resource."""
         queryBuilder = SQLAQueryBuilder('Collection')

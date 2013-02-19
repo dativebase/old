@@ -52,7 +52,7 @@ class TestSpeakersController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /speakers returns an array of all speakers and that orderBy and pagination parameters work correctly."""
 
@@ -140,7 +140,7 @@ class TestSpeakersController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /speakers creates a new speaker
         or returns an appropriate error if the input is invalid.
@@ -165,7 +165,7 @@ class TestSpeakersController(TestController):
         assert resp['errors']['firstName'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /speakers/new returns an empty JSON object."""
         response = self.app.get(url('new_speaker'), headers=self.json_headers,
@@ -174,7 +174,7 @@ class TestSpeakersController(TestController):
         assert resp == {}
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /speakers/id updates the speaker with id=id."""
 
@@ -212,7 +212,7 @@ class TestSpeakersController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /speakers/id deletes the speaker with id=id."""
 
@@ -253,7 +253,7 @@ class TestSpeakersController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /speakers/id returns the speaker with id=id or an appropriate error."""
 
@@ -289,7 +289,7 @@ class TestSpeakersController(TestController):
         assert resp['dialect'] == u'dialect'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /speakers/id/edit returns a JSON object of data necessary to edit the speaker with id=id.
 

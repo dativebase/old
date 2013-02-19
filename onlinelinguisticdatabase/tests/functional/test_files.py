@@ -141,7 +141,7 @@ class TestFilesController(TestController):
         extra_environ['test.applicationSettings'] = True
         response = self.app.get(url('forms'), extra_environ=extra_environ)
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /files returns a JSON array of files with expected values."""
         # Test that the restricted tag is working correctly.
@@ -894,7 +894,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u''
 
-    #@nottest
+    @nottest
     def test_relational_restrictions(self):
         """Tests that the restricted tag works correctly with respect to relational attributes of files.
 
@@ -1061,7 +1061,7 @@ class TestFilesController(TestController):
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create_large(self):
         """Tests that POST /files correctly creates a large file.
 
@@ -1156,7 +1156,7 @@ class TestFilesController(TestController):
             else:
                 assert resp['lossyFilename'] == None
                 assert lossyFilename not in newReducedDirList
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /file/new returns an appropriate JSON object for creating a new OLD file.
 
@@ -1233,7 +1233,7 @@ class TestFilesController(TestController):
         assert resp['utteranceTypes'] == data['utteranceTypes']
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /files/id correctly updates an existing file."""
 
@@ -1517,7 +1517,7 @@ class TestFilesController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert resp['errors']['dateElicited'] == u'Please enter the date in the form mm/dd/yyyy'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /files/id deletes the file with id=id and returns a JSON representation.
 
@@ -1701,7 +1701,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'child'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /files/id returns a JSON file object, null or 404
         depending on whether the id is valid, invalid or unspecified,
@@ -1858,7 +1858,7 @@ class TestFilesController(TestController):
                         headers=self.json_headers, extra_environ=extra_environ)
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /files/id/edit returns a JSON object of data necessary to edit the file with id=id.
 
@@ -1987,7 +1987,7 @@ class TestFilesController(TestController):
                             extra_environ=self.extra_environ_admin, status=404)
         assert u'There is no file with id %s' % id in json.loads(response.body)['error']
 
-    #@nottest
+    @nottest
     def test_serve(self):
         """Tests that GET /files/serve/id returns the file with name id from
         the permanent store, i.e., from onlinelinguisticdatabase/files/.
@@ -2195,7 +2195,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'There is no file with id 123456789012'
 
-    #@nottest
+    @nottest
     def test_file_reduction(self):
         """Verifies that reduced-size copies of image and wav files are created in files/reduced_files
         and that the names of these reduced-size files is returned as the lossyFilename
@@ -2347,7 +2347,7 @@ class TestFilesController(TestController):
             assert resp['lossyFilename'] is None
             assert not os.path.isfile(lossyFilePath)
 
-    #@nottest
+    @nottest
     def test_new_search(self):
         """Tests that GET /files/new_search returns the search parameters for searching the files resource."""
         queryBuilder = SQLAQueryBuilder('File')

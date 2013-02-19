@@ -59,7 +59,7 @@ class TestOrthographiesController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /orthographies returns an array of all orthographies and that orderBy and pagination parameters work correctly."""
 
@@ -148,7 +148,7 @@ class TestOrthographiesController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /orthographies creates a new orthography
         or returns an appropriate error if the input is invalid.
@@ -244,7 +244,7 @@ class TestOrthographiesController(TestController):
         assert resp['errors']['lowercase'] == u"Value should be 'true' or 'false'"
         assert resp['errors']['initialGlottalStops'] == u"Value should be 'true' or 'false'"
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /orthographies/new returns an empty JSON object."""
         response = self.app.get(url('new_orthography'), headers=self.json_headers,
@@ -253,7 +253,7 @@ class TestOrthographiesController(TestController):
         assert resp == {}
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /orthographies/id updates the orthography with id=id."""
 
@@ -343,7 +343,7 @@ class TestOrthographiesController(TestController):
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c, d, e, f'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /orthographies/id deletes the orthography with id=id."""
 
@@ -429,7 +429,7 @@ class TestOrthographiesController(TestController):
         assert response.content_type == 'application/json'
         assert resp['orthography'] == u'a, b, c'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /orthographies/id returns the orthography with id=id or an appropriate error."""
 
@@ -470,7 +470,7 @@ class TestOrthographiesController(TestController):
         assert resp['orthography'] == u'a, b, c'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /orthographies/id/edit returns a JSON object of data necessary to edit the orthography with id=id.
 

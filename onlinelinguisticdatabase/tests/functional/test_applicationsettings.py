@@ -74,7 +74,7 @@ class TestApplicationsettingsController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /applicationsettings returns a JSON array of application settings objects."""
 
@@ -107,7 +107,7 @@ class TestApplicationsettingsController(TestController):
         assert resp[0]['storageOrthography']['name'] == applicationSettings.storageOrthography.name
         assert resp[0]['unrestrictedUsers'][0]['role'] == applicationSettings.unrestrictedUsers[0].role
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /applicationsettings correctly creates a new application settings."""
 
@@ -158,7 +158,7 @@ class TestApplicationsettingsController(TestController):
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
-    #@nottest
+    @nottest
     def test_create_invalid(self):
         """Tests that POST /applicationsettings responds with an appropriate error when invalid params are submitted in the request."""
 
@@ -189,7 +189,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['errors']['storageOrthography'] == \
             u'Please enter an integer value'
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /applicationsettings/new returns an appropriate JSON object for creating a new application settings object.
 
@@ -251,7 +251,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['users'] == data['users']
         assert resp['orthographies'] == data['orthographies']
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /applicationsettings/id correctly updates an existing application settings."""
 
@@ -341,7 +341,7 @@ class TestApplicationsettingsController(TestController):
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /applicationsettings/id deletes the application settings with id=id and returns a JSON representation.
 
@@ -426,7 +426,7 @@ class TestApplicationsettingsController(TestController):
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /applicationsettings/id returns the JSON application settings object with id=id
         or a 404 status code depending on whether the id is valid or
@@ -462,7 +462,7 @@ class TestApplicationsettingsController(TestController):
         assert resp['storageOrthography']['name'] == \
             applicationSettings.storageOrthography.name
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /applicationsettings/id/edit returns a JSON object for editing an existing application settings.
 
