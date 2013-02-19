@@ -12,7 +12,19 @@ setup(
 storing, searching, processing and analyzing of linguistic fieldwork data.''',
     author='Joel Dunham',
     author_email='jrwdunham@gmail.com',
-    url='',
+    url='http://www.onlinelinguisticdatabase.org',
+    classifiers = [
+        "Development Status :: 3 - Alpha",
+        "Framework :: Pylons",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Natural Language :: English",
+        "Programming Language :: Python",
+        "Topic :: Database :: Front-Ends",
+        "Topic :: Education"
+    ],
     install_requires=[
         "Pylons>=1.0,<=1.0.99",
         "SQLAlchemy>=0.5,<=0.7.9",

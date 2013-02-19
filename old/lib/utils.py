@@ -16,6 +16,8 @@
 The utils module is really cool!
 ------------------------------------
 
+A Sphinx/reST Python code block example:
+
 .. code-block:: python
 
     class NewPageForm(formencode.Schema):
