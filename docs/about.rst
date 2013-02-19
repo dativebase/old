@@ -82,7 +82,7 @@ Core features
    inventories & orthographies, object and meta-language identification, etc.
 #. Data processing (e.g., copying and reduction of image and audio files,
    generation of category strings based on the categories of component
-   morphemes, phrase-morpheme linking, orthography conversion, etc.)
+   morphemes, phrase-morpheme linking, etc.)
 #. Resource search, i.e., open-ended, nested boolean search with substring,
    exact and regular expression matches against specified fields.
 #. (Linguistic analysis: phonology & corpora specification, automatic

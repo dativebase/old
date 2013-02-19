@@ -23,10 +23,10 @@ Collection.forms    90.9        54.2            45.4
 
 from paste.deploy import appconfig
 from pylons import config
-from old.config.environment import load_environment
-import old.model as model
-from old.model.meta import Session
-import old.lib.helpers as h
+from onlinelinguisticdatabase.config.environment import load_environment
+import onlinelinguisticdatabase.model as model
+from onlinelinguisticdatabase.model.meta import Session
+import onlinelinguisticdatabase.lib.helpers as h
 import timeit
 
 conf = appconfig('config:test.ini', relative_to='.')

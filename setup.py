@@ -13,6 +13,7 @@ storing, searching, processing and analyzing of linguistic fieldwork data.''',
     author='Joel Dunham',
     author_email='jrwdunham@gmail.com',
     url='http://www.onlinelinguisticdatabase.org',
+    license='Apache v. 2.0',
     classifiers = [
         "Development Status :: 3 - Alpha",
         "Framework :: Pylons",
@@ -28,7 +29,8 @@ storing, searching, processing and analyzing of linguistic fieldwork data.''',
     install_requires=[
         "Pylons>=1.0,<=1.0.99",
         "SQLAlchemy>=0.5,<=0.7.9",
-        "WebOb<=1.0",
+        #"WebOb<=1.0",
+        "WebOb",
         "Markdown",
         "PassLib",
         "docutils>=0.10"
@@ -38,7 +40,7 @@ storing, searching, processing and analyzing of linguistic fieldwork data.''',
     include_package_data=True,
     test_suite='nose.collector',
     package_data={'onlinelinguisticdatabase': ['i18n/*/LC_MESSAGES/*.mo']},
-    #message_extractors={'old': [
+    #message_extractors={'onlinelinguisticdatabase': [
     #        ('**.py', 'python', None),
     #        ('templates/**.mako', 'mako', {'input_encoding': 'utf-8'}),
     #        ('public/**', 'ignore', None)]},
@@ -46,14 +48,13 @@ storing, searching, processing and analyzing of linguistic fieldwork data.''',
     paster_plugins=['PasteScript', 'Pylons'],
     entry_points="""
     [paste.app_factory]
-    main = old.config.middleware:make_app
+    main = onlinelinguisticdatabase.config.middleware:make_app
 
     [paste.app_install]
     main = pylons.util:PylonsInstaller
     """,
     extras_require = {
         'MySQL': ["mysql-python>-1.2"],
-        'magic': ["python-magic"],   # interface to libmagic for guessing file type based on contents
-        'PIL': ["PIL"]  # Python Imaginc Library (note: easy_install PIL fails for me ...)
-    }
+        'magic': ["python-magic"]   # interface to libmagic for guessing file type based on contents
+    } #'PIL': ["PIL"]  # Python Imagine Library (note: easy_install PIL fails for me ...)
 )

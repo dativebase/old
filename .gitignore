@@ -22,7 +22,14 @@ test_files/old_test_long.wav
 test_files/old_test_medium.wav
 
 # The client-side JavaScript application should be kept separate, at least for now
-old/public/
+onlinelinguisticdatabase/public/coffee/
+onlinelinguisticdatabase/public/css/
+onlinelinguisticdatabase/public/images/
+onlinelinguisticdatabase/public/index.html
+onlinelinguisticdatabase/public/js/
+onlinelinguisticdatabase/public/js_/
+onlinelinguisticdatabase/public/lib/
+onlinelinguisticdatabase/public/templates/
 
 # Ignore the GMail .ini file
 gmail.ini

@@ -1,3 +1,3 @@
-include old/config/deployment.ini_tmpl
-recursive-include old/public *
-recursive-include old/templates *
+include onlinelinguisticdatabase/config/deployment.ini_tmpl
+recursive-include onlinelinguisticdatabase/public *
+recursive-include onlinelinguisticdatabase/templates *
