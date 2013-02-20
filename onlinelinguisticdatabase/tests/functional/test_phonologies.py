@@ -57,7 +57,7 @@ class TestPhonologiesController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /phonologies returns an array of all phonologies and that orderBy and pagination parameters work correctly."""
 
@@ -146,7 +146,7 @@ class TestPhonologiesController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /phonologies creates a new phonology
         or returns an appropriate error if the input is invalid.
@@ -244,7 +244,7 @@ class TestPhonologiesController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /phonologies/new returns an empty JSON object."""
         response = self.app.get(url('new_phonology'), headers=self.json_headers,
@@ -253,7 +253,7 @@ class TestPhonologiesController(TestController):
         assert resp == {}
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /phonologies/id updates the phonology with id=id."""
 
@@ -307,7 +307,7 @@ class TestPhonologiesController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /phonologies/id deletes the phonology with id=id."""
 
@@ -356,7 +356,7 @@ class TestPhonologiesController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /phonologies/id returns the phonology with id=id or an appropriate error."""
 
@@ -402,7 +402,7 @@ class TestPhonologiesController(TestController):
         assert resp['script'] == u'# The rules will begin after this comment.\n\n'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /phonologies/id/edit returns a JSON object of data necessary to edit the phonology with id=id.
 

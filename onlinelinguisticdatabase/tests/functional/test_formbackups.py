@@ -74,7 +74,7 @@ class TestFormbackupsController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET & SEARCH /formbackups behave correctly.
         """
@@ -353,7 +353,7 @@ class TestFormbackupsController(TestController):
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new_search(self):
         """Tests that GET /formbackups/new_search returns the search parameters for searching the form backups resource."""
         queryBuilder = SQLAQueryBuilder('FormBackup')

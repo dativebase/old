@@ -46,7 +46,7 @@ class TestLanguagesController(TestController):
         # Clear all models in the database except Language; recreate the users.
         pass
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET & SEARCH /languages behave correctly.
         
@@ -150,7 +150,7 @@ class TestLanguagesController(TestController):
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new_search(self):
         """Tests that GET /languages/new_search returns the search parameters for searching the languages resource."""
         queryBuilder = SQLAQueryBuilder('Language')

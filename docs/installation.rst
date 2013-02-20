@@ -63,17 +63,23 @@ of `easy_install` to install the OLD and its dependencies into the virtual
 environment.
 
 There are two ways to do this.  The more explicit and verbose way is to specify
-the path to the executables, i.e., run one of the following two commands in
-order to invoke Python or easy_install, respectively:
+the path to the executables in the virtual environment directory.  That is, to
+run the virtual environment's `python` or `easy_install` executable, you would
+run one of the following two commands, respectively:
 
-    env/bin/python
-    env/bin/easy_install
+    /path/to/env/bin/python
+    /path/to/env/bin/easy_install
 
-The easier way is to activate the Python virtual environment by running the
-command below.  The `(env)` at the beginning of your command prompt will
-indicate that you have activated the virtual environment in `env`.
+The easier way (on Posix systems) is to activate the Python virtual environment
+by running the `source` command with the path to the `activate` executable in
+your virtual environment as its first argument.  That is, run
 
-    source env/bin/activate
+    source /path/to/env/bin/activate
+
+If the above command was successful, you should see the name of your virtual
+environment directory in parentheses to the left of your command prompt, e.g.,
+`(env)username@host:~$`.  Now invoking `python`, `easy_install`, `paster`, will
+run the executables in your virtual environment.
 
 
 Install the OLD
@@ -87,16 +93,18 @@ to use a virtual environment.)
     easy_install onlinelinguisticdatabase
 
 Once the install has completed, you should see `Finished processing dependencies
-for onlinelinguisticdatabase`.
+for onlinelinguisticdatabase`.  This means that the OLD and all of its
+dependencies have been successfully installed.
 
 
 Configure the OLD
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now that the OLD is installed, we need to configure it.  When the OLD's setup
-script is run, several directories will be created in the same directory as the
-config file.  Therefore, it is a good idea to create the config file in its own
-directory.  Make a new directory and change to it, as follows:
+Now that the OLD is installed, we need to configure it.  This is done by
+generating a default config file and making any desired changes.  When the OLD's
+setup script is run, several directories will be created in the same directory
+as the config file.  Therefore, it is a good idea to create the config file in
+its own directory.  So let's make a new directory and change to it.
 
     mkdir old
     cd old
@@ -106,15 +114,25 @@ config file named `production.ini`, run
 
     paster make-config onlinelinguisticdatabase production.ini
 
-Now we edit the config file.
+By default, the OLD is set to serve at 127.0.0.1 on port 5000, the Pylons
+interactive debugger is turned off and the database (RDBMS) is set to SQLite
+(a database called `production.db` will be created in the current directory).
+These defaults are good for verifying that everything is working ok.  On a
+production system you will need to change the host and port values in the config
+file as well as set the database to MySQL.  See below.
+
+
+Configure the OLD to use MySQL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The OLD is configured to use MySQL as its database
 backend by default.  This entails installing a MySQL server, installing
-mysql-python and creating a database.  This is detailed below (**show where**).
-In order to just get the OLD up and running and make sure everything is working
-ok, I recommend using SQLite and then switching to MySQL for production.  
+mysql-python and creating a database.
 
-* virtualenv
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 * setup-app
 * required programs
 * optional programs

@@ -52,7 +52,7 @@ class TestElicitationMethodsController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /elicitationmethods returns an array of all elicitation methods and that orderBy and pagination parameters work correctly."""
 
@@ -136,7 +136,7 @@ class TestElicitationMethodsController(TestController):
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /elicitationmethods creates a new elicitation method
         or returns an appropriate error if the input is invalid.
@@ -173,7 +173,7 @@ class TestElicitationMethodsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /elicitationmethods/new returns an empty JSON object."""
         response = self.app.get(url('new_elicitationmethod'), headers=self.json_headers,
@@ -182,7 +182,7 @@ class TestElicitationMethodsController(TestController):
         assert resp == {}
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /elicitationmethods/id updates the elicitationmethod with id=id."""
 
@@ -220,7 +220,7 @@ class TestElicitationMethodsController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /elicitationmethods/id deletes the elicitationMethod with id=id."""
 
@@ -259,7 +259,7 @@ class TestElicitationMethodsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /elicitationmethods/id returns the elicitation method with id=id or an appropriate error."""
 
@@ -294,7 +294,7 @@ class TestElicitationMethodsController(TestController):
         assert resp['description'] == u'description'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /elicitationmethods/id/edit returns a JSON object of data necessary to edit the elicitation method with id=id.
 

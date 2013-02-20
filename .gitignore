@@ -34,3 +34,6 @@ onlinelinguisticdatabase/public/templates/
 
 # Ignore the GMail .ini file
 gmail.ini
+
+# Ignore _requests_tests.py since it is copied from tests/ when setup-app is run
+/_requests_tests.py

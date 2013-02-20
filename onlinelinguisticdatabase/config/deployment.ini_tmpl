@@ -11,7 +11,7 @@ error_email_from = paste@localhost
 
 [server:main]
 use = egg:Paste#http
-host = 0.0.0.0
+host = 127.0.0.1
 port = 5000
 
 [app:main]
@@ -41,7 +41,7 @@ set debug = false
 ################################################################################
 
 # SQLAlchemy database URL
-#sqlalchemy.url = sqlite:///production.db
+sqlalchemy.url = sqlite:///production.db
 
 # MySQL OPTION
 # The old_test database must exist: mysql> create database old_test default character set utf8
@@ -52,8 +52,8 @@ set debug = false
 # mysql> alter table form modify comments text character set utf8;
 # By convention, old databases are named "xyzold" where xyz is the 3-character
 # ISO 639-3 id for the language under study.
-sqlalchemy.url = mysql://username:password@localhost:3306/dbname
-sqlalchemy.pool_recycle = 3600
+#sqlalchemy.url = mysql://username:password@localhost:3306/dbname
+#sqlalchemy.pool_recycle = 3600
 
 
 ################################################################################

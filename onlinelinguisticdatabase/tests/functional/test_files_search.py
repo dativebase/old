@@ -184,14 +184,14 @@ class TestFormsSearchController(TestController):
 
     # Initialization for the tests - this needs to be run first in order for the
     # tests to succeed
-    @nottest
+    #@nottest
     def test_a_initialize(self):
         """Tests POST /files/search: initialize database."""
         # Add a bunch of data to the db.
         self._createTestData(self.n)
         addSEARCHToWebTestValidMethods()
 
-    @nottest
+    #@nottest
     def test_search_b_equals(self):
         """Tests POST /files/search: equals."""
         jsonQuery = json.dumps(
@@ -202,7 +202,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == 1
         assert resp[0]['name'] == u'name_10.jpg'
 
-    @nottest
+    #@nottest
     def test_search_c_not_equals(self):
         """Tests SEARCH /files: not equals."""
         jsonQuery = json.dumps(
@@ -213,7 +213,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == self.n - 1
         assert u'name_10.jpg' not in [f['name'] for f in resp]
 
-    @nottest
+    #@nottest
     def test_search_d_like(self):
         """Tests POST /files/search: like."""
 
@@ -247,7 +247,7 @@ class TestFormsSearchController(TestController):
         resultSet = [f for f in files if u'N' in f['name'] or u'n' in f['name']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /files: not like."""
         files = [f.getDict() for f in h.getFiles()]
@@ -259,7 +259,7 @@ class TestFormsSearchController(TestController):
         resultSet = [f for f in files if u'1' not in f['name']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_f_regexp(self):
         """Tests POST /files/search: regular expression."""
         files = [f.getDict() for f in h.getFiles()]
@@ -326,7 +326,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
-    @nottest
+    #@nottest
     def test_search_g_not_regexp(self):
         """Tests SEARCH /files: not regular expression."""
         files = [f.getDict() for f in h.getFiles()]
@@ -338,7 +338,7 @@ class TestFormsSearchController(TestController):
         resultSet = [f for f in files if not re.search('[345]2', f['name'])]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_h_empty(self):
         """Tests POST /files/search: is NULL."""
         files = [f.getDict() for f in h.getFiles()]
@@ -359,7 +359,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_i_not_empty(self):
         """Tests SEARCH /files: is not NULL."""
         files = [f.getDict() for f in h.getFiles()]
@@ -379,7 +379,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_j_invalid_json(self):
         """Tests POST /files/search: invalid JSON params."""
         jsonQuery = json.dumps(
@@ -391,7 +391,7 @@ class TestFormsSearchController(TestController):
         assert resp['error'] == \
             u'JSON decode error: the parameters provided were not valid JSON.'
 
-    @nottest
+    #@nottest
     def test_search_k_malformed_query(self):
         """Tests SEARCH /files: malformed query."""
 
@@ -476,7 +476,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
-    @nottest
+    #@nottest
     def test_search_l_lexical_semantic_error(self):
         """Tests POST /files/search: lexical & semantic errors.
 
@@ -525,7 +525,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert u'InvalidRequestError' in resp['errors']
 
-    @nottest
+    #@nottest
     def test_search_m_conjunction(self):
         """Tests SEARCH /files: conjunction."""
         users = h.getUsers()
@@ -597,7 +597,7 @@ class TestFormsSearchController(TestController):
         resultSet = [f for f in files if u'1' in f['name']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_n_disjunction(self):
         """Tests POST /files/search: disjunction."""
         users = h.getUsers()
@@ -647,7 +647,7 @@ class TestFormsSearchController(TestController):
                      or (f['elicitor'] and f['elicitor']['id'] == contributor.id)]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_o_int(self):
         """Tests SEARCH /files: integer searches."""
 
@@ -725,7 +725,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(expectedMatches)
 
-    @nottest
+    #@nottest
     def test_search_p_date(self):
         """Tests POST /files/search: date searches."""
         files = [f.getDict() for f in h.getFiles()]
@@ -843,7 +843,7 @@ class TestFormsSearchController(TestController):
         resultSet = [f for f in files if f['dateElicited'] is not None]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_q_date_invalid(self):
         """Tests SEARCH /files: invalid date searches."""
 
@@ -913,7 +913,7 @@ class TestFormsSearchController(TestController):
                      f['dateElicited'].isoformat() in ['2012-01-01', '2012-01-03']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_r_datetime(self):
         """Tests POST /files/search: datetime searches."""
         files = [f.getDict() for f in h.getFiles()]
@@ -1044,7 +1044,7 @@ class TestFormsSearchController(TestController):
                      f['datetimeEntered'] < midnightTomorrow]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_s_datetime_invalid(self):
         """Tests SEARCH /files: invalid datetime searches."""
         files = [f.getDict() for f in h.getFiles()]
@@ -1127,7 +1127,7 @@ class TestFormsSearchController(TestController):
                      f['datetimeModified'] in (todayTimestamp, yesterdayTimestamp)]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_t_many_to_one(self):
         """Tests POST /files/search: searches on many-to-one attributes."""
         files = [f.getDict() for f in h.getFiles()]
@@ -1216,7 +1216,7 @@ class TestFormsSearchController(TestController):
                      set(list('13579')) & set(list(f['parentFile']['filename']))]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_v_many_to_many(self):
         """Tests POST /files/search: searches on many-to-many attributes, i.e., Tag, Form."""
         files = [f.getDict() for f in h.getFiles()]
@@ -1325,7 +1325,7 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-    @nottest
+    #@nottest
     def test_search_w_in(self):
         """Tests SEARCH /files: searches using the in_ relation."""
         files = [f.getDict() for f in h.getFiles()]
@@ -1347,7 +1347,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 0
 
-    @nottest
+    #@nottest
     def test_search_x_complex(self):
         """Tests POST /files/search: complex searches."""
         files = [f.getDict() for f in h.getFiles()]
@@ -1413,7 +1413,7 @@ class TestFormsSearchController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
-    @nottest
+    #@nottest
     def test_search_y_paginator(self):
         """Tests SEARCH /files: paginator."""
         files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
@@ -1470,7 +1470,7 @@ class TestFormsSearchController(TestController):
         assert resp['items'][0]['id'] == resultSet[4]['id']
         assert resp['items'][-1]['id'] == resultSet[7]['id']
 
-    @nottest
+    #@nottest
     def test_search_z_order_by(self):
         """Tests POST /files/search: order by."""
         files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
@@ -1548,7 +1548,7 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
-    @nottest
+    #@nottest
     def test_search_za_restricted(self):
         """Tests SEARCH /files: restricted files."""
 
@@ -1600,7 +1600,7 @@ class TestFormsSearchController(TestController):
         assert len(resp['items']) == 3
         assert resp['items'][0]['id'] == resultSet[3].id
 
-    @nottest
+    #@nottest
     def test_search_zb_file_type(self):
         """Tests SEARCH /files: get the different types of files."""
         files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
@@ -1629,7 +1629,7 @@ class TestFormsSearchController(TestController):
         resultSet = [f for f in files if f['url']]
         assert len(resp) == 10
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Tests POST /files/search: clean up the database."""
 

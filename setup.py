@@ -27,13 +27,15 @@ storing, searching, processing and analyzing of linguistic fieldwork data.''',
         "Topic :: Education"
     ],
     install_requires=[
-        "Pylons>=1.0,<=1.0.99",
+        "Pylons==1.0",
+        "FormEncode==1.2.4",    # vs. >= 1.2.5 have include changes that break the OLD
         "SQLAlchemy>=0.5,<=0.7.9",
-        #"WebOb<=1.0",
-        "WebOb",
+        "WebOb<=1.1.1",    # The OLD works with v. <= 1.1.1; Pylons 1.0 works with 1.1.1; DeprecationWarning logged :(
         "Markdown",
         "PassLib",
-        "docutils>=0.10"
+        "docutils>=0.10",
+        "python-magic",  # interface to libmagic for guessing file type based on contents
+        "requests"  # http requests in Python made easy; good for testing a live system
     ],
     setup_requires=["PasteScript>=1.6.3"],
     packages=find_packages(exclude=['ez_setup']),
@@ -54,7 +56,6 @@ storing, searching, processing and analyzing of linguistic fieldwork data.''',
     main = pylons.util:PylonsInstaller
     """,
     extras_require = {
-        'MySQL': ["mysql-python>-1.2"],
-        'magic': ["python-magic"]   # interface to libmagic for guessing file type based on contents
+        'MySQL': ["mysql-python>-1.2"]
     } #'PIL': ["PIL"]  # Python Imagine Library (note: easy_install PIL fails for me ...)
 )

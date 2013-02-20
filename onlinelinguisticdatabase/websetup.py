@@ -14,9 +14,8 @@
 
 """Setup the old application"""
 import logging, os, codecs, datetime
-
+from shutil import copyfile
 import pylons.test
-
 from onlinelinguisticdatabase.config.environment import load_environment
 from onlinelinguisticdatabase.model.meta import Base, Session
 from onlinelinguisticdatabase import model
@@ -73,6 +72,11 @@ def setup_app(command, conf, vars):
 
     # Not a test: add a bunch of nice defaults.
     else:
+
+        # Create the _requests_tests.py script
+        requestsTestsPath = os.path.join(config['pylons.paths']['root'], 'tests',
+                                         '_requests_tests.py')
+        copyfile(requestsTestsPath, '_requests_tests.py')
 
         # Create the tables if they don't already exist
         Base.metadata.create_all(bind=Session.bind, checkfirst=True)

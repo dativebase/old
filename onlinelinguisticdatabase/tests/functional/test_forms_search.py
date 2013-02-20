@@ -180,14 +180,14 @@ class TestFormsSearchController(TestController):
     # requirement that the initialize "test" needs to run first, these create
     # tests do not need to be executed in the order determined by their names;
     # it just helps in locating them.
-    @nottest
+    #@nottest
     def test_a_initialize(self):
         """Tests POST /forms/search: initialize database."""
         # Add a bunch of data to the db.
         createTestData(self.n)
         addSEARCHToWebTestValidMethods()
 
-    @nottest
+    #@nottest
     def test_search_b_equals(self):
         """Tests POST /forms/search: equals."""
         # Simple == search on transcriptions
@@ -200,7 +200,7 @@ class TestFormsSearchController(TestController):
         assert resp[0]['transcription'] == u'transcription 10'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_search_c_not_equals(self):
         """Tests SEARCH /forms: not equals."""
         jsonQuery = json.dumps(
@@ -211,7 +211,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == self.n - 1
         assert u'transcription 10' not in [f['transcription'] for f in resp]
 
-    @nottest
+    #@nottest
     def test_search_d_like(self):
         """Tests POST /forms/search: like."""
         jsonQuery = json.dumps(
@@ -239,7 +239,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 100
 
-    @nottest
+    #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /forms: not like."""
         jsonQuery = json.dumps(
@@ -249,7 +249,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 80
 
-    @nottest
+    #@nottest
     def test_search_f_regexp(self):
         """Tests POST /forms/search: regular expression."""
         jsonQuery = json.dumps(
@@ -310,7 +310,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
-    @nottest
+    #@nottest
     def test_search_g_not_regexp(self):
         """Tests SEARCH /forms: not regular expression."""
         jsonQuery = json.dumps(
@@ -320,7 +320,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 97
 
-    @nottest
+    #@nottest
     def test_search_h_empty(self):
         """Tests POST /forms/search: is NULL."""
         jsonQuery = json.dumps(
@@ -338,7 +338,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 75
 
-    @nottest
+    #@nottest
     def test_search_i_not_empty(self):
         """Tests SEARCH /forms: is not NULL."""
         jsonQuery = json.dumps(
@@ -356,7 +356,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 25
 
-    @nottest
+    #@nottest
     def test_search_j_invalid_json(self):
         """Tests POST /forms/search: invalid JSON params."""
         jsonQuery = json.dumps(
@@ -368,7 +368,7 @@ class TestFormsSearchController(TestController):
         assert resp['error'] == \
             u'JSON decode error: the parameters provided were not valid JSON.'
 
-    @nottest
+    #@nottest
     def test_search_k_malformed_query(self):
         """Tests SEARCH /forms: malformed query."""
 
@@ -450,7 +450,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
-    @nottest
+    #@nottest
     def test_search_l_lexical_semantic_error(self):
         """Tests POST /forms/search: lexical & semantic errors.
 
@@ -498,7 +498,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert u'InvalidRequestError' in resp['errors']
 
-    @nottest
+    #@nottest
     def test_search_m_conjunction(self):
         """Tests SEARCH /forms: conjunction."""
         users = h.getUsers()
@@ -564,7 +564,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 20
 
-    @nottest
+    #@nottest
     def test_search_n_disjunction(self):
         """Tests POST /forms/search: disjunction."""
         users = h.getUsers()
@@ -610,7 +610,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == 76
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_search_o_int(self):
         """Tests SEARCH /forms: integer searches."""
 
@@ -688,7 +688,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(expectedMatches)
 
-    @nottest
+    #@nottest
     def test_search_p_date(self):
         """Tests POST /forms/search: date searches."""
 
@@ -789,7 +789,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 98
 
-    @nottest
+    #@nottest
     def test_search_q_date_invalid(self):
         """Tests SEARCH /forms: invalid date searches."""
 
@@ -853,7 +853,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-    @nottest
+    #@nottest
     def test_search_r_datetime(self):
         """Tests POST /forms/search: datetime searches."""
 
@@ -962,7 +962,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 49
 
-    @nottest
+    #@nottest
     def test_search_s_datetime_invalid(self):
         """Tests SEARCH /forms: invalid datetime searches."""
 
@@ -1038,7 +1038,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 99
 
-    @nottest
+    #@nottest
     def test_search_t_many_to_one(self):
         """Tests POST /forms/search: searches on many-to-one attributes."""
 
@@ -1133,7 +1133,7 @@ class TestFormsSearchController(TestController):
         assert resp
         assert len(resp) == len(expectedForms)
 
-    @nottest
+    #@nottest
     def test_search_u_one_to_many(self):
         """Tests SEARCH /forms: searches on one-to-many attributes, viz. Gloss."""
 
@@ -1273,7 +1273,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 1
 
-    @nottest
+    #@nottest
     def test_search_v_many_to_many(self):
         """Tests POST /forms/search: searches on many-to-many attributes, i.e., Tag, File, Collection, User."""
 
@@ -1452,7 +1452,7 @@ class TestFormsSearchController(TestController):
         assert response.content_type == 'application/json'
         assert resp['errors']['Memorizer.username'] == u'Searching on Memorizer.username is not permitted'
 
-    @nottest
+    #@nottest
     def test_search_w_in(self):
         """Tests SEARCH /forms: searches using the in_ relation."""
 
@@ -1472,7 +1472,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 0
 
-    @nottest
+    #@nottest
     def test_search_x_complex(self):
         """Tests POST /forms/search: complex searches."""
         forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
@@ -1547,7 +1547,7 @@ class TestFormsSearchController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
-    @nottest
+    #@nottest
     def test_search_y_paginator(self):
         """Tests SEARCH /forms: paginator."""
         forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
@@ -1604,7 +1604,7 @@ class TestFormsSearchController(TestController):
         assert resp['items'][0]['id'] == resultSet[16]['id']
         assert resp['items'][-1]['id'] == resultSet[31]['id']
 
-    @nottest
+    #@nottest
     def test_search_z_order_by(self):
         """Tests POST /forms/search: order by."""
         forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
@@ -1696,7 +1696,7 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
-    @nottest
+    #@nottest
     def test_search_za_restricted(self):
         """Tests SEARCH /forms: restricted forms."""
 
@@ -1748,7 +1748,7 @@ class TestFormsSearchController(TestController):
         assert len(resp['items']) == 7
         assert resp['items'][0]['id'] == resultSet[14].id
 
-    @nottest
+    #@nottest
     def test_search_zb_like_escaping(self):
         """Tests SEARCH /forms: escaping special characters in LIKE queries.
 
@@ -1862,7 +1862,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == 1
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Tests POST /forms/search: clean up the database."""
 

@@ -104,7 +104,7 @@ class TestFormsearchesController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /formsearches returns an array of all form searches and that orderBy and pagination parameters work correctly."""
 
@@ -191,7 +191,7 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /formsearches creates a new formSearch
         or returns an appropriate error if the input is invalid.
@@ -280,7 +280,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['search'] == u'The submitted query was invalid'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /formsearches/new returns the data necessary to create a new form search."""
         response = self.app.get(url('new_formsearch'), headers=self.json_headers,
@@ -290,7 +290,7 @@ class TestFormsearchesController(TestController):
         assert 'relations' in resp['searchParameters']
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /formsearches/id updates the form search with id=id."""
 
@@ -343,7 +343,7 @@ class TestFormsearchesController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /formsearches/id deletes the form search with id=id."""
 
@@ -391,7 +391,7 @@ class TestFormsearchesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /formsearches/id returns the formsearch with id=id or an appropriate error."""
 
@@ -434,7 +434,7 @@ class TestFormsearchesController(TestController):
         assert resp['description'] == u"This one's worth saving!"
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /formsearches/id/edit returns a JSON object of data necessary to edit the form search with id=id.
 
@@ -488,7 +488,7 @@ class TestFormsearchesController(TestController):
         assert 'relations' in resp['data']['searchParameters']
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_search(self):
         """Tests that SEARCH /formsearches (a.k.a. POST /formsearches/search) correctly returns an array of formsearches based on search criteria."""
 
@@ -650,7 +650,7 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
-    @nottest
+    #@nottest
     def test_new_search(self):
         """Tests that GET /formsearches/new_search returns the search parameters for searching the form searches resource."""
         queryBuilder = SQLAQueryBuilder('FormSearch')

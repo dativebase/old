@@ -204,7 +204,7 @@ class TestSourcesController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /sources returns an array of all sources and that orderBy and pagination parameters work correctly."""
 
@@ -297,7 +297,7 @@ class TestSourcesController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /sources creates a new source or returns an appropriate error
         if the input is invalid.
@@ -593,7 +593,7 @@ class TestSourcesController(TestController):
         assert newSourcesCount == sourcesCount + 1
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /sources/new returns the list of valid BibTeX entry types."""
         response = self.app.get(url('new_source'), headers=self.json_headers,
@@ -602,7 +602,7 @@ class TestSourcesController(TestController):
         assert resp['types'] == sorted(entryTypes.keys())
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /sources/1 updates an existing source."""
 
@@ -698,7 +698,7 @@ class TestSourcesController(TestController):
         assert resp['file']['name'] == fileName
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /sources/id deletes the source with id=id."""
 
@@ -747,7 +747,7 @@ class TestSourcesController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /source/id returns the source with id=id or an appropriate error."""
 
@@ -792,7 +792,7 @@ class TestSourcesController(TestController):
         assert resp['year'] == 1957
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /sources/id/edit returns a JSON object of data necessary to edit the source with id=id.
 
@@ -846,7 +846,7 @@ class TestSourcesController(TestController):
         assert resp['data']['types'] == sorted(entryTypes.keys())
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_search(self):
         """Tests that SEARCH /sources (a.k.a. POST /sources/search) correctly returns an array of sources based on search criteria."""
 
@@ -1023,7 +1023,7 @@ class TestSourcesController(TestController):
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new_search(self):
         """Tests that GET /sources/new_search returns the search parameters for searching the sources resource."""
         queryBuilder = SQLAQueryBuilder('Source')

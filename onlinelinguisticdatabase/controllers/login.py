@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 class LoginController(BaseController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
+    here = h.getConfig(config=config)['here']
 
     @h.jsonify
     @h.restrict('POST')

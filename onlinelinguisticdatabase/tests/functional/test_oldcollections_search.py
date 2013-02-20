@@ -208,7 +208,7 @@ class TestFormsSearchController(TestController):
 
     # Initialization for the tests - this needs to be run first in order for the
     # tests to succeed
-    @nottest
+    #@nottest
     def test_a_initialize(self):
         """Tests POST /collections/search: initialize database."""
         h.clearAllModels(['Language', 'User'])
@@ -217,7 +217,7 @@ class TestFormsSearchController(TestController):
         self._createTestData(self.n)
         addSEARCHToWebTestValidMethods()
 
-    @nottest
+    #@nottest
     def test_search_b_equals(self):
         """Tests POST /collections/search: equals."""
         jsonQuery = json.dumps(
@@ -228,7 +228,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == 1
         assert resp[0]['title'] == u'Collection 13'
 
-    @nottest
+    #@nottest
     def test_search_c_not_equals(self):
         """Tests SEARCH /collections: not equals."""
         jsonQuery = json.dumps(
@@ -239,7 +239,7 @@ class TestFormsSearchController(TestController):
         assert len(resp) == self.n - 1
         assert u'Collection 10' not in [c['title'] for c in resp]
 
-    @nottest
+    #@nottest
     def test_search_d_like(self):
         """Tests POST /collections/search: like."""
 
@@ -273,7 +273,7 @@ class TestFormsSearchController(TestController):
         resultSet = [c for c in collections if u'C' in c['title'] or u'c' in c['title']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /collections: not like."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -285,7 +285,7 @@ class TestFormsSearchController(TestController):
         resultSet = [c for c in collections if u'1' not in c['title']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_f_regexp(self):
         """Tests POST /collections/search: regular expression."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -352,7 +352,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
-    @nottest
+    #@nottest
     def test_search_g_not_regexp(self):
         """Tests SEARCH /collections: not regular expression."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -364,7 +364,7 @@ class TestFormsSearchController(TestController):
         resultSet = [c for c in collections if not re.search('[345]2', c['title'])]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_h_empty(self):
         """Tests POST /collections/search: is NULL."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -385,7 +385,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_i_not_empty(self):
         """Tests SEARCH /collections: is not NULL."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -405,7 +405,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_j_invalid_json(self):
         """Tests POST /collections/search: invalid JSON params."""
         jsonQuery = json.dumps(
@@ -417,7 +417,7 @@ class TestFormsSearchController(TestController):
         assert resp['error'] == \
             u'JSON decode error: the parameters provided were not valid JSON.'
 
-    @nottest
+    #@nottest
     def test_search_k_malformed_query(self):
         """Tests SEARCH /collections: malformed query."""
 
@@ -502,7 +502,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
-    @nottest
+    #@nottest
     def test_search_l_lexical_semantic_error(self):
         """Tests POST /collections/search: lexical & semantic errors.
 
@@ -551,7 +551,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert u'InvalidRequestError' in resp['errors']
 
-    @nottest
+    #@nottest
     def test_search_m_conjunction(self):
         """Tests SEARCH /collections: conjunction."""
         users = h.getUsers()
@@ -623,7 +623,7 @@ class TestFormsSearchController(TestController):
         resultSet = [c for c in collections if u'1' in c['title']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_n_disjunction(self):
         """Tests POST /collections/search: disjunction."""
         users = h.getUsers()
@@ -673,7 +673,7 @@ class TestFormsSearchController(TestController):
                      or (c['elicitor'] and c['elicitor']['id'] == contributor.id)]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_o_int(self):
         """Tests SEARCH /collections: integer searches."""
 
@@ -751,7 +751,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == len(expectedMatches)
 
-    @nottest
+    #@nottest
     def test_search_p_date(self):
         """Tests POST /collections/search: date searches."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -869,7 +869,7 @@ class TestFormsSearchController(TestController):
         resultSet = [c for c in collections if c['dateElicited'] is not None]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_q_date_invalid(self):
         """Tests SEARCH /collections: invalid date searches."""
 
@@ -939,7 +939,7 @@ class TestFormsSearchController(TestController):
                      c['dateElicited'].isoformat() in ['2012-01-01', '2012-01-03']]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_r_datetime(self):
         """Tests POST /collections/search: datetime searches."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -1070,7 +1070,7 @@ class TestFormsSearchController(TestController):
                      c['datetimeEntered'] < midnightTomorrow]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_s_datetime_invalid(self):
         """Tests SEARCH /collections: invalid datetime searches."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -1153,7 +1153,7 @@ class TestFormsSearchController(TestController):
                      c['datetimeModified'] in (todayTimestamp, yesterdayTimestamp)]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_t_many_to_one(self):
         """Tests POST /collections/search: searches on many-to-one attributes."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -1232,7 +1232,7 @@ class TestFormsSearchController(TestController):
                      '5' in str(c['speaker']['id'])]
         assert len(resp) == len(resultSet)
 
-    @nottest
+    #@nottest
     def test_search_v_many_to_many(self):
         """Tests POST /collections/search: searches on many-to-many attributes, i.e., Tag, Form, File."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -1360,7 +1360,7 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-    @nottest
+    #@nottest
     def test_search_w_in(self):
         """Tests SEARCH /collections: searches using the in_ relation."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -1383,7 +1383,7 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 0
 
-    @nottest
+    #@nottest
     def test_search_x_complex(self):
         """Tests POST /collections/search: complex searches."""
         collections = [c.getDict() for c in h.getCollections()]
@@ -1451,7 +1451,7 @@ class TestFormsSearchController(TestController):
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
-    @nottest
+    #@nottest
     def test_search_y_paginator(self):
         """Tests SEARCH /collections: paginator."""
         collections = json.loads(json.dumps(h.getCollections(), cls=h.JSONOLDEncoder))
@@ -1508,7 +1508,7 @@ class TestFormsSearchController(TestController):
         assert resp['items'][0]['id'] == resultSet[4]['id']
         assert resp['items'][-1]['id'] == resultSet[7]['id']
 
-    @nottest
+    #@nottest
     def test_search_z_order_by(self):
         """Tests POST /collections/search: order by."""
         collections = json.loads(json.dumps(h.getCollections(), cls=h.JSONOLDEncoder))
@@ -1586,7 +1586,7 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['Foo.id'] == u'Searching on Foo.id is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
-    @nottest
+    #@nottest
     def test_search_za_restricted(self):
         """Tests SEARCH /collections: restricted collections."""
 
@@ -1638,7 +1638,7 @@ class TestFormsSearchController(TestController):
         assert len(resp['items']) == 3
         assert resp['items'][0]['id'] == resultSet[3].id
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Tests POST /collections/search: clean up the database."""
 
