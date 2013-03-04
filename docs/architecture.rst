@@ -2,121 +2,54 @@
 Architecture Overview
 ================================================================================
 
-An OLD web service is, at its core, a database with a particular schema (data
-structure) and an interface for interacting with the data stored in the database.
-The core features of the OLD: user authentication and authorization; resource
-creation, retrieval, update and deletion; input validation; data processing; and
-search.
+An OLD web service consists of a data structure for storing the artifacts of
+linguistic fieldwork and analysis and a read-write interface to that data
+structure.
 
-The OLD exposes REST-ful interface styled on the Atom Publishing Protocol.  This
-means that all of the "resources" of the OLD (e.g., forms, files, collections,
-sources, users, syntactic categories, etc.) are **c**\ reated, **r**\ ead,
-**u**\ pdated and **d**\ eleted in a standard way.  The HTTP protocol defines a
-small set of "methods" for classifying requests to web servers; relevant to us
-here are the POST, GET, PUT and DELETE methods.  Requests to create a new
-resource use the POST method, read requests use the GET method, update requests
-the PUT method and delete requests the DELETE method.  The table below
-illustrates this pattern for the forms resource.
+A major design principle of the OLD is that as much work as possible
+should be delegated to the user-facing applications so that the OLD web service
+can focus on providing secure and responsive multi-user concurrent access to
+a central data structure.  In some cases, technological restrictions currently
+inherent to particular platforms (e.g., the inability of browser-based JavaScript
+applications to call external programs) have required server-side implementation
+of features that might otherwise be implemented client-side (e.g., morphological
+parsing, PDF creation using TeX).
 
-+-------------+----------------+----------------------------------+---------------------------+
-| HTTP Method | URL            | Effect                           | Parameters                |
-+=============+================+==================================+===========================+
-| POST        | /forms         | Create a new form                | JSON object               |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms         | Read all forms                   | optional GET params       |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms/id      | Read form with id=id             |                           |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms/new     | Get data for creating a new form | optional GET params       |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms/id/edit | Get data for editing form id     | optional GET params       |
-+-------------+----------------+----------------------------------+---------------------------+
-| PUT         | /forms/id      | Update form with id=id           | JSON object               |
-+-------------+----------------+----------------------------------+---------------------------+
-| DELETE      | /forms/id      | Delete form with id=id           |                           |
-+-------------+----------------+----------------------------------+---------------------------+
+The diagram below illustrates the core components of an OLD application.
 
-Assuming an OLD web service served at http://www.xyz-old.org, an HTTP request to
-http://www.xyz-old.org/forms with method POST would result in the system
-attempting to create a new linguistic form in the database using the data passed
-as JavaScript Object Notation (JSON) in the body of the request.  If the input
-data are valid, the system will respond with a JSON representation of the form
-with additional (server-generated) attributes (e.g., datetimeModified) included.
-If the input data are invalid (or if the user was not authorized to create a
-form or some other error occured), the system will respond with an HTTP error
-status code and a JSON object in the response body that gives more information
-about the error.
+.. image:: _static/OLD_diagram_med_level.png
+   :align: center
 
-As a general rule, the OLD communicates via JSON.  JSON is a widely-used
-standard for converting certain data types and (nested) data structures to and from
-strings.  Strings, numbers, arrays (lists) and associative arrays (dictionaries)
-can all be serialized to a JSON string.  For example, a Python dictionary, i.e.,
-a set of key/value pairs such as `{'transcription': 'dog', 'gloss': 'chien'}`
-when converted to JSON would be `'{"transcription": "dog", "gloss": "chien"}'`.
-In most cases, when an OLD web service requires user input, that input will be
-expected to be JSON in the request body.  (In contrast to POST, PUT and DELETE
-requests, HTTP GET requests do not, canonically, possess contentful request
-bodies; therefore, when optional parameters are permissible on such requests,
-the OLD will expect GET parameters in the URL string.)
+When an OLD web application receives HTTP requests, the Routes component decides
+which Pylons controller will handle the request.  This decision is based on the
+HTTP method of the request and the URL.  Routes and the controllers conspire to
+create a RESTful interface to the data structure *qua* a set of resources.  That
+is, a POST request to ``www.xyz-old.org/forms`` will be interpreted as a request
+to create a new form resource while the same URL with a GET method will be
+interpreted as a request to read (i.e., retrieve) all of the form resources.
+The first request will be routed to the ``create`` action (i.e., method) of the
+``forms`` controller (i.e., class) while the second will be routed to the
+``index`` action of that same controller.  The authentication, authorization,
+input validation, data processing, linguistic analysis and database updates and
+queries are all handled by the controllers.
 
-The application logic of the OLD is written in Python (2.6).  The system uses
-the Pylons (1.0) web framework.  Pylons facilitates parsing of HTTP requests and
-generation of HTTP responses.  It advocates a Model-View-Controller architecture
-where, in the context of the OLD, each resource possesses a model, which governs
-the storage and retrieval of a persisted object or resource (e.g., a linguistic
-form), as well as a controller, which generates responses to user requests, i.e.,
-controls authentication, input validation, data processing, etc.
+As illustrated in the diagram, the Routes and Controllers components can be
+conceptually grouped together as the *interface* of an OLD web service.  The
+:ref:`interface` section details this interface.
 
-OLD objects are stored in a relational database.  The system has been tested on
-both MySQL and SQLite, though the latter is not suited to a concurrent multi-
-user production environment.  The system uses SQLAlchemy (a python module) to
-map Python objects to relational database tables.  The FormEncode Python module
-is used to validate user input.
+SQLAlchemy provides an abstraction over the tables and relations of the
+underlying database.  Tables, their columns and the relations between them
+(i.e., the schema) are declared using Python data structures called *models* and
+interaction with the database is accomplished entirely via these.  This not only
+simplifies interaction with the database (from the Python programmer's point of
+view) but also makes it easier to use different RDBMSs (e.g., SQLite, MySQL)
+with minimal changes to the application logic.
 
-The OLD prescribes a particular data structure for organizing linguistic
-fieldwork data.  The three core objects are forms, files and collections.  In
-brief, forms are textual representations of language data (e.g., morphemes,
-words, phrases, sentences)
+As illustrated in the diagram, the Models and RDBMS components can be
+conceptually grouped together as the *data structure* of an OLD web service.
+The :ref:`data-structure` section describes and argues for the utility of the
+data structure of the OLD.
 
-The OLD prescribes a particular data structure or schema for linguistic
-fieldwork data; it validates user input against that schema and ...
 
-A web service is a web-based application
-that, unlike a traditional web application, does not require a particular user
-interface.  An OLD web service can be accessed via a browser-based application,
-a traditional desktop application, an application on a mobile device, a command
-line application or even another web application.  As long as the front-end
-application can send and receive JSON (JavaScript Object Notation) using the
-HTTP protocol and store cookies, the OLD will happily interact with it.
-
-    Note that this is a break from previous versions of the OLD.  In versions 0.1
-    through 0.2.7, the OLD was a traditional web application, i.e., it served HTML
-    pages as user interface and expected user input as HTML form requests.
-
-The OLD exposes REST-ful interface styled on the Atom Publishing Protocol.  This
-means that all of the "resources" of the OLD (e.g., forms, files, collections,
-sources, users, syntactic categories, etc.) are **c**\ reated, **r**\ ead,
-**u**\ pdated and **d**\ eleted in the same way.  The HTTP protocol defines a
-small set of "methods" for classifying requests to web servers; relevant to us
-here are the POST, GET, PUT and DELETE methods.  Requests to create a new
-resource use the POST method, read requests use the GET method, update requests
-the PUT method and delete requests the DELETE method.  The table below
-illustrates this pattern for the forms resource.
-
-+-------------+----------------+----------------------------------+---------------------------+
-| HTTP Method | URL            | Effect                           | Parameters                |
-+=============+================+==================================+===========================+
-| POST        | /forms         | Create a new form                | JSON object               |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms         | Read all forms                   | optional GET params       |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms/id      | Read form with id=id             |                           |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms/new     | Get data for creating a new form | optional GET params       |
-+-------------+----------------+----------------------------------+---------------------------+
-| GET         | /forms/id/edit | Get data for editing form id     | optional GET params       |
-+-------------+----------------+----------------------------------+---------------------------+
-| PUT         | /forms/id      | Update form with id=id           | JSON object               |
-+-------------+----------------+----------------------------------+---------------------------+
-| DELETE      | /forms/id      | Delete form with id=id           |                           |
-+-------------+----------------+----------------------------------+---------------------------+
+Fake subsection
+--------------------------------------------------------------------------------

@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>About &mdash; OLD 1.0 documentation</title>
+    <title>About &mdash; OLD 1.0a documentation</title>
     
     <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.0',
+        VERSION:     '1.0a',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,8 +25,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="#" />
-    <link rel="top" title="OLD 1.0 documentation" href="index.html" />
-    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="top" title="OLD 1.0a documentation" href="index.html" />
+    <link rel="next" title="Installation &amp; Configuration" href="installation.html" />
     <link rel="prev" title="Documentation Overview" href="index.html" /> 
   </head>
   <body>
@@ -37,12 +37,12 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="installation.html" title="Installation"
+          <a href="installation.html" title="Installation &amp; Configuration"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Documentation Overview"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">OLD 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">OLD 1.0a documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -55,8 +55,7 @@
 <h1>About<a class="headerlink" href="#about" title="Permalink to this headline">¶</a></h1>
 <p>The Online Linguistic Database (OLD) is software that facilitates collaborative
 storing, searching, processing and analyzing of linguistic fieldwork data.</p>
-<p>Linguistic fieldwork, i.e., the process of gathering, analyzing and processing
-natural language data, stands to benefit significantly from inter-researcher
+<p>Linguistic fieldwork stands to benefit significantly from inter-researcher
 collaboration and data-sharing.  The OLD arose as a response to a lack of
 multi-user cross-platform tools for language documentation and analysis.</p>
 <div class="section" id="purpose">
@@ -65,7 +64,7 @@ multi-user cross-platform tools for language documentation and analysis.</p>
 <ol class="arabic simple">
 <li>Language data can be shared easily between researchers.</li>
 <li>Language data are intelligently structured (balancing an allowance for
-theoretical and methodological variation with capability for easy retrieval
+theoretical and methodological variation with capacity for easy retrieval
 and re-purposing.)</li>
 <li>Language data are highly searchable.</li>
 <li>Access to language data can be controlled via authentication and
@@ -78,26 +77,26 @@ parsing, automated information extraction, corpus analysis, comparative
 cross-linguistic analysis.</li>
 </ol>
 </div>
-<div class="section" id="but-what-is-it">
-<h2>But, what is it?<a class="headerlink" href="#but-what-is-it" title="Permalink to this headline">¶</a></h2>
-<p>The OLD is a program for creating a collaborative language documentation <em>web
-service</em>.  A web service is like a web site or web application, insofar as it
-runs on a web server and responds to HTTP requests.  However, a web service
-differs from a traditional web application in that it expects to communicate
-with other programs and not, directly, with human users.</p>
+<div class="section" id="what-is-it">
+<h2>What is it?<a class="headerlink" href="#what-is-it" title="Permalink to this headline">¶</a></h2>
+<p>The OLD is a program for creating collaborative language documentation <em>web
+services</em> <a class="footnote-reference" href="#f1" id="id1">[1]</a>.  A web service is like a web site or web application, insofar
+as it runs on a web server and responds to HTTP requests.  However, a web
+service differs from a traditional web application in that it expects to
+communicate with other programs and not, directly, with human users.</p>
 <p>The benefit of this design strategy is that a single web service can form a
 useful component of a variety of different applications with different goals.
-For example, an OLD web service for language L could serve data to a mobile
-application that helps users to learn L.  At the same time, researchers could
+For example, an OLD web service for language <em>L</em> could serve data to a mobile
+application that helps users to learn <em>L</em>.  At the same time, researchers could
 be collaboratively entering, searching and processing data on the OLD web
 service via a desktop application and/or a browser-based one.</p>
 <p>The OLD will be packaged with an in-browser user-friendly application.  However,
 since these two applications will not be interdependent their documentation will
 be kept separate also.</p>
-<p>The OLD is intended to be setup on a web server.  However, it can also easily be
-installed on a personal computer for, say, developmental or experimental
+<p>The OLD is intended to be set up on a web server.  However, it can also easily
+be installed on a personal computer for, say, developmental or experimental
 purposes.  For detailed installation instructions see the
-<a class="reference internal" href="installation.html#installation-section"><em>Installation</em></a> section.</p>
+<a class="reference internal" href="installation.html#installation-section"><em>Installation &amp; Configuration</em></a> section.</p>
 <p>The OLD is, at its core, a database-driven application.  It is essentially an
 interface to a relational database with a specific data structure, or schema.
 The schema was designed with the goals of linguistic fieldwork in mind.  An OLD
@@ -121,7 +120,7 @@ morpheme delimiters).</li>
 inventories &amp; orthographies, object and meta-language identification, etc.</li>
 <li>Data processing (e.g., copying and reduction of image and audio files,
 generation of category strings based on the categories of component
-morphemes, phrase-morpheme linking, orthography conversion, etc.)</li>
+morphemes, phrase-morpheme auto-linking, etc.)</li>
 <li>Resource search, i.e., open-ended, nested boolean search with substring,
 exact and regular expression matches against specified fields.</li>
 <li>(Linguistic analysis: phonology &amp; corpora specification, automatic
@@ -131,10 +130,10 @@ specification &amp; generation.)</li>
 </div>
 <div class="section" id="technologies">
 <h2>Technologies<a class="headerlink" href="#technologies" title="Permalink to this headline">¶</a></h2>
-<p>The OLD is written in Python, using the Pylons web framework.  The OLD exposes
-a RESTful interface based on the Atom Publishing Protocol, as implemented by the
-Routes URL routing component of Pylons.  The relational database management
-system (RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
+<p>The OLD is written in Python, using the Pylons web framework.  It exposes a
+RESTful API based on the Atom Publishing Protocol, as implemented by the Routes
+URL routing component of Pylons.  The relational database management system
+(RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
 SQLAlchemy provides a Pythonic interface (ORM) to the RDBMS.</p>
 </div>
 <div class="section" id="who-should-read-this-manual">
@@ -150,14 +149,22 @@ will also benefit from reading the API documentation.</p>
 linguistic analysis and language processing components will also find this
 manual helpful.  Typically, end users
 of an OLD-based system will interact with an OLD web service not directly but
-via a user interface-focused application.  Such users are advised to consult the
+via a user interface-focused application.  Such users may want to consult the
 documentation for the latter application before exploring the present document.</p>
-<p>The next two sections describe the objectives, architecture and technologies
-that determine the properties of the system.</p>
 </div>
 <div class="section" id="license">
 <h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
-<p>The OLD is licensed under ... Well, it&#8217;ll be open source but not GPL ...</p>
+<p>The OLD is open source software licensed under
+<a class="reference external" href="http://www.apache.org/licenses/LICENSE-2.0.txt">Apache 2.0</a>.</p>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Note that this is a break from previous versions of the OLD.  In
+versions 0.1 through 0.2.7, the OLD was a traditional web application, i.e.,
+it served HTML pages as user interface and expected user input as HTML form
+requests.</td></tr>
+</tbody>
+</table>
 </div>
 </div>
 
@@ -171,7 +178,7 @@ that determine the properties of the system.</p>
   <ul>
 <li><a class="reference internal" href="#">About</a><ul>
 <li><a class="reference internal" href="#purpose">Purpose</a></li>
-<li><a class="reference internal" href="#but-what-is-it">But, what is it?</a></li>
+<li><a class="reference internal" href="#what-is-it">What is it?</a></li>
 <li><a class="reference internal" href="#core-features">Core features</a></li>
 <li><a class="reference internal" href="#technologies">Technologies</a></li>
 <li><a class="reference internal" href="#who-should-read-this-manual">Who should read this manual?</a></li>
@@ -183,7 +190,7 @@ that determine the properties of the system.</p>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="index.html" title="previous chapter">Documentation Overview</a></li>
-      <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
+      <li>Next: <a href="installation.html" title="next chapter">Installation &amp; Configuration</a></li>
   </ul></li>
 </ul>
   <h3>This Page</h3>

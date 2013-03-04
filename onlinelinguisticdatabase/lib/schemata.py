@@ -335,6 +335,7 @@ class FormIdsSchemaNullable(Schema):
     filter_extra_fields = True
     forms = ForEach(ValidOLDModelObject(modelName='Form'))
 
+
 ################################################################################
 # File Schemata
 ################################################################################
@@ -514,7 +515,7 @@ class FileSubintervalReferencingSchema(FileUpdateSchema):
 
 class ValidMIMEtype(FancyValidator):
     """Validator ensures that the user-supplied MIMEtype value is one of those
-    listed in hallowedFileTypes.
+    listed in h.allowedFileTypes.
     """
     messages = {u'invalid_type': u'The file upload failed because the file type %(MIMEtype)s is not allowed.'}
     def validate_python(self, value, state):
@@ -527,6 +528,7 @@ class FileExternallyHostedSchema(FileUpdateSchema):
     url = URL(not_empty=True, check_exists=False, add_http=True)       # add check_exists=True if desired
     password = UnicodeString(max=255)
     MIMEtype = ValidMIMEtype()
+
 
 ################################################################################
 # Collection Schemata
@@ -543,7 +545,7 @@ class CollectionSchema(Schema):
     type = OneOf(h.collectionTypes)
     url = Regex('^[a-zA-Z0-9_/-]{0,255}$')
     description = UnicodeString()
-    markupLanguage = OneOf(h.markupLanguages)
+    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
     contents = UnicodeString()
     contentsUnpacked = UnicodeString()
     # html = UnicodeString()      # uncomment to permit saving of client-side-generated html
@@ -557,6 +559,7 @@ class CollectionSchema(Schema):
 
     # A forms attribute must be created using the contents attribute before validation occurs
     forms = ForEach(ValidOLDModelObject(modelName='Form'))
+
 
 ################################################################################
 # ApplicationSettings Schemata
@@ -577,20 +580,18 @@ class ApplicationSettingsSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-
-    validationValues = [u'None', u'Warning', u'Error']
     objectLanguageName = UnicodeString(max=255)
     objectLanguageId = UnicodeString(max=3)
     metalanguageName = UnicodeString(max=255)
     metalanguageId = UnicodeString(max=3)
     metalanguageInventory = UnicodeString()
-    orthographicValidation = OneOf(validationValues)
+    orthographicValidation = OneOf(h.validationValues)
     narrowPhoneticInventory = UnicodeString()
-    narrowPhoneticValidation = OneOf(validationValues)
+    narrowPhoneticValidation = OneOf(h.validationValues)
     broadPhoneticInventory = UnicodeString()
-    broadPhoneticValidation = OneOf(validationValues)
+    broadPhoneticValidation = OneOf(h.validationValues)
     morphemeBreakIsOrthographic = StringBoolean()
-    morphemeBreakValidation = OneOf(validationValues)
+    morphemeBreakValidation = OneOf(h.validationValues)
     phonemicInventory = UnicodeString()
     morphemeDelimiters = GetMorphemeDelimiters(max=255)
     punctuation = UnicodeString()
@@ -717,7 +718,7 @@ class SourceSchema(Schema):
     author = UnicodeString(max=255)
     booktitle = UnicodeString(max=255)
     chapter = UnicodeString(max=255)
-    crossref = UnicodeString(max=255)
+    crossref = UnicodeString(max=1000)
     edition = UnicodeString(max=255)
     editor = UnicodeString(max=255)
     howpublished = UnicodeString(max=255)
@@ -833,7 +834,7 @@ class PageSchema(Schema):
     filter_extra_fields = True
     name = UnicodeString(max=255, not_empty=True)
     heading = UnicodeString(max=255)
-    markupLanguage = OneOf(h.markupLanguages)
+    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
     content = UnicodeString()
     html = UnicodeString()
 
@@ -896,7 +897,7 @@ class ValidUsernameAndPassword(FancyValidator):
         'bad_password': u' '.join([
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
-            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.']),
+            u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.']),
         'no_password': u'A password is required when creating a new user.',
         'not_confirmed': u'The password and password_confirm values do not match.',
         'nonunique_username': u'The username %(username)s is already taken.',
@@ -1000,8 +1001,8 @@ class UserSchema(Schema):
     email = Email(max=255, not_empty=True)
     affiliation = UnicodeString(max=255)
     role = OneOf(h.userRoles, not_empty=True)
-    markupLanguage = OneOf(h.markupLanguages)
-    pageContent = UnicodeString(max=255)
+    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
+    pageContent = UnicodeString()
     inputOrthography = ValidOLDModelObject(modelName='Orthography')
     outputOrthography = ValidOLDModelObject(modelName='Orthography')
 

@@ -407,7 +407,7 @@ class TestUsersController(TestController):
         assert resp['errors'] == u' '.join([
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
-            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+            u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
         assert response.content_type == 'application/json'
 
         # Invalid because the password does not contain an uppercase printable ASCII character
@@ -431,7 +431,7 @@ class TestUsersController(TestController):
         assert resp['errors'] == u' '.join([
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
-            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+            u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
 
         # Invalid because the password does not contain a lowercase printable ASCII character
         params = self.createParams.copy()
@@ -454,7 +454,7 @@ class TestUsersController(TestController):
         assert resp['errors'] == u' '.join([
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
-            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+            u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
 
         # Invalid because the password does not contain a symbol from the printable ASCII character range
         params = self.createParams.copy()
@@ -477,7 +477,7 @@ class TestUsersController(TestController):
         assert resp['errors'] == u' '.join([
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
-            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+            u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
         assert response.content_type == 'application/json'
 
         # Invalid because the password does not contain a digit
@@ -501,7 +501,7 @@ class TestUsersController(TestController):
         assert resp['errors'] == u' '.join([
             u'The submitted password is invalid; valid passwords contain at least 8 characters',
             u'and either contain at least one character that is not in the printable ASCII range',
-            u'or else contain at least one symbol, one digit, one uppercass letter and one lowercase letter.'])
+            u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
         assert response.content_type == 'application/json'
 
         # Valid user: the password contains a unicode character
@@ -562,7 +562,7 @@ class TestUsersController(TestController):
         assert resp['errors']['affiliation'] == u'Enter a value not more than 255 characters long'
         assert resp['errors']['role'] == u"Value must be one of: viewer; contributor; administrator (not u'master')"
         assert resp['errors']['inputOrthography'] == u'There is no orthography with id 1234.'
-        assert resp['errors']['markupLanguage'] == u"Value must be one of: markdown; reStructuredText (not u'markdownandupanddown')"
+        assert resp['errors']['markupLanguage'] == u"Value must be one of: Markdown; reStructuredText (not u'markdownandupanddown')"
         assert response.content_type == 'application/json'
 
         # Valid user: all fields have valid values
@@ -582,7 +582,7 @@ class TestUsersController(TestController):
             'email': u'amanaplanacanalpanama@gmail.com',
             'affiliation': u'Moscow State University',
             'role': u'contributor',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'pageContent': u'My OLD Page\n===============\n\nWhat a great linguistic fieldwork application!\n\n',
             'inputOrthography': orthography1Id,
             'outputOrthography': orthography2Id
@@ -600,9 +600,9 @@ class TestUsersController(TestController):
         assert resp['email'] == u'amanaplanacanalpanama@gmail.com'
         assert resp['affiliation'] == u'Moscow State University'
         assert resp['role'] == u'contributor'
-        assert resp['markupLanguage'] == u'markdown'
+        assert resp['markupLanguage'] == u'Markdown'
         assert resp['pageContent'] == u'My OLD Page\n===============\n\nWhat a great linguistic fieldwork application!\n\n'
-        assert resp['html'] == h.getHTMLFromContents(resp['pageContent'], 'markdown')
+        assert resp['html'] == h.getHTMLFromContents(resp['pageContent'], 'Markdown')
         assert resp['inputOrthography']['id'] == orthography1Id
         assert resp['outputOrthography']['id'] == orthography2Id
         assert response.content_type == 'application/json'
@@ -860,7 +860,7 @@ class TestUsersController(TestController):
             'lastName': u'Buckley',         # Here is a change
             'email': u'john.doe@gmail.com',
             'role': u'contributor',
-            'markupLanguage': u'markdown',  # Another change
+            'markupLanguage': u'Markdown',  # Another change
             'pageContent': mdContents       # And another
         })
         params = json.dumps(params)
@@ -870,7 +870,7 @@ class TestUsersController(TestController):
         assert resp['username'] == u'johnbuck'
         assert resp['lastName'] == u'Buckley'
         assert h.encryptPassword(u'Zzzzzz.9', str(userJustUpdated.salt)) == userJustUpdated.password
-        assert resp['html'] == h.getHTMLFromContents(mdContents, u'markdown')
+        assert resp['html'] == h.getHTMLFromContents(mdContents, u'Markdown')
         assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
@@ -880,7 +880,7 @@ class TestUsersController(TestController):
             'lastName': u'Buckley',
             'email': u'john.doe@gmail.com',
             'role': u'contributor',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'pageContent': mdContents
         })
         params = json.dumps(params)

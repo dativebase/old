@@ -239,6 +239,14 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert len(resp) == 100
 
+        # Testing the "_" wildcard
+        jsonQuery = json.dumps(
+            {'query': {'filter': ['Form', 'transcription', 'like', u'T_A%']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                                 self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp) == 50
+
     #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /forms: not like."""
@@ -1003,9 +1011,10 @@ class TestFormsSearchController(TestController):
         assert resp['errors']['datetime 01'] == \
             u'Datetime search parameters must be valid ISO 8601 datetime strings.'
 
-        # regex on valid datetime will work and will act just like = -- no point
+        # regex on valid datetime will work and will similarly to equality test.
+        todayString = todayTimestamp.isoformat().split('.')[0]
         jsonQuery = json.dumps({'query': {'filter':
-                ['Form', 'datetimeModified', 'regex', todayTimestamp.isoformat()]}})
+                ['Form', 'datetimeModified', 'regex', todayString]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1013,7 +1022,7 @@ class TestFormsSearchController(TestController):
 
         # Same thing for like, it works like = but what's the point?
         jsonQuery = json.dumps({'query': {'filter':
-                ['Form', 'datetimeModified', 'like', todayTimestamp.isoformat()]}})
+                ['Form', 'datetimeModified', 'like', todayString]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)

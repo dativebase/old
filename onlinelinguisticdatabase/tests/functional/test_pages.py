@@ -80,7 +80,7 @@ class TestPagesController(TestController):
         def createPageFromIndex(index):
             page = model.Page()
             page.name = u'page%d' % index
-            page.markupLanguage = u'markdown'
+            page.markupLanguage = u'Markdown'
             page.content = self.mdContents
             return page
         pages = [createPageFromIndex(i) for i in range(1, 101)]
@@ -171,7 +171,7 @@ class TestPagesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': u'page',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)
@@ -181,7 +181,7 @@ class TestPagesController(TestController):
         assert newPageCount == originalPageCount + 1
         assert resp['name'] == u'page'
         assert resp['content'] == self.mdContents
-        assert resp['html'] == h.getHTMLFromContents(self.mdContents, 'markdown')
+        assert resp['html'] == h.getHTMLFromContents(self.mdContents, 'Markdown')
         assert response.content_type == 'application/json'
 
         # Invalid because name is empty and markup language is invalid
@@ -196,14 +196,14 @@ class TestPagesController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['name'] == u'Please enter a value'
         assert resp['errors']['markupLanguage'] == \
-            u"Value must be one of: markdown; reStructuredText (not u'markdownable')"
+            u"Value must be one of: Markdown; reStructuredText (not u'markdownable')"
         assert response.content_type == 'application/json'
 
         # Invalid because name is too long
         params = self.createParams.copy()
         params.update({
             'name': u'name' * 200,
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)
@@ -229,7 +229,7 @@ class TestPagesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': u'page',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)
@@ -244,7 +244,7 @@ class TestPagesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': u'Awesome Page',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)
@@ -279,7 +279,7 @@ class TestPagesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': u'page',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)
@@ -324,7 +324,7 @@ class TestPagesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': u'page',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)
@@ -370,7 +370,7 @@ class TestPagesController(TestController):
         params = self.createParams.copy()
         params.update({
             'name': u'page',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'content': self.mdContents
         })
         params = json.dumps(params)

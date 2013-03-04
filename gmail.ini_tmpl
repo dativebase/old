@@ -1,8 +1,0 @@
-[DEFAULT]
-
-# When testing the reset-password-via-email functionality, this GMail email
-# address will be used so that one can verify that an email was actually sent.
-#gmail_from_address = a_valid_gmail_address@gmail.com
-
-# gmail_from_password must be the valid password for the above GMail account.
-#gmail_from_password = password_for_the_above_email_account

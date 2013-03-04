@@ -185,7 +185,7 @@ class TestFormsSearchController(TestController):
             if i > 5 and i < 16:
                 params.update({
                     'files': [testModels['files'][i - 1]['id']],
-                    'markupLanguage': u'markdown',
+                    'markupLanguage': u'Markdown',
                     'contents': u'%s\nform[%d]\n' % (self.mdContents, testModels['forms'][i - 1]['id'])
                 })
             else:

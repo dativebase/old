@@ -88,7 +88,6 @@ def make_map(config):
     map.resource('form', 'forms')
     map.resource('formsearch', 'formsearches')
     map.resource('formbackup', 'formbackups')       # read-only
-    map.resource('gloss', 'glosses')                # read-only
     map.resource('language', 'languages')           # read-only
     map.resource('orthography', 'orthographies')
     map.resource('page', 'pages')

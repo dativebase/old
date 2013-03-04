@@ -1,31 +1,51 @@
 .. _installation-section:
 
 ================================================================================
-Installation
+Installation & Configuration
 ================================================================================
 
-Get it
---------------------------------------------------------------------------------
+This section explains how to get, install and configure an OLD application.  The
+bird's-eye view of the process is as follows:
 
-The source code for the OLD can be found on GitHub at
-https://github.com/jrwdunham/old.
+#. Download and install the OLD.
+#. Generate an OLD config file and edit it.
+#. Run the ``paster setup-app`` script to create the database tables and
+   directory structure.
+#. Serve the application and test that it is working properly.
 
-Pre-packaged eggs of stable OLD releases can be found on the Python Package
-index at http://pypi.python.org/pypi/onlinelinguisticdatabase
-
-Egg files are ... p. 472 on creating an egg
-
-
-Installation & configuration
---------------------------------------------------------------------------------
-
-Note that these installation instructions assume a Unix-based system, i.e.,
+Note that these installation instructions assume a Unix-like system, e.g.,
 Linux or Mac OS X.  If you are using Windows, please refer to the Pylons
 or the virtualenv documentation for instructions on how to create and activate
 a Python virtual environment and install and download a Pylons application.
 
 
-Create a virtual environment
+Get the OLD
+--------------------------------------------------------------------------------
+
+The source code for the OLD can be found on
+`GitHub <https://github.com/jrwdunham/old.>`_.
+
+Pre-packaged eggs of stable OLD releases can be found on the
+`Python Package Index <http://pypi.python.org/pypi/onlinelinguisticdatabase.>`_
+
+The easiest way to get and install the OLD is to use the Python command-line
+program Easy Install and run::
+
+    sudo easy_install onlinelinguisticdatabase
+
+To get the development version of the OLD from GitHub via git, first install
+`Git <http://git-scm.com/>`_ and then clone the repository::
+
+    git clone git://github.com/jrwdunham/old.git
+
+See below for detailed instructions.
+
+
+Installation
+--------------------------------------------------------------------------------
+
+
+Create a virtual Python environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 It is generally recommended that you install the OLD using a virtual Python
@@ -35,119 +55,459 @@ rendering other programs unworkable by, say, upgrading *their* dependencies
 in incompatible ways.
 
 If you do not want to install the OLD and its dependencies in a virtual
-environment, skip this step.
+environment, skip this section.
 
-Use virtualenv (http://www.virtualenv.org) to create a virtual Python
-environment.  First, follow the steps to on the abovementioned web site to
-install virtualenv.  If you already have easy_install or pip installed, you can
-just run one of the following commands at the terminal.
+Use `virtualenv <http://www.virtualenv.org>`_ to create a virtual Python
+environment.  First, follow the steps on the aforementioned web site to
+install virtualenv.  If you already have ``easy_install`` or ``pip`` installed,
+you can just run one of the following commands at the terminal::
 
     pip install virtualenv
     easy_install virtualenv
 
-Otherwise, you can download the virtualenv archive, decompress it, move into
-the directory and install it manually, i.e.,:
+Otherwise, you can download the ``virtualenv`` archive, decompress it, move into
+the directory and install it manually, i.e., ::
 
     cd virtualenv-X.X
     python setup.py install
 
 Once virtualenv is installed, create a virtual environment in a directory called
-`env` (or any other name) with the following command:
+``env`` (or any other name) with the following command::
 
     virtualenv --no-site-packages env
 
-The virtual environment set up in `env` is packaged with a program called
-`easy_install` which, as its name suggests, makes it easy to install Python
+The virtual environment set up in ``env`` is packaged with a program called
+``easy_install`` which, as its name suggests, makes it easy to install Python
 packages and their dependencies.  We will use the virtual environment's version
-of `easy_install` to install the OLD and its dependencies into the virtual
+of ``easy_install`` to install the OLD and its dependencies into the virtual
 environment.
 
 There are two ways to do this.  The more explicit and verbose way is to specify
 the path to the executables in the virtual environment directory.  That is, to
-run the virtual environment's `python` or `easy_install` executable, you would
-run one of the following two commands, respectively:
+run the virtual environment's ``python``, ``easy_install`` or ``pip``
+executables, you would run one of the following commands. ::
 
     /path/to/env/bin/python
     /path/to/env/bin/easy_install
+    /path/to/env/bin/pip
 
 The easier way (on Posix systems) is to activate the Python virtual environment
-by running the `source` command with the path to the `activate` executable in
-your virtual environment as its first argument.  That is, run
+by running the ``source`` command with the path to the ``activate`` executable
+in your virtual environment as its first argument.  That is, run::
 
     source /path/to/env/bin/activate
 
 If the above command was successful, you should see the name of your virtual
 environment directory in parentheses to the left of your command prompt, e.g.,
-`(env)username@host:~$`.  Now invoking `python`, `easy_install`, `paster`, will
-run the executables in your virtual environment.
+``(env)username@host:~$``.  Now invoking ``python``, ``easy_install``,
+``paster``, ``pip``, etc. will run the relevant executable in your virtual
+environment.
 
 
 Install the OLD
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The easiest way to install the OLD is via `easy_install`, as in the command
-below.  (Note that from this point on I am assuming that you have activated a
-virtual environment in one of the two ways described above or have elected not
-to use a virtual environment.)
+The easiest way to install the OLD is via
+`Easy Install <http://peak.telecommunity.com/DevCenter/EasyInstall>`_, as in
+the command below.  (Note that from this point on I am assuming that you have
+activated a virtual environment in one of the two ways described above or have
+elected not to use a virtual environment.) ::
 
     easy_install onlinelinguisticdatabase
 
-Once the install has completed, you should see `Finished processing dependencies
-for onlinelinguisticdatabase`.  This means that the OLD and all of its
-dependencies have been successfully installed.
+You can also use ``pip`` to install it::
+
+    pip install onlinelinguisticdatabase
+
+Once the install has completed, you should see ``Finished processing
+dependencies for onlinelinguisticdatabase``.  (If you used ``pip``, you will see
+something like ``Successfully installed onlinelinguisticdatabase``.)  This means
+that the OLD and all of its dependencies have been successfully installed.
 
 
 Configure the OLD
+--------------------------------------------------------------------------------
+
+.. _gen-config:
+
+Generate the config file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now that the OLD is installed, we need to configure it.  This is done by
+Once the OLD is installed, it is necessary to configure it.  This is done by
 generating a default config file and making any desired changes.  When the OLD's
 setup script is run, several directories will be created in the same directory
 as the config file.  Therefore, it is a good idea to create the config file in
-its own directory.  So let's make a new directory and change to it.
+its own directory.  I use the convention of naming production systems using the
+`ISO 639-3 <http://www-01.sil.org/iso639-3/codes.asp>`_ three-character id of
+the object language.  So, using *xyz* as an example (fictitious) language id,
+make a new directory called ``xyzold`` and change to it. ::
 
-    mkdir old
-    cd old
+    mkdir xyzold
+    cd xyzold
 
 The first step in configuring the OLD is creating a config file.  To create a
-config file named `production.ini`, run
+config file named ``production.ini``, run::
 
     paster make-config onlinelinguisticdatabase production.ini
 
 By default, the OLD is set to serve at 127.0.0.1 on port 5000, the Pylons
-interactive debugger is turned off and the database (RDBMS) is set to SQLite
-(a database called `production.db` will be created in the current directory).
-These defaults are good for verifying that everything is working ok.  On a
-production system you will need to change the host and port values in the config
-file as well as set the database to MySQL.  See below.
+interactive debugger is turned off and the database (RDBMS) is set to
+`SQLite <http://www.sqlite.org/>`_ (a database called ``production.db`` will be
+created in the current directory). These defaults are good for verifying that
+everything is working ok.  On a production system you will need to change the
+``host`` and ``port`` values in the config file as well as set the database to
+`MySQL <http://www.mysql.com/>`_. If you want to get up and running with MySQL
+right away, see the :ref:`mysql-config` section; otherwise, continue on to
+:ref:`edit-config`.
 
 
-Configure the OLD to use MySQL
+.. _mysql-config:
+
+Setup MySQL/MySQLdb
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The OLD is configured to use MySQL as its database
-backend by default.  This entails installing a MySQL server, installing
-mysql-python and creating a database.
+The OLD can be configured to use either MySQL or SQLite as its relational
+database management system (RDBMS).
+
+While SQLite is easy to install (both the SQLite library and the ``pysqlite``
+language binding are built into the Python language), it is not recommended for
+multi-user concurrent production systems.  Therefore, a production OLD setup
+should have MySQL installed.  The following instructions assume that you have
+successfully installed the MySQL server on your system.
+
+First login to MySQL as root::
+
+    mysql -u root -p<root_password>
+
+Then create a database to store your OLD data::
+
+    mysql> create database xyzold default character set utf8;
+
+Now create a MySQL user with sufficient access to the above-created database.
+In the first command ``xyzuser`` is the username and ``4R5gvC9x`` is the
+password. ::
+
+    mysql> create user 'xyzuser'@'localhost' identified by '4R5gvC9x';
+    mysql> grant select, insert, update, delete, create, drop on xyzold.* to 'xyzuser'@'localhost';
+    mysql> quit;
+
+Make sure that the above commands worked::
+
+    mysql -u xyzuser -p4R5gvC9x
+    mysql> use xyzold;
+    mysql> show tables;
+
+Now MySQL is setup with a database called ``xyzold`` (with UTF-8 as its default
+character set) and a user ``xyzuser`` who has access to ``xyzold``.  The next
+step is to make sure that the python module ``MySQLdb`` is installed.  Enter a
+Python prompt (using your virtual environment, if applicable) and check::
+
+    python
+    >>> import MySQLdb
+
+If you see no output, then ``MySQLdb`` is installed.  If you see ``ImportError:
+No module named MySQLdb``, then you need to install ``MySQLdb``.
+
+Installing ``MySQLdb`` can be tricky.  On some Linux distributions, it is
+necessary to first install ``python-dev``.  On distros with the Advanced
+Packaging Tool, you can run the following command. ::
+
+    apt-get install python-dev
+
+Once ``python-dev`` is installed, run the following to install ``MySQLdb``
+(remembering to activate the virtual environment, if necessary). ::
+
+    easy_install MySQL-python
+
+Note that it is also possible to use ``easy_install`` to install ``MySQLdb`` at
+the same time as you install the OLD.  Instead of running ``easy_install
+onlinelinguisticdatabase`` as above, run the following command::
+
+    easy_install onlinelinguisticdatabase[MySQL]
 
 
+.. _edit-config:
 
+Edit the config file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* setup-app
-* required programs
-* optional programs
-* configuration via the config file
+The config file (whose creation was described in :ref:`gen-config`) is where an
+OLD app is configured.  Open the config file (e.g., ``production.ini``) and make
+any desired changes.  While the config file is self-documenting, this section
+supplements that documentation.
 
-Serve it
+(Note that once the OLD is downloaded and installed, it may be used to run
+several distinct web services.  To do this, simply repeat the configuration
+steps with different settings.)
+
+The host and port where the application will be served are configured here.
+The defaults of ``127.0.0.1`` (i.e., localhost) and ``5000`` are fine for
+initial setup and testing.  During deployment and server configuration, return
+here to change these values.
+
+The ``set debug = false`` line should be left as is on a production setup.
+However, for initial testing it is a good idea to comment out this line with a
+hash mark (i.e., ``#set debug = false``) so that errors can be debugged.  When
+the line is commented out and an error occurs, Pylons will generate a detailed
+error report with a web interface that can be accessed by navigating to the link
+printed to the console (i.e., stderr).
+
+The ``sqlalchemy.url`` parameter will need to be changed, depending on the
+relational database setup needed.  If SQLite will be used, then the
+``sqlalchemy.url = sqlite:///production.db`` line should remain uncommented.
+Change the database name, if desired; i.e., change ``production.db`` to, say,
+``mydb.sql``.
+
+If MySQL will be used, then the first step is to comment out the SQLite line,
+and uncomment the *two* MySQL lines::
+
+    #sqlalchemy.url = sqlite:///production.db
+    sqlalchemy.url = mysql://username:password@localhost:3306/dbname
+    sqlalchemy.pool_recycle = 3600
+
+Then, change the first MySQL line so that it contains the appropriate values for
+your MySQL setup.  E.g., using the example setup from :ref:`mysql-config` would
+involve changing it to the following::
+
+    sqlalchemy.url = mysql://xyzuser:4R5gvC9x@localhost:3306/xyzold
+
+The only other values you may want to change are ``password_reset_smtp_server``,
+``create_reduced_size_file_copies`` and ``preferred_lossy_audio_format``.
+
+Uncomment the ``password_reset_smtp_server = smtp.gmail.com`` line if you want
+the system to send emails using a Gmail account specified in a separate
+``gmail.ini`` config file.
+
+Set ``create_reduced_size_file_copies`` to ``0`` if you do *not* want the system
+to create copies of images and .wav files with reduced sizes.  Note that in
+order for the reduced-copies functionality to succeed with images and .wav files
+it is necessary to install the Python Imaging Library (PIL) and FFmpeg,
+respectively (see the :ref:`soft-dependecies` section below).
+
+Finally, set the ``preferred_lossy_audio_format`` to ``mp3`` instead of ``ogg``
+if you would like to create .mp3 copies of your users' .wav files instead of
+.ogg ones. (Note that a default installation of FFmpeg may not be able to
+convert .wav to .mp3 without installation of some additional libraries.)
+
+
+Setup an OLD application
 --------------------------------------------------------------------------------
 
-* cf. Pylons book deployment
-* Apache proxy to Paster server
-* Admin scripts (include?)
+Once the OLD has been installed and a config file has been created and edited,
+it is time to run the setup command.  This will generate the tables in the
+database, insert some defaults (e.g., some users and useful tags) and create
+the requisite directory structure.  To setup an OLD application, move to the
+directory containing the config file (e.g., ``xyzold`` containing
+``production.ini``) and run the ``paster setup-app`` command::
+
+    cd xyzold
+    paster setup-app production.ini
+
+If successful, the output should be ``Running setup_app() from
+onlinelinguisticdatabase.websetup``.  By default, the OLD sends logs to
+``application.log`` so if you run ``cat application.log`` you should see
+something like the following. ::
+
+    Environment loaded.
+    Retrieving ISO-639-3 languages data.
+    Creating a default administrator, contributor and viewer.
+    Tables created.
+    Creating default home and help pages.
+    Generating default application settings.
+    Creating some useful tags and categories.
+    Adding defaults.
+    OLD successfully set up.
+
+If you now enter the database and poke around, you will see that the tables have
+been created and the defaults inserted. ::
+
+    mysql -u xyzuser -p4R5gvC9x
+    mysql> use xyzold;
+    mysql> show tables;
+    mysql> select username from user;
 
 
-Test it
+Serve the OLD application
 --------------------------------------------------------------------------------
 
-* WebTests
-* Requests tests
+To begin serving an OLD application, use Paster's ``serve`` command::
+
+    paster serve production.ini
+
+The output should be something like the following. ::
+
+    Starting server in PID 7938.
+    serving on http://127.0.0.1:5000
+
+If you visit ``http://127.0.0.1:5000`` in a web browser, you should see
+``{"error": "The resource could not be found."}`` displayed.  If you visit 
+``http://127.0.0.1:5000/forms`` in a web browser, you should see
+``{"error": "Authentication is required to access this resource."}``.
+Congratulations, this means an OLD application has successfully been setup and
+is being served locally.
+
+When ``paster setup-app`` is run, a Python script called ``_requests_tests.py``
+is created in the current working directory.  This script uses the Python
+Requests module to test that a live OLD application is working correctly.
+Assuming that you have run ``paster serve`` and an OLD application is being
+served locally on port 5000, running the following command will run the
+``_requests_tests`` script::
+
+    python _requests_tests.py
+
+If everything is working correctly, you should see ``All requests tests
+passed.``  Note that if you have changed the config file (i.e., the host or port
+values), then you will need to change the values of the ``host`` and/or ``port``
+variables in ``_requests_tests.py``.
+
+
+.. _soft-dependecies:
+
+Install soft dependencies
+--------------------------------------------------------------------------------
+
+In order to create smaller copies of image files and .wav files, the OLD uses
+the `Python Imaging Library (PIL) <http://www.pythonware.com/products/pil/>`_
+and the `FFmpeg <http://www.ffmpeg.org/>`_ command-line program.  If you would
+like your OLD application to automatically create reduced-size images and .wav
+files, then these programs should be downloaded and installed using the
+instructions on the above-linked pages.  I will provide brief instructions here.
+
+
+Install PIL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install PIL, download and decompress the source.  Then change to the root
+folder and run ``setup.py install`` (remembering to use your ``virtualenv``
+Python executable, if necessary)::
+
+    cd Imaging-1.1.7
+    python setup.py install
+
+The OLD accepts .jpg, .png and .gif image file uploads.  If you want to test
+whether the PIL install can resize all of these formats, create a test file of
+each format and run something like the following.  If successful, you will have
+created a smaller version of each image::
+
+    >>> import Image
+    >>> im = Image.open('large_image.jpg')
+    >>> im.thumbnail((500, 500), Image.ANTIALIAS)
+    >>> im.save('small_image.jpg')
+
+
+Install FFmpeg
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FFmpeg is a command-line tool that can convert .wav files to the lossy formats
+.ogg and .mp3.  It can be somewhat tricky to install FFmpeg properly and some
+installs will not support .mp3 creation by default.  For Debian 6.0 (Squeeze), I
+can recommend
+`this tutorial <http://www.e-rave.nl/installing-ffmpeg-on-debian-squeeze-and-newer>`_.
+
+Once ``ffmpeg`` is installed, you can check whether .wav-to-.ogg and
+.wav-to-.mp3 conversion is working by ensuring you have a file called
+``old_test.wav`` in the current directory and issuing the following commands::
+
+    ffmpeg -i old_test.wav old_test.ogg
+    ffmpeg -i old_test.wav old_test.mp3
+
+If successful, you will have created a .ogg and a .mp3 version of your .wav
+file.
+
+
+Deploy an OLD Application
+--------------------------------------------------------------------------------
+
+Deploying an OLD application means getting a domain name, serving the
+application on the world wide web and setting up some admin scripts.  There are
+many possible ways to achieve this.  In my production systems I have followed
+the approach of using Apache to proxy requests to Pylons as described in
+`Chapter 21: Deployment <http://pylonsbook.com/en/1.1/deployment.html>`_ of
+`The Pylons Book <http://pylonsbook.com/>`_ and have had success with that.
+
+Assuming, Apache 2, ``mod_proxy`` and ``mod_proxy_http`` are installed, you
+first enable the latter two::
+
+    sudo a2enmod proxy
+    sudo a2enmod proxy_http
+
+Then you create a config file such as the one below in
+``/etc/apache2/sites-available/`` or in the equivalent location for your
+platform.  I used the config file below for an OLD application deployed for
+documenting the Okanagan language.  The domain name is www.okaold.org.  I saved
+the file as ``/etc/apache2/sites-available/okaold.org`` and  created the error
+logs directory, i.e., ``/home/old/log``.  The only configuration necessary for
+the *OLD* config file (i.e., the ``production.ini`` file whose creation was
+detailed in :ref:`gen-config`) is to ensure that the ``host`` variable is set to
+``localhost`` and the ``port`` variable is set to ``8081``. ::
+
+    NameVirtualHost *
+    # OKA - Okanagan
+    <VirtualHost *>
+        ServerName okaold.org
+        ServerAlias www.okaold.org
+    
+        # Logfiles
+        ErrorLog /home/old/log/error.log
+        CustomLog /home/old/log/access.log combined
+                                                 
+        # Proxy
+        ProxyPreserveHost On
+        ProxyPass / http://localhost:8081/ retry=5
+        ProxyPassReverse / http://localhost:8081/
+        <Proxy *>
+            Order deny,allow
+            Allow from all
+        </Proxy>
+    </VirtualHost>
+
+Now you can start serving the OLD application with Paster.  In order to keep the
+server running after you exit the shell, you must invoke ``paster serve`` in
+daemon mode, as follows::
+
+    paster serve --daemon production.ini start
+
+Now disable the default Apache configuration, enable the virtual host config
+file just created (in this case ``okaold.org``) and restart Apache::
+
+    sudo a2dissite default
+    sudo a2ensite okaold.org
+    sudo /etc/init.d/apache2 restart
+
+You might also want the ``paster serve`` script to log error messages, which you
+can do by specifying a file to log to using the ``--log-file`` option.  You can
+also use the ``--pid-file`` option to store the process ID of the running server
+in a file so that other tools know which server is running::
+
+    paster serve --daemon --pid-file=/home/old/okaold.pid --log-file=/home/old/log/paster-okaold.log production.ini start
+
+As well as specifying ``start``, you can use a similar command with ``stop`` or
+``restart`` to stop or restart the running daemon, respectively.
+
+The Pylons Book also explains how to
+`Create init scripts <http://pylonsbook.com/en/1.1/deployment.html#creating-init-scripts>`_
+and how to use ``crontab`` to restart a paster server that is serving an
+OLD/Pylons application (should that) ever be necessary.  See the referenced
+sections for details.
+
+You may also wish to write admin scripts to monitor an OLD application to ensure
+that it is functioning properly and to email you if not.  I may include a guide
+for doing that at some future data.
+
+Finally, it is a good idea to make regular backups of the database and the
+``files`` and ``analysis`` directories of your OLD application.  In my
+production systems I have used
+`MySQL database replication <http://www.howtoforge.com/mysql_database_replication>`_
+to create a mirror of my production database on a second server in a different
+location.  I then use the standard Unix utility ``rsync`` to create live copies
+of the ``files`` and ``analysis`` directories on that same second server.
+A Python script is run periodically on the second server to perform a ``mysqldump``
+of the relevant databases.  I will further document my backup setup at a later
+date.
+
+
+Development installation
+--------------------------------------------------------------------------------
+
+* install sphinx
+* run setup.py develop ...

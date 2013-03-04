@@ -5,8 +5,7 @@ About
 The Online Linguistic Database (OLD) is software that facilitates collaborative
 storing, searching, processing and analyzing of linguistic fieldwork data.
 
-Linguistic fieldwork, i.e., the process of gathering, analyzing and processing
-natural language data, stands to benefit significantly from inter-researcher
+Linguistic fieldwork stands to benefit significantly from inter-researcher
 collaboration and data-sharing.  The OLD arose as a response to a lack of
 multi-user cross-platform tools for language documentation and analysis.
 
@@ -18,7 +17,7 @@ The OLD seeks to facilitate achievement of the following objectives.
 
 #. Language data can be shared easily between researchers.
 #. Language data are intelligently structured (balancing an allowance for
-   theoretical and methodological variation with capability for easy retrieval
+   theoretical and methodological variation with capacity for easy retrieval
    and re-purposing.)
 #. Language data are highly searchable.
 #. Access to language data can be controlled via authentication and
@@ -31,19 +30,19 @@ The OLD seeks to facilitate achievement of the following objectives.
    cross-linguistic analysis.
 
 
-But, what is it?
+What is it?
 --------------------------------------------------------------------------------
 
-The OLD is a program for creating a collaborative language documentation *web
-service*.  A web service is like a web site or web application, insofar as it
-runs on a web server and responds to HTTP requests.  However, a web service
-differs from a traditional web application in that it expects to communicate
-with other programs and not, directly, with human users.
+The OLD is a program for creating collaborative language documentation *web
+services* [#f1]_.  A web service is like a web site or web application, insofar
+as it runs on a web server and responds to HTTP requests.  However, a web
+service differs from a traditional web application in that it expects to
+communicate with other programs and not, directly, with human users.
 
 The benefit of this design strategy is that a single web service can form a
 useful component of a variety of different applications with different goals.
-For example, an OLD web service for language L could serve data to a mobile
-application that helps users to learn L.  At the same time, researchers could
+For example, an OLD web service for language *L* could serve data to a mobile
+application that helps users to learn *L*.  At the same time, researchers could
 be collaboratively entering, searching and processing data on the OLD web
 service via a desktop application and/or a browser-based one.
 
@@ -51,8 +50,8 @@ The OLD will be packaged with an in-browser user-friendly application.  However,
 since these two applications will not be interdependent their documentation will
 be kept separate also.
 
-The OLD is intended to be setup on a web server.  However, it can also easily be
-installed on a personal computer for, say, developmental or experimental
+The OLD is intended to be set up on a web server.  However, it can also easily
+be installed on a personal computer for, say, developmental or experimental
 purposes.  For detailed installation instructions see the
 :ref:`installation-section` section.
 
@@ -82,7 +81,7 @@ Core features
    inventories & orthographies, object and meta-language identification, etc.
 #. Data processing (e.g., copying and reduction of image and audio files,
    generation of category strings based on the categories of component
-   morphemes, phrase-morpheme linking, etc.)
+   morphemes, phrase-morpheme auto-linking, etc.)
 #. Resource search, i.e., open-ended, nested boolean search with substring,
    exact and regular expression matches against specified fields.
 #. (Linguistic analysis: phonology & corpora specification, automatic
@@ -93,10 +92,10 @@ Core features
 Technologies
 --------------------------------------------------------------------------------
 
-The OLD is written in Python, using the Pylons web framework.  The OLD exposes
-a RESTful interface based on the Atom Publishing Protocol, as implemented by the
-Routes URL routing component of Pylons.  The relational database management
-system (RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
+The OLD is written in Python, using the Pylons web framework.  It exposes a
+RESTful API based on the Atom Publishing Protocol, as implemented by the Routes
+URL routing component of Pylons.  The relational database management system
+(RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
 SQLAlchemy provides a Pythonic interface (ORM) to the RDBMS.
 
 
@@ -117,14 +116,19 @@ End users who wish to know more about the data structures of the OLD or its
 linguistic analysis and language processing components will also find this
 manual helpful.  Typically, end users
 of an OLD-based system will interact with an OLD web service not directly but
-via a user interface-focused application.  Such users are advised to consult the
+via a user interface-focused application.  Such users may want to consult the
 documentation for the latter application before exploring the present document.
-
-The next two sections describe the objectives, architecture and technologies
-that determine the properties of the system.
 
 
 License
 --------------------------------------------------------------------------------
 
-The OLD is licensed under ... Well, it'll be open source but not GPL ...
+The OLD is open source software licensed under
+`Apache 2.0 <http://www.apache.org/licenses/LICENSE-2.0.txt>`_.
+
+
+
+.. [#f1] Note that this is a break from previous versions of the OLD.  In
+   versions 0.1 through 0.2.7, the OLD was a traditional web application, i.e.,
+   it served HTML pages as user interface and expected user input as HTML form
+   requests.

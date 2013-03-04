@@ -1111,7 +1111,6 @@ def datetimeString2datetime(datetimeString):
 
     Previously called ISO8601Str2datetime.
     """
-
     try:
         parts = datetimeString.split('.')
         yearsToSecondsString = parts[0]
@@ -1303,10 +1302,19 @@ formReferencePattern = re.compile('[Ff]orm\[([0-9]+)\]')
 collectionReferencePattern = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
 
 def rst2html(string):
-    return publish_parts(string, writer_name='html')['html_body']
+    try:
+        return publish_parts(string, writer_name='html')['html_body']
+    except:
+        return string
+
+def md2html(string):
+    try:
+        return Markdown().convert(string)
+    except:
+        return string
 
 markupLanguageToFunc = {
-    'markdown': Markdown().convert,
+    'Markdown': md2html,
     'reStructuredText': rst2html
 }
 
@@ -1582,3 +1590,6 @@ def setAttr(obj, name, value, changed):
         setattr(obj, name, value)
         changed = True
     return changed
+
+
+validationValues = (u'None', u'Warning', u'Error')

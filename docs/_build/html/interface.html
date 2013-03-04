@@ -1,0 +1,1479 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>The OLD Interface &mdash; OLD 1.0a documentation</title>
+    
+    <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="OLD 1.0a documentation" href="index.html" />
+    <link rel="next" title="The OLD Data Structure" href="datastructure.html" />
+    <link rel="prev" title="Architecture Overview" href="architecture.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="datastructure.html" title="The OLD Data Structure"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="architecture.html" title="Architecture Overview"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">OLD 1.0a documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="the-old-interface">
+<span id="interface"></span><h1>The OLD Interface<a class="headerlink" href="#the-old-interface" title="Permalink to this headline">¶</a></h1>
+<p>This section details the RESTful interface to the OLD data structure as well as
+resource search, authentication and authorization, input validation, and the
+data processing and linguistic analysis components.  That is, it explains what
+kind of effect one can expect from requesting a particular URL (with a
+particular HTTP method and a particular JSON payload) of an OLD web service.</p>
+<div class="section" id="the-restful-api">
+<span id="restful-api"></span><h2>The RESTful API<a class="headerlink" href="#the-restful-api" title="Permalink to this headline">¶</a></h2>
+<p>The OLD exposes a RESTful interface to its data structure.  While there is some
+disagreement on what, exactly, REST means <a class="footnote-reference" href="#f1" id="id1">[1]</a>, in the context of the OLD it
+refers to the fact URLs are used consistently to refer to OLD resources and that
+HTTP methods dictate the action to be performed on the resource.  For example,
+URLs of the form <tt class="docutils literal"><span class="pre">/forms</span></tt> and <tt class="docutils literal"><span class="pre">/forms/id</span></tt> are always routed to the forms
+controller which provides the interface for the form resources.  If the HTTP
+method is GET and the URL is <tt class="docutils literal"><span class="pre">/forms</span></tt>, the system will return all form
+resources; the same URL with a POST method will cause the system to create a new
+form resource (using JSON data passed in the request body).  The URL
+<tt class="docutils literal"><span class="pre">/forms/id</span></tt> with a PUT method will result in an update to the form resource
+with <tt class="docutils literal"><span class="pre">id=id</span></tt> while a DELETE method on the same URL will cause that resource to
+be deleted.</p>
+<p>This pattern is detailed in the following table.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="14%" />
+<col width="17%" />
+<col width="40%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">HTTP Method</th>
+<th class="head">URL</th>
+<th class="head">Effect</th>
+<th class="head">Parameters</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>GET</td>
+<td>/forms</td>
+<td>Read all forms</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/forms/id</td>
+<td>Read form with id=id</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>GET</td>
+<td>/forms/new</td>
+<td>Get data for creating a new form</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/forms/id/edit</td>
+<td>Get data for editing form with id=id</td>
+<td>optional GET params</td>
+</tr>
+<tr class="row-even"><td>DELETE</td>
+<td>/forms/id</td>
+<td>Delete form with id=id</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>POST</td>
+<td>/forms</td>
+<td>Create a new form</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-even"><td>PUT</td>
+<td>/forms/id</td>
+<td>Update form with id=id</td>
+<td>JSON object</td>
+</tr>
+</tbody>
+</table>
+<p>The benefit of this consistent interface is that, once you know what resources
+the OLD exposes, it is clear how to create new ones, retrieve all or one in
+particular, update one or delete one.  The resources of the OLD are listed
+in the table below.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="37%" />
+<col width="19%" />
+<col width="16%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Resource (URL)</th>
+<th class="head">SEARCH-able</th>
+<th class="head">Read-only</th>
+<th class="head">Additional actions</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>applicationsettings</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>collections</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+<td>Yes</td>
+</tr>
+<tr class="row-even"><td>collectionbackups</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>elicitationmethods</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>files</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+<td>Yes</td>
+</tr>
+<tr class="row-odd"><td>forms</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+<td>Yes</td>
+</tr>
+<tr class="row-even"><td>formbackups</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>formsearchs</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>languages</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>orthographies</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>pages</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>phonologies</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>rememberedforms*</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>sources</td>
+<td>Yes</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>speakers</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>syntacticcategories</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>tags</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>users</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p>As indicated by the &#8220;SEARCH-able&#8221; column in the above table, some OLD resources
+can be searched using a non-standard <a class="footnote-reference" href="#f2" id="id2">[2]</a> SEARCH method with the relevant URL.
+The table below uses the files resources to illustrate the search interface.
+The details of the search feature (e.g., the format of JSON search parameters)
+are laid out in the <a class="reference internal" href="#search-old"><em>Search</em></a> section.  (Note that POST
+<tt class="docutils literal"><span class="pre">/resources/search</span></tt> is a synonym for SEARCH <tt class="docutils literal"><span class="pre">/resources</span></tt>; this is to allow
+for search requests from clients that do not allow specification of non-standard
+HTTP methods.)</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="13%" />
+<col width="20%" />
+<col width="39%" />
+<col width="28%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">HTTP Method</th>
+<th class="head">URL</th>
+<th class="head">Effect</th>
+<th class="head">Parameters</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>SEARCH</td>
+<td>/files</td>
+<td>Search files</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-odd"><td>POST</td>
+<td>/files/search</td>
+<td>Search files</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-even"><td>GET</td>
+<td>/files/new_search</td>
+<td>Get data for searching files</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p>Requests to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/new_search</span></tt> return a JSON object which summarizes
+the data structure of the relevant resource, thus facilitating query
+construction.</p>
+<p>For the read-only resources (i.e., formbackups, collectionbackups and
+languages), the only standard requests that are valid are <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources</span></tt> and
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/id</span></tt>.  Since these read-only resources also happen to be
+searchable, the search-related requests of the table above are valid for them as
+well.</p>
+<p>The core OLD resources (i.e., forms, files and collections) deviate from the
+RESTful standard in having additional valid URLs associated.  For example, the
+forms resource has a <tt class="docutils literal"><span class="pre">remember</span></tt> action such that <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/forms/remember</span></tt> will
+result in the system associating the forms referenced in the request body with
+the user making the request (i.e., the user remembers those forms).  Similarly,
+the files resource has a <tt class="docutils literal"><span class="pre">serve</span></tt> action such that <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/files/serve/id</span></tt> will
+return the file data for the file with <tt class="docutils literal"><span class="pre">id=id</span></tt>.  These additional actions are
+described in the subsections for the relevant resources/controllers below.</p>
+<p>Aside from those described above, the only additional valid URL/method
+combinations of an OLD web service have to do with authentication and the
+<tt class="docutils literal"><span class="pre">login</span></tt> controller.  These are detailed in the <a class="reference internal" href="#auth"><em>Authentication &amp; authorization</em></a> section.</p>
+<p>All other (i.e,. invalid) requests to an OLD web service will result in a
+response with a sensible HTTP error code and a JSON message in the response body
+that gives further information on the error.</p>
+<div class="section" id="get-resources-requests">
+<span id="get-resources"></span><h3>GET /resources requests<a class="headerlink" href="#get-resources-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources</span></tt>, e.g., <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms</span></tt>, return all
+resources of the type specified in the URL.  These requests are routed to the
+<tt class="docutils literal"><span class="pre">index</span></tt> action of the controller for the resource.</p>
+<p>The order of the returned resources may be specified via &#8220;orderBy&#8221;-prefixed
+parameters in the URL query string.  For example, a request such as
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms?orderByModel=Form&amp;orderByAttribute=id&amp;orderByDirection=desc</span></tt> will
+return all form resources sorted by id in descending order.  These ordering
+parameters are processed in exactly the same way as those passed as an array
+during resource search requests (see <a class="reference internal" href="#search-orderby"><em>Ordering results</em></a>).</p>
+<p>It is also possible to request that the resources returned be paginated.  This
+is accomplished by passing &#8220;page&#8221; and &#8220;itemsPerPage&#8221; parameters in the URL query
+string.  For example, <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/files?page=3&amp;itemsPerPage=50</span></tt> will return a JSON
+representation of files 101 through 150.  Of course, ordering and pagination
+parameters may both be supplied in a single request.</p>
+</div>
+<div class="section" id="get-resources-id-requests">
+<h3>GET /resources/id requests<a class="headerlink" href="#get-resources-id-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/id</span></tt>, e.g., <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/collections/43</span></tt>,
+return a JSON object representation of the resource with the specified id.
+These requests are routed to the <tt class="docutils literal"><span class="pre">show</span></tt> action of the controller for the
+resource.</p>
+</div>
+<div class="section" id="get-resources-new-requests">
+<span id="resources-new"></span><h3>GET /resources/new requests<a class="headerlink" href="#get-resources-new-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/new</span></tt>, e.g., <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms/new</span></tt>, return a
+JSON object containing all of the data necessary to create new resources of the
+specified type.  These requests are routed to the <tt class="docutils literal"><span class="pre">new</span></tt> action of the
+controller for the relevant resource.  For example, when creating a new form
+resource, it is helpful to know the set of valid grammaticality values,
+elicitation method names, users, sources, etc. of the system.  Therefore, a
+request to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms/new</span></tt> will return a JSON object of the form listed
+below, where the values of the attributes are arrays containing the relevant
+data.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;grammaticalities&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">],</span>
+    <span class="s2">&quot;elicitationMethods&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">],</span>
+    <span class="s2">&quot;tags&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">],</span>
+    <span class="s2">&quot;syntacticCategories&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">],</span>
+    <span class="s2">&quot;speakers&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">],</span>
+    <span class="s2">&quot;users&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">],</span>
+    <span class="s2">&quot;sources&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This is really just a convenience that saves the trouble of making multiple
+requests (e.g., to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/tags</span></tt>, <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/sources</span></tt>, etc.)</p>
+<p>Parameters in the query string can be used to alter the content of the response
+so that only certain datasets are returned.  If the URL query string is
+not empty, then only the attributes of the response object that have non-empty
+parameters in the query string will be returned.  For example, the request
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms/new?sources=y&amp;tags=y</span></tt> will result in a response object of the same
+form as above except that only the <tt class="docutils literal"><span class="pre">sources</span></tt> and <tt class="docutils literal"><span class="pre">tags</span></tt> attributes will have
+non-empty arrays for values.</p>
+<p>If the value of a parameter in the URL query string is a valid
+<a class="reference external" href="http://en.wikipedia.org/wiki/ISO_8601">ISO 8601</a> datetime string of the form
+<tt class="docutils literal"><span class="pre">YYYY-MM-DDTHH:MM:SS</span></tt>, then the value of the corresponding attribute in the
+response object will be non-empty only so long as input datetime does <em>not</em>
+match the most recent <tt class="docutils literal"><span class="pre">datetimeModified</span></tt> value of the specified resources.
+This permits the requesting of only novel data.  For example the request
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms/new?sources=2013-02-22T23:28:43</span></tt> will return nothing but source
+resources and even these only if there are such that have been updated or
+created more recently than 2013-02-22T23:28:43.</p>
+<p>Some resources have very simple data structures (e.g., tags) and, therefore,
+requests of the form <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/new</span></tt> on such resources will return an
+empty JSON object.</p>
+</div>
+<div class="section" id="get-resources-id-edit-requests">
+<h3>GET /resources/id/edit requests<a class="headerlink" href="#get-resources-id-edit-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/id/edit</span></tt> return the resource with the
+specified id as well as all data required to update that resource.  These
+requests are routed to the <tt class="docutils literal"><span class="pre">edit</span></tt> action of the relevant controller.  Such
+requests can be thought of as a combination of <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/id</span></tt> and
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/new</span></tt>.  The JSON object in the response body is of the form</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;resourceName&quot;</span><span class="o">:</span> <span class="p">{...},</span> <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{...}}</span>
+</pre></div>
+</div>
+<p>where the value of <tt class="docutils literal"><span class="pre">response.body.resourceName</span></tt> is the same object as that
+returned by <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/id</span></tt> and the value of <tt class="docutils literal"><span class="pre">resopnse.body.data</span></tt> is the
+same as that returned by <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/new</span></tt>.  Parameters supplied in the
+URL query string have the same effect as those supplied to
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources/new</span></tt> requests (cf. <a class="reference internal" href="#resources-new"><em>GET /resources/new requests</em></a>).</p>
+</div>
+<div class="section" id="delete-resources-id-requests">
+<h3>DELETE /resources/id requests<a class="headerlink" href="#delete-resources-id-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">DELETE</span> <span class="pre">/resources/id</span></tt> result in the resource with the
+specified id being deleted from the database.  Such requests are routed to the
+<tt class="docutils literal"><span class="pre">delete</span></tt> action of the relevant controller.  The form and collection resources
+are special in that they are first saved to a backup table before being deleted;
+thus these types of resources can be restored after deletion.  The response
+body of a successful deletion request is a JSON object representation of the
+content of the resource.  As mentioned above, only administrators and their
+enterers may delete form, file and collection resources.</p>
+</div>
+<div class="section" id="post-resources-requests">
+<h3>POST /resources requests<a class="headerlink" href="#post-resources-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/resources</span></tt> result in the creation of a resource of
+the specified type using the data supplied as a JSON object in the request body.
+These requests are routed to the <tt class="docutils literal"><span class="pre">create</span></tt> action of the relevant controller.
+The input data are first validated (as detailed in <a class="reference internal" href="#validation"><em>Input validation</em></a>).  If
+successful, a JSON object representation of the newly created resource is
+returned.</p>
+<p>Note that all resources receive, upon successful POST and PUT requests, a value
+for a <tt class="docutils literal"><span class="pre">datetimeModified</span></tt> attribute which is a Coordinated Universal Time (UTC)
+timestamp.  For creation requests on form, file and collection resources, the
+user who made the request is recorded in the <tt class="docutils literal"><span class="pre">enterer</span></tt> attribute of the
+resource.</p>
+</div>
+<div class="section" id="put-resources-id-requests">
+<h3>PUT /resources/id requests<a class="headerlink" href="#put-resources-id-requests" title="Permalink to this headline">¶</a></h3>
+<p>Requests of the form <tt class="docutils literal"><span class="pre">PUT</span> <span class="pre">/resources/id</span></tt> result in the updating of the
+resource of the specified type with the specified id.  The data used to update
+the resource are supplied as a JSON object in the request body.  These requests
+are routed to the <tt class="docutils literal"><span class="pre">update</span></tt> action of the relevant controller.  As with the
+POST requests described above, the input data are validated before the update
+can occur.  If successful, a JSON object representation of the newly updated
+resource is returned.  Upon successful update, the previous versions of form and
+collection resources are saved to special backup tables of the database (i.e.,
+<tt class="docutils literal"><span class="pre">formbackup</span></tt> and <tt class="docutils literal"><span class="pre">collectionbackup</span></tt>.)</p>
+</div>
+<div class="section" id="notable-resources">
+<h3>Notable resources<a class="headerlink" href="#notable-resources" title="Permalink to this headline">¶</a></h3>
+<p>Some resources require special handling beyond the standard CRUD+S (i.e.,
+create, read, update, delete &amp; search) interface described here and in the
+<a class="reference internal" href="#search-old"><em>Search</em></a> section below.  The notable and novel aspects of these
+resources are described in the resource-specific sections below, i.e.,
+<a class="reference internal" href="#form-resource"><em>Forms</em></a>, <a class="reference internal" href="#file-resource"><em>File resources</em></a>, <a class="reference internal" href="#collection-resource"><em>Collections</em></a>, and
+<a class="reference internal" href="#application-settings-resource"><em>Application settings</em></a>.</p>
+</div>
+<div class="section" id="json">
+<h3>JSON<a class="headerlink" href="#json" title="Permalink to this headline">¶</a></h3>
+<p>As a general rule, the OLD communicates via <a class="reference external" href="http://www.json.org/">JSON</a>.
+JSON is a widely-used standard for converting certain data types and (nested)
+data structures to and from strings.  Strings, numbers, arrays (lists) and
+associative arrays (dictionaries) can all be serialized to a JSON string.  For
+example, a Python dictionary, i.e., a set of key/value pairs such as
+<tt class="docutils literal"><span class="pre">{'transcription':</span> <span class="pre">'dog',</span> <span class="pre">'glosses':</span> <span class="pre">[{'gloss':</span> <span class="pre">'chien'}]}</span></tt> when converted to
+JSON would be <tt class="docutils literal"><span class="pre">'{&quot;transcription&quot;:</span> <span class="pre">&quot;dog&quot;,</span> <span class="pre">&quot;glosses&quot;:</span> <span class="pre">[{&quot;gloss&quot;:</span> <span class="pre">&quot;chien&quot;}]}'</span></tt>.
+In most cases, when an OLD web service requires user input, that input is
+expected to be JSON in the request body <a class="footnote-reference" href="#f3" id="id4">[3]</a>.</p>
+</div>
+</div>
+<div class="section" id="search">
+<span id="search-old"></span><h2>Search<a class="headerlink" href="#search" title="Permalink to this headline">¶</a></h2>
+<p>As discussed in the <a class="reference internal" href="#restful-api"><em>The RESTful API</em></a> section, the following resources can be
+searched: collections, collectionbackups, files, forms, formbackups,
+formsearches, languages, rememberedforms and sources.  The OLD has a powerful
+search interface, allowing for an unlimited number of filter expressions
+conjoined via boolean operators into a hierarchical structure of unbounded
+depth where each filter expression references a resource attribute, a relation
+and a pattern.</p>
+<p>In terms of implementation, search expressions are JSON objects that are mapped
+to SQLAlchemy query objects which produce SQL queries.  In relational database
+speak, the OLD search interface permits multi-table queries while taking care of
+the joins and subqueries automatically.  The <tt class="docutils literal"><span class="pre">SQLAQueryBuilder</span></tt> class in
+<tt class="docutils literal"><span class="pre">lib/SQLAQueryBuilder.py</span></tt> handles the conversion from JSON search expression
+objects <a class="footnote-reference" href="#f7" id="id5">[7]</a> to SQLAlchemy query objects.</p>
+<p>Valid search requests (e.g., <tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/forms</span></tt>) must contain in the request body
+a JSON object representing the query.  The query object has a &#8216;query&#8217; attribute
+whose value is another object which has a mandatory &#8216;filter&#8217; attribute and an
+optional &#8216;orderBy&#8217; attribute.  The values of <tt class="docutils literal"><span class="pre">request.body.query.filter</span></tt> and
+<tt class="docutils literal"><span class="pre">request.body.query.orderBy</span></tt> are both arrays, the former representing the
+hierarchy of filter expressions conjoined by boolean operators and the latter
+representing a simple SQL <tt class="docutils literal"><span class="pre">ORDER</span> <span class="pre">BY</span></tt> clause:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;query&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&quot;filter&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">...</span> <span class="p">],</span>
+        <span class="s">&quot;orderBy&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">...</span> <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="filter-expression-syntax">
+<h3>Filter expression syntax<a class="headerlink" href="#filter-expression-syntax" title="Permalink to this headline">¶</a></h3>
+<p>OLD query filters are sets of simple filter expressions configured into a
+hierarchical structure using negation, conjunction and disjunction.  Their
+syntax is simple and can be described via the following context-free grammar.</p>
+<pre>
+<strong id="grammar-token-filterExpression">filterExpression       </strong> ::=  <a class="reference internal" href="#grammar-token-simpleFilterExpression"><tt class="xref docutils literal"><span class="pre">simpleFilterExpression</span></tt></a> | <a class="reference internal" href="#grammar-token-complexFilterExpression"><tt class="xref docutils literal"><span class="pre">complexFilterExpression</span></tt></a>
+<strong id="grammar-token-simpleFilterExpression">simpleFilterExpression </strong> ::=  &quot;[&quot; <tt class="xref docutils literal"><span class="pre">modelName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">attributeName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">relationName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">pattern</span></tt> &quot;]&quot; |
+                             &quot;[&quot; <tt class="xref docutils literal"><span class="pre">modelName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">attributeName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">attributeModelAttributeName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">relationName</span></tt> &quot;,&quot; <tt class="xref docutils literal"><span class="pre">pattern</span></tt> &quot;]&quot;
+<strong id="grammar-token-complexFilterExpression">complexFilterExpression</strong> ::=  &quot;[&quot;, &quot;not&quot; &quot;,&quot; <a class="reference internal" href="#grammar-token-filterExpression"><tt class="xref docutils literal"><span class="pre">filterExpression</span></tt></a> &quot;]&quot; |
+                             &quot;[&quot;, &quot;and&quot; &quot;,&quot; &quot;[&quot; <a class="reference internal" href="#grammar-token-filterExpression"><tt class="xref docutils literal"><span class="pre">filterExpression</span></tt></a> (&quot;,&quot; <a class="reference internal" href="#grammar-token-filterExpression"><tt class="xref docutils literal"><span class="pre">filterExpression</span></tt></a>)* &quot;]&quot; |
+                             &quot;[&quot;, &quot;or&quot; &quot;,&quot; &quot;[&quot; <a class="reference internal" href="#grammar-token-filterExpression"><tt class="xref docutils literal"><span class="pre">filterExpression</span></tt></a> (&quot;,&quot; <a class="reference internal" href="#grammar-token-filterExpression"><tt class="xref docutils literal"><span class="pre">filterExpression</span></tt></a>)* &quot;]&quot;
+</pre>
+<p>That is, a <tt class="docutils literal"><span class="pre">filterExpression</span></tt> is either (1) a <tt class="docutils literal"><span class="pre">simpleFilterExpression</span></tt> or
+(2) an array whose first element is the string &#8220;not&#8221; and whose second element is
+another <tt class="docutils literal"><span class="pre">filterExpression</span></tt> or (3) an array whose first element is one of the
+strings &#8220;and&#8221; or &#8220;or&#8221; and whose second element is an array of one or more
+filter expressions.</p>
+</div>
+<div class="section" id="simple-filter-expressions">
+<h3>Simple filter expressions<a class="headerlink" href="#simple-filter-expressions" title="Permalink to this headline">¶</a></h3>
+<p>In plain English, a simple filter expression is something like &#8220;the
+transcription contains the character &#8216;a&#8217;&#8221;.  A <tt class="docutils literal"><span class="pre">simpleFilterExpression</span></tt> is an
+array with four or five elements.  If four, then the first is the name of an OLD
+model, the second the name of a valid attribute of that model, the third a
+relation and the fourth a pattern or value.  Consider the simple filter
+expression below (where the forms resources are being searched, i.e.,
+<tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/forms</span></tt>).</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;like&quot;</span><span class="p">,</span> <span class="s2">&quot;%a%&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>This expression is mapped to the SQLAlchemy <tt class="docutils literal"><span class="pre">query</span></tt> object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">transcription</span><span class="o">.</span><span class="n">like</span><span class="p">(</span><span class="s">u&#39;%a%&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>which generates the SQL that follows.</p>
+<div class="highlight-sql"><div class="highlight"><pre><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">form</span> <span class="k">WHERE</span> <span class="n">transcription</span> <span class="k">LIKE</span> <span class="s1">&#39;%a%&#39;</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>A request to <tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/forms</span></tt> with this <tt class="docutils literal"><span class="pre">simpleFilterExpression</span></tt> in the
+request body would return all form resources whose transcription attribute
+contains the character &#8220;a&#8221;.</p>
+<p>When a simple filter expression has five elements, the second is assumed to be
+the name of a relational attribute, i.e., an attribute that references another
+model, while the third is an attribute of the referenced model.  For example,
+the <tt class="docutils literal"><span class="pre">Form</span></tt> model has an <tt class="docutils literal"><span class="pre">enterer</span></tt> attribute whose value is a <tt class="docutils literal"><span class="pre">User</span></tt> model
+and a <tt class="docutils literal"><span class="pre">User</span></tt> model has a <tt class="docutils literal"><span class="pre">firstName</span></tt> attribute.  Therefore, to find all form
+resources with enterers whose first name begins with &#8220;J&#8221; or &#8220;S&#8221;, we construct
+the simple filter expression</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;enterer&quot;</span><span class="p">,</span> <span class="s2">&quot;firstName&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;^[JS]&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>which maps to the SQLAlchemy query object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">query</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">enterer</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">firstName</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)(</span><span class="s">u&#39;^[JS]&#39;</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>The two following simple filter expressions return all forms lacking enterers
+and all forms having them, respectively.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;enterer&quot;</span><span class="p">,</span> <span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="kc">null</span><span class="p">]</span>
+<span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;enterer&quot;</span><span class="p">,</span> <span class="s2">&quot;!=&quot;</span><span class="p">,</span> <span class="kc">null</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Some relational attributes of OLD models reference <em>collections</em>, i.e., lists
+of zero or more models of a given type.  For example, OLD forms can be
+associated to one or more files, i.e., the <tt class="docutils literal"><span class="pre">Form</span></tt> model has a <tt class="docutils literal"><span class="pre">files</span></tt>
+attribute whose value is a collection of <tt class="docutils literal"><span class="pre">File</span></tt> objects.  Since <tt class="docutils literal"><span class="pre">File</span></tt>
+objects have <tt class="docutils literal"><span class="pre">id</span></tt> attributes, we can use the filter expression below to
+retrieve all forms associated to files with one of the following ids: 1, 2, 33,
+5.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">5</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>The four-element filter expression below returns the same result set as the
+five-element one one above.  This is because the OLD knows that the <tt class="docutils literal"><span class="pre">Form</span></tt>
+model is being queried and that the only relation between the <tt class="docutils literal"><span class="pre">Form</span></tt> and
+<tt class="docutils literal"><span class="pre">File</span></tt> models is captured by the <tt class="docutils literal"><span class="pre">files</span></tt> attribute of the <tt class="docutils literal"><span class="pre">Form</span></tt> model.
+<a class="footnote-reference" href="#f5" id="id6">[5]</a></p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;File&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">5</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>The two following simple filter expressions return all forms lacking files
+and all forms having one or more, respectively.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">,</span> <span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="kc">null</span><span class="p">]</span>
+<span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">,</span> <span class="s2">&quot;!=&quot;</span><span class="p">,</span> <span class="kc">null</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="complex-filter-expressions">
+<h3>Complex filter expressions<a class="headerlink" href="#complex-filter-expressions" title="Permalink to this headline">¶</a></h3>
+<p>Complex filter expressions are built from simple filter expressions using &#8220;not&#8221;,
+&#8220;and&#8221; and &#8220;or&#8221;.</p>
+<p>The following complex filter expression uses &#8220;not&#8221; to return all form resources
+that do not have &#8220;a&#8221; in their transcriptions.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;not&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;like&quot;</span><span class="p">,</span> <span class="s2">&quot;%a%&quot;</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>Conjoined and disjoined filter expressions are exemplified below.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;transcription&#39;</span><span class="p">,</span> <span class="s1">&#39;like&#39;</span><span class="p">,</span> <span class="s1">&#39;%a%&#39;</span><span class="p">],</span>
+         <span class="p">[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;elicitor&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">13</span><span class="p">]]]</span>
+<span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;transcription&#39;</span><span class="p">,</span> <span class="s1">&#39;like&#39;</span><span class="p">,</span> <span class="s1">&#39;%a%&#39;</span><span class="p">],</span>
+        <span class="p">[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;dateElicited&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="s1">&#39;2012-01-01&#39;</span><span class="p">]]]</span>
+</pre></div>
+</div>
+<p>Finally, an example of a complex filter expression involving multiple levels
+of embedding.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Gloss&#39;</span><span class="p">,</span> <span class="s1">&#39;gloss&#39;</span><span class="p">,</span> <span class="s1">&#39;like&#39;</span><span class="p">,</span> <span class="s1">&#39;%1%&#39;</span><span class="p">],</span>
+         <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;morphemeBreak&#39;</span><span class="p">,</span> <span class="s1">&#39;regex&#39;</span><span class="p">,</span> <span class="s1">&#39;[28][5-7]&#39;</span><span class="p">]],</span>
+         <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="s1">&#39;2012-03-01T00:00:00&#39;</span><span class="p">],</span>
+                 <span class="p">[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;2012-01-01T00:00:00&#39;</span><span class="p">]]]]]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="filter-relations">
+<h3>Filter relations<a class="headerlink" href="#filter-relations" title="Permalink to this headline">¶</a></h3>
+<p>OLD search requests permit the relations listed below.  Note that some relations
+can be referenced by more than one name as indicated in the brackets.</p>
+<ul class="simple">
+<li>equality (&#8220;=&#8221; or &#8220;__eq__&#8221;)</li>
+<li>inequality (&#8221;!=&#8221; or &#8220;__ne__&#8221;)</li>
+<li>like (&#8220;like&#8221; <a class="footnote-reference" href="#f6" id="id7">[6]</a>)</li>
+<li>regular expression (&#8220;regex&#8221; or &#8220;regexp&#8221;)</li>
+<li>less than (&#8220;&lt;&#8221; or &#8220;__lt__&#8221;)</li>
+<li>less than or equal to (&#8220;&lt;=&#8221; or &#8220;__le__&#8221;)</li>
+<li>greater than (&#8220;&gt;&#8221; or &#8220;__gt__&#8221;)</li>
+<li>greater than or equal to (&#8220;&gt;=&#8221; or &#8220;__ge__&#8221;)</li>
+<li>one of (&#8220;in&#8221; or &#8220;in_&#8221;)</li>
+</ul>
+<p>Most of these relations should be self-explanatory.  However, the <em>like</em> and
+<em>regular expression</em> relations merit further discussion.</p>
+</div>
+<div class="section" id="the-like-relation">
+<h3>The <em>like</em> relation<a class="headerlink" href="#the-like-relation" title="Permalink to this headline">¶</a></h3>
+<p>The &#8220;like&#8221; relation is simply the SQL <tt class="docutils literal"><span class="pre">LIKE</span></tt> operator.  The pattern following
+the &#8220;like&#8221; relation may contain the wildcard characters &#8220;%&#8221; and &#8220;_&#8221;.  The
+percent sign matches zero or more of any character while the underscore matches
+exactly one instance of any character.  These wildcards are illustrated via
+some typical use cases below.</p>
+<p>Find all forms whose transcription contains &#8220;t&#8221;:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;like&quot;</span><span class="p">,</span> <span class="s2">&quot;%t%&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Find all forms whose transcription begins with &#8220;T&#8221;:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;like&quot;</span><span class="p">,</span> <span class="s2">&quot;T%&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Find all forms whose transcription ends with &#8220;t&#8221;:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;like&quot;</span><span class="p">,</span> <span class="s2">&quot;%t&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Find all forms that contain &#8220;k&#8221;, followed by any single character, followed by
+&#8220;t&#8221;:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;like&quot;</span><span class="p">,</span> <span class="s2">&quot;%k_t%&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Note that, as illustrated by the above examples, OLD filter expressions are
+case-sensitive.</p>
+</div>
+<div class="section" id="the-regexp-relation">
+<h3>The <em>regexp</em> relation<a class="headerlink" href="#the-regexp-relation" title="Permalink to this headline">¶</a></h3>
+<p>The &#8220;regexp&#8221; (a.k.a. &#8220;regex&#8221;) relation implements regular expression matching.
+<a class="footnote-reference" href="#f8" id="id8">[8]</a>  Regular expressions are tools for specifying complex patterns on
+strings.  As with the &#8220;like&#8221; relation described above, certain characters and
+constructions in &#8220;regexp&#8221; search patterns have special meanings.</p>
+<p>By default, regular expressions perform a substring match.  That is, an OLD
+filter expression like the one that follows will return all forms that contain
+the string &#8220;it&#8221; anywhere in the value of their transcription attribute.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;it&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>We can refer to the beginning or end of the string using the anchors &#8220;^&#8221; and
+&#8220;$&#8221;.  For example, the following two filter expressions find all forms whose
+transcription begins with &#8220;T&#8221; or ends with &#8220;s&#8221;, respectively.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;^T&quot;</span><span class="p">]</span>
+<span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;s$&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The period &#8221;.&#8221; matches any character.  For example, the OLD filter expression
+below will match all forms that have &#8220;kat&#8221;, &#8220;kit&#8221;, &#8220;kst&#8221;, &#8220;kqt&#8221;, etc. in their
+transcription values.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;k.t&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>It is also possible to specify a pattern that matches a limited set of
+characters using character classes, i.e., sequences of characters enclosed in
+square brackets.  For example, the following OLD filter expression will match
+all forms whose transcription value contains &#8220;k&#8221;, followed by a vowel, followed
+by &#8220;t&#8221;.  (Of course, unicode characters are permitted as well so accented and
+IPA vowels could be specified here also.)</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;k[aeiou]t&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>If the caret character &#8220;^&#8221; is the first character in the character class, then
+the class matches any character except those it contains.  For example, the
+following OLD filter expression will match all forms whose transcriptions
+contain a &#8220;k&#8221;, followed by <em>anything but</em> a &#8220;q&#8221; or another &#8220;k&#8221;, followed by a
+&#8220;t&#8221;.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;k[^qk]t&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The vertical bar &#8220;|&#8221; is the alternation metacharacter.  It matches either the
+string to its left or the string to its right.  For example, the following OLD
+filter expression will return all forms containing a gloss that contains either
+&#8220;the cat ran&#8221; or &#8220;the dog ran&#8221;.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;glosses&quot;</span><span class="p">,</span> <span class="s2">&quot;gloss&quot;</span><span class="p">,</span> <span class="s2">&quot;the (cat|dog) ran&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Regular expressions also support quantification.  That is, it is possible to
+specify that a pattern zero or one times (using &#8221;?&#8221;), zero or more times (using
+&#8220;*&#8221;), one or more times (using &#8220;+&#8221;), exactly <em>n</em> times (using &#8220;{n}&#8221;), between
+<em>n</em> and <em>m</em> times (using &#8220;{n,m}&#8221;) and <em>n</em> or more times (using &#8220;{n,}&#8221;).</p>
+<p>For example, to find all forms whose transcription is a single word with one
+syllable whose nucleus is transcribed using exactly two vowels, an OLD filter
+expression like the following might be appropriate.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;^[ptkmns][aeiou]{2}[ptkmns]$&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Quantifiers could also be used to filter resources by the length of one of their
+fields.  For example, to find all forms whose transcriptions contain at least
+five but no more than ten characters, one could use the following OLD filter
+expression.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;^.{5,10}$&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Note that regular expressions will treat unicode combining characters as
+separate characters.  Since the OLD applies unicode canonical decomposition
+normalization <a class="footnote-reference" href="#f9" id="id9">[9]</a> on all input, a string like &#8220;á&#8221; will be interpreted by
+the regular expression parser as containing two strings, the &#8220;a&#8221; and the
+COMBINING ACCUTE ACCENT (u+0301) character.  Keep this in mind when using
+regular expression quantifiers to filter based on string length or when using
+character sets.  In the latter case, it is usually safer to use parentheses and
+the alternation metacharacter than character sets.  To illustrate, consider the
+two examples below.  The first OLD filter expression will match &#8220;oao&#8221;, &#8220;oio&#8221; and
+&#8220;óo&#8221;, which is probably not what was intended.  The second filter expression
+will match &#8220;oáo&#8221; and &#8220;oío&#8221;, which is probably what was intended.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;o[áí]o&quot;</span><span class="p">]</span>
+<span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;o(á|í)o&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="ordering-results">
+<span id="search-orderby"></span><h3>Ordering results<a class="headerlink" href="#ordering-results" title="Permalink to this headline">¶</a></h3>
+<p>In making a search request of an OLD web service, it is possible to specify the
+order in which the results are returned.  This is accomplished by specifying
+an <tt class="docutils literal"><span class="pre">orderBy</span></tt> attribute for the JSON <tt class="docutils literal"><span class="pre">query</span></tt> object that is passed as input
+in the body of the request.  Remember that OLD search requests must contain an
+object of the following form (where the <tt class="docutils literal"><span class="pre">orderBy</span></tt> attribute is optional).</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="o">:</span> <span class="p">{</span>
+    <span class="s2">&quot;filter&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">]</span> <span class="p">,</span>
+    <span class="s2">&quot;orderBy&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">]}}</span>
+</pre></div>
+</div>
+<p>The value of the <tt class="docutils literal"><span class="pre">orderBy</span></tt> attribute is an array containing exactly three
+strings where the first is the name of a model/resource, the second the name of
+an attribute of the model and the third is a direction, i.e., &#8220;asc&#8221; or &#8220;desc&#8221;.
+For example, the following JSON object passed in the body of a request to
+<tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/forms</span></tt> would return all forms whose transcription begins with &#8220;p&#8221;
+ordered by id in descending order.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="o">:</span> <span class="p">{</span>
+    <span class="s2">&quot;filter&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="s2">&quot;^p&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;orderBy&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;desc&quot;</span><span class="p">]}}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="forms">
+<span id="form-resource"></span><h2>Forms<a class="headerlink" href="#forms" title="Permalink to this headline">¶</a></h2>
+<p>Forms represent linguistic forms and are the core of an OLD web service.  Access
+to the forms resource is handled by the <tt class="docutils literal"><span class="pre">forms</span></tt> controller.  This controller
+has some non-standard actions, viz. <tt class="docutils literal"><span class="pre">history</span></tt> and <tt class="docutils literal"><span class="pre">remember</span></tt>.  It also
+performs some additional processing during create and update requests related to
+morphological analysis.  This section describes these idiosyncracies.</p>
+<div class="section" id="get-forms-history-id">
+<h3>GET /forms/history/id<a class="headerlink" href="#get-forms-history-id" title="Permalink to this headline">¶</a></h3>
+<p>Requests to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms/history/id</span></tt> are routed to the <tt class="docutils literal"><span class="pre">history</span></tt> action of
+the <tt class="docutils literal"><span class="pre">forms</span></tt> controller.  Such requests return a JSON object representing the
+history, or previous versions, of the form with the specified id.  The id
+parameter can be the integer id or the
+<a class="reference external" href="http://en.wikipedia.org/wiki/Universally_unique_identifier">Universally Unique Identifier</a>
+(UUID) of the form. <a class="footnote-reference" href="#f10" id="id10">[10]</a>  The JSON object returned is of the form</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="p">...</span> <span class="p">},</span> <span class="s2">&quot;previousVersions&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">]}</span>
+</pre></div>
+</div>
+<p>where the value of the &#8220;form&#8221; attribute is the JSON representation of the form
+while the value of &#8220;previousVersions&#8221; is an array of objects representing the
+previous versions of the form.  If the form has been deleted, the value of the
+&#8220;form&#8221; attribute will be <tt class="docutils literal"><span class="pre">null</span></tt> and if the form has not been updated or
+deleted, the value of the &#8220;previousVersions&#8221; attribute will be an empty array.</p>
+</div>
+<div class="section" id="post-forms-remember">
+<h3>POST /forms/remember<a class="headerlink" href="#post-forms-remember" title="Permalink to this headline">¶</a></h3>
+<p>Requests to <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/forms/remember</span></tt> are routed to the <tt class="docutils literal"><span class="pre">remember</span></tt> action of
+the <tt class="docutils literal"><span class="pre">forms</span></tt> controller and cause the forms referenced in the request body to
+be appended to the <tt class="docutils literal"><span class="pre">rememberedForms</span></tt> collection of the user making the
+request.  The expected input is an object of the form</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;forms&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">id1</span><span class="p">,</span> <span class="nx">id2</span><span class="p">,</span> <span class="p">...</span> <span class="p">]}</span>
+</pre></div>
+</div>
+<p>where <tt class="docutils literal"><span class="pre">id1</span></tt>, <tt class="docutils literal"><span class="pre">id2</span></tt>, etc. are form integer ids.</p>
+</div>
+<div class="section" id="morphological-processing">
+<span id="id11"></span><h3>Morphological processing<a class="headerlink" href="#morphological-processing" title="Permalink to this headline">¶</a></h3>
+<p>Values for four attributes of form resources related to morphological analysis
+are generated on create and update requests.  These are the <tt class="docutils literal"><span class="pre">morphemeBreakIDs</span></tt>,
+<tt class="docutils literal"><span class="pre">morphemeGlossIDs</span></tt>, <tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt> and <tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt>
+attributes.  The function <tt class="docutils literal"><span class="pre">compileMorphemicAnalysis</span></tt> in the <tt class="docutils literal"><span class="pre">forms</span></tt>
+controller is responsible for generating these values.</p>
+<p>The values of the <tt class="docutils literal"><span class="pre">morphemeBreakIDs</span></tt> and <tt class="docutils literal"><span class="pre">morphemeGlossIDs</span></tt> attributes are
+arrays that hold references to other forms that match the morphemes indicated in
+the user-defined <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> and <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt> attributes.  Each array
+has one array per word in the relevant field, each word array has one array per
+morpheme and each morpheme array has one array per match found.  Matches are
+ordered triples where the first element is the id of the match, the second is
+the <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> or <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt> value of the match and the third is
+the <tt class="docutils literal"><span class="pre">syntacticCategory.name</span></tt> of the match or <tt class="docutils literal"><span class="pre">null</span></tt> if no category is
+specified.  As illustration, consider a database containing the following forms.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="4%" />
+<col width="21%" />
+<col width="24%" />
+<col width="24%" />
+<col width="26%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">id</th>
+<th class="head">transcription</th>
+<th class="head">morphemeBreak</th>
+<th class="head">morphemeGloss</th>
+<th class="head">syntacticCategory.name</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>1</td>
+<td>chien</td>
+<td>chien</td>
+<td>dog</td>
+<td>N</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>s</td>
+<td>s</td>
+<td>PL</td>
+<td>Agr</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>s</td>
+<td>s</td>
+<td>PL</td>
+<td>Num</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>le</td>
+<td>le</td>
+<td>the</td>
+<td>D</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>cour</td>
+<td>cour</td>
+<td>run</td>
+<td>V</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>ent</td>
+<td>ent</td>
+<td>3.PL</td>
+<td>Agr</td>
+</tr>
+<tr class="row-even"><td>7</td>
+<td>les chiens courent</td>
+<td>le-s chien-s cour-ent</td>
+<td>the-PL dog-PL run-3PL</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<p>When the form with id 7 is entered, the system will generate the following
+arrays for the <tt class="docutils literal"><span class="pre">morphemeBreakIDs</span></tt> and <tt class="docutils literal"><span class="pre">morphemeGlossIDs</span></tt> attributes.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">morphemeBreakIDs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span>
+        <span class="p">[[</span><span class="mi">4</span><span class="p">,</span> <span class="s">&#39;the&#39;</span><span class="p">,</span> <span class="s">&#39;D&#39;</span><span class="p">]],</span>
+        <span class="p">[[</span><span class="mi">2</span><span class="p">,</span> <span class="s">&#39;PL&#39;</span><span class="p">,</span> <span class="s">&#39;Agr&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;PL&#39;</span><span class="p">,</span> <span class="s">&#39;Num&#39;</span><span class="p">]]</span>
+    <span class="p">],</span>
+    <span class="p">[</span>
+        <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;dog&#39;</span><span class="p">,</span> <span class="s">&#39;N&#39;</span><span class="p">]],</span>
+        <span class="p">[[</span><span class="mi">2</span><span class="p">,</span> <span class="s">&#39;PL&#39;</span><span class="p">,</span> <span class="s">&#39;Agr&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;PL&#39;</span><span class="p">,</span> <span class="s">&#39;Num&#39;</span><span class="p">]]</span>
+    <span class="p">],</span>
+    <span class="p">[</span>
+        <span class="p">[[</span><span class="mi">5</span><span class="p">,</span> <span class="s">&#39;run&#39;</span><span class="p">,</span> <span class="s">&#39;V&#39;</span><span class="p">]],</span>
+        <span class="p">[[</span><span class="mi">6</span><span class="p">,</span> <span class="s">&#39;3.PL&#39;</span><span class="p">,</span> <span class="s">&#39;Agr&#39;</span><span class="p">]]</span>
+    <span class="p">]</span>
+<span class="p">]</span>
+<span class="n">morphemeGlossIDs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span>
+        <span class="p">[[</span><span class="mi">4</span><span class="p">,</span> <span class="s">&#39;le&#39;</span><span class="p">,</span> <span class="s">&#39;D&#39;</span><span class="p">]],</span>
+        <span class="p">[[</span><span class="mi">2</span><span class="p">,</span> <span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="s">&#39;Agr&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="s">&#39;Num&#39;</span><span class="p">]]</span>
+    <span class="p">],</span>
+    <span class="p">[</span>
+        <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;chien&#39;</span><span class="p">,</span> <span class="s">&#39;N&#39;</span><span class="p">]],</span>
+        <span class="p">[[</span><span class="mi">2</span><span class="p">,</span> <span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="s">&#39;Agr&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="s">&#39;Num&#39;</span><span class="p">]]</span>
+    <span class="p">],</span>
+    <span class="p">[</span>
+        <span class="p">[[</span><span class="mi">5</span><span class="p">,</span> <span class="s">&#39;cour&#39;</span><span class="p">,</span> <span class="s">&#39;V&#39;</span><span class="p">]],</span>
+        <span class="p">[]</span>
+    <span class="p">]</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Note that <tt class="docutils literal"><span class="pre">morphemeBreakIDs[0][1]</span></tt> contains two match triples because the
+second morpheme of the first word in the <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> line, i.e., &#8220;s&#8221;,
+matches two forms, i.e., the forms with ids 2 and 3.  Similarly,
+<tt class="docutils literal"><span class="pre">morphemeGlossIDs[0][1]</span></tt> contains two analogous match triples, the difference
+in this case being that the morpheme&#8217;s phonemic/orthographic representation is
+listed and not its gloss.  In contrast, the morpheme break &#8220;ent&#8221; matches form 6,
+hence the single match triple in <tt class="docutils literal"><span class="pre">morphemeBreakIDs[2][1]</span></tt>, whereas &#8220;3PL&#8221;
+matches nothing, hence the absence of matches in <tt class="docutils literal"><span class="pre">morphemeGlossIDs[2][1]</span></tt>.</p>
+<p>The purpose of the <tt class="docutils literal"><span class="pre">morphemeBreakIDs</span></tt> and <tt class="docutils literal"><span class="pre">morphemeGlossIDs</span></tt> attributes is
+that they record the extent to which the morphemic analysis of a given form is
+in accordance with the lexical items listed in the database.  If these values
+were not generated server-side upon create and update requests, then for any
+user-facing application to display such information would require many requests
+and database queries each time a form were displayed.  The information in these
+two attributes is quite valuable in that it can be used to immediately inform
+users when the lexical items implicit in their morphological analyses are not
+yet listed in the database or when small differences in, say, glossing
+conventions are masking underlying consensus in analysis.</p>
+<p>At the same time as the <tt class="docutils literal"><span class="pre">morphemeBreakIDs</span></tt> and <tt class="docutils literal"><span class="pre">morphemeGlossIDs</span></tt> values are
+generated, so too are the values for the <tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt> and
+<tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt> attributes.  These values for our example form 7 from
+above would be:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">syntacticCategoryString</span> <span class="o">=</span> <span class="s">&#39;D-Agr N-Agr V-Agr&#39;</span>
+<span class="n">breakGlossCategory</span> <span class="o">=</span> <span class="s">&#39;le|the|D-s|PL|Agr chien|dog|N-s|PL|Agr cour|run|V-ent|3PL|Agr&#39;</span>
+</pre></div>
+</div>
+<p>The value of the <tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt> attribute is a string of syntactic
+category names corresponding to the string of morphemes in the morphemic
+segmentation.[#f11]_ Since the syntactic category string can be used to filter
+form resources on search requests, its generation facilitates search based on
+high-level morphological patterns.  For example, using the syntactic category
+string, one could use regular expressions to search for all forms consisting of
+an NP followed by a VP.</p>
+<p>Note that, given our example dataset, <tt class="docutils literal"><span class="pre">'D-Num</span> <span class="pre">N-Num</span> <span class="pre">V-Agr'</span></tt> is a reasonable
+(and perhaps preferable) syntactic category string value.  However, the system
+has no way of knowing this and therefore when there are two matches for a
+morpheme (as there are for &#8220;s&#8221;) it arbitrarily chooses the syntactic category of
+the lexical form with the lowest id.</p>
+<p>The value of <tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt> is a string that unambiguously represents
+the morphemic analysis of the form.  Each morpheme is taken to be a triplet
+consisting of a phonemic representation (i.e., the <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value), a
+semantic representation (i.e., the <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt> value) and a categorial
+value (i.e., the <tt class="docutils literal"><span class="pre">syntacticCategory.name</span></tt> value).  These break-gloss-category
+triplets are delimited by the vertical bar &#8220;|&#8221; and each such triplet is joined
+using the morpheme delimiters of the <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value.</p>
+<p>This attribute makes it possible to search for forms that contain a specific
+morpheme.  Consider the case where one wanted to find all forms containing the
+morpheme &#8220;s&#8221; glossed as &#8220;PL&#8221; of category &#8220;Num&#8221;.  Performing a regular expression
+search on the <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> line for the pattern <tt class="regexp docutils literal"><span class="pre">-s(</span> <span class="pre">|-|$)</span></tt> (i.e., &#8220;-s&#8221;
+followed by a space, &#8220;-&#8221; or the end of the string) would be insufficient since
+it might also find forms containing an &#8220;s&#8221; morpheme with a different gloss.
+Conjoining the above regular expression filter with another on the
+<tt class="docutils literal"><span class="pre">morphemeGloss</span></tt> line with the pattern <tt class="docutils literal"><span class="pre">-PL(</span> <span class="pre">|-|$)</span></tt> would still be
+insufficient since it would (contra what is desired) match a form with a
+<tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value of &#8220;le-s oiseau-x&#8221; and a <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt> value of
+&#8220;the-plrl bird-PL&#8221;.  By searching the forms according to those whose
+<tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt> value matches the regular expression
+<tt class="docutils literal"><span class="pre">-s\|PL\|Num(</span> <span class="pre">|-|$)</span></tt>, one can be assured of finding all and only all the forms
+containing the morpheme &#8220;s&#8221;/&#8221;PL&#8221;/&#8221;Num&#8221;</p>
+<p>Given the above discussion, it is evident that an update to an existing
+lexical form, the creation of a new one or the updating of the name of a
+syntactic category may require updating the <tt class="docutils literal"><span class="pre">morphemeBreakIDs</span></tt>,
+<tt class="docutils literal"><span class="pre">morphemeGlossIDs</span></tt>, <tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt> and/or <tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt>
+values of a number of different forms.  The OLD accomplishes this by calling
+<tt class="docutils literal"><span class="pre">updateFormsContainingThisFormAsMorpheme</span></tt> whenever a form is created or
+updated.  This function first assesses whether the newly created/updated form is
+lexical and, if so, it selects all forms whose morphological analyses implicitly
+reference the lexical form and updates the relevant fields appropriately.  Care
+is taken to reduce database select queries to an absolute minimum with the end
+result being that the majority of calls to
+<tt class="docutils literal"><span class="pre">updateFormsContainingThisFormAsMorpheme</span></tt> will require only one select query,
+i.e., the one to find all of the forms that reference the lexical item just
+created/updated.  In addition, when the name of a (lexical) syntactic category
+is changed, <tt class="docutils literal"><span class="pre">updateFormsContainingThisFormAsMorpheme</span></tt> is called on each form
+that has that category.</p>
+</div>
+<div class="section" id="foreign-words">
+<h3>Foreign words<a class="headerlink" href="#foreign-words" title="Permalink to this headline">¶</a></h3>
+<p>Whenever a form is created, updated or deleted, the forms controller calls
+<tt class="docutils literal"><span class="pre">updateApplicationSettingsIfFormIsForeignWord</span></tt>.  This function is responsible
+for updating the transcription validators of the application settings if the
+form is a foreign word.  As described in <a class="reference internal" href="#object-language-validation"><em>Object language validation</em></a>,
+forms tagged with the &#8220;foreign word&#8221; tag will create exceptions to the
+user-defined object language transcription validation.  For example, if a form
+is entered with <tt class="docutils literal"><span class="pre">transcription</span></tt>, <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> and <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt>
+values of &#8220;John&#8221;, &#8220;John&#8221; and &#8220;John&#8221; and is tagged as a &#8220;foreign word&#8221;, then the
+system will allow the string &#8220;John&#8221; to be included in the <tt class="docutils literal"><span class="pre">transcription</span></tt>
+field of other forms even if validation is set to reject forms whose
+transcriptions contain, say, &#8220;J&#8221; or &#8220;h&#8221;.  Note that it is desirable to be able
+to enter such a lexical entry as &#8220;John&#8221; with a category of, say, &#8220;PN&#8221; since
+doing so will result in sensible <tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt> values for forms
+containing &#8220;John&#8221; in their <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value.</p>
+</div>
+</div>
+<div class="section" id="file-resources">
+<span id="file-resource"></span><h2>File resources<a class="headerlink" href="#file-resources" title="Permalink to this headline">¶</a></h2>
+<p>OLD file resources are representations of binary files stored on a filesystem.
+From a linguist&#8217;s point of view, they are the audio/video records of linguistic
+fieldwork, the images (or audio or video) used as stimuli, PDFs of relevant
+papers or handouts, etc. &#8211; anything that is relevant to a piece or a collection
+of language data.  Multiple file resources can be associated to a given form or
+collection resource.  Thus, for example, a form representing a sentence could be
+associated to the following three OLD file resources: a large audio recording of
+an elicitation session, a smaller audio recording of just the sentence being
+uttered as well as an image used to illustrate a context for a speaker.</p>
+<p>There are three types of file resources and while each share a common core of
+metadata-related attributes, they have attributes unique to their type as well.
+<em>Local</em> files are stored on the filesystem (in the <tt class="docutils literal"><span class="pre">files/</span></tt> directory) of the
+machine serving an OLD applicaton.  <em>Subinterval-referencing</em> files get their
+file content from a local <em>audio/video</em> file (their <tt class="docutils literal"><span class="pre">parentFile</span></tt>) and have
+<tt class="docutils literal"><span class="pre">start</span></tt> and <tt class="docutils literal"><span class="pre">end</span></tt> attributes which reference start and end positions in the
+parent file.  <em>Externally hosted</em> files have content stored on another server
+and have <tt class="docutils literal"><span class="pre">url</span></tt> attributes.</p>
+<p>The file resource has two novel methods: <tt class="docutils literal"><span class="pre">serve</span></tt> and <tt class="docutils literal"><span class="pre">serve_reduced</span></tt>.
+Requests to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/files/serve/id</span></tt> return the file content of the file resource
+with the given id, assuming the authenticated user is authorized to access that
+resource.  Requests to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/files/serve_reduced/id</span></tt> return the file content
+of the reduced-size copy of the file which was created by the OLD upon file
+creation.  If there is no reduced-size copy of the file, the OLD returns an
+error message.  Both types of request handle subinterval-referencing files by
+returning the content of the parent file.  It is the responsibility of the
+user-facing application to use the <tt class="docutils literal"><span class="pre">start</span></tt> and <tt class="docutils literal"><span class="pre">end</span></tt> attributes to play the
+appropriate portion of the parent file&#8217;s contents.  When the id in one of these
+requests refers to an externally hosted file, an explanatory error message is
+returned.</p>
+</div>
+<div class="section" id="collections">
+<span id="collection-resource"></span><h2>Collections<a class="headerlink" href="#collections" title="Permalink to this headline">¶</a></h2>
+<p>As with forms, requests to <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/collections/history/id</span></tt> are routed to the
+<tt class="docutils literal"><span class="pre">history</span></tt> action of the <tt class="docutils literal"><span class="pre">collections</span></tt> controller.  Such requests return a
+JSON object representing the history, or previous versions, of the collection
+with the specified id.  The id parameter can be the integer id or the
+<a class="reference external" href="http://en.wikipedia.org/wiki/Universally_unique_identifier">Universally Unique Identifier</a>
+(UUID) of the collection. <a class="footnote-reference" href="#f10" id="id13">[10]</a>  The JSON object returned is of the form</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;collection&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="p">...</span> <span class="p">},</span> <span class="s2">&quot;previousVersions&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="p">...</span> <span class="p">]}</span>
+</pre></div>
+</div>
+<p>where the value of the &#8220;collection&#8221; attribute is the JSON representation of the
+collection while the value of &#8220;previousVersions&#8221; is an array of objects
+representing the previous versions of the collection.  If the collection has
+been deleted, the value of the &#8220;collection&#8221; attribute will be <tt class="docutils literal"><span class="pre">null</span></tt> and if
+the collection has not been updated or deleted, the value of the
+&#8220;previousVersions&#8221; attribute will be an empty array.</p>
+</div>
+<div class="section" id="application-settings">
+<span id="application-settings-resource"></span><h2>Application settings<a class="headerlink" href="#application-settings" title="Permalink to this headline">¶</a></h2>
+<p>Only administrators are permitted to create, update or delete application
+settings resources.  Other types of users can only request
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/applicationsettings</span></tt> and <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/applicationsettings/id</span></tt>.  The
+application settings resources are unique in that the most recently created one
+(i.e., that with the largest id) is designated as the <em>active</em> application
+settings, i.e., the one that affects the behaviour of the rest of the
+application.  Therefore, application-wide behaviour may be configured either by
+updating the active application settings resource or by creating a new (and
+hence active) one.</p>
+</div>
+<div class="section" id="users">
+<h2>Users<a class="headerlink" href="#users" title="Permalink to this headline">¶</a></h2>
+<p>Only administrators are authorized to create or delete user resources and a user
+resource can only be updated by administrators and the holder of the user
+account.  Aside from these authorization idiosyncracies, the interface to the
+user resource is standard.</p>
+</div>
+<div class="section" id="remembered-forms">
+<span id="remembered-forms-interface"></span><h2>Remembered forms<a class="headerlink" href="#remembered-forms" title="Permalink to this headline">¶</a></h2>
+<p>Each user has an attribute called <tt class="docutils literal"><span class="pre">rememberedForms</span></tt> which is a collection of
+zero or more form resources that the speaker has memorized.  Since this
+collection can grow quite large, it is treated as a resource of its own and is
+not returned when a user resource is read.</p>
+<p>In order to retrieve the forms remembered by a user, request
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/rememberedforms/id</span></tt>.  Such requests are routed to the <tt class="docutils literal"><span class="pre">show</span></tt> action
+of the <tt class="docutils literal"><span class="pre">rememberedforms</span></tt> controller and return all forms remembered by the
+user with the supplied id.  Note that ordering and pagination parameters may be
+supplied in the query string of this request in exactly the same way as with
+standard <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/resources</span></tt> requests of conventional resources (cf.
+<a class="reference internal" href="#get-resources"><em>GET /resources requests</em></a>).</p>
+<p>Requests to <tt class="docutils literal"><span class="pre">UPDATE</span> <span class="pre">/rememberedforms/id</span></tt> are routed to the <tt class="docutils literal"><span class="pre">update</span></tt> action
+and set the remembered forms of the user with the supplied id to the set of
+forms referenced in the JSON array of form ids sent in the request body. This
+type of request accomplishes creation, updating and deletion of a
+remembered form &#8220;resource&#8221;.  Note that the <tt class="docutils literal"><span class="pre">remember</span></tt> action of the forms
+controller has a similar, but more restricted, effect, i.e., requests to
+<tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/forms/remember</span></tt> can add forms to (but not delete them from) the
+remembered forms collection of the user who makes the request.  Only
+administrators and the user with the supplied id can make licit requests to
+<tt class="docutils literal"><span class="pre">UPDATE</span> <span class="pre">/rememberedforms/id</span></tt>.  As with requests to <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/forms/remember</span></tt>,
+requests to <tt class="docutils literal"><span class="pre">UPDATE</span> <span class="pre">/rememberedforms/id</span></tt> should contain a JSON request body of
+the form <tt class="docutils literal"><span class="pre">{&quot;forms&quot;:</span> <span class="pre">[16,</span> <span class="pre">28,</span> <span class="pre">385]}</span></tt>.</p>
+<p>Requests to <tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/rememberedforms/id</span></tt> return all form resources remembered
+by the user with the supplied id and which match the JSON search filter passed
+in the request body.  These requests are routed to the <tt class="docutils literal"><span class="pre">search</span></tt> action.
+Requests to <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/rememberedforms/id/search</span></tt> have the same effect as those to
+<tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/rememberedforms/id</span></tt>.  Note also that the same effect can be achieved
+by conjoining the following filter expression to an existing search on form
+resources, i.e., a request to <tt class="docutils literal"><span class="pre">SEARCH</span> <span class="pre">/forms</span></tt>.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Memorizer&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="nx">id</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="authentication-authorization">
+<span id="auth"></span><h2>Authentication &amp; authorization<a class="headerlink" href="#authentication-authorization" title="Permalink to this headline">¶</a></h2>
+<p>Speakers of endangered languages and their communities often require that the
+language data gathered by researchers not be made available to the public at
+large.  Therefore, authentication (i.e., a username and password) is required in
+order to access data on an OLD web service <a class="footnote-reference" href="#f4" id="id14">[4]</a>.</p>
+<p>In addition to authentication, the OLD possesses a role-based system of
+authorization.  The three roles are <em>administrator</em>, <em>contributor</em> and <em>viewer</em>.</p>
+<p>Viewers are only able to perform read requests, e.g., view all form resources,
+retrieve a particular file resource or search the collections resources.</p>
+<p>Contributors have read and write access.  However, contributor <em>U1</em> is not
+permitted to delete a form, file or collection entered by contributor <em>U2</em>.
+Only administrators and <em>U1</em> can delete a form, file or collection entered by
+<em>U1</em>.  In addition, only administrators and user <em>U1</em> are permitted to update
+the user resource representing <em>U1</em>.</p>
+<p>Administrators have unrestricted access to read and write any resources.  Only
+administrators can create or delete users and only administrators have write
+access to application settings resources.</p>
+<p>Separate from the role-based division of users is a classification into
+restricted and unrestricted users.  While administrators are, by default, always
+unrestricted, the application settings can specify a subset of contributors and
+viewers as unrestricted.  Only unrestricted users are permitted to access
+restricted objects, i.e., forms, files or collections tagged with the
+&#8220;restricted&#8221; tag.  Users not classified as unrestricted (i.e., restricted users)
+are unable to access restricted objects in any way.  Since core objects can be
+associated to one another (e.g., a form can be associated to multiple files),
+restricted status can spread from object to object.  For example, an
+unrestricted form becomes restricted as soon as it is associated to a restricted
+file.</p>
+<p>The <tt class="docutils literal"><span class="pre">login</span></tt> controller effects authentication.  Its interface is detailed in
+the following table.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="27%" />
+<col width="36%" />
+<col width="25%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">HTTP Method</th>
+<th class="head">URL</th>
+<th class="head">Effect</th>
+<th class="head">Parameters</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>POST</td>
+<td>/login/authenticate</td>
+<td>Attempt to authenticate</td>
+<td>JSON object</td>
+</tr>
+<tr class="row-odd"><td>GET</td>
+<td>/login/logout</td>
+<td>De-authenticate</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>POST</td>
+<td>/login/email_reset_password</td>
+<td>Get data for creating a new form</td>
+<td>JSON object</td>
+</tr>
+</tbody>
+</table>
+<p><tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/login/authenticate</span></tt> attempts authentication using the provided input,
+i.e., a JSON object on the request body of the form
+<tt class="docutils literal"><span class="pre">{&quot;username&quot;:</span> <span class="pre">&quot;</span> <span class="pre">...</span> <span class="pre">&quot;,</span> <span class="pre">&quot;password&quot;:</span> <span class="pre">&quot;</span> <span class="pre">...</span> <span class="pre">&quot;}</span></tt>.  If successful, authenticated
+status is persisted across requests via a cookie-based <tt class="docutils literal"><span class="pre">session</span></tt> object where
+the value of <tt class="docutils literal"><span class="pre">session['user']</span></tt> is the <tt class="docutils literal"><span class="pre">User</span></tt> model of the authenticated
+user.</p>
+<p>A <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/login/logout</span></tt> request removes the <tt class="docutils literal"><span class="pre">'user'</span></tt> key from the <tt class="docutils literal"><span class="pre">session</span></tt>
+object associated with the cookie passed in the request.</p>
+<p>A <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/login/email_reset_password</span></tt> request with a JSON object in the request
+body of the form <tt class="docutils literal"><span class="pre">{&quot;username&quot;:</span> <span class="pre">&quot;</span> <span class="pre">...</span> <span class="pre">&quot;}</span></tt> attempts to create a new, randomly
+generated password for the user with the provided username and notify the user
+via email of the change.  If the server is unable to send email, the password
+will not be reset and a JSON error message will be returned in the response.
+Note: if an SMTP mail server cannot be used, it is possible (as detailed in the
+comments of the config file that is generated when <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">make-config</span></tt> is
+run) to configure an OLD application to send email via Gmail.</p>
+<p>For more details on the authentication and authorization scheme of the OLD,
+please consult the API documentation and/or the source code.  Most relevant are
+the <tt class="docutils literal"><span class="pre">lib/auth.py</span></tt>, <tt class="docutils literal"><span class="pre">controllers/login.py</span></tt>, <tt class="docutils literal"><span class="pre">controllers/forms.py</span></tt>,
+<tt class="docutils literal"><span class="pre">controllers/files.py</span></tt> and <tt class="docutils literal"><span class="pre">controllers/oldcollections.py</span></tt> modules.</p>
+</div>
+<div class="section" id="input-validation">
+<span id="validation"></span><h2>Input validation<a class="headerlink" href="#input-validation" title="Permalink to this headline">¶</a></h2>
+<p>When users attempt to create a new resource or update an existing one, the OLD
+attempts to validate the input.  If validation fails, the status code of the
+response is set to 400 and a JSON object explaining the issue(s) is returned,
+i.e., an object of the form
+<tt class="docutils literal"><span class="pre">{'error':</span> <span class="pre">'error</span> <span class="pre">message'}</span></tt> or
+<tt class="docutils literal"><span class="pre">{'errors':</span> <span class="pre">{'field</span> <span class="pre">name</span> <span class="pre">1':</span> <span class="pre">'error</span> <span class="pre">message</span> <span class="pre">1',</span> <span class="pre">'field</span> <span class="pre">name</span> <span class="pre">2':</span> <span class="pre">'error</span> <span class="pre">message</span> <span class="pre">2'}}</span></tt>.</p>
+<div class="section" id="standard-validation">
+<h3>Standard validation<a class="headerlink" href="#standard-validation" title="Permalink to this headline">¶</a></h3>
+<p>Standard validation is validation on user input that is applied by all OLD
+applications</p>
+<p>Some representative examples will illustrate.  All forms require some string in
+their transcription field and at least one gloss.  References to other OLD
+resources via their ids are validated for existence; e.g., when an elicitor for
+a form is specified via a user id, then validation ensures that the id
+corresponds to a user in the database.  User-supplied values for date fields
+must be in <tt class="docutils literal"><span class="pre">mm/dd/yyyy</span></tt> format.  Emails must be correctly formatted.  Files
+uploaded must be one of the allowed file types (e.g., .jpg, .wav) of the OLD.</p>
+<p>The Pylons controller classes that control the creation and updating of
+resources ensure that all such validation is passed before these requests can
+succeed.  The validators that encode these validations are written using the
+<a class="reference external" href="http://www.formencode.org">FormEncode</a> library and can be found on the OLD in
+the <tt class="docutils literal"><span class="pre">lib/schemata.py</span></tt> module.  For further information on input validation,
+consult the <a class="reference internal" href="datastructure.html#data-structure"><em>The OLD Data Structure</em></a> section, the API documentation and/or the
+source code.</p>
+</div>
+<div class="section" id="object-language-validation">
+<span id="id15"></span><h3>Object language validation<a class="headerlink" href="#object-language-validation" title="Permalink to this headline">¶</a></h3>
+<p>In addition to the standard validation described above, particular OLD
+applications can control how, or whether, transcriptions of the object language
+are validated.  The relevant form attributes are <tt class="docutils literal"><span class="pre">transcription</span></tt>,
+<tt class="docutils literal"><span class="pre">phoneticTranscription</span></tt>, <tt class="docutils literal"><span class="pre">narrowPhoneticTranscription</span></tt> and
+<tt class="docutils literal"><span class="pre">morphemeBreak</span></tt>.  By configuring the OLD application&#8217;s settings, adminstrators
+can control what types of strings are permitted in these fields.  This is useful
+for when groups of researchers want to ensure that, say, all morpheme
+segmentation strings (i.e., <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> values) are restricted to
+sequences of phonemes from the specified inventory plus the specified morpheme
+delimiters.</p>
+<p>The table below shows how object language transcription validation is
+configured.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="32%" />
+<col width="39%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Form attribute</th>
+<th class="head">Relevant inventory or orthography</th>
+<th class="head">Validation parameter</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>transcription</td>
+<td>storageOrthography</td>
+<td>orthographicValidation</td>
+</tr>
+<tr class="row-odd"><td>phoneticTranscription</td>
+<td>broadPhoneticInventory</td>
+<td>broadPhoneticValidation</td>
+</tr>
+<tr class="row-even"><td>narrowPhoneticTranscription</td>
+<td>narrowPhoneticInventory</td>
+<td>narrowPhoneticValidation</td>
+</tr>
+<tr class="row-odd"><td>morphemeBreak</td>
+<td>phonemicInventory*</td>
+<td>morphemeBreakValidation</td>
+</tr>
+</tbody>
+</table>
+<p>The validation parameter column lists the settings in the application settings
+resource that control whether the object language transcription form attribute
+should be validated against the relevant inventory or orthography.  Each of the
+attributes in the validation parameter column can have one of three possible
+values: <tt class="docutils literal"><span class="pre">None</span></tt>, <tt class="docutils literal"><span class="pre">Warning</span></tt> or <tt class="docutils literal"><span class="pre">Error</span></tt>.  Only if the attribute is set to
+<tt class="docutils literal"><span class="pre">Error</span></tt> will inventory/orthography-based validation occur.</p>
+<p>For example, if the current application settings resource has
+<tt class="docutils literal"><span class="pre">orthographicValidation</span></tt> set to <tt class="docutils literal"><span class="pre">Error</span></tt>, then input validation will ensure
+that form transcriptions contain only graphs (i.e., characters or character
+sequences) from the storage orthography plus punctuation characters and the
+space character.</p>
+<p>When validation is enabled on the phonetic transcription fields, only graphs
+from the specified inventory plus the space character are permitted (i.e., no
+punctuation).</p>
+<p>The <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> attribute&#8217;s validation settings are slightly more complex
+since it is possible to choose between the storage orthography or the phonemic
+inventory when configuring validation.  This is done by setting the
+<tt class="docutils literal"><span class="pre">morphemeBreakIsOrthographic</span></tt> attribute of the application settings resource
+to <tt class="docutils literal"><span class="pre">true</span></tt> in the former case and <tt class="docutils literal"><span class="pre">false</span></tt> in the latter.  For example,
+if <tt class="docutils literal"><span class="pre">morphemeBreakIsOrthographic</span></tt> is set to <tt class="docutils literal"><span class="pre">false</span></tt> and
+<tt class="docutils literal"><span class="pre">morphemeBreakValidation</span></tt> is set to <tt class="docutils literal"><span class="pre">Error</span></tt>, then input to the
+<tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> field will be rejected if it contains characters outside of
+the specified phonemic inventory, the specified morpheme delimiters and the
+space character.</p>
+<p>As implied in the above discussion, the application settings resource has
+<tt class="docutils literal"><span class="pre">morphemeDelimiters</span></tt> and <tt class="docutils literal"><span class="pre">punctuation</span></tt> attributes for specifying sets of
+valid morpheme delimiters and punctuation, respectively.</p>
+<p>Sometimes it is desirable to include foreign words in the object language
+transcriptions while still permitting validation against inventories and
+orthographies on these fields.  For example, in a system where <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt>
+validation is enabled and the phonemic inventory is /p/, /t/, /k/, /i/, /a/, /u/,
+it might be desirable to allow a <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value of &#8220;ki dog katti&#8221; but
+prohibit &#8220;ki dog kotti&#8221;.  The OLD permits this via the special &#8220;foreign word&#8221;
+tag on form resources.  When a form is tagged as a foreign word, its
+transcription values affect validation.  So, if the system were to contain a
+foreign word form with &#8220;dog&#8221; as its <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value, then validation
+would correctly allow both instances of &#8220;dog&#8221; in the above two examples while
+disallowing the latter example because of the illicit &#8220;o&#8221; in &#8220;kotti&#8221;.  The
+function <tt class="docutils literal"><span class="pre">updateApplicationSettingsIfFormIsForeignWord</span></tt> is called in the
+<tt class="docutils literal"><span class="pre">forms</span></tt> controller upon successful create and update requests.</p>
+</div>
+</div>
+<div class="section" id="processing">
+<h2>Processing<a class="headerlink" href="#processing" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>unicode normalization</li>
+</ul>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>In the OLD there is a near one-to-one-to-one relationship between <em>resources</em>,
+<em>models</em> and relational database <em>tables</em>.  That is, an OLD application controls
+access to <em>form</em> resources via a <em>forms</em> controller that reads and writes to a
+<em>form</em> table in the database as abstracted by an SQLAlchemy <em>form</em> model object.</p>
+<ul class="simple">
+<li>Interface<ul>
+<li>RESTful API</li>
+<li>SEARCH</li>
+<li>CRUD details (paginator, new/edit inputs, ...)</li>
+<li>Authentication &amp; Authorization</li>
+<li>Validation (general, BibTex sources, orthographies/inventories, etc.)</li>
+<li>Processing (file reduction, morpheme-morpheme linking, metadata creation)</li>
+<li>Analysis (parsing)</li>
+</ul>
+</li>
+<li>Data Processing<ul>
+<li>lexical-phrasal form referencing</li>
+<li>collection-collection referencing</li>
+<li>image &amp; audio manipulation</li>
+<li>phonologies, morphologies, corpora &amp; parsers</li>
+<li>unicode &amp; normalization</li>
+</ul>
+</li>
+</ul>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>See <a class="reference external" href="http://stackoverflow.com/questions/671118/what-exactly-is-restful-programming">this StackOverflow page</a>
+for a discussion on what exactly it means and read
+<a class="reference external" href="http://www.ics.uci.edu/~fielding/pubs/dissertation/fielding_dissertation.pdf">Fielding&#8217;s thesis</a>
+for the source of the term.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[2]</a></td><td>The WebDAV standard includes a <a class="reference external" href="http://www.webdav.org/specs/rfc5323.html">SEARCH</a>
+method so this is not entirely without precedent.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f3" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4">[3]</a></td><td>In contrast to POST, PUT and DELETE requests, HTTP GET requests are
+not, canonically, supposed to possess contentful request bodies; therefore,
+when optional parameters are permissible on such requests, the OLD will
+expect GET parameters in the URL string.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id14">[4]</a></td><td>Future versions of the OLD may make authentication a configurable
+option, thus allowing publicization of all data.  Another possibility is that
+the system could allow users to tag some data as public and that these data
+could be accessed without authentication.  A final possibility would be to
+publicize all data but allow some data to be encrypted such that only
+authenticated users could decrypt them.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f5" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id6">[5]</a></td><td>Note that while the results returned will be the same, the SQLAlchemy
+query object constructed and the SQL issued to the database will be distinct.
+That is, the filter expression <tt class="docutils literal"><span class="pre">[&quot;Form&quot;,</span> <span class="pre">&quot;files&quot;,</span> <span class="pre">&quot;id&quot;,</span> <span class="pre">&quot;in&quot;,</span> <span class="pre">[1,</span> <span class="pre">2,</span> <span class="pre">33,</span> <span class="pre">5]]</span></tt>
+maps to the SQLAlchemy query
+<tt class="docutils literal"><span class="pre">query(model.Form).filter(model.Form.files.any(model.File.id.in_([1,</span> <span class="pre">2,</span> <span class="pre">33,</span> <span class="pre">5])))</span></tt>
+while <tt class="docutils literal"><span class="pre">[&quot;File&quot;,</span> <span class="pre">&quot;id&quot;,</span> <span class="pre">&quot;in&quot;,</span> <span class="pre">[1,</span> <span class="pre">2,</span> <span class="pre">33,</span> <span class="pre">5]]</span></tt> maps to
+<tt class="docutils literal"><span class="pre">fileAlias</span> <span class="pre">=</span> <span class="pre">aliased(File)</span></tt> and
+<tt class="docutils literal"><span class="pre">Session.query(Form).filter(fileAlias.id.in_([1,</span> <span class="pre">2,</span> <span class="pre">33,</span> <span class="pre">5])).outerjoin(fileAlias,</span> <span class="pre">Form.files)</span></tt>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f6" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id7">[6]</a></td><td>Substring pattern match is effected via the SQL <tt class="docutils literal"><span class="pre">LIKE</span></tt> relation.
+TALK ABOUT WILDCARDS HERE</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f7" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id5">[7]</a></td><td>Actually, the search actions of the relevant controllers convert the
+JSON string to a Python dictionary using the <tt class="docutils literal"><span class="pre">loads</span></tt> function of the
+<tt class="docutils literal"><span class="pre">simplejson</span></tt> module.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f8" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id8">[8]</a></td><td>With MySQL as RDBMS, the &#8220;regexp&#8221; relation is simply the standard MySQL
+<tt class="docutils literal"><span class="pre">REGEXP</span></tt> operator, i.e., an implementation of POSIX extended regular
+expressions.  Since SQLite does not implement a <tt class="docutils literal"><span class="pre">REGEXP</span></tt> operator, the OLD
+supplies one using the standard <tt class="docutils literal"><span class="pre">re</span></tt> Python module.  The table on
+<a class="reference external" href="http://www.regular-expressions.info/refflavors.html">this page</a> does a
+good job of detailing the difference between these two regular expression
+implementations.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f9" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id9">[9]</a></td><td>Cf. <a class="reference external" href="http://unicode.org/reports/tr15/">http://unicode.org/reports/tr15/</a></td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f10" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[10]</td><td><em>(<a class="fn-backref" href="#id10">1</a>, <a class="fn-backref" href="#id13">2</a>)</em> Since some RDBMSs reuse primary key integers when a record is deleted,
+it is not possible to associate forms and collections to their backups via
+their integer id attributes.  Therefore, both form and collection resources
+have UUID attributes and are associated to their backup objects via both
+<tt class="docutils literal"><span class="pre">form_id</span></tt>/<tt class="docutils literal"><span class="pre">collection_id</span></tt> and <tt class="docutils literal"><span class="pre">UUID</span></tt> attributes.  The safest way,
+therefore, to request all of the backups of a given form/collection,
+therefore is to pass the UUID to the relevant <tt class="docutils literal"><span class="pre">history</span></tt> GET request.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f11" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[11]</td><td>Note that the morpheme delimiters for both the
+<tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt> and <tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt> values are taken,
+arbitrarily, from the <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt> value.  That is, if the morphemic
+segmentation were &#8220;chien-s&#8221; and the gloss string were &#8220;dog=PL&#8221; (and &#8220;-&#8221; and
+&#8220;=&#8221; were both valid morpheme delimiters of the system), then the syntactic
+category string would be &#8216;N-Num&#8217; and not &#8216;N=Num&#8217;.  Similarly, the
+<tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt> value would be &#8216;chien|dog|N-s|PL|Num&#8217; and not
+&#8216;chien|dog|N=s|PL|Num&#8217;.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The OLD Interface</a><ul>
+<li><a class="reference internal" href="#the-restful-api">The RESTful API</a></li>
+<li><a class="reference internal" href="#search">Search</a></li>
+<li><a class="reference internal" href="#forms">Forms</a></li>
+<li><a class="reference internal" href="#file-resources">File resources</a></li>
+<li><a class="reference internal" href="#collections">Collections</a></li>
+<li><a class="reference internal" href="#application-settings">Application settings</a></li>
+<li><a class="reference internal" href="#users">Users</a></li>
+<li><a class="reference internal" href="#remembered-forms">Remembered forms</a></li>
+<li><a class="reference internal" href="#authentication-authorization">Authentication &amp; authorization</a></li>
+<li><a class="reference internal" href="#input-validation">Input validation</a></li>
+<li><a class="reference internal" href="#processing">Processing</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="architecture.html" title="previous chapter">Architecture Overview</a></li>
+      <li>Next: <a href="datastructure.html" title="next chapter">The OLD Data Structure</a></li>
+  </ul></li>
+</ul>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/interface.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

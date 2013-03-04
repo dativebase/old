@@ -86,8 +86,8 @@ analysis_data = %(here)s/analysis
 # to attempt to send the email.  If password_reset_smtp_server is smtp.gmail.com,
 # then Gmail will be used to send the email.  In this case, the system expects a
 # gmail.ini config file in the root directory with a [DEFAULT] section and variables
-# defined for gmail_from_address and gmail_from_password.  Use the gmail.ini_tmpl
-# to construct the gmail.ini config file.  
+# defined for gmail_from_address and gmail_from_password.  Use the gmail.ini
+# template at the bottom of this config file to construct the gmail.ini config file.  
 # password_reset_smtp_server = smtp.gmail.com
 
 # Set create_reduced_size_file_copies to 0 if you do not want the system to
@@ -136,3 +136,17 @@ class = FileHandler
 args = ('application.log', 'a')
 level = INFO
 formatter = generic
+
+
+################################################################################
+# Template for a gmail.ini config file
+################################################################################
+#
+# [DEFAULT]
+#
+# When testing the reset-password-via-email functionality, this GMail email
+# address will be used so that one can verify that an email was actually sent.
+# gmail_from_address = a_valid_gmail_address@gmail.com
+#
+# gmail_from_password must be the valid password for the above GMail account.
+# gmail_from_password = password_for_the_above_email_account

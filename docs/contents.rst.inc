@@ -14,17 +14,28 @@ install it, you should start here.
 Architecture
 --------------------------------------------------------------------------------
 
-Look here to find details about
+Look here to find details about the design of the OLD.
 
 .. toctree::
    :maxdepth: 2
 
    architecture
-   models
-   controllers
-   validation
-   processing
+   interface
+   datastructure
 
+
+Tutorial
+--------------------------------------------------------------------------------
+
+This section will contain a whiz-bang! tutorial of the OLD: quick installation,
+testing and getting started playing with the system.
+
+
+API
+--------------------------------------------------------------------------------
+
+This section will contain the API documentation automatically extracted from the
+docstrings of the source code.
 
 
 If you can’t find the information you’re looking for, have a look at the index

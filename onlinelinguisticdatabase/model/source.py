@@ -42,7 +42,7 @@ class Source(Base):
     author = Column(Unicode(255))
     booktitle = Column(Unicode(255))
     chapter = Column(Unicode(255))
-    crossref = Column(Unicode(255))
+    crossref = Column(Unicode(1000))
     edition = Column(Unicode(255))
     editor = Column(Unicode(255))
     howpublished = Column(Unicode(255))

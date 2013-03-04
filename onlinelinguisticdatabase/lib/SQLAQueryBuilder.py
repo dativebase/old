@@ -175,13 +175,13 @@ class SQLAQueryBuilder(object):
     getSQLAQuery.  Example usage:
     
         > queryBuilder = SQLAlchemyQueryBuilder()
-        > pythonQuery = [
+        > pythonQuery = {'filter': [
             'and', [
                 ['Gloss', 'gloss', 'like', '1'],
                 ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
                 ['or', [
                     ['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
-                    ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]
+                    ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]}
         > query = queryBuilder.getSQLAQuery(pythonQuery)
         > forms = query.all()
     """

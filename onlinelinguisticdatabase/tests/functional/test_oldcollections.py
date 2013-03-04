@@ -441,7 +441,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'Chapter 1',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents1,
             'files': [file1Id, file2Id],
             'tags': [tag1Id, tag2Id]
@@ -455,7 +455,7 @@ class TestOldcollectionsController(TestController):
         assert type(resp) == type({})
         assert resp['title'] == u'Chapter 1'
         assert resp['enterer']['firstName'] == u'Admin'
-        assert resp['html'] == h.markupLanguageToFunc['markdown'](mdContents1)
+        assert resp['html'] == h.markupLanguageToFunc['Markdown'](mdContents1)
         assert sorted([f['id'] for f in resp['files']]) == sorted([file1Id, file2Id])
         assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1Id, tag2Id])
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id])
@@ -496,7 +496,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'Book 1',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents2
         })
         params = json.dumps(params)
@@ -511,7 +511,7 @@ class TestOldcollectionsController(TestController):
         assert resp['title'] == u'Book 1'
         assert resp['enterer']['firstName'] == u'Admin'
         assert resp['contentsUnpacked'] == collection2ContentsUnpacked
-        assert resp['html'] == h.markupLanguageToFunc['markdown'](collection2ContentsUnpacked)
+        assert resp['html'] == h.markupLanguageToFunc['Markdown'](collection2ContentsUnpacked)
         assert resp['files'] == []
         assert resp['tags'] == []
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id, form3Id])
@@ -534,7 +534,7 @@ class TestOldcollectionsController(TestController):
         params3 = self.createParams.copy()
         params3.update({
             'title': u'Novel',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents3
         })
         params3 = json.dumps(params3)
@@ -549,7 +549,7 @@ class TestOldcollectionsController(TestController):
         assert resp['title'] == u'Novel'
         assert resp['enterer']['firstName'] == u'Admin'
         assert resp['contentsUnpacked'] == collection3ContentsUnpacked
-        assert resp['html'] == h.markupLanguageToFunc['markdown'](collection3ContentsUnpacked)
+        assert resp['html'] == h.markupLanguageToFunc['Markdown'](collection3ContentsUnpacked)
         assert resp['files'] == []
         assert resp['tags'] == []
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id, form3Id, form4Id])
@@ -596,7 +596,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'Chapter 1',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents1,
             'files': [file1Id, file2Id],
             'tags': [tag1Id, tag2Id, restrictedTagId]   # ANOTHER CHANGE: restrict this collection
@@ -690,7 +690,7 @@ class TestOldcollectionsController(TestController):
         newCollectionCount = Session.query(model.Collection).count()
         assert resp['errors']['url'] == u'The input is not valid'
         assert resp['errors']['markupLanguage'] == \
-            u"Value must be one of: markdown; reStructuredText (not u'rtf')"
+            u"Value must be one of: Markdown; reStructuredText (not u'rtf')"
         assert resp['errors']['type'] == \
             u"Value must be one of: story; elicitation; paper; discourse; other (not u'novella')"
         assert newCollectionCount == collectionCount
@@ -764,6 +764,8 @@ class TestOldcollectionsController(TestController):
         assert resp['speaker']['firstName'] == speaker.firstName
         assert resp['elicitor']['firstName'] == contributor.firstName
         assert newCollectionCount == collectionCount + 1
+        log.debug(resp['markupLanguage'])
+        log.debug(resp['type'])
 
     #@nottest
     def test_relational_restrictions(self):
@@ -882,7 +884,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents
         })
         params = json.dumps(params)
@@ -927,7 +929,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents
         })
         params = json.dumps(params)
@@ -972,7 +974,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents
         })
         params = json.dumps(params)
@@ -1307,7 +1309,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test_create_title',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents,
             'files': [file1Id, file2Id],
             'tags': [restrictedTagId, tag1Id, tag2Id]
@@ -1320,7 +1322,7 @@ class TestOldcollectionsController(TestController):
         collectionCount = Session.query(model.Collection).count()
         assert resp['title'] == u'test_create_title'
         assert resp['enterer']['firstName'] == u'Admin'
-        assert resp['html'] == h.markupLanguageToFunc['markdown'](mdContents)
+        assert resp['html'] == h.markupLanguageToFunc['Markdown'](mdContents)
         assert sorted([f['id'] for f in resp['files']]) == sorted([file1Id, file2Id])
         assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1Id, tag2Id, restrictedTagId])
         assert sorted([f['id'] for f in resp['forms']]) == sorted([form1Id, form2Id])
@@ -1336,7 +1338,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test_create_title',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents,
             'tags': tags,
             'files': files
@@ -1353,7 +1355,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test_create_title',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents,
             'tags': tags,
             'files': files[0:1]
@@ -1372,7 +1374,7 @@ class TestOldcollectionsController(TestController):
         params = self.createParams.copy()
         params.update({
             'title': u'test_create_title',
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents,
             'tags': [1000, 9875, u'abcdef'],
             'files': [44, u'1t']
@@ -1459,7 +1461,7 @@ class TestOldcollectionsController(TestController):
             'speaker': speakerId,
             'tags': [tagId],
             'files': [fileId],
-            'markupLanguage': u'markdown',
+            'markupLanguage': u'Markdown',
             'contents': mdContents
         })
         params = json.dumps(params)
