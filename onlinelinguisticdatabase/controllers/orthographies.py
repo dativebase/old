@@ -99,7 +99,9 @@ class OrthographiesController(BaseController):
                 try:
                     schema = OrthographySchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    result = schema.to_python(values)
+                    state = h.getStateObject(values)
+                    state.id = id
+                    result = schema.to_python(values, state)
                     orthography = updateOrthography(orthography, result)
                     # orthography will be False if there are no changes (cf. updateOrthography).
                     if orthography:

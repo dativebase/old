@@ -178,6 +178,8 @@ def createNewSpeaker(data):
     speaker.dialect = h.normalize(data['dialect'])
     speaker.pageContent = h.normalize(data['pageContent'])
     speaker.datetimeModified = datetime.datetime.utcnow()
+    speaker.markupLanguage = h.normalize(data['markupLanguage'])
+    speaker.html = h.getHTMLFromContents(speaker.pageContent, speaker.markupLanguage)
     return speaker
 
 
@@ -193,6 +195,10 @@ def updateSpeaker(speaker, data):
     changed = h.setAttr(speaker, 'lastName', h.normalize(data['lastName']), changed)
     changed = h.setAttr(speaker, 'dialect', h.normalize(data['dialect']), changed)
     changed = h.setAttr(speaker, 'pageContent', h.normalize(data['pageContent']), changed)
+    changed = h.setAttr(speaker, 'markupLanguage', h.normalize(data['markupLanguage']), changed)
+    changed = h.setAttr(speaker, 'html',
+                        h.getHTMLFromContents(speaker.pageContent, speaker.markupLanguage),
+                        changed)
 
     if changed:
         speaker.datetimeModified = datetime.datetime.utcnow()

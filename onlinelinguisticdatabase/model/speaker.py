@@ -31,7 +31,9 @@ class Speaker(Base):
     firstName = Column(Unicode(255))
     lastName = Column(Unicode(255))
     dialect = Column(Unicode(255))
+    markupLanguage = Column(Unicode(100))
     pageContent = Column(UnicodeText)
+    html = Column(UnicodeText)
     datetimeModified = Column(DateTime, default=now)
 
     def getDict(self):
@@ -40,6 +42,8 @@ class Speaker(Base):
             'firstName': self.firstName,
             'lastName': self.lastName,
             'dialect': self.dialect,
+            'markupLanguage': self.markupLanguage,
             'pageContent': self.pageContent,
+            'html': self.html,
             'datetimeModified': self.datetimeModified
         }

@@ -158,13 +158,13 @@ class TestOrthographiesController(TestController):
 
         # Create a valid one
         params = self.createParams.copy()
-        params.update({'name': u'orthography', 'orthography': u'a, b, c'})
+        params.update({'name': u'orthography 1', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         newOrthographyCount = Session.query(Orthography).count()
         assert newOrthographyCount == originalOrthographyCount + 1
-        assert resp['name'] == u'orthography'
+        assert resp['name'] == u'orthography 1'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
         assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
@@ -191,7 +191,7 @@ class TestOrthographiesController(TestController):
         # Boolean cols
         params = self.createParams.copy()
         params.update({
-            'name': u'orthography',
+            'name': u'orthography 2',
             'orthography': u'a, b, c',
             'initialGlottalStops': False,
             'lowercase': True
@@ -202,7 +202,7 @@ class TestOrthographiesController(TestController):
         orthographyCount = newOrthographyCount
         newOrthographyCount = Session.query(Orthography).count()
         assert newOrthographyCount == orthographyCount + 1
-        assert resp['name'] == u'orthography'
+        assert resp['name'] == u'orthography 2'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == True
         assert resp['initialGlottalStops'] == False
@@ -215,7 +215,7 @@ class TestOrthographiesController(TestController):
         # Any other string values will cause an Invalid error to be raised.
         params = self.createParams.copy()
         params.update({
-            'name': u'orthography',
+            'name': u'orthography 3',
             'orthography': u'a, b, c',
             'initialGlottalStops': u'FALSE',
             'lowercase': u'truE'
@@ -226,14 +226,14 @@ class TestOrthographiesController(TestController):
         orthographyCount = newOrthographyCount
         newOrthographyCount = Session.query(Orthography).count()
         assert newOrthographyCount == orthographyCount + 1
-        assert resp['name'] == u'orthography'
+        assert resp['name'] == u'orthography 3'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == True
         assert resp['initialGlottalStops'] == False
 
         params = self.createParams.copy()
         params.update({
-            'name': u'orthography',
+            'name': u'orthography 4',
             'orthography': u'a, b, c',
             'initialGlottalStops': u'negative',
             'lowercase': u'althaea'

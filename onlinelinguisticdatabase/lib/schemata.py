@@ -820,8 +820,7 @@ class OrthographySchema(Schema):
 
     allow_extra_fields = True
     filter_extra_fields = True
-
-    name = UnicodeString(max=255, not_empty=True)
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Orthography', attributeName='name')
     orthography = UnicodeString(not_empty=True)
     lowercase = StringBoolean()
     initialGlottalStops = StringBoolean()
@@ -848,6 +847,7 @@ class SpeakerSchema(Schema):
     lastName = UnicodeString(max=255, not_empty=True)
     dialect = UnicodeString(max=255)
     pageContent = UnicodeString()
+    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
 
 class SyntacticCategorySchema(Schema):
     """SyntacticCategorySchema is a Schema for validating the data submitted to

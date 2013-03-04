@@ -38,6 +38,14 @@ log = logging.getLogger(__name__)
 
 class TestSpeakersController(TestController):
 
+    createParams = {
+        'firstName': u'',
+        'lastName': u'',
+        'pageContent': u'',
+        'dialect': u'dialect',
+        'markupLanguage': u'reStructuredText'
+    }
+
     extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}
@@ -149,7 +157,14 @@ class TestSpeakersController(TestController):
         originalSpeakerCount = Session.query(Speaker).count()
 
         # Create a valid one
-        params = json.dumps({'firstName': u'John', 'lastName': u'Doe', 'pageContent': u'pageContent', 'dialect': u'dialect'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'John',
+            'lastName': u'Doe',
+            'pageContent': u'pageContent',
+            'dialect': u'dialect'
+        })
+        params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         newSpeakerCount = Session.query(Speaker).count()
@@ -159,7 +174,14 @@ class TestSpeakersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because firstName is too long
-        params = json.dumps({'firstName': u'John' * 400, 'lastName': u'Doe', 'pageContent': u'pageContent', 'dialect': u'dialect'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'John' * 400,
+            'lastName': u'Doe',
+            'pageContent': u'pageContent',
+            'dialect': u'dialect'
+        })
+        params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['firstName'] == u'Enter a value not more than 255 characters long'
@@ -179,7 +201,14 @@ class TestSpeakersController(TestController):
         """Tests that PUT /speakers/id updates the speaker with id=id."""
 
         # Create a speaker to update.
-        params = json.dumps({'firstName': u'firstName', 'lastName': u'lastName', 'pageContent': u'pageContent', 'dialect': u'dialect'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'firstName',
+            'lastName': u'lastName',
+            'pageContent': u'pageContent',
+            'dialect': u'dialect'
+        })
+        params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -189,7 +218,14 @@ class TestSpeakersController(TestController):
 
         # Update the speaker
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = json.dumps({'firstName': u'firstName', 'lastName': u'lastName', 'pageContent': u'pageContent', 'dialect': u'updated dialect.'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'firstName',
+            'lastName': u'lastName',
+            'pageContent': u'pageContent',
+            'dialect': u'updated dialect.'
+        })
+        params = json.dumps(params)
         response = self.app.put(url('speaker', id=speakerId), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -217,7 +253,14 @@ class TestSpeakersController(TestController):
         """Tests that DELETE /speakers/id deletes the speaker with id=id."""
 
         # Create a speaker to delete.
-        params = json.dumps({'firstName': u'firstName', 'lastName': u'lastName', 'pageContent': u'pageContent', 'dialect': u'dialect'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'firstName',
+            'lastName': u'lastName',
+            'pageContent': u'pageContent',
+            'dialect': u'dialect'
+        })
+        params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -258,7 +301,14 @@ class TestSpeakersController(TestController):
         """Tests that GET /speakers/id returns the speaker with id=id or an appropriate error."""
 
         # Create a speaker to show.
-        params = json.dumps({'firstName': u'firstName', 'lastName': u'lastName', 'pageContent': u'pageContent', 'dialect': u'dialect'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'firstName',
+            'lastName': u'lastName',
+            'pageContent': u'pageContent',
+            'dialect': u'dialect'
+        })
+        params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -299,7 +349,14 @@ class TestSpeakersController(TestController):
         """
 
         # Create a speaker to edit.
-        params = json.dumps({'firstName': u'firstName', 'lastName': u'lastName', 'pageContent': u'pageContent', 'dialect': u'dialect'})
+        params = self.createParams.copy()
+        params.update({
+            'firstName': u'firstName',
+            'lastName': u'lastName',
+            'pageContent': u'pageContent',
+            'dialect': u'dialect'
+        })
+        params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
