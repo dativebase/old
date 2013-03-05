@@ -621,6 +621,37 @@ class TestSourcesController(TestController):
         assert resp['crossrefSource']['author'] == u'Vendler, Zeno'
         assert resp['chapter'] == u'4'
 
+        # Now update our inbook back to how it was and remove the cross-reference;
+        # make sure that the crossrefSource value is now None.
+        params = self.createParams.copy()
+        params.update({
+            'type': u'inbook',    # case is irrelevant for entry types
+            'key': u'vendler67',
+            'title': u'Linguistics in Philosophy',
+            'publisher': u'Cornell University Press',
+            'year': 1967,
+            'author': 'Vendler, Zeno',
+            'chapter': u'4'
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('source', id=inbookId), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        assert resp['type'] == u'inbook'      # the OLD converts type to lowercase
+        assert resp['title'] == u'Linguistics in Philosophy'
+        assert resp['publisher'] == u'Cornell University Press'
+        assert resp['year'] == 1967
+        assert resp['author'] == u'Vendler, Zeno'
+        assert resp['chapter'] == u'4'
+        assert resp['pages'] == u''
+        assert resp['crossref'] == u''
+        assert resp['crossrefSource'] == None
+        assert newSourcesCount == sourcesCount
+        assert response.content_type == 'application/json'
+
+
         ########################################################################
         # MISC
         ########################################################################

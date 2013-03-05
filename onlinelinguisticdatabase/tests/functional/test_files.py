@@ -1066,7 +1066,7 @@ class TestFilesController(TestController):
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create_large(self):
         """Tests that POST /files correctly creates a large file.
 

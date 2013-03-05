@@ -556,10 +556,6 @@ class TestOldcollectionsController(TestController):
         assert collectionCount == 3
         assert response.content_type == 'application/json'
 
-        # Now show that if we update the contents of one of the collections
-        # referenced by the third (Novel) collection, the third will not have
-        # its contentsUnpacked/html updated until update is called on it.
-
         # First attempt to update the third collection with no new data and
         # expect to fail.
         response = self.app.put(url('collection', id=collection3Id), params3,
@@ -576,10 +572,14 @@ class TestOldcollectionsController(TestController):
         collection2FormIds = [f.id for f in collection2.forms]
         collection2DatetimeModified = collection2.datetimeModified
         collection2HTML = collection2.html
+        collection2BackupsCount = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection2Id).count()
         collection3 = Session.query(model.Collection).get(collection3Id)
         collection3FormIds = [f.id for f in collection3.forms]
         collection3DatetimeModified = collection3.datetimeModified
         collection3HTML = collection3.html
+        collection3BackupsCount = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection3Id).count()
         sleep(1)
         mdContents1 = u'\n'.join([
             '### Chapter 1',
@@ -609,10 +609,17 @@ class TestOldcollectionsController(TestController):
         newCollection2FormIds = [f.id for f in newCollection2.forms]
         newCollection2DatetimeModified = newCollection2.datetimeModified
         newCollection2HTML = newCollection2.html
+        newCollection2Contents = newCollection2.contents
+        newCollection2Backups = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection2Id).all()
+        newCollection2BackupsCount = len(newCollection2Backups)
         newCollection3 = Session.query(model.Collection).get(collection3Id)
         newCollection3FormIds = [f.id for f in newCollection3.forms]
         newCollection3DatetimeModified = newCollection3.datetimeModified
         newCollection3HTML = newCollection3.html
+        newCollection3Backups = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection3Id).all()
+        newCollection3BackupsCount = len(newCollection3Backups)
         assert form1Id not in [f['id'] for f in resp['forms']]
         assert sorted(collection2FormIds) != sorted(newCollection2FormIds)
         assert form1Id in collection2FormIds
@@ -624,6 +631,13 @@ class TestOldcollectionsController(TestController):
         assert form1Id not in newCollection3FormIds
         assert collection3DatetimeModified != newCollection3DatetimeModified
         assert collection3HTML != newCollection3HTML
+        # Show that backups are made too
+        assert newCollection2BackupsCount == collection2BackupsCount + 1
+        assert newCollection3BackupsCount == collection3BackupsCount + 1
+        assert form1Id not in [f.id for f in newCollection2.forms]
+        assert form1Id in json.loads(newCollection2Backups[0].forms)
+        assert form1Id not in [f.id for f in newCollection3.forms]
+        assert form1Id in json.loads(newCollection3Backups[0].forms)
 
         # Show that a vacuous update of the third collection with no new data
         # will again fail.
@@ -631,6 +645,86 @@ class TestOldcollectionsController(TestController):
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
+
+        # Show how collection deletion propagates.  That is, deleting the first
+        # collection will result in a deletion of all references to that collection
+        # in the contents of other collections.
+
+        # Delete the first collection and show that the contents value of the
+        # second collection no longer references it, i.e., the first.
+        response = self.app.delete(url('collection', id=collection1Id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        oldCollection2Contents = newCollection2Contents
+        newCollection2 = Session.query(model.Collection).get(collection2Id)
+        newCollection2Contents = newCollection2.contents
+        collection1Ref = u'collection[%d]' % collection1Id
+        oldCollection2BackupsCount = newCollection2BackupsCount
+        newCollection2Backups = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection2Id).\
+            order_by(desc(model.CollectionBackup.id)).all()
+        newCollection2BackupsCount = len(newCollection2Backups)
+        assert collection1Ref in oldCollection2Contents
+        assert collection1Ref not in newCollection2Contents
+        assert newCollection2BackupsCount == oldCollection2BackupsCount + 1
+        assert collection1Ref in newCollection2Backups[0].contents
+
+        # Now if we perform an irrelevant update on the third collection, everything
+        # will work fine because the reference to the now nonexistent first collection
+        # in the contents of the second collection has been removed.  Without deletion
+        # propagation, an InvalidCollectionReferenceError would have been raised and
+        # an error response would have been returned.
+        params3 = json.loads(params3)
+        params3.update({u'title': u'A Great Novel'})
+        params3 = json.dumps(params3)
+        response = self.app.put(url('collection', id=collection3Id), params3,
+                                self.json_headers, self.extra_environ_admin)
+
+        # Now show that when a form that is referenced in a collection is deleted,
+        # the contents of that collection are edited so that the reference to the
+        # deleted form is removed.  This edit causes the appropriate changes to
+        # the attributes of the affected collections as well as all of the collections
+        # that reference those collections
+        collection2 = Session.query(model.Collection).get(collection2Id)
+        collection3 = Session.query(model.Collection).get(collection3Id)
+        collection2Contents = collection2.contents
+        collection2HTML = collection2.html
+        collection2Forms = [f.id for f in collection2.forms]
+        collection3Forms = [f.id for f in collection3.forms]
+        collection3ContentsUnpacked = collection3.contentsUnpacked
+        collection3HTML = collection3.html
+        collection2BackupsCount = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection2Id).count()
+        collection3BackupsCount = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection3Id).count()
+        response = self.app.delete(url('form', id=form3Id), headers=self.json_headers,
+                                   extra_environ=self.extra_environ_admin)
+        newCollection2 = Session.query(model.Collection).get(collection2Id)
+        newCollection3 = Session.query(model.Collection).get(collection3Id)
+        newCollection2Contents = newCollection2.contents
+        newCollection2ContentsUnpacked = newCollection2.contentsUnpacked
+        newCollection2Forms = [f.id for f in newCollection2.forms]
+        newCollection2HTML = newCollection2.html
+        newCollection3Forms = [f.id for f in newCollection3.forms]
+        newCollection3ContentsUnpacked = newCollection3.contentsUnpacked
+        newCollection3HTML = newCollection3.html
+        newCollection2BackupsCount = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection2Id).count()
+        newCollection3BackupsCount = Session.query(model.CollectionBackup).\
+            filter(model.CollectionBackup.collection_id == collection3Id).count()
+        assert 'form[%d]' % form3Id in collection2Contents
+        assert 'form[%d]' % form3Id in collection2HTML
+        assert 'form[%d]' % form3Id in collection3ContentsUnpacked
+        assert 'form[%d]' % form3Id in collection3HTML
+        assert 'form[%d]' % form3Id not in newCollection2Contents
+        assert 'form[%d]' % form3Id not in newCollection2HTML
+        assert 'form[%d]' % form3Id not in newCollection3ContentsUnpacked
+        assert 'form[%d]' % form3Id not in newCollection3HTML
+        assert form3Id in collection2Forms
+        assert form3Id in collection3Forms
+        assert form3Id not in newCollection2Forms
+        assert form3Id not in newCollection3Forms
+        assert newCollection2BackupsCount == collection2BackupsCount + 1
+        assert newCollection3BackupsCount == collection3BackupsCount + 1
 
     #@nottest
     def test_create_invalid(self):

@@ -21,7 +21,7 @@ from formencode.foreach import ForEach
 from formencode.api import NoDefault
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 import onlinelinguisticdatabase.lib.helpers as h
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import and_, desc
 import onlinelinguisticdatabase.lib.bibtex as bibtex
 from pylons import app_globals
 import onlinelinguisticdatabase.model as model
@@ -540,7 +540,6 @@ class CollectionSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-
     title = UnicodeString(max=255, not_empty=True)
     type = OneOf(h.collectionTypes)
     url = Regex('^[a-zA-Z0-9_/-]{0,255}$')
@@ -548,7 +547,6 @@ class CollectionSchema(Schema):
     markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
     contents = UnicodeString()
     contentsUnpacked = UnicodeString()
-    # html = UnicodeString()      # uncomment to permit saving of client-side-generated html
     speaker = ValidOLDModelObject(modelName='Speaker')
     source = ValidOLDModelObject(modelName='Source')
     elicitor = ValidOLDModelObject(modelName='User')
@@ -557,7 +555,8 @@ class CollectionSchema(Schema):
     tags = ForEach(ValidOLDModelObject(modelName='Tag'))
     files = ForEach(ValidOLDModelObject(modelName='File'))
 
-    # A forms attribute must be created using the contents attribute before validation occurs
+    # A forms attribute must be created in the controller using the contents
+    # attribute prior to validation.
     forms = ForEach(ValidOLDModelObject(modelName='Form'))
 
 

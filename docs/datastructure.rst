@@ -2295,7 +2295,7 @@ the cross-referenced source.
 ``crossrefSource``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The value of the ``crossrefSource`` attribute is either ``null`` or a source
+The value of the ``crossrefSource`` attribute is either ``null`` or the source
 model that is cross-referenced via the ``crossref`` attribute.  That is, a valid
 ``crossref`` value passed on input will cause the system to set the
 cross-referenced source as the value of the ``crossrefSource`` attribute.  When

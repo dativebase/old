@@ -29,7 +29,8 @@ from onlinelinguisticdatabase.lib.schemata import FormSchema, FormIdsSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Form, FormBackup, Translation, User
+from onlinelinguisticdatabase.model import Form, FormBackup, Translation, User, Collection
+from onlinelinguisticdatabase.controllers.oldcollections import updateCollectionByDeletionOfReferencedForm
 
 log = logging.getLogger(__name__)
 
@@ -191,6 +192,7 @@ class FormsController(BaseController):
             form.enterer is session['user']:
                 formDict = form.getDict()
                 backupForm(formDict)
+                updateCollectionsReferencingThisForm(form)
                 Session.delete(form)
                 Session.commit()
                 updateApplicationSettingsIfFormIsForeignWord(form)
@@ -1033,3 +1035,23 @@ def updateHasChangedTheAnalysis(form, formDict):
            form.morphemeGloss != formDict['morphemeGloss'] or \
            form.breakGlossCategory != formDict['breakGlossCategory'] or \
            getattr(form.syntacticCategory, 'name', None) != oldSyntacticCategoryName
+
+
+def updateCollectionsReferencingThisForm(form):
+    """When a form is deleted, it is necessary to update all collections whose
+    ``contents`` value references the deleted form.  The update removes the
+    reference, and recomputes the ``contentsUnpacked``, ``html`` and ``forms``
+    attributes of the affected collection and causes all of these changes to
+    percolate through the collection-collection reference chain.
+
+    Note that getting the collections that reference this form by searching for
+    collections whose ``forms`` attribute references this form is not quite the
+    correct way to do this because many of these collections will not *directly*
+    reference this form -- in short, this will result in redundant updates and
+    backups.
+    """
+    pattern = unicode(h.formReferencePattern.pattern.replace('[0-9]+', str(form.id)))
+    collectionsReferencingThisForm = Session.query(Collection).\
+        filter(Collection.contents.op('regexp')(pattern)).all()
+    for collection in collectionsReferencingThisForm:
+        updateCollectionByDeletionOfReferencedForm(collection, form)

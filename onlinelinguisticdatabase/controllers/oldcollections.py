@@ -38,11 +38,12 @@ log = logging.getLogger(__name__)
 class OldcollectionsController(BaseController):
     """REST Controller styled on the Atom Publishing Protocol.
 
-    The collections controller is one of the more complex.  A great deal of this
-    complexity arised from the fact that collections can reference forms and
-    other collections in the value of their contents attribute.  The propagation
-    of restricted tags and associated forms and the generation of the html from
-    these contents-with-references, necessitates some complex logic for updates.
+    The collections controller is one of the more complex ones.  A great deal of
+    this complexity arised from the fact that collections can reference forms
+    and other collections in the value of their contents attribute.  The
+    propagation of restricted tags and associated forms and the generation of
+    the html from these contents-with-references, necessitates some complex
+    logic for updates and deletions.
 
     There is a potential issue with collection-collection reference.  A
     restricted user can restrict their own collection A and that restriction
@@ -186,8 +187,8 @@ class OldcollectionsController(BaseController):
                     # collection will be False if there are no changes (cf. updateCollection).
                     if collection:
                         backupCollection(collectionDict, collection.datetimeModified)
-                        updateCollectionsThatReferenceThisCollection(collection,
-                                self.queryBuilder, restricted, contents_changed)
+                        updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder,
+                                            restricted=restricted, contents_changed=contents_changed)
                         Session.add(collection)
                         Session.commit()
                         return collection
@@ -232,6 +233,7 @@ class OldcollectionsController(BaseController):
             collection.enterer is session['user']:
                 collectionDict = collection.getDict()
                 backupCollection(collectionDict)
+                updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder, deleted=True)
                 Session.delete(collection)
                 Session.commit()
                 return collection
@@ -392,7 +394,8 @@ def backupCollection(collectionDict, datetimeModified=None):
 # collection objects, which dict is used by addContentsUnpackedToValues, the
 # output of the latter being used to generate the list of referenced forms.
 
-def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None, collectionId=None, patt=None):
+def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None,
+                             collectionId=None, patt=None):
     """Return a dict of the form {id: collection} where the keys are the ids of
     all the collections referenced in the contents and all of the collection ids
     referenced in those collections, etc., and the values are the collection
@@ -434,15 +437,34 @@ def getCollectionsReferencedInContents(collection, collectionsReferenced):
     return [collectionsReferenced[int(id)]
             for id in h.collectionReferencePattern.findall(collection.contents)]
 
-def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, restricted, contents_changed):
-    """If the contents of this collection have changed (i.e., contents_changed=True)
-    or this collection has just been tagged as restricted (i.e., restricted=True),
-    then retrieve all collections that reference this collection and all collections
-    that reference those referers, etc., and (1) tag them as restricted (if
-    appropriate), (2) update their contentsUnpacked and html attributes (if
-    appropriate) and (3) update their datetimeModified attribute.
+def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwargs):
+    """This function updates the contents, contentsUnpacked, html and/or form
+    attributes of every collection that references the input collection plus all
+    of the collections that reference those collections, etc.  This function is
+    called upon successful update and delete requests.
+
+    If the contents of this collection have changed (i.e.,
+    kwargs['contents_changed']==True) , then retrieve all collections
+    that reference this collection and all collections that reference those
+    referers, etc., and update their contentsUnpacked, html and forms
+    attributes.
+
+    If this collection has been deleted (i.e., kwargs['deleted']==True) , then
+    recursively retrieve all collections referencing this collection and update
+    their contents, contentsUnpacked, html and forms attributes.
+
+    If this collection has just been tagged as restricted (i.e.,
+    kwargs['restricted']==True), then recursively restrict all collections that
+    reference this collection.
+
+    In all cases, update the datetimeModified value of every collection that
+    recursively references this collection.
     """
-    def updateContentsUnpackedEtc(collection):
+    def updateContentsUnpackedEtc(collection, **kwargs):
+        deleted = kwargs.get('deleted', False)
+        collectionId = kwargs.get('collectionId')
+        if deleted:
+            collection.contents = removeReferencesToThisCollection(collection.contents, collectionId)
         collectionsReferenced = getCollectionsReferenced(collection.contents)
         collection.contentsUnpacked = generateContentsUnpacked(
                                     collection.contents, collectionsReferenced)
@@ -451,20 +473,32 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, restr
         collection.forms = [Session.query(Form).get(int(id)) for id in
                     h.formReferencePattern.findall(collection.contentsUnpacked)]
 
-    if restricted or contents_changed:
+    restricted = kwargs.get('restricted', False)
+    contents_changed = kwargs.get('contents_changed', False)
+    deleted = kwargs.get('deleted', False)
+    if restricted or contents_changed or deleted:
         collectionsReferencingThisCollection = getCollectionsReferencingThisCollection(
             collection, queryBuilder)
+        collectionsReferencingThisCollectionDicts = [c.getDict() for c in
+                                        collectionsReferencingThisCollection]
         now = h.now()
         if restricted:
             restrictedTag = h.getRestrictedTag()
             [c.tags.append(restrictedTag) for c in collectionsReferencingThisCollection]
         if contents_changed:
             [updateContentsUnpackedEtc(c) for c in collectionsReferencingThisCollection]
+        if deleted:
+            [updateContentsUnpackedEtc(c, collectionId=collection.id, deleted=True)
+             for c in collectionsReferencingThisCollection]
         [setattr(c, 'datetimeModified', now) for c in collectionsReferencingThisCollection]
+        [backupCollection(cd, now) for cd in collectionsReferencingThisCollectionDicts]
         Session.add_all(collectionsReferencingThisCollection)
         Session.commit()
 
 def getCollectionsReferencingThisCollection(collection, queryBuilder):
+    """Return a list of all collections that reference the input collection plus
+    all collections that reference those referencing collections, etc.
+    """
     patt = h.collectionReferencePattern.pattern.replace(
         '\d+', str(collection.id)).replace('\\', '')
     query = {'filter': ['Collection', 'contents', 'regex', patt]}
@@ -474,7 +508,43 @@ def getCollectionsReferencingThisCollection(collection, queryBuilder):
     return result
 
 
+def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
+    """This function is called in the forms controller when a form is deleted.
+    It is called on each collection that references the deleted form and the
+    changes to each of those collections are propagated through all of the
+    collections that reference them, and so on.
+    """
+    collectionDict = collection.getDict()
+    collection.contents = removeReferencesToThisForm(collection.contents, referencedForm.id)
+    collectionsReferenced = getCollectionsReferenced(collection.contents)
+    collection.contentsUnpacked = generateContentsUnpacked(
+                                collection.contents, collectionsReferenced)
+    collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
+                                              collection.markupLanguage)
+    collection.datetimeModified = datetime.datetime.utcnow()
+    backupCollection(collectionDict, collection.datetimeModified)
+    updateCollectionsThatReferenceThisCollection(
+        collection, OldcollectionsController.queryBuilder, contents_changed=True)
+    Session.add(collection)
+    Session.commit()
+
+def removeReferencesToThisForm(contents, formId):
+    """Return the input contents string with all references to the input
+    form id removed.
+    """
+    patt = re.compile('[Ff]orm\[(%d)\]' % formId)
+    return patt.sub('', contents)
+
+
+
 # PRIVATE FUNCTIONS
+
+def removeReferencesToThisCollection(contents, collectionId):
+    """Return the input contents string with all references to the input
+    collection id removed.
+    """
+    patt = re.compile('[cC]ollection[\[\(](%d)[\]\)]' % collectionId)
+    return patt.sub('', contents)
 
 def getUnicode(key, dict_):
     """Return dict_[key], making sure it defaults to a unicode string.
@@ -500,7 +570,8 @@ def generateContentsUnpacked(contents, collectionsReferenced, patt=None):
     based on the value of its contents attribute.  This function calls itself
     recursively.  The collectionsReferenced dict is generated earlier and
     obviates repeated database queries.  Note also that circular, invalid and
-    unauthorized reference chains are caught in the generation of collectionsReferenced.
+    unauthorized reference chains are caught in the generation of
+    collectionsReferenced.
     """
     patt = patt or re.compile(h.collectionReferencePattern)
     return patt.sub(
