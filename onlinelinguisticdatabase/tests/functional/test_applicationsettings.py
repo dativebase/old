@@ -77,28 +77,8 @@ class TestApplicationsettingsController(TestController):
     #@nottest
     def test_index(self):
         """Tests that GET /applicationsettings returns a JSON array of application settings objects."""
-
-        """
-        # Add an empty application settings.
-        applicationSettings = ApplicationSettings()
-        Session.add(applicationSettings)
-        Session.commit()
-
-        response = self.app.get(url('applicationsettings'),
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        resp = json.loads(response.body)
-        log.debug(resp)
-        assert type(resp) == type([])
-        assert len(resp) == 1
-        assert resp[0]['objectLanguageName'] == None
-        assert resp[0]['storageOrthography'] == None
-        assert resp[0]['unrestrictedUsers'] == []
-        assert response.content_type == 'application/json'
-        """
-
         # Add the default application settings.
         applicationSettings = addDefaultApplicationSettings()
-
         response = self.app.get(url('applicationsettings'),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)

@@ -104,8 +104,8 @@ class ApplicationSettings(Base):
             'punctuation': self.punctuation,
             'grammaticalities': self.grammaticalities,
             'datetimeModified': self.datetimeModified,
-            'storageOrthography': self.getMiniUserDict(self.storageOrthography),
-            'inputOrthography': self.getMiniUserDict(self.inputOrthography),
-            'outputOrthography': self.getMiniUserDict(self.outputOrthography),
+            'storageOrthography': self.getMiniOrthographyDict(self.storageOrthography),
+            'inputOrthography': self.getMiniOrthographyDict(self.inputOrthography),
+            'outputOrthography': self.getMiniOrthographyDict(self.outputOrthography),
             'unrestrictedUsers': self.getMiniList(self.unrestrictedUsers)
         }
