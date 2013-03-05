@@ -46,7 +46,7 @@ class TestFormbackupsController(TestController):
         'morphemeBreak': u'',
         'grammaticality': u'',
         'morphemeGloss': u'',
-        'glosses': [],
+        'translations': [],
         'comments': u'',
         'speakerComments': u'',
         'elicitationMethod': u'',
@@ -111,7 +111,7 @@ class TestFormbackupsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Created by the Contributor',
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -125,7 +125,7 @@ class TestFormbackupsController(TestController):
         # will create one form backup.
         params = self.createParams.copy()
         params.update({
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'transcription': u'Updated by the Administrator',
             'speaker': speakerId,
             'tags': tagIds + [None, u''], # None and u'' ('') will be ignored by forms.updateForm
@@ -143,7 +143,7 @@ class TestFormbackupsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated by the Contributor',
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'speaker': speakerId,
             'tags': tagIds,
             'files': fileIds
@@ -176,7 +176,7 @@ class TestFormbackupsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated and de-restricted by the Contributor',
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'speaker': speakerId,
             'tags': [],
             'files': fileIds
@@ -204,7 +204,7 @@ class TestFormbackupsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated by the Contributor *again*',
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'speaker': speakerId,
             'tags': [],
             'files': fileIds

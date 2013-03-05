@@ -63,38 +63,38 @@ class PasswordResetSchema(Schema):
 ################################################################################
 
 
-class ValidGlosses(FancyValidator):
-    """Validator for glosses.  Ensures that there is at least one non-empty
-    gloss and that all glossGrammaticalities are valid.
+class ValidTranslations(FancyValidator):
+    """Validator for translations.  Ensures that there is at least one non-empty
+    translation and that all translation grammaticalities are valid.
     """
 
     messages = {
-        'one_gloss': 'Please enter one or more glosses',
-        'invalid_grammaticality': u''.join([u'At least one submitted gloss ',
+        'one_translation': 'Please enter one or more translations',
+        'invalid_grammaticality': u''.join([u'At least one submitted translation ',
                 u'grammaticality does not match any of the available options.'])
     }
 
     def _to_python(self, value, state):
-        def createGloss(dict_):
-            gloss = model.Gloss()
-            gloss.gloss = h.toSingleSpace(h.normalize(dict_['gloss']))
-            gloss.glossGrammaticality = dict_['glossGrammaticality']
-            return gloss
+        def createTranslation(dict_):
+            translation = model.Translation()
+            translation.transcription = h.toSingleSpace(h.normalize(dict_['transcription']))
+            translation.grammaticality = dict_['grammaticality']
+            return translation
         try:
-            glosses = [g for g in value if g['gloss'].strip()]
-            glossGrammaticalities = [g['glossGrammaticality'] for g in value
-                                     if g['glossGrammaticality'].strip()]
+            translations = [t for t in value if t['transcription'].strip()]
+            grammaticalities = [t['grammaticality'] for t in value
+                                     if t['grammaticality'].strip()]
         except (AttributeError, KeyError, TypeError):
-            glosses = []
-            glossGrammaticalities = []
+            translations = []
+            grammaticalities = []
         validGrammaticalities = getGrammaticalities()
-        badGlossGrammaticalities = [gg for gg in glossGrammaticalities
-                                    if gg not in validGrammaticalities]
-        if not glosses:
-            raise Invalid(self.message("one_gloss", state), value, state)
-        if badGlossGrammaticalities:
+        badTranslationGrammaticalities = [g for g in grammaticalities
+                                    if g not in validGrammaticalities]
+        if not translations:
+            raise Invalid(self.message("one_translation", state), value, state)
+        if badTranslationGrammaticalities:
             raise Invalid(self.message("invalid_grammaticality", state), value, state)
-        return [createGloss(g) for g in glosses]
+        return [createTranslation(t) for t in translations]
 
 
 class ValidOrthographicTranscription(UnicodeString):
@@ -301,7 +301,7 @@ class FormSchema(Schema):
     morphemeBreak = ValidMorphemeBreakTranscription(max=255)
     grammaticality = ValidGrammaticality()
     morphemeGloss = UnicodeString(max=255)
-    glosses = ValidGlosses(not_empty=True)
+    translations = ValidTranslations(not_empty=True)
     comments = UnicodeString()
     speakerComments = UnicodeString()
     status = OneOf(h.formStatuses)

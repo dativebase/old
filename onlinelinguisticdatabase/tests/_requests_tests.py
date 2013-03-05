@@ -75,7 +75,7 @@ formCreateParams = {
     'morphemeBreak': u'',
     'grammaticality': u'',
     'morphemeGloss': u'',
-    'glosses': [],
+    'translations': [],
     'comments': u'',
     'speakerComments': u'',
     'elicitationMethod': u'',
@@ -96,10 +96,10 @@ r = s.post('%s/forms' % baseurl, data=json.dumps(payload))
 rJSON = r.json()
 errorMsg = u'Failed in attempt to request creation of an invalid form.'
 assert r.status_code == 400, errorMsg
-assert rJSON.get('errors', {}).get('glosses') == u'Please enter a value', errorMsg
+assert rJSON.get('errors', {}).get('translations') == u'Please enter a value', errorMsg
 
 # Create a valid form.
-payload['glosses'].append({'gloss': u'test', 'glossGrammaticality': u''})
+payload['translations'].append({'transcription': u'test', 'grammaticality': u''})
 r = s.post('%s/forms' % baseurl, data=json.dumps(payload))
 rJSON = r.json()
 errorMsg = u'Failed in attempt to request creation of a form.'
@@ -109,7 +109,7 @@ except:
     print rJSON
 assert r.status_code == 200, errorMsg
 assert rJSON.get('transcription') == u'test'
-assert rJSON.get('glosses', {'gloss': None})[0]['gloss'] == u'test'
+assert rJSON.get('translations', {'transcription': None})[0]['transcription'] == u'test'
 
 # Request GET /forms/id and expect to receive the form we just created.
 r = s.get('%s/forms/%s' % (baseurl, formId))

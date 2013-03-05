@@ -24,7 +24,7 @@ from onlinelinguisticdatabase.model.file import File
 from onlinelinguisticdatabase.model.form import Form, FormFile
 from onlinelinguisticdatabase.model.formbackup import FormBackup
 from onlinelinguisticdatabase.model.formsearch import FormSearch
-from onlinelinguisticdatabase.model.gloss import Gloss
+from onlinelinguisticdatabase.model.translation import Translation
 from onlinelinguisticdatabase.model.language import Language
 from onlinelinguisticdatabase.model.orthography import Orthography
 from onlinelinguisticdatabase.model.page import Page

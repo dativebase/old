@@ -185,7 +185,7 @@ def createNewSyntacticCategory(data):
 
     syntacticCategory = SyntacticCategory()
     syntacticCategory.name = h.normalize(data['name'])
-    syntacticCategory.type = h.normalize(data['type'])
+    syntacticCategory.type = data['type']
     syntacticCategory.description = h.normalize(data['description'])
     syntacticCategory.datetimeModified = datetime.datetime.utcnow()
     return syntacticCategory

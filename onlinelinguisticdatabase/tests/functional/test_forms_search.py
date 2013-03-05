@@ -99,8 +99,8 @@ def createTestForms(n=100):
         f.speakerComments = u'speakerComments %d' % i
         f.morphemeBreakIDs = u'[[[]]]'
         f.morphemeGlossIDs = u'[[[]]]'
-        g = model.Gloss()
-        g.gloss = u'gloss %d' % i
+        tl = model.Translation()
+        tl.transcription = u'translation %d' % i
         f.enterer = contributor
         f.syntacticCategory = testModels['syntacticCategories'][i - 1]
         if i > 75:
@@ -108,7 +108,7 @@ def createTestForms(n=100):
             f.narrowPhoneticTranscription = u'narrowPhoneticTranscription %d' % i
             t = testModels['tags'][i - 1]
             f.tags.append(t)
-            g.glossGrammaticality = u'*'
+            tl.grammaticality = u'*'
             viewer.rememberedForms.append(f)
         if i > 65 and i < 86:
             fi = testModels['files'][i - 1]
@@ -143,11 +143,11 @@ def createTestForms(n=100):
         if (i > 41 and i < 53) or i in [86, 92, 3]:
             f.source = testModels['sources'][i]
         if i != 87:
-            f.glosses.append(g)
+            f.translations.append(tl)
         if i == 79:
-            g = model.Gloss()
-            g.gloss = u'gloss %d the second' % i
-            f.glosses.append(g)
+            tl = model.Translation()
+            tl.transcription = u'translation %d the second' % i
+            f.translations.append(tl)
             t = testModels['tags'][i - 2]
             f.tags.append(t)
         Session.add(f)
@@ -475,9 +475,9 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert 'Form.transcription.contains' in resp['errors']
 
-        # model.Form.glosses.__eq__('abcdefg') will raise a custom OLDSearchParseError
+        # model.Form.translations.__eq__('abcdefg') will raise a custom OLDSearchParseError
         jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'glosses', '=', u'abcdefg']}})
+            {'query': {'filter': ['Form', 'translations', '=', u'abcdefg']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
@@ -491,13 +491,13 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert resp['errors']['Form.tags.regex'] == u'The relation regex is not permitted for Form.tags'
 
-        # model.Form.glosses.like('gloss') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'glosses', 'like', u'abc']}})
+        # model.Form.translations.like('transcription') will raise a custom OLDSearchParseError
+        jsonQuery = json.dumps({'query': {'filter': ['Form', 'translations', 'like', u'abc']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Form.glosses.like'] == \
-            u'The relation like is not permitted for Form.glosses'
+        assert resp['errors']['Form.translations.like'] == \
+            u'The relation like is not permitted for Form.translations'
 
         # model.Form.tags.__eq__('tag') will raise a custom OLDSearchParseError
         jsonQuery = json.dumps({'query': {'filter': ['Form', 'tags', '__eq__', u'tag']}})
@@ -1144,84 +1144,84 @@ class TestFormsSearchController(TestController):
 
     #@nottest
     def test_search_u_one_to_many(self):
-        """Tests SEARCH /forms: searches on one-to-many attributes, viz. Gloss."""
+        """Tests SEARCH /forms: searches on one-to-many attributes, viz. Translation."""
 
-        # gloss.gloss =
+        # translation.transcription =
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'gloss', '=', 'gloss 1']}})
+            ['Translation', 'transcription', '=', 'translation 1']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
-        # gloss.gloss = (with any())
+        # translation.transcription = (with any())
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'glosses', 'gloss', '=', 'gloss 1']}})
+            ['Form', 'translations', 'transcription', '=', 'translation 1']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
-        # gloss.glossGrammaticality
+        # translation.transcriptionGrammaticality
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'glossGrammaticality', '=', '*']}})
+            ['Translation', 'grammaticality', '=', '*']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 24
 
-        # gloss.gloss like
+        # translation.transcription like
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'gloss', 'like', '%1%']}})
+            ['Translation', 'transcription', 'like', '%1%']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20
 
-        # gloss.gloss regexp
+        # translation.transcription regexp
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'gloss', 'regex', '[13][25]']}})
+            ['Translation', 'transcription', 'regex', '[13][25]']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 4
 
-        # gloss.gloss in_
+        # translation.transcription in_
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'gloss', 'in_', [u'gloss 1', u'gloss 2']]}})
+            ['Translation', 'transcription', 'in_', [u'translation 1', u'translation 2']]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
 
-        # gloss.gloss <
+        # translation.transcription <
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'gloss', '<', u'z']}})
+            ['Translation', 'transcription', '<', u'z']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
-        # gloss.datetimeModified
+        # translation.datetimeModified
         jsonQuery = json.dumps({'query': {'filter':
-            ['Gloss', 'datetimeModified', '>', yesterdayTimestamp.isoformat()]}})
+            ['Translation', 'datetimeModified', '>', yesterdayTimestamp.isoformat()]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
-        # To search for the presence/absence of glosses, one must use the
-        # glosses attribute of the Form model, =/!= and None.
+        # To search for the presence/absence of translations, one must use the
+        # translations attribute of the Form model, =/!= and None.
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'glosses', '=', None]}})
+            ['Form', 'translations', '=', None]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
-        # Using an empty list to test for presence of glosses fails too.
+        # Using an empty list to test for presence of translations fails too.
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'glosses', '=', []]}})
+            ['Form', 'translations', '=', []]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
@@ -1229,34 +1229,34 @@ class TestFormsSearchController(TestController):
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'glosses', '!=', None]}})
+            ['Form', 'translations', '!=', None]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
-        # Using anything other than =/!= on Form.glosses will raise an error.
+        # Using anything other than =/!= on Form.translations will raise an error.
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'glosses', 'like', None]}})
+            ['Form', 'translations', 'like', None]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Form.glosses.like'] == u'The relation like is not permitted for Form.glosses'
+        assert resp['errors']['Form.translations.like'] == u'The relation like is not permitted for Form.translations'
 
-        # Using a value other than None on Form.glosses will also raise an error
+        # Using a value other than None on Form.translations will also raise an error
         jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'glosses', '=', 'gloss 1']}})
+            ['Form', 'translations', '=', 'translation 1']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-        # Search based on two distinct glosses (only Form #79 has two) ...
+        # Search based on two distinct translations (only Form #79 has two) ...
         jsonQuery = json.dumps({'query': {'filter':
             ['and', [
-                ['Gloss', 'gloss', '=', 'gloss 79'],
-                ['Gloss', 'gloss', '=', 'gloss 79 the second']]]}})
+                ['Translation', 'transcription', '=', 'translation 79'],
+                ['Translation', 'transcription', '=', 'translation 79 the second']]]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1265,8 +1265,8 @@ class TestFormsSearchController(TestController):
         # ... one is ungrammatical, the other is unspecified
         jsonQuery = json.dumps({'query': {'filter':
             ['and', [
-                ['Gloss', 'glossGrammaticality', '=', '*'],
-                ['Gloss', 'glossGrammaticality', '=', None]]]}})
+                ['Translation', 'grammaticality', '=', '*'],
+                ['Translation', 'grammaticality', '=', None]]]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1275,8 +1275,8 @@ class TestFormsSearchController(TestController):
         # Same search as above but using has()
         jsonQuery = json.dumps({'query': {'filter':
             ['and', [
-                ['Form', 'glosses', 'glossGrammaticality', '=', '*'],
-                ['Form', 'glosses', 'glossGrammaticality', '=', None]]]}})
+                ['Form', 'translations', 'grammaticality', '=', '*'],
+                ['Form', 'translations', 'grammaticality', '=', None]]]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1489,7 +1489,7 @@ class TestFormsSearchController(TestController):
         # A fairly complex search
         jsonQuery = json.dumps({'query': {'filter': [
             'and', [
-                ['Gloss', 'gloss', 'like', '%1%'],
+                ['Translation', 'transcription', 'like', '%1%'],
                 ['not', ['Form', 'morphemeBreak', 'regex', '[18][5-7]']],
                 ['or', [
                     ['Form', 'datetimeModified', '=', todayTimestamp.isoformat()],
@@ -1500,7 +1500,7 @@ class TestFormsSearchController(TestController):
 
         # Emulate the search Pythonically
         resultSet = [f for f in forms if
-            '1' in ' '.join([g['gloss'] for g in f['glosses']]) and
+            '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morphemeBreak']) and
             (todayTimestamp.isoformat().split('.')[0] == f['datetimeModified'].split('.')[0] or
              (f['dateElicited'] and jan1.isoformat() == f['dateElicited']))]
@@ -1511,7 +1511,7 @@ class TestFormsSearchController(TestController):
         patt = '([13579][02468])|([02468][13579])'
         jsonQuery = json.dumps({'query': {'filter': [
             'or', [
-                ['Gloss', 'gloss', 'like', '%1%'],
+                ['Translation', 'transcription', 'like', '%1%'],
                 ['Tag', 'name', 'in', ['name 2', 'name 4', 'name 88']],
                 ['and', [
                     ['not', ['File', 'name', 'regex', patt]],
@@ -1525,7 +1525,7 @@ class TestFormsSearchController(TestController):
         # being searched be Python-truthy in order for the pattern to match.  I doubt
         # that this is the behaviour of MySQL's regexp...
         resultSet = [f for f in forms if
-            '1' in ' '.join([g['gloss'] for g in f['glosses']]) or
+            '1' in ' '.join([g['transcription'] for g in f['translations']]) or
             set([t['name'] for t in f['tags']]) & set(tagNames) or
             (f['files'] and
              not re.search(patt, ', '.join([fi['name'] for fi in f['files']])) and
@@ -1539,7 +1539,7 @@ class TestFormsSearchController(TestController):
             'and', [
                 ['Form', 'transcription', 'like', '%5%'],
                 ['Form', 'morphemeBreak', 'like', '%9%'],
-                ['not', ['Gloss', 'gloss', 'like', '%6%']],
+                ['not', ['Translation', 'transcription', 'like', '%6%']],
                 ['or', [
                     ['Form', 'datetimeEntered', '<', todayTimestamp.isoformat()],
                     ['Form', 'datetimeModified', '>', yesterdayTimestamp.isoformat()],
@@ -1640,46 +1640,46 @@ class TestFormsSearchController(TestController):
         assert resp[-1]['transcription'] == u'transcription 1'
         assert resp[0]['transcription'] == u'TRANSCRIPTION 99'
 
-        # order by gloss ascending
+        # order by translation ascending
         jsonQuery = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Gloss', 'gloss', 'asc']}})
+                'orderBy': ['Translation', 'transcription', 'asc']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
-        assert resp[0]['glosses'] == [] # Form # 87 has no glosses
-        assert resp[1]['glosses'][0]['gloss'] == u'gloss 1'
-        assert resp[-1]['glosses'][0]['gloss'] == u'gloss 99'
+        assert resp[0]['translations'] == [] # Form # 87 has no translations
+        assert resp[1]['translations'][0]['transcription'] == u'translation 1'
+        assert resp[-1]['translations'][0]['transcription'] == u'translation 99'
 
         # order by with missing direction defaults to 'asc'
         jsonQuery = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Gloss', 'gloss']}})
+                'orderBy': ['Translation', 'transcription']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
-        assert resp[0]['glosses'] == [] # Form # 87 has no glosses
-        assert resp[1]['glosses'][0]['gloss'] == u'gloss 1'
-        assert resp[-1]['glosses'][0]['gloss'] == u'gloss 99'
+        assert resp[0]['translations'] == [] # Form # 87 has no translations
+        assert resp[1]['translations'][0]['transcription'] == u'translation 1'
+        assert resp[-1]['translations'][0]['transcription'] == u'translation 99'
 
         # order by with unknown direction defaults to 'asc'
         jsonQuery = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Gloss', 'gloss', 'descending']}})
+                'orderBy': ['Translation', 'transcription', 'descending']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
-        assert resp[0]['glosses'] == [] # Form # 87 has no glosses
-        assert resp[1]['glosses'][0]['gloss'] == u'gloss 1'
-        assert resp[-1]['glosses'][0]['gloss'] == u'gloss 99'
+        assert resp[0]['translations'] == [] # Form # 87 has no translations
+        assert resp[1]['translations'][0]['transcription'] == u'translation 1'
+        assert resp[-1]['translations'][0]['transcription'] == u'translation 99'
 
         # syntactically malformed order by
         jsonQuery = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Gloss']}})
+                'orderBy': ['Translation']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
@@ -1776,7 +1776,7 @@ class TestFormsSearchController(TestController):
             'morphemeBreak': u'',
             'grammaticality': u'',
             'morphemeGloss': u'',
-            'glosses': [],
+            'translations': [],
             'comments': u'',
             'speakerComments': u'',
             'elicitationMethod': u'',
@@ -1796,8 +1796,8 @@ class TestFormsSearchController(TestController):
         params = createParams.copy()
         params.update({
             'transcription': u'_%',
-            'glosses': [{'gloss': u'LIKE, test or some junk',
-                         'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'LIKE, test or some junk',
+                         'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)

@@ -53,7 +53,7 @@ class TestFormsController(TestController):
         'morphemeBreak': u'',
         'grammaticality': u'',
         'morphemeGloss': u'',
-        'glosses': [],
+        'translations': [],
         'comments': u'',
         'speakerComments': u'',
         'elicitationMethod': u'',
@@ -149,8 +149,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
-            'glosses': [{'gloss': u'test restricted tag gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test restricted tag translation',
+                         'grammaticality': u''}],
             'tags': [h.getTags()[0].id]    # the restricted tag should be the only one
         })
         params = json.dumps(params)
@@ -163,8 +163,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription 2',
-            'glosses': [{'gloss': u'test restricted tag gloss 2',
-                         'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test restricted tag translation 2',
+                         'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -186,8 +186,8 @@ class TestFormsController(TestController):
         assert resp[0]['transcription'] == u'test restricted tag transcription'
         assert resp[0]['morphemeBreakIDs'] == None
         assert resp[0]['morphemeBreakIDs'] == None
-        assert resp[0]['glosses'][0]['gloss'] == u'test restricted tag gloss'
-        assert type(resp[0]['glosses'][0]['id']) == type(1)
+        assert resp[0]['translations'][0]['transcription'] == u'test restricted tag translation'
+        assert type(resp[0]['translations'][0]['id']) == type(1)
         assert type(resp[0]['id']) == type(1)
         assert response.content_type == 'application/json'
 
@@ -365,7 +365,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test_create_transcription',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
             'status': u'tested'
         })
         params = json.dumps(params)
@@ -375,7 +375,7 @@ class TestFormsController(TestController):
         formCount = Session.query(model.Form).count()
         assert type(resp) == type({})
         assert resp['transcription'] == u'test_create_transcription'
-        assert resp['glosses'][0]['gloss'] == u'test_create_gloss'
+        assert resp['translations'][0]['transcription'] == u'test_create_translation'
         assert resp['morphemeBreakIDs'] == None
         assert resp['enterer']['firstName'] == u'Admin'
         assert resp['status'] == u'tested'
@@ -404,7 +404,7 @@ class TestFormsController(TestController):
             'transcription': u'chien',
             'morphemeBreak': u'chien',
             'morphemeGloss': u'dog',
-            'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'dog', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         params = json.dumps(params)
@@ -418,7 +418,7 @@ class TestFormsController(TestController):
             'transcription': u's',
             'morphemeBreak': u's',
             'morphemeGloss': u'PL',
-            'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'plural', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         params = json.dumps(params)
@@ -434,7 +434,7 @@ class TestFormsController(TestController):
             'transcription': u's',
             'morphemeBreak': u's',
             'morphemeGloss': u'PL',
-            'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'plural', 'grammaticality': u''}],
             'syntacticCategory': AgrId
         })
         params = json.dumps(params)
@@ -451,7 +451,7 @@ class TestFormsController(TestController):
             'transcription': u'Les chiens aboient.',
             'morphemeBreak': u'les chien-s aboient',
             'morphemeGloss': u'the dog-PL bark',
-            'glosses': [{'gloss': u'The dogs are barking.', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'The dogs are barking.', 'grammaticality': u''}],
             'syntacticCategory': Session.query(
                 model.SyntacticCategory).filter(
                 model.SyntacticCategory.name==u'S').first().id
@@ -463,7 +463,7 @@ class TestFormsController(TestController):
         formCount = Session.query(model.Form).count()
         assert type(resp) == type({})
         assert resp['transcription'] == u'Les chiens aboient.'
-        assert resp['glosses'][0]['gloss'] == u'The dogs are barking.'
+        assert resp['translations'][0]['transcription'] == u'The dogs are barking.'
         assert resp['syntacticCategory']['name'] == u'S'
         assert resp['morphemeBreakIDs'] == [[[]], [[]], [[]]]
         assert resp['morphemeGlossIDs'] == [[[]], [[]], [[]]]
@@ -516,7 +516,7 @@ class TestFormsController(TestController):
             'transcription': u'Les chiens aboient.',
             'morphemeBreak': u'les chien- -s aboient',
             'morphemeGloss': u'the dog- -PL bark',
-            'glosses': [{'gloss': u'The dogs are barking.', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'The dogs are barking.', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -533,7 +533,7 @@ class TestFormsController(TestController):
     def test_create_invalid(self):
         """Tests that POST /forms with invalid input returns an appropriate error."""
 
-        # Empty transcription and glosses should raise error
+        # Empty transcription and translations should raise error
         formCount = Session.query(model.Form).count()
         params = self.createParams.copy()
         params = json.dumps(params)
@@ -542,7 +542,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         newFormCount = Session.query(model.Form).count()
         assert resp['errors']['transcription'] == u'Please enter a value'
-        assert resp['errors']['glosses'] == u'Please enter a value'
+        assert resp['errors']['translations'] == u'Please enter a value'
         assert newFormCount == formCount
 
         # Exceeding length restrictions should return errors also.
@@ -554,7 +554,7 @@ class TestFormsController(TestController):
             'narrowPhoneticTranscription': u'test create invalid narrow phonetic transcription' * 100,
             'morphemeBreak': u'test create invalid morpheme break' * 100,
             'morphemeGloss': u'test create invalid morpheme gloss' * 100,
-            'glosses': [{'gloss': 'test create invalid gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': 'test create invalid translation', 'grammaticality': u''}],
             'status': u'invalid status value'
         })
         params = json.dumps(params)
@@ -589,8 +589,8 @@ class TestFormsController(TestController):
         params.update({
             'transcription': u'test create invalid transcription',
             'grammaticality': badGrammaticality,
-            'glosses': [{'gloss': 'test create invalid gloss',
-                         'glossGrammaticality': badGrammaticality}]
+            'translations': [{'transcription': 'test create invalid translation',
+                         'grammaticality': badGrammaticality}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -599,8 +599,8 @@ class TestFormsController(TestController):
         newFormCount = Session.query(model.Form).count()
         assert resp['errors']['grammaticality'] == \
             u'The grammaticality submitted does not match any of the available options.'
-        assert resp['errors']['glosses'] == \
-            u'At least one submitted gloss grammaticality does not match any of the available options.'
+        assert resp['errors']['translations'] == \
+            u'At least one submitted translation grammaticality does not match any of the available options.'
         assert newFormCount == formCount
 
         # Create a form with a valid grammaticality
@@ -608,8 +608,8 @@ class TestFormsController(TestController):
         params.update({
             'transcription': u'test create invalid transcription',
             'grammaticality': goodGrammaticality,
-            'glosses': [{'gloss': 'test create invalid gloss',
-                         'glossGrammaticality': goodGrammaticality}]
+            'translations': [{'transcription': 'test create invalid translation',
+                         'grammaticality': goodGrammaticality}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -617,8 +617,8 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         newFormCount = Session.query(model.Form).count()
         assert resp['grammaticality'] == goodGrammaticality
-        assert goodGrammaticality in [g['glossGrammaticality'] for g in
-                                      resp['glosses']]
+        assert goodGrammaticality in [t['grammaticality'] for t in
+                                      resp['translations']]
         assert newFormCount == formCount + 1
 
         # Create a form with some invalid many-to-one data, i.e., elicitation
@@ -628,8 +628,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test create invalid transcription',
-            'glosses': [{'gloss': 'test create invalid gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': 'test create invalid translation',
+                         'grammaticality': u''}],
             'elicitationMethod': badId,
             'syntacticCategory': badInt,
             'speaker': badId,
@@ -672,8 +672,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test create invalid transcription',
-            'glosses': [{'gloss': 'test create invalid gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': 'test create invalid translation',
+                         'grammaticality': u''}],
             'elicitationMethod': h.getElicitationMethods()[0].id,
             'syntacticCategory': h.getSyntacticCategories()[0].id,
             'speaker': h.getSpeakers()[0].id,
@@ -728,7 +728,7 @@ class TestFormsController(TestController):
             'phoneticTranscription': u'test broad phonetic transcription validation',
             'transcription': u'test orthographic transcription validation',
             'morphemeBreak': u'test morpheme break validation',
-            'glosses': [{'gloss': u'test validation gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test validation translation', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -753,7 +753,7 @@ class TestFormsController(TestController):
             'phoneticTranscription': u'test broad phonetic transcription validation',
             'transcription': u'',
             'morphemeBreak': u'test morpheme break validation',
-            'glosses': [{'gloss': u'test validation gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test validation translation', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -787,7 +787,7 @@ class TestFormsController(TestController):
             'phoneticTranscription': u'test broad phonetic transcription validation',
             'transcription': u'test orthographic transcription validation',
             'morphemeBreak': u'test morpheme break validation',
-            'glosses': [{'gloss': u'test validation gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test validation translation', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -810,7 +810,7 @@ class TestFormsController(TestController):
             'phoneticTranscription': u'test broad phonetic transcription validation',
             'transcription': u'test orthographic transcription validation',
             'morphemeBreak': u'OOO ooo OOO   o',
-            'glosses': [{'gloss': u'test validation gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test validation translation', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -839,7 +839,7 @@ class TestFormsController(TestController):
             'phoneticTranscription': u'foren',
             'transcription': u'foreign',
             'morphemeBreak': u'foreign',
-            'glosses': [{'gloss': u'foreign gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'foreign translation', 'grammaticality': u''}],
             'tags': [h.getForeignWordTag().id]
         })
         params = json.dumps(params)
@@ -863,7 +863,7 @@ class TestFormsController(TestController):
             'phoneticTranscription': u'b p',
             'transcription': u'o O',
             'morphemeBreak': u'o-foreign-O',
-            'glosses': [{'gloss': u'sentence containing foreign word', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'sentence containing foreign word', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -896,8 +896,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test relational transcription',
-            'glosses': [{'gloss': u'test relational gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test relational translation',
+                         'grammaticality': u''}],
             'tags': [t.id for t in h.getTags()],
             'files': [f.id for f in h.getFiles()]
         })
@@ -924,8 +924,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test relational transcription',
-            'glosses': [{'gloss': u'test relational gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test relational translation',
+                         'grammaticality': u''}],
             'tags': tags,
             'files': files
         })
@@ -940,8 +940,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test relational transcription',
-            'glosses': [{'gloss': u'test relational gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test relational translation',
+                         'grammaticality': u''}],
             'tags': tags,
             'files': files[0:1]
         })
@@ -960,8 +960,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test relational transcription invalid',
-            'glosses': [{'gloss': u'test relational gloss invalid',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test relational translation invalid',
+                         'grammaticality': u''}],
             'tags': [1000, 9875, u'abcdef'],
             'files': [44, u'1t']
         })
@@ -995,7 +995,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -1044,7 +1044,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
             'files': [restrictedFileId]
         })
         params = json.dumps(params)
@@ -1059,7 +1059,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
             'files': [unrestrictedFileId]
         })
         params = json.dumps(params)
@@ -1076,7 +1076,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
             'files': [restrictedFileId]
         })
         params = json.dumps(params)
@@ -1098,7 +1098,7 @@ class TestFormsController(TestController):
         unrestrictedFormParams = self.createParams.copy()
         unrestrictedFormParams.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test_create_gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}]
         })
         params = json.dumps(unrestrictedFormParams)
         response = self.app.post(url('forms'), params, self.json_headers, admin)
@@ -1244,10 +1244,10 @@ class TestFormsController(TestController):
         # Create a form to update.
         params = self.createParams.copy()
         originalTranscription = u'test_update_transcription'
-        originalGloss = u'test_update_gloss'
+        originalTranslation = u'test_update_translation'
         params.update({
             'transcription': originalTranscription,
-            'glosses': [{'gloss': originalGloss, 'glossGrammaticality': u''}],
+            'translations': [{'transcription': originalTranslation, 'grammaticality': u''}],
             'tags': [restrictedTag.id]
         })
         params = json.dumps(params)
@@ -1257,7 +1257,7 @@ class TestFormsController(TestController):
         id = int(resp['id'])
         newFormCount = Session.query(model.Form).count()
         assert resp['transcription'] == originalTranscription
-        assert resp['glosses'][0]['gloss'] == originalGloss
+        assert resp['translations'][0]['transcription'] == originalTranslation
         assert newFormCount == formCount + 1
 
         # As a viewer, attempt to update the restricted form we just created.
@@ -1267,7 +1267,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated!',
-            'glosses': [{'gloss': u'test_update_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_update_translation', 'grammaticality': u''}],
         })
         params = json.dumps(params)
         response = self.app.put(url('form', id=id), params,
@@ -1281,7 +1281,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated!',
-            'glosses': [{'gloss': u'test_update_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_update_translation', 'grammaticality': u''}],
             'morphemeBreak': u'a-b',
             'morphemeGloss': u'c-d',
             'status': u'requires testing'
@@ -1294,7 +1294,7 @@ class TestFormsController(TestController):
         newBackupCount = Session.query(model.FormBackup).count()
         morphemeBreakIDsOfWord = resp['morphemeBreakIDs']
         assert resp['transcription'] == u'Updated!'
-        assert resp['glosses'][0]['gloss'] == u'test_update_gloss'
+        assert resp['translations'][0]['transcription'] == u'test_update_translation'
         assert resp['morphemeBreak'] == u'a-b'
         assert resp['morphemeGloss'] == u'c-d'
         assert resp['morphemeBreakIDs'] == [[[], []]]
@@ -1331,7 +1331,7 @@ class TestFormsController(TestController):
         newParams = self.createParams.copy()
         newParams.update({
             'transcription': u'a',
-            'glosses': [{'gloss': u'lexical', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'lexical', 'grammaticality': u''}],
             'morphemeBreak': u'a',
             'morphemeGloss': u'c'
         })
@@ -1397,7 +1397,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'Updated!',
-            'glosses': [{'gloss': u'test_update_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_update_translation', 'grammaticality': u''}],
             'tags': [h.getForeignWordTag().id],
             'morphemeBreak': u'a-b',
             'morphemeGloss': u'c-d'
@@ -1423,8 +1423,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'oO',
-            'glosses': [{'gloss': 'Updated again gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': 'Updated again translation',
+                         'grammaticality': u''}],
             'speaker': speaker.id,
         })
         params = json.dumps(params)
@@ -1472,7 +1472,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test_delete_transcription',
-            'glosses': [{'gloss': u'test_delete_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_delete_translation', 'grammaticality': u''}],
             'speaker': unicode(speaker.id),
             'tags': [tagId],
             'files': [fileId]
@@ -1483,13 +1483,13 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         toDeleteId = resp['id']
         assert resp['transcription'] == u'test_delete_transcription'
-        assert resp['glosses'][0]['gloss'] == u'test_delete_gloss'
+        assert resp['translations'][0]['transcription'] == u'test_delete_translation'
         assert resp['tags'][0]['name'] == u'default tag'
         assert resp['files'][0]['name'] == u'test_file_name'
 
-        # Query the Gloss from the db and expect it to be present.
-        gloss = Session.query(model.Gloss).get(resp['glosses'][0]['id'])
-        assert gloss.gloss == u'test_delete_gloss'
+        # Query the Translation from the db and expect it to be present.
+        translation = Session.query(model.Translation).get(resp['translations'][0]['id'])
+        assert translation.transcription == u'test_delete_translation'
 
         # Now count the forms and formBackups.
         newFormCount = Session.query(model.Form).count()
@@ -1507,7 +1507,7 @@ class TestFormsController(TestController):
         assert resp['error'] == u'You are not authorized to access this resource.'
 
         # As myContributor, attempt to delete the form we just created and
-        # expect to succeed.  Show that glosses get deleted when forms do but
+        # expect to succeed.  Show that translations get deleted when forms do but
         # many-to-many relations (e.g., tags and files) and many-to-one relations
         # (e.g., speakers) do not.
         extra_environ = {'test.authentication.id': myContributorId,
@@ -1517,15 +1517,15 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         newFormCount = Session.query(model.Form).count()
         newFormBackupCount = Session.query(model.FormBackup).count()
-        glossOfDeletedForm = Session.query(model.Gloss).get(
-            resp['glosses'][0]['id'])
+        translationOfDeletedForm = Session.query(model.Translation).get(
+            resp['translations'][0]['id'])
         tagOfDeletedForm = Session.query(model.Tag).get(
             resp['tags'][0]['id'])
         fileOfDeletedForm = Session.query(model.File).get(
             resp['files'][0]['id'])
         speakerOfDeletedForm = Session.query(model.Speaker).get(
             resp['speaker']['id'])
-        assert glossOfDeletedForm is None
+        assert translationOfDeletedForm is None
         assert isinstance(tagOfDeletedForm, model.Tag)
         assert isinstance(fileOfDeletedForm, model.File)
         assert isinstance(speakerOfDeletedForm, model.Speaker)
@@ -1536,7 +1536,7 @@ class TestFormsController(TestController):
         # The deleted form will be returned to us, so the assertions from above
         # should still hold true.
         assert resp['transcription'] == u'test_delete_transcription'
-        assert resp['glosses'][0]['gloss'] == u'test_delete_gloss'
+        assert resp['translations'][0]['transcription'] == u'test_delete_translation'
 
         # Trying to get the deleted form from the db should return None
         deletedForm = Session.query(model.Form).get(toDeleteId)
@@ -1611,7 +1611,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test_delete_transcription',
-            'glosses': [{'gloss': u'test_delete_gloss', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test_delete_translation', 'grammaticality': u''}],
             'tags': [h.getForeignWordTag().id]
         })
         params = json.dumps(params)
@@ -1621,7 +1621,7 @@ class TestFormsController(TestController):
         assert hasattr(response.g, 'applicationSettings')
         applicationSettings = response.g.applicationSettings
         assert resp['transcription'] == u'test_delete_transcription'
-        assert resp['glosses'][0]['gloss'] == u'test_delete_gloss'
+        assert resp['translations'][0]['transcription'] == u'test_delete_translation'
         assert 'test_delete_transcription' in applicationSettings.orthographicInventory.inputList
 
         # Delete the form we just created and observe that the orthographic
@@ -1667,7 +1667,7 @@ class TestFormsController(TestController):
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['transcription'] == u'test transcription'
-        assert resp['glosses'][0]['gloss'] == u'test gloss'
+        assert resp['translations'][0]['transcription'] == u'test translation'
         assert response.content_type == 'application/json'
 
         # Now test that the restricted tag is working correctly.
@@ -1700,8 +1700,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
-            'glosses': [{'gloss': u'test restricted tag gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test restricted tag translation',
+                         'grammaticality': u''}],
             'tags': [h.getTags()[0].id]    # the restricted tag should be the only one
         })
         params = json.dumps(params)
@@ -1813,7 +1813,7 @@ class TestFormsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['form']['transcription'] == u'test transcription'
-        assert resp['form']['glosses'][0]['gloss'] == u'test gloss'
+        assert resp['form']['translations'][0]['transcription'] == u'test translation'
         assert response.content_type == 'application/json'
 
         # Valid id with GET params.  Param values are treated as strings, not
@@ -1933,7 +1933,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'created by the contributor',
-            'glosses': [{'gloss': u'created by the contributor', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'created by the contributor', 'grammaticality': u''}],
             'elicitor': contributorId,
             'tags': [restrictedTagId]
         })
@@ -1953,8 +1953,8 @@ class TestFormsController(TestController):
         params.update({
             'grammaticality': u'?',
             'transcription': u'updated by the administrator',
-            'glosses': [{'gloss': u'updated by the administrator',
-                         'glossGrammaticality': u'*'}],
+            'translations': [{'transcription': u'updated by the administrator',
+                         'grammaticality': u'*'}],
             'morphemeBreak': u'up-dat-ed by the ad-ministr-ator',
             'morphemeGloss': u'up-date-PAST PREP DET PREP-servant-AGT',
             'speaker': speakerId,
@@ -1978,8 +1978,8 @@ class TestFormsController(TestController):
         params.update({
             'grammaticality': u'#',
             'transcription': u'updated by the contributor',
-            'glosses': [{'gloss': u'updated by the contributor',
-                         'glossGrammaticality': u'*'}],
+            'translations': [{'transcription': u'updated by the contributor',
+                         'grammaticality': u'*'}],
             'morphemeBreak': u'up-dat-ed by the ad-ministr-ator',
             'morphemeGloss': u'up-date-PAST PREP DET PREP-servant-AGT',
             'speaker': speakerId,
@@ -2151,8 +2151,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'2nd form restricted',
-            'glosses': [{'gloss': u'2nd form restricted',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'2nd form restricted',
+                         'grammaticality': u''}],
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -2168,7 +2168,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'2nd form unrestricted',
-            'glosses': [{'gloss': u'2nd form unrestricted', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'2nd form unrestricted', 'grammaticality': u''}],
             'tags': []
         })
         params = json.dumps(params)
@@ -2180,8 +2180,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'2nd form unrestricted updated',
-            'glosses': [{'gloss': u'2nd form unrestricted updated',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'2nd form unrestricted updated',
+                         'grammaticality': u''}],
             'tags': []
         })
         params = json.dumps(params)
@@ -2365,7 +2365,7 @@ class TestFormsController(TestController):
             'transcription': u'abc',
             'morphemeBreak': u'a-b-c',
             'morphemeGloss': u'1-2-3',
-            'glosses': [{'gloss': u'123', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'123', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -2375,7 +2375,7 @@ class TestFormsController(TestController):
             'transcription': u'xyz',
             'morphemeBreak': u'x-y-z',
             'morphemeGloss': u'7-8-9',
-            'glosses': [{'gloss': u'789', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'789', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -2409,7 +2409,7 @@ class TestFormsController(TestController):
             'transcription': u'x',
             'morphemeBreak': u'x',
             'morphemeGloss': u'7',
-            'glosses': [{'gloss': u'7', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'7', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         params = json.dumps(params)
@@ -2421,7 +2421,7 @@ class TestFormsController(TestController):
             'transcription': u'y',
             'morphemeBreak': u'y',
             'morphemeGloss': u'8',
-            'glosses': [{'gloss': u'8', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'8', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         params = json.dumps(params)
@@ -2433,7 +2433,7 @@ class TestFormsController(TestController):
             'transcription': u'z',
             'morphemeBreak': u'z',
             'morphemeGloss': u'9',
-            'glosses': [{'gloss': u'9', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'9', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         params = json.dumps(params)
@@ -2445,7 +2445,7 @@ class TestFormsController(TestController):
             'transcription': u'a',
             'morphemeBreak': u'a',
             'morphemeGloss': u'1',
-            'glosses': [{'gloss': u'1', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'1', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         params = json.dumps(params)
@@ -2457,7 +2457,7 @@ class TestFormsController(TestController):
             'transcription': u'b',
             'morphemeBreak': u'b',
             'morphemeGloss': u'2',
-            'glosses': [{'gloss': u'2', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'2', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         params = json.dumps(params)
@@ -2469,7 +2469,7 @@ class TestFormsController(TestController):
             'transcription': u'c',
             'morphemeBreak': u'c',
             'morphemeGloss': u'3',
-            'glosses': [{'gloss': u'3', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'3', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         params = json.dumps(params)
@@ -2566,8 +2566,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
-            'glosses': [{'gloss': u'test restricted tag gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test restricted tag translation',
+                         'grammaticality': u''}],
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -2582,8 +2582,8 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
-            'glosses': [{'gloss': u'test restricted tag gloss',
-                         'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test restricted tag translation',
+                         'grammaticality': u''}],
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -2612,7 +2612,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': eAcuteCombining,
-            'glosses': [{'gloss': u'test normalization', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test normalization', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
@@ -2624,7 +2624,7 @@ class TestFormsController(TestController):
         params = self.createParams.copy()
         params.update({
             'transcription': eAcutePrecomposed,
-            'glosses': [{'gloss': u'test normalization', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test normalization', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
@@ -2678,7 +2678,7 @@ class TestFormsController(TestController):
             'transcription': u'abc',
             'morphemeBreak': u'a-b-c',
             'morphemeGloss': u'1-2-3',
-            'glosses': [{'gloss': u'123', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'123', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
@@ -2689,7 +2689,7 @@ class TestFormsController(TestController):
             'transcription': u'xyz',
             'morphemeBreak': u'x-y-z',
             'morphemeGloss': u'7-8-9',
-            'glosses': [{'gloss': u'789', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'789', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
@@ -2715,7 +2715,7 @@ class TestFormsController(TestController):
             'transcription': u'x',
             'morphemeBreak': u'x',
             'morphemeGloss': u'7',
-            'glosses': [{'gloss': u'7', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'7', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         xParams = json.dumps(xParams)
@@ -2734,7 +2734,7 @@ class TestFormsController(TestController):
             'transcription': u'y',
             'morphemeBreak': u'y',
             'morphemeGloss': u'8',
-            'glosses': [{'gloss': u'8', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'8', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         yParams = json.dumps(yParams)
@@ -2746,7 +2746,7 @@ class TestFormsController(TestController):
             'transcription': u'z',
             'morphemeBreak': u'z',
             'morphemeGloss': u'9',
-            'glosses': [{'gloss': u'9', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'9', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         zParams = json.dumps(zParams)
@@ -2758,7 +2758,7 @@ class TestFormsController(TestController):
             'transcription': u'a',
             'morphemeBreak': u'a',
             'morphemeGloss': u'1',
-            'glosses': [{'gloss': u'1', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'1', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         aParams = json.dumps(aParams)
@@ -2770,7 +2770,7 @@ class TestFormsController(TestController):
             'transcription': u'b',
             'morphemeBreak': u'b',
             'morphemeGloss': u'2',
-            'glosses': [{'gloss': u'2', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'2', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         bParams = json.dumps(bParams)
@@ -2782,7 +2782,7 @@ class TestFormsController(TestController):
             'transcription': u'c',
             'morphemeBreak': u'c',
             'morphemeGloss': u'3',
-            'glosses': [{'gloss': u'3', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'3', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         cParams = json.dumps(cParams)
@@ -2901,7 +2901,7 @@ class TestFormsController(TestController):
         # form 'xyz'; expect 'xyz' to be unaffected.
         zParams = json.loads(zParams)
         zParams['transcription'] = u'zZz'
-        zParams['glosses'] = [{'gloss': u'999', 'glossGrammaticality': u''}]
+        zParams['translations'] = [{'transcription': u'999', 'grammaticality': u''}]
         zParams = json.dumps(zParams)
         response = self.app.put(url('form', id=zId), zParams, self.json_headers, extra_environ)
         newXyzPhrase = Session.query(model.Form).get(xyzId)
@@ -2919,7 +2919,7 @@ class TestFormsController(TestController):
             'transcription': u'x',
             'morphemeBreak': u'x',
             'morphemeGloss': u'7',
-            'glosses': [{'gloss': u'7', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'7', 'grammaticality': u''}],
             'syntacticCategory': AgrId
         })
         x2Params = json.dumps(x2Params)
@@ -3039,7 +3039,7 @@ class TestFormsController(TestController):
             'transcription': u'Le chien a courru.',
             'morphemeBreak': u'le chien a courru',
             'morphemeGloss': u'the dog has run.PP',
-            'glosses': [{'gloss': u'The dog ran.', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'The dog ran.', 'grammaticality': u''}],
             'syntacticCategory': SId
         })
         params = json.dumps(params)
@@ -3056,7 +3056,7 @@ class TestFormsController(TestController):
             'transcription': u'le',
             'morphemeBreak': u'le',
             'morphemeGloss': u'the',
-            'glosses': [{'gloss': u'the', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'the', 'grammaticality': u''}],
             'syntacticCategory': DId
         })
         params = json.dumps(params)
@@ -3074,7 +3074,7 @@ class TestFormsController(TestController):
             'transcription': u'chien',
             'morphemeBreak': u'chien',
             'morphemeGloss': u'dog',
-            'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'dog', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         params = json.dumps(params)
@@ -3087,7 +3087,7 @@ class TestFormsController(TestController):
             'transcription': u'a',
             'morphemeBreak': u'a',
             'morphemeGloss': u'has',
-            'glosses': [{'gloss': u'has', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'has', 'grammaticality': u''}],
             'syntacticCategory': TId
         })
         params = json.dumps(params)
@@ -3100,7 +3100,7 @@ class TestFormsController(TestController):
             'transcription': u'courru',
             'morphemeBreak': u'courru',
             'morphemeGloss': u'run.PP',
-            'glosses': [{'gloss': u'run', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'run', 'grammaticality': u''}],
             'syntacticCategory': VId
         })
         params = json.dumps(params)
@@ -3144,7 +3144,7 @@ class TestFormsController(TestController):
             'transcription': u'Les chiens ont courru.',
             'morphemeBreak': u'le^s chien.s o?nt courr+u',
             'morphemeGloss': u'the^PL dog.PL have?3PL run+PP',
-            'glosses': [{'gloss': u'The dogs ran.', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'The dogs ran.', 'grammaticality': u''}],
             'syntacticCategory': SId
         })
         params = json.dumps(params)
@@ -3172,7 +3172,7 @@ class TestFormsController(TestController):
             'transcription': u's',
             'morphemeBreak': u's',
             'morphemeGloss': u'PL',
-            'glosses': [{'gloss': u'plural', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'plural', 'grammaticality': u''}],
             'syntacticCategory': NumId
         })
         params = json.dumps(params)
@@ -3186,7 +3186,7 @@ class TestFormsController(TestController):
             'transcription': u'o',
             'morphemeBreak': u'o',
             'morphemeGloss': u'have',
-            'glosses': [{'gloss': u'have', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'have', 'grammaticality': u''}],
             'syntacticCategory': TId
         })
         params = json.dumps(params)
@@ -3200,7 +3200,7 @@ class TestFormsController(TestController):
             'transcription': u'nt',
             'morphemeBreak': u'nt',
             'morphemeGloss': u'3PL',
-            'glosses': [{'gloss': u'third person plural', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'third person plural', 'grammaticality': u''}],
             'syntacticCategory': AgrId
         })
         params = json.dumps(params)
@@ -3214,7 +3214,7 @@ class TestFormsController(TestController):
             'transcription': u'courr',
             'morphemeBreak': u'courr',
             'morphemeGloss': u'run',
-            'glosses': [{'gloss': u'run', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'run', 'grammaticality': u''}],
             'syntacticCategory': VId
         })
         params = json.dumps(params)
@@ -3228,7 +3228,7 @@ class TestFormsController(TestController):
             'transcription': u'u',
             'morphemeBreak': u'u',
             'morphemeGloss': u'PP',
-            'glosses': [{'gloss': u'past participle', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'past participle', 'grammaticality': u''}],
             'syntacticCategory': TId
         })
         params = json.dumps(params)
@@ -3297,7 +3297,7 @@ class TestFormsController(TestController):
             'transcription': u'Les chiens ont courru; les chiens ont courru; les chiens ont courru.',
             'morphemeBreak': u'le^s chien.s o?nt courr+u le^s chien.s o?nt courr+u le^s chien.s o?nt courr+u',
             'morphemeGloss': u'the^PL dog.PL have?3PL run+PP the^PL dog.PL have?3PL run+PP the^PL dog.PL have?3PL run+PP',
-            'glosses': [{'gloss': u'The dogs ran; the dogs ran; the dogs ran.', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'The dogs ran; the dogs ran; the dogs ran.', 'grammaticality': u''}],
             'syntacticCategory': SId
         })
         params = json.dumps(params)

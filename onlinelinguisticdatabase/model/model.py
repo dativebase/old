@@ -29,7 +29,7 @@ class Model(object):
     tableName2coreAttributes = {
         'elicitationmethod': ['id', 'name'],
         'file': ['id', 'name', 'filename', 'MIMEtype', 'size', 'url', 'lossyFilename'],
-        'gloss': ['id', 'gloss', 'glossGrammaticality'],
+        'translation': ['id', 'transcription', 'grammaticality'],
         'orthography': ['id', 'name', 'orthography', 'lowercase', 'initialGlottalStops'],
         'source': ['id', 'type', 'key', 'journal', 'editor', 'chapter', 'pages',
             'publisher', 'booktitle', 'school', 'institution', 'year', 'author', 'title', 'note'],
@@ -80,8 +80,8 @@ class Model(object):
     def getMiniSourceDict(self, source):
         return self.getMiniDictFor(source)
 
-    def getMiniGlossDict(self, gloss):
-        return self.getMiniDictFor(gloss)
+    def getMiniTranslationDict(self, translation):
+        return self.getMiniDictFor(translation)
 
     def getMiniTagDict(self, tag):
         return self.getMiniDictFor(tag)
@@ -95,8 +95,8 @@ class Model(object):
     def getMiniList(self, listOfModels):
         return [m.getMiniDict() for m in listOfModels]
 
-    def getGlossesList(self, glosses):
-        return [self.getMiniGlossDict(gloss) for gloss in glosses]
+    def getTranslationsList(self, translations):
+        return [self.getMiniTranslationDict(translation) for translation in translations]
 
     def getTagsList(self, tags):
         return [self.getMiniTagDict(tag) for tag in tags]

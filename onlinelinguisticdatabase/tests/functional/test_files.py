@@ -108,7 +108,7 @@ class TestFilesController(TestController):
         'morphemeBreak': u'',
         'grammaticality': u'',
         'morphemeGloss': u'',
-        'glosses': [{'gloss': u'', 'glossGrammaticality': u''}],
+        'translations': [{'transcription': u'', 'grammaticality': u''}],
         'comments': u'',
         'speakerComments': u'',
         'elicitationMethod': u'',
@@ -464,7 +464,7 @@ class TestFilesController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -942,7 +942,7 @@ class TestFilesController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'restricted',
-            'glosses': [{'gloss': u'restricted', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'restricted', 'grammaticality': u''}],
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -954,7 +954,7 @@ class TestFilesController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'unrestricted',
-            'glosses': [{'gloss': u'unrestricted', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'unrestricted', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -1738,7 +1738,7 @@ class TestFilesController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'test',
-            'glosses': [{'gloss': u'test', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'files': [fileId]
         })
         params = json.dumps(params)
@@ -1747,7 +1747,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         assert type(resp) == type({})
         assert resp['transcription'] == u'test'
-        assert resp['glosses'][0]['gloss'] == u'test'
+        assert resp['translations'][0]['transcription'] == u'test'
         assert resp['morphemeBreakIDs'] == None
         assert resp['enterer']['firstName'] == u'Admin'
         assert resp['files'][0]['filename'] == u'old_test.jpg'

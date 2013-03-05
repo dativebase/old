@@ -94,8 +94,8 @@ def createTestForms(n=100):
         f.speakerComments = u'speakerComments %d' % i
         f.morphemeBreakIDs = u'[[[]]]'
         f.morphemeGlossIDs = u'[[[]]]'
-        g = model.Gloss()
-        g.gloss = u'gloss %d' % i
+        tl = model.Translation()
+        tl.transcription = u'translation %d' % i
         f.enterer = contributor
         f.syntacticCategory = testModels['syntacticCategories'][i - 1]
         if i > 75:
@@ -103,7 +103,7 @@ def createTestForms(n=100):
             f.narrowPhoneticTranscription = u'narrowPhoneticTranscription %d' % i
             t = testModels['tags'][i - 1]
             f.tags.append(t)
-            g.glossGrammaticality = u'*'
+            tl.grammaticality = u'*'
         if i > 65 and i < 86:
             fi = testModels['files'][i - 1]
             f.files.append(fi)
@@ -135,11 +135,11 @@ def createTestForms(n=100):
         if (i > 41 and i < 53) or i in [86, 92, 3]:
             f.source = testModels['sources'][i]
         if i != 87:
-            f.glosses.append(g)
+            f.translations.append(tl)
         if i == 79:
-            g = model.Gloss()
-            g.gloss = u'gloss %d the second' % i
-            f.glosses.append(g)
+            tl = model.Translation()
+            tl.transcription = u'translation %d the second' % i
+            f.translations.append(tl)
             t = testModels['tags'][i - 2]
             f.tags.append(t)
         Session.add(f)
@@ -504,7 +504,7 @@ class TestRememberedformsController(TestController):
         # The query we will use over and over again
         jsonQuery = json.dumps({'query': {'filter': [
             'and', [
-                ['Gloss', 'gloss', 'like', '%1%'],
+                ['Translation', 'transcription', 'like', '%1%'],
                 ['not', ['Form', 'morphemeBreak', 'regex', '[18][5-7]']],
                 ['or', [
                     ['Form', 'datetimeModified', '=', todayTimestamp.isoformat()],
@@ -513,7 +513,7 @@ class TestRememberedformsController(TestController):
         # remembered forms will return some values
         jsonQueryAdmin = json.dumps({'query': {'filter': [
             'and', [
-                ['Gloss', 'gloss', 'like', '%8%'],
+                ['Translation', 'transcription', 'like', '%8%'],
                 ['not', ['Form', 'morphemeBreak', 'regex', '[18][5-7]']],
                 ['or', [
                     ['Form', 'datetimeModified', '=', todayTimestamp.isoformat()],
@@ -522,19 +522,19 @@ class TestRememberedformsController(TestController):
         # The expected output of the above query on each of the user's remembered forms list
         resultSetViewer = [
             f for f in viewerRememberedForms if
-            '1' in ' '.join([g['gloss'] for g in f['glosses']]) and
+            '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morphemeBreak']) and
             (todayTimestamp.isoformat().split('.')[0] == f['datetimeModified'].split('.')[0] or
             (f['dateElicited'] and jan1.isoformat() == f['dateElicited']))]
         resultSetContributor = [
             f for f in contributorRememberedForms if
-            '1' in ' '.join([g['gloss'] for g in f['glosses']]) and
+            '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morphemeBreak']) and
             (todayTimestamp.isoformat().split('.')[0] == f['datetimeModified'].split('.')[0] or
             (f['dateElicited'] and jan1.isoformat() == f['dateElicited']))]
         resultSetAdministrator = [
             f for f in administratorRememberedForms if
-            '8' in ' '.join([g['gloss'] for g in f['glosses']]) and
+            '8' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morphemeBreak']) and
             (todayTimestamp.isoformat().split('.')[0] == f['datetimeModified'].split('.')[0] or
             (f['dateElicited'] and jan1.isoformat() == f['dateElicited']))]

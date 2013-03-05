@@ -14,7 +14,7 @@ the object-relational mapping provided by SQLAlchemy.
 The prototypical OLD model object is the ``form``  which represents a linguistic
 form, i.e., a morpheme, word, phrase or sentence elicited by a linguistic
 fieldworker.  Some of the representative attributes of the form model are
-``transcription``, ``morphemeBreak``, ``morphemeGloss``, ``glosses``,
+``transcription``, ``morphemeBreak``, ``morphemeGloss``, ``translations``,
 ``grammaticality``, ``speaker`` and ``dateElicited``.
 
 This exposition is structured according to the models defined by the OLD.\ [#f1]_
@@ -165,8 +165,8 @@ character.  See the :ref:`object-language-validation` section for more details.
 
 The ``grammaticalities`` attribute holds a comma-delimited list of
 grammaticality values that will be the available options for the
-``grammaticality`` attributes of form models and the ``glossGrammaticality``
-attributes of gloss models.  The default value for this field is "\*,#,?" as
+``grammaticality`` attributes of form models and the ``grammaticality``
+attributes of translation models.  The default value for this field is "\*,#,?" as
 defined in the ``generateDefaultApplicationSettings`` function of
 ``lib/utils.py``.
 
@@ -208,8 +208,8 @@ standard.  The default value for the ``metalanguageId`` attribute is "eng".
 
 The value of the ``metalanguageInventory`` attribute is a comma-delimited
 string representing the inventory of graphemes (i.e., single characters or
-strings of characters) that should be used to construct the glosses in the
-``glosses`` attribute of form models.  Note that the OLD is not set up to use
+strings of characters) that should be used to construct the translations in the
+``translations`` attribute of form models.  Note that the OLD is not set up to use
 the inventory in the ``metalanguageInventory`` attribute for validation.
 
 
@@ -1262,13 +1262,13 @@ it is a recording of an utterance of the object language, i.e., Blackfoot) and
 assume that the ``utteranceType`` value of *F2* is "Metalanguage Utterance"
 (since it is a recording of an utterance in the language of analysis and
 translation, i.e., English).  Now imagine a form *F* whose transcription is
-"oki" and whose only gloss is "hello" and which is associated to files *F1* and
-*F2*.  If there are a good number of forms like *F*, then an application making
-use of this OLD web service would be able to reasonably assume that *F1*, being
-an object language utterance associated to *F* is a recording of a speaker
-uttering the linguistic form that is transcribed in *F*.  Such an application
-could then use such forms to automatically generate audio/textual language
-learning games or talking dictionaries.
+"oki" and whose only translation is "hello" and which is associated to files
+*F1* and *F2*.  If there are a good number of forms like *F*, then an
+application making use of this OLD web service would be able to reasonably
+assume that *F1*, being an object language utterance associated to *F* is a
+recording of a speaker uttering the linguistic form that is transcribed in *F*.
+Such an application could then use such forms to automatically generate
+audio/textual language learning games or talking dictionaries.
 
 
 .. _form-data-structure:
@@ -1292,7 +1292,7 @@ form.
         "elicitationMethod": null, // valid elicitation method model id or null
         "elicitor": null, // valid user model id or null
         "files": [], // array of valid file model ids or []
-        "glosses": [{"gloss": "hello", "glossGrammaticality": ""}],
+        "translations": [{"transcription": "hello", "grammaticality": ""}],
         "grammaticality": "",
         "morphemeBreak": "",
         "morphemeGloss": "",
@@ -1322,7 +1322,7 @@ Forms representations returned by the OLD are JSON objects of the following form
         "elicitor": null, // an object representation of a user or null
         "enterer": { ... }, // an object representation of a user
         "files": [], // an array of object representations of files or []
-        "glosses": [{...}], // an array of object representations of glosses
+        "translations": [{...}], // an array of object representations of translations
         "grammaticality": "",
         "id": 1, // the integer id assigned by the database
         "morphemeBreak": "",
@@ -1434,18 +1434,19 @@ will be an array containing JSON object representations of any associated file
 models.
 
 
-``glosses``
+``translations``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A form model must have at least one gloss but may have more.  The glosses of a
-form are each gloss model objects that are listed in the ``glosses`` attribute
-of the form.  (In the relational database schema, the ``form`` and ``gloss``
-tables are in a one-to-many relationship.)  Forms with multiple glosses, e.g.,
-sentences with multiple valid translations, should use separate gloss models for
-each such gloss.  Gloss models can also have grammaticalities (cf. the
-``glossGrammaticality`` attribute) -- this feature may be used to indicate a
-translation that is not appropriate to a grammatical form.  Thus, as a
-simplified example, "chien" may be glossed as "dog" and "\*wolf".
+A form model must have at least one translation but may have more.  The
+translations of a form are each translation model objects that are listed in the
+``translations`` attribute of the form.  (In the relational database schema, the
+``form`` and ``translation`` tables are in a one-to-many relationship.)  Forms
+with multiple translations, e.g., sentences with multiple valid translations,
+should use separate translation models for each such translation.  Translation
+models can also have grammaticalities (cf. the ``grammaticality`` attribute) --
+this feature may be used to indicate a translation that is not appropriate to a
+grammatical form.  Thus, as a simplistic example, "chien" may be translationed
+as "dog" and "\*wolf" using two translation models.
 
 
 ``grammaticality``
@@ -1695,7 +1696,7 @@ following form.
         "enterer": null, // an object representation of an elicitation method or null
         "files": [], // an array of objects representing file models or []
         "form_id": 1,
-        "glosses": [], // an array of objects representing gloss models or []
+        "translations": [], // an array of objects representing translation models or []
         "grammaticality": "",
         "id": 1,
         "morphemeBreak": "",
@@ -1792,29 +1793,30 @@ create the form search.  This value is generated automatically by the system
 upon form search creation.
 
 
-.. _gloss-data-structure:
+.. _translation-data-structure:
 
-``Gloss``
+``Translation``
 --------------------------------------------------------------------------------
 
-Glosses are translations of forms into the metalanguage.  A form model can
-have multiple glosses and each of these glosses is a gloss model.  Each gloss
-model has ``gloss`` and ``glossGrammaticality`` attributes.  In relational
-database terminology, the form and gloss tables are in a one-to-many
-relationship; that is, a form may have many glosses but each gloss has one and
-only one form.  When a form is deleted, so too are its glosses.
+Translations are translations of forms into the metalanguage.  A form model can
+have multiple translations and each of these translations is a translation
+model.  Each translation model has ``transcription`` and ``grammaticality``
+attributes.  In relational database terminology, the form and translation tables
+are in a one-to-many relationship; that is, a form may have many translations
+but each translation has one and only one form.  When a form is deleted, so too
+are its translations.
 
-Glosses are created not directly (i.e., there is no "glosses" resource) but upon
-form create and update requests.  The input JSON object of such requests has a
-``glosses`` attribute whose value is an array of objects with ``gloss`` and
-``glossGrammaticality`` attributes, e.g.,
+Translations are created not directly (i.e., there is no "translations"
+resource) but upon form create and update requests.  The input JSON object of
+such requests has a ``translations`` attribute whose value is an array of
+objects with ``transcription`` and ``grammaticality`` attributes, e.g.,
 
 .. code-block:: javascript
 
     {
-        "glosses": [
-            {"gloss": "dog", "glossGrammaticality": ""},
-            {"gloss": "wolf", "glossGrammaticality": "*"}
+        "translations": [
+            {"transcription": "dog", "grammaticality": ""},
+            {"transcription": "wolf", "grammaticality": "*"}
         ]
     }
 
@@ -2696,10 +2698,11 @@ for this attribute is obligatory, must be unique among other syntactic category
 
 Syntactic categories are themselves categorized via the ``type`` attribute.
 Valid values, as defined in the ``syntacticCategoryTypes`` tuple of
-``lib/utils.py`` are "lexical", "phrasal" and "sentential".  The purpose of this
-attribute is to help the system to better understand the categorization.  This
-categorization could be useful for functionality that, say, seeks to induce a
-grammar of the morphology of the language.  The available syntactic category
+``lib/utils.py`` are "lexical", "phrasal" and "sentential".  An input  value of
+``null`` or the empty string will result in ``null`` as value.  The purpose of
+this attribute is to help the system to better understand the categorization.
+This categorization could be useful for functionality that, say, seeks to induce
+a grammar of the morphology of the language.  The available syntactic category
 types may change in future versions of the OLD.
 
 

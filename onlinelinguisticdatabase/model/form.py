@@ -86,7 +86,7 @@ class Form(Base):
     syntacticCategory = relation('SyntacticCategory', backref='forms')
     source_id = Column(Integer, ForeignKey('source.id'))
     source = relation('Source')
-    glosses = relation('Gloss', backref='form', cascade='all, delete, delete-orphan')
+    translations = relation('Translation', backref='form', cascade='all, delete, delete-orphan')
     files = relation('File', secondary=FormFile.__table__, backref='forms')
     collections = relation('Collection', secondary=collectionform_table, backref='forms')
     tags = relation('Tag', secondary=formtag_table, backref='forms')
@@ -125,7 +125,7 @@ class Form(Base):
             'elicitationMethod': self.getMiniElicitationMethodDict(self.elicitationMethod),
             'syntacticCategory': self.getMiniSyntacticCategoryDict(self.syntacticCategory),
             'source': self.getMiniSourceDict(self.source),
-            'glosses': self.getGlossesList(self.glosses),
+            'translations': self.getTranslationsList(self.translations),
             'tags': self.getTagsList(self.tags),
             'files': self.getFilesList(self.files)
         }

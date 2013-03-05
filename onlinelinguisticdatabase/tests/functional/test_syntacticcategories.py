@@ -45,7 +45,7 @@ class TestSyntacticcategoriesController(TestController):
         'morphemeBreak': u'',
         'grammaticality': u'',
         'morphemeGloss': u'',
-        'glosses': [],
+        'translations': [],
         'comments': u'',
         'speakerComments': u'',
         'elicitationMethod': u'',
@@ -178,6 +178,7 @@ class TestSyntacticcategoriesController(TestController):
         assert newSCCount == originalSCCount + 1
         assert resp['name'] == u'sc'
         assert resp['description'] == u'Described.'
+        assert resp['type'] == u'lexical'
         assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
@@ -402,7 +403,7 @@ class TestSyntacticcategoriesController(TestController):
             'transcription': u'chien',
             'morphemeBreak': u'chien',
             'morphemeGloss': u'dog',
-            'glosses': [{'gloss': u'dog', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'dog', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         params = json.dumps(params)
@@ -422,7 +423,7 @@ class TestSyntacticcategoriesController(TestController):
             'transcription': u'chiens',
             'morphemeBreak': u'chien-s',
             'morphemeGloss': u'dog-PL',
-            'glosses': [{'gloss': u'dogs', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'dogs', 'grammaticality': u''}],
             'syntacticCategory': NId
         })
         params = json.dumps(params)

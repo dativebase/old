@@ -12,23 +12,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Gloss model"""
+"""Translation model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 
-class Gloss(Base):
+class Translation(Base):
 
-    __tablename__ = 'gloss'
+    __tablename__ = 'translation'
     __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
-        return '<Gloss (%s)>' % self.id
+        return '<Translation (%s)>' % self.id
 
-    id = Column(Integer, Sequence('gloss_seq_id', optional=True), primary_key=True)
-    gloss = Column(UnicodeText, nullable=False)
-    glossGrammaticality = Column(Unicode(255))
+    id = Column(Integer, Sequence('translation_seq_id', optional=True), primary_key=True)
+    transcription = Column(UnicodeText, nullable=False)
+    grammaticality = Column(Unicode(255))
     form_id = Column(Integer, ForeignKey('form.id'))
     datetimeModified = Column(DateTime, default=now)

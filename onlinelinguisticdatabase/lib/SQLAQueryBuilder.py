@@ -75,19 +75,19 @@ against the Form model.
                                   Form.dateElicited < datetime.date(2012, 1, 1)))
 
 10. Complex.
-    ['and', [['Gloss', 'gloss', 'like', '%1%'],
+    ['and', [['Translation', 'transcription', 'like', '%1%'],
             ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
             ['or', [['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
                     ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]
-    glossAlias = aliased(Gloss)
+    translationAlias = aliased(Translation)
     Session.query(Form).filter(and_(
-        glossAlias.gloss.like(u'%1%'),
+        translationAlias.transcription.like(u'%1%'),
         not_(Form.morphemeBreak.op('regexp')(u'[28][5-7]')),
         or_(
             Form.datetimeModified < ...,
             Form.datetimeModified > ...
         )
-    )).outerjoin(glossAlias, Form.glosses)
+    )).outerjoin(translationAlias, Form.translations)
 
 Note also that SQLAQueryBuilder detects the RDBMS and issues collate commands
 where necessary to ensure that pattern matches are case-sensitive while ordering
@@ -177,7 +177,7 @@ class SQLAQueryBuilder(object):
         > queryBuilder = SQLAlchemyQueryBuilder()
         > pythonQuery = {'filter': [
             'and', [
-                ['Gloss', 'gloss', 'like', '1'],
+                ['Translation', 'transcription', 'like', '1'],
                 ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
                 ['or', [
                     ['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
@@ -354,7 +354,7 @@ class SQLAQueryBuilder(object):
     # 'enterer' ...] will be treated as Form.enterer_id...  The relations listed
     # in self.relations above are the default for all attributes.  This can be
     # overridden by specifying a 'relation' key (cf.
-    # schema['Form']['glosses'] below).  Certain attributes require
+    # schema['Form']['translations'] below).  Certain attributes require
     # value converters -- functions that change the value in some attribute-
     # specific way, e.g., conversion of ISO 8601 datetimes to Python datetime
     # objects.
@@ -435,7 +435,7 @@ class SQLAQueryBuilder(object):
             'elicitationMethod': {'foreignModel': 'ElicitationMethod', 'type': 'scalar'},
             'syntacticCategory': {'foreignModel': 'SyntacticCategory', 'type': 'scalar'},
             'source': {'foreignModel': 'Source', 'type': 'scalar'},
-            'glosses': {'foreignModel': 'Gloss', 'type': 'collection'},
+            'translations': {'foreignModel': 'Translation', 'type': 'collection'},
             'tags': {'foreignModel': 'Tag', 'type': 'collection'},
             'files': {'foreignModel': 'File', 'type': 'collection'},
             'collections': {'foreignModel': 'Collection', 'type': 'collection'}
@@ -468,7 +468,7 @@ class SQLAQueryBuilder(object):
             'elicitationMethod': {},
             'syntacticCategory': {},
             'source': {},
-            'glosses': {},
+            'translations': {},
             'tags': {},
             'files': {},
             'collections': {}
@@ -504,10 +504,10 @@ class SQLAQueryBuilder(object):
             'forms': {'foreignModel': 'Collection', 'type': 'collection'},
             'collections': {'foreignModel': 'Collection', 'type': 'collection'}
         },
-        'Gloss': {
+        'Translation': {
             'id': {},
-            'gloss': {},
-            'glossGrammaticality': {},
+            'transcription': {},
+            'grammaticality': {},
             'datetimeModified': {'valueConverter': '_getDatetimeValue'}
         },
         'Language': {
@@ -629,7 +629,7 @@ class SQLAQueryBuilder(object):
     models2joins = {
         'Form': {
             'File': 'files',
-            'Gloss': 'glosses',
+            'Translation': 'translations',
             'Tag': 'tags',
             'Collection': 'collections',
             'Memorizer': 'memorizers'

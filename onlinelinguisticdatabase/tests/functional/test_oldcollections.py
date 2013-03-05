@@ -61,7 +61,7 @@ class TestOldcollectionsController(TestController):
         'morphemeBreak': u'',
         'grammaticality': u'',
         'morphemeGloss': u'',
-        'glosses': [],
+        'translations': [],
         'comments': u'',
         'speakerComments': u'',
         'elicitationMethod': u'',
@@ -405,7 +405,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'transcription 1',
-            'glosses': [{'gloss': u'gloss 1', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'translation 1', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -416,7 +416,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'transcription 2',
-            'glosses': [{'gloss': u'gloss 2', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'translation 2', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -466,7 +466,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'transcription 3',
-            'glosses': [{'gloss': u'gloss 3', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'translation 3', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
@@ -476,7 +476,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'transcription 4',
-            'glosses': [{'gloss': u'gloss 4', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'translation 4', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
@@ -764,8 +764,6 @@ class TestOldcollectionsController(TestController):
         assert resp['speaker']['firstName'] == speaker.firstName
         assert resp['elicitor']['firstName'] == contributor.firstName
         assert newCollectionCount == collectionCount + 1
-        log.debug(resp['markupLanguage'])
-        log.debug(resp['type'])
 
     #@nottest
     def test_relational_restrictions(self):
@@ -829,7 +827,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'restricted',
-            'glosses': [{'gloss': u'restricted', 'glossGrammaticality': u''}],
+            'translations': [{'transcription': u'restricted', 'grammaticality': u''}],
             'tags': [restrictedTagId]
         })
         params = json.dumps(params)
@@ -841,7 +839,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'unrestricted',
-            'glosses': [{'gloss': u'unrestricted', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'unrestricted', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -1270,7 +1268,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'transcription 1',
-            'glosses': [{'gloss': u'gloss 1', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'translation 1', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -1281,7 +1279,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'transcription 2',
-            'glosses': [{'gloss': u'gloss 2', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'translation 2', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
@@ -1426,7 +1424,7 @@ class TestOldcollectionsController(TestController):
         params = self.createFormParams.copy()
         params.update({
             'transcription': u'test_delete_transcription',
-            'glosses': [{'gloss': u'test_delete_gloss', 'glossGrammaticality': u''}]
+            'translations': [{'transcription': u'test_delete_translation', 'grammaticality': u''}]
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)

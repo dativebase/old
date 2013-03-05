@@ -1004,9 +1004,9 @@ def generateDefaultForm():
     form.morphemeBreakIDs = u'null'
     form.morphemeGlossIDs = u'null'
     form.datetimeEntered = now()
-    gloss = model.Gloss()
-    gloss.gloss = u'test gloss'
-    form.glosses.append(gloss)
+    translation = model.Translation()
+    translation.transcription = u'test translation'
+    form.translations.append(translation)
     return form
 
 def generateDefaultFile():
@@ -1534,7 +1534,7 @@ def eagerloadForm(query):
         #subqueryload(model.Form.elicitationMethod),
         #subqueryload(model.Form.syntacticCategory),
         #subqueryload(model.Form.source),
-        joinedload(model.Form.glosses),
+        joinedload(model.Form.translations),
         joinedload(model.Form.files),
         joinedload(model.Form.tags))
 

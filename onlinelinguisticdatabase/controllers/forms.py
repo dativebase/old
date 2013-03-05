@@ -29,7 +29,7 @@ from onlinelinguisticdatabase.lib.schemata import FormSchema, FormIdsSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Form, FormBackup, Gloss, User
+from onlinelinguisticdatabase.model import Form, FormBackup, Translation, User
 
 log = logging.getLogger(__name__)
 
@@ -527,8 +527,8 @@ def createNewForm(data):
     form.verifier = data['verifier']
     form.speaker = data['speaker']
 
-    # One-to-Many Data: glosses
-    form.glosses = data['glosses']
+    # One-to-Many Data: translations
+    form.translations = data['translations']
 
     # Many-to-Many Data: tags & files
     form.tags = [t for t in data['tags'] if t]
@@ -582,16 +582,16 @@ def updateForm(form, data):
     # User-entered date: dateElicited
     changed = h.setAttr(form, 'dateElicited', data['dateElicited'], changed)
 
-    # One-to-Many Data: Glosses
-    # First check if the user has made any changes to the glosses.
-    # If there are changes, then delete all glosses and replace with new
-    #  ones.  (Note: this will result in the deletion of a gloss and the
+    # One-to-Many Data: Translations
+    # First check if the user has made any changes to the translations.
+    # If there are changes, then delete all translations and replace with new
+    #  ones.  (Note: this will result in the deletion of a translation and the
     #  recreation of an identical one with a different index.  There may be a
     #  "better" way of doing this, but this way is simple...
-    glossesWeHave = [(g.gloss, g.glossGrammaticality) for g in form.glosses]
-    glossesToAdd = [(g.gloss, g.glossGrammaticality) for g in data['glosses']]
-    if set(glossesWeHave) != set(glossesToAdd):
-        form.glosses = data['glosses']
+    translationsWeHave = [(t.transcription, t.grammaticality) for t in form.translations]
+    translationsToAdd = [(t.transcription, t.grammaticality) for t in data['translations']]
+    if set(translationsWeHave) != set(translationsToAdd):
+        form.translations = data['translations']
         changed = True
 
     # Many-to-One Data

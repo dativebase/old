@@ -68,7 +68,7 @@ class FormBackup(Base):
     elicitationMethod = Column(UnicodeText)
     syntacticCategory = Column(UnicodeText)
     source = Column(UnicodeText)
-    glosses = Column(UnicodeText)
+    translations = Column(UnicodeText)
     tags = Column(UnicodeText)
     files = Column(UnicodeText) 
     backuper = Column(UnicodeText)
@@ -108,7 +108,7 @@ class FormBackup(Base):
         self.enterer = unicode(json.dumps(formDict['enterer']))
         self.verifier = unicode(json.dumps(formDict['verifier']))
         self.backuper = unicode(json.dumps(self.getMiniUserDict(backuper)))
-        self.glosses = unicode(json.dumps(formDict['glosses']))
+        self.translations = unicode(json.dumps(formDict['translations']))
         self.tags = unicode(json.dumps(formDict['tags']))
         self.files = unicode(json.dumps(formDict['files']))
 
@@ -140,7 +140,7 @@ class FormBackup(Base):
             'enterer': self.jsonLoads(self.enterer),
             'verifier': self.jsonLoads(self.verifier),
             'backuper': self.jsonLoads(self.backuper),
-            'glosses': self.jsonLoads(self.glosses),
+            'translations': self.jsonLoads(self.translations),
             'tags': self.jsonLoads(self.tags),
             'files': self.jsonLoads(self.files)
         }
@@ -194,15 +194,15 @@ class FormBackup(Base):
             self.verifier.id = verifier['id']
             self.verifier.firstName = verifier['firstName']
             self.verifier.lastName = verifier['lastName']
-        if self.glosses:
-            glosses = json.loads(self.glosses)
-            self.glosses = []
-            for glossDict in glosses:
-                gloss = self.Column()
-                gloss.id = glossDict['id']
-                gloss.gloss = glossDict['gloss']
-                gloss.glossGrammaticality = glossDict['glossGrammaticality']
-                self.glosses.append(gloss)
+        if self.translations:
+            translations = json.loads(self.translations)
+            self.translations = []
+            for translationDict in translations:
+                translation = self.Column()
+                translation.id = translationDict['id']
+                translation.transcription = translationDict['transcription']
+                translation.grammaticality = translationDict['grammaticality']
+                self.translations.append(translation)
         if self.tags:
             tags = json.loads(self.tags)
             self.tags = []
