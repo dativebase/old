@@ -258,9 +258,9 @@ def createNewSource(data):
     source.price = h.normalize(data['price'])
     source.size = h.normalize(data['size'])
 
-    # Many-to-one: file
-    if data['file']:
-        source.file = data['file']
+    # Many-to-one: file, crossrefSource
+    source.file = data['file']
+    source.crossrefSource = data['crossrefSource']
 
     # OLD-generated Data
     source.datetimeModified = datetime.datetime.utcnow()
@@ -319,6 +319,7 @@ def updateSource(source, data):
 
     # Many-to-One Data
     changed = h.setAttr(source, 'file', data['file'], changed)
+    changed = h.setAttr(source, 'crossrefSource', data['crossrefSource'], changed)
 
     if changed:
         source.datetimeModified = datetime.datetime.utcnow()

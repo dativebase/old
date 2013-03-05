@@ -539,6 +539,7 @@ class TestSourcesController(TestController):
         response = self.app.post(url('sources'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
+        inbookId = resp['id']
         sourcesCount = newSourcesCount
         newSourcesCount = Session.query(Source).count()
         assert resp['type'] == u'inbook'      # the OLD converts type to lowercase
@@ -573,6 +574,53 @@ class TestSourcesController(TestController):
             u'Sources of type inbook require values for title, publisher and year as well as a value for at least one of author and editor and at least one of chapter and pages.'
         assert response.content_type == 'application/json'
 
+        # 'required': (('author', 'editor'), 'title', ('chapter', 'pages'), 'publisher', 'year')
+        # Create a book that the inbook above will cross-reference once updated.
+        # required: author or editor, title, publisher and year
+        params = self.createParams.copy()
+        params.update({
+            'type': u'bOOk',    # case is irrelevant for entry types
+            'key': u'vendler67book',
+            'author': u'Vendler, Zeno',
+            'title': u'Linguistics in Philosophy',
+            'publisher': u'Cornell University Press',
+            'year': 1967
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('sources'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        assert resp['type'] == u'book'      # the OLD converts type to lowercase
+        assert resp['title'] == u'Linguistics in Philosophy'
+        assert resp['author'] == u'Vendler, Zeno'
+        assert resp['year'] == 1967
+        assert resp['publisher'] == u'Cornell University Press'
+        assert resp['key'] == u'vendler67book'
+        assert response.content_type == 'application/json'
+
+        # Now update the valid inbook created above and have it cross-reference
+        # the book just created above.  Because the Vendler book has all of the
+        # rest of the attributes, all we need to specify is the chapter.
+        params = self.createParams.copy()
+        params.update({
+            'type': u'inbook',    # case is irrelevant for entry types
+            'key': u'vendler67',
+            'chapter': u'4',
+            'crossref': u'vendler67book'
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('source', id=inbookId), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['type'] == u'inbook'      # the OLD converts type to lowercase
+        assert resp['crossrefSource']['title'] == u'Linguistics in Philosophy'
+        assert resp['crossrefSource']['publisher'] == u'Cornell University Press'
+        assert resp['crossrefSource']['year'] == 1967
+        assert resp['crossrefSource']['author'] == u'Vendler, Zeno'
+        assert resp['chapter'] == u'4'
+
         ########################################################################
         # MISC
         ########################################################################
@@ -592,6 +640,130 @@ class TestSourcesController(TestController):
         assert resp['type'] == u'misc'      # the OLD converts type to lowercase
         assert newSourcesCount == sourcesCount + 1
         assert response.content_type == 'application/json'
+
+        ########################################################################
+        # INPROCEEDINGS
+        ########################################################################
+
+        # Create an inproceedings; required: author, title, booktitle, year.
+        params = self.createParams.copy()
+        params.update({
+            'type': u'inpROceedings',    # case is irrelevant for entry types
+            'key': u'oaho83',
+            'title': u'On Notions of Information Transfer in {VLSI} Circuits',
+            'booktitle': u'Proc. Fifteenth Annual ACM',
+            'year': 1983,
+            'author': u'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('sources'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        inproceedingsId = resp['id']
+        assert resp['type'] == u'inproceedings'      # the OLD converts type to lowercase
+        assert resp['title'] == u'On Notions of Information Transfer in {VLSI} Circuits'
+        assert resp['booktitle'] == u'Proc. Fifteenth Annual ACM'
+        assert resp['year'] == 1983
+        assert resp['author'] == u'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis'
+        assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
+
+        # Attempt to create an inproceedings that lacks booktitle and year
+        # values; expect to fail.
+        params = self.createParams.copy()
+        params.update({
+            'type': u'inpROceedings',    # case is irrelevant for entry types
+            'key': u'oaho83_2',
+            'title': u'On Notions of Information Transfer in {VLSI} Circuits',
+            'author': 'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('sources'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        assert newSourcesCount == sourcesCount
+        assert response.content_type == 'application/json'
+        assert resp['errors'] == u'Sources of type inproceedings require values for author, title, booktitle and year.'
+
+        # Now create a proceedings source that will be cross-referenced by the
+        # above inproceedings source.
+        params = self.createParams.copy()
+        params.update({
+            'type': u'PROceedings',    # case is irrelevant for entry types
+            'key': u'acm15_83',
+            'title': u'Proc. Fifteenth Annual',
+            'booktitle': u'Proc. Fifteenth Annual ACM',
+            'year': 1983
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('sources'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        proceedingsId = resp['id']
+        assert resp['type'] == u'proceedings'      # the OLD converts type to lowercase
+        assert resp['title'] == u'Proc. Fifteenth Annual'
+        assert resp['booktitle'] == u'Proc. Fifteenth Annual ACM'
+        assert resp['year'] == 1983
+        assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
+
+        # Now attempt to create an inproceedings that lacks booktitle and year
+        # values but cross-reference the proceedings source we just created; expect to succeed.
+        params = self.createParams.copy()
+        params.update({
+            'type': u'inpROceedings',    # case is irrelevant for entry types
+            'key': u'oaho83_2',
+            'title': u'On Notions of Information Transfer in {VLSI} Circuits',
+            'author': u'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis',
+            'crossref': u'acm15_83'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('sources'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
+        assert resp['type'] == u'inproceedings'      # the OLD converts type to lowercase
+        assert resp['title'] == u'On Notions of Information Transfer in {VLSI} Circuits'
+        assert resp['crossrefSource']['booktitle'] == u'Proc. Fifteenth Annual ACM'
+        assert resp['crossrefSource']['year'] == 1983
+        assert resp['author'] == u'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis'
+        assert newSourcesCount == sourcesCount + 1
+        assert response.content_type == 'application/json'
+        assert resp['crossrefSource']['id'] == proceedingsId
+
+        # Make sure the crossref stuff works with updates
+        params = self.createParams.copy()
+        params.update({
+            'type': u'inpROceedings',    # case is irrelevant for entry types
+            'key': u'oaho83',
+            'title': u'On Notions of Information Transfer in {VLSI} Circuits',
+            'author': u'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis',
+            'crossref': u'acm15_83'
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('source', id=inproceedingsId), params,
+                                self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        sourcesCount = newSourcesCount
+        newSourcesCount = Session.query(Source).count()
+        assert response.content_type == 'application/json'
+        assert resp['type'] == u'inproceedings'      # the OLD converts type to lowercase
+        assert resp['title'] == u'On Notions of Information Transfer in {VLSI} Circuits'
+        assert resp['crossrefSource']['booktitle'] == u'Proc. Fifteenth Annual ACM'
+        assert resp['crossrefSource']['year'] == 1983
+        assert resp['author'] == u'Alfred V. Oaho and Jeffrey D. Ullman and Mihalis Yannakakis'
+        assert newSourcesCount == sourcesCount
+        assert response.content_type == 'application/json'
+        assert resp['crossrefSource']['id'] == proceedingsId
 
     #@nottest
     def test_new(self):

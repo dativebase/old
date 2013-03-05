@@ -684,20 +684,53 @@ class ValidBibTeXEntry(FancyValidator):
                             for dr in disjunctivelyRequiredFields]))
         return requiredFields, disjunctivelyRequiredFields, u'%s.' % msg
 
+    def getRequiredValue(self, values, requiredField):
+        """Try to get a requied value from the values dict; if it's not there,
+        try the cross-referenced source model.
+        """
+        if values.get(requiredField):
+            return values[requiredField]
+        elif getattr(values.get('crossrefSource'), requiredField, None):
+            return getattr(values['crossrefSource'], requiredField)
+        else:
+            return None
+
     def validate_python(self, values, state):
         invalid = False
         type = values.get('type', '')
         requiredFields, disjunctivelyRequiredFields, msg = self.parseRequirements(type)
-        requiredFieldsValues = [values.get(rf) for rf in requiredFields if values.get(rf)]
+        requiredFieldsValues = filter(None,
+                    [self.getRequiredValue(values, rf) for rf in requiredFields])
         if len(requiredFieldsValues) != len(requiredFields):
             invalid = True
         else:
             for dr in disjunctivelyRequiredFields:
-                drValues = [values.get(rf) for rf in dr if values.get(rf)]
+                drValues = filter(None, [self.getRequiredValue(values, rf) for rf in dr])
                 if not drValues:
                     invalid = True
         if invalid:
             raise Invalid(self.message('invalid_entry', state, msg=msg), values, state)
+
+class ValidCrossref(FancyValidator):
+    """Validator checks that a specified crossref value is valid, i.e., matches
+    the key attribute of an existing source.
+    """
+    messages = {'invalid_crossref': 'There is no source with "%(crossref)s" as its key.'}
+
+    def _to_python(self, values, state):
+        if values.get('crossref') in (None, u''):
+            values['crossrefSource'] = None
+            return values
+        else:
+            crossref = values['crossref']
+            crossrefSource = Session.query(model.Source).\
+                filter(model.Source.key == crossref).first()
+            if crossrefSource is None:
+                raise Invalid(self.message('invalid_crossref', state, crossref=crossref),
+                              values, state)
+            else:
+                values['crossrefSource'] = crossrefSource
+                return values
 
 class SourceSchema(Schema):
     """SourceSchema is a Schema for validating the data submitted to
@@ -706,10 +739,10 @@ class SourceSchema(Schema):
 
     allow_extra_fields = True
     filter_extra_fields = True
-    chained_validators = [ValidBibTeXEntry()]
+    chained_validators = [ValidCrossref(), ValidBibTeXEntry()]
 
     type = ValidBibTeXEntryType(not_empty=True)   # OneOf lib.bibtex.entryTypes with any uppercase permutations
-    key = ValidBibTexKey(not_empty=True, unique=True)  # any combination of letters, numerals and symbols (except commas)
+    key = ValidBibTexKey(not_empty=True, unique=True, max=1000)  # any combination of letters, numerals and symbols (except commas)
 
     file = ValidOLDModelObject(modelName='File')
 

@@ -19,6 +19,9 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 
+import logging
+log = logging.getLogger(__name__)
+
 class Source(Base):
 
     __tablename__ = 'source'
@@ -30,6 +33,8 @@ class Source(Base):
     id = Column(Integer, Sequence('source_seq_id', optional=True), primary_key=True)
     file_id = Column(Integer, ForeignKey('file.id'))
     file = relation('File')
+    crossrefSource_id = Column(Integer, ForeignKey('source.id'))
+    crossrefSource = relation('Source', remote_side=[id])
     datetimeModified = Column(DateTime, default=now)
 
     # BibTeX data structure
@@ -85,7 +90,7 @@ class Source(Base):
         'name', 'size', etc. (cf. getMiniUserDict of the model superclass) and
         lacks keys for some attributes.
         """
-
         sourceDict = self.__dict__
         sourceDict['file'] = self.getMiniFileDict(self.file)
+        sourceDict['crossrefSource'] = self.getMiniSourceDict(self.crossrefSource)
         return sourceDict

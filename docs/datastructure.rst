@@ -2153,8 +2153,10 @@ value of the ``contents`` attribute of collection models.
 
 Requests to create or update source resources must contain a JSON object of
 the following form.  Source representations returned by the OLD are JSON objects
-of the same form, with the addition of ``id`` and ``datetimeModified``
-attributes.
+of the same form, with the addition of ``id``, ``datetimeModified`` and
+``crossrefSource``  attributes.  The value of the ``crossrefSource`` attribute
+is either ``null`` (if no ``crossref`` value was supplied by the user) or a JSON
+object representing the cross-referenced source.
 
 .. code-block:: javascript
 
@@ -2277,14 +2279,29 @@ Copyright information.  Maximum length is 255 characters.
 The ``key`` value of another source to be cross-referenced. Any attribute values
 that are missing from the source model are inherited from the source
 cross-referenced via the ``crossref`` attribute.  Maximum length is 1000
-characters.  
+characters.
 
-Note that the OLD does not yet make use of the ``crossref`` attribute during
-validation.  That is, a source whose ``type`` value is, for example,
-"inproceedings" will fail validation if it lacks a value for its ``booktitle``
-attribute, even though it cross-references another source whose ``type`` value
-is "proceedings" and which has a content-ful ``booktitle`` attribute value.
-This should be remedied in future versions of the OLD.
+If a valid ``key`` value is supplied as the value of the ``crossref`` attribute,
+the system will use the attributes of the cross-referenced source when
+validating the input.  That is, a source whose ``type`` value is, for example,
+"inproceedings" would normally fail validation if it lacks a value for its
+``booktitle`` attribute; however, if it cross-references another source whose
+``type`` value is "proceedings" and which has a content-ful ``booktitle`` value,
+then it will pass validaton.  If a valid ``crossref`` value is passed on input,
+then, on output, the value of ``crossrefSource`` will be an object representing
+the cross-referenced source.
+
+
+``crossrefSource``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The value of the ``crossrefSource`` attribute is either ``null`` or a source
+model that is cross-referenced via the ``crossref`` attribute.  That is, a valid
+``crossref`` value passed on input will cause the system to set the
+cross-referenced source as the value of the ``crossrefSource`` attribute.  When
+returning a JSON representation of the original source, the value of the
+``crossrefSource`` attribute will be a JSON object representing the
+cross-referenced source.
 
 
 ``edition``

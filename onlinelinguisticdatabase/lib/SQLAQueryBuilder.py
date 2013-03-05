@@ -587,6 +587,8 @@ class SQLAQueryBuilder(object):
             'lastName': {},
             'dialect': {},
             'pageContent': {},
+            'markupLanguage': {},
+            'html': {},
             'datetimeModified': {'valueConverter': '_getDatetimeValue'}
         },
         'SyntacticCategory': {
