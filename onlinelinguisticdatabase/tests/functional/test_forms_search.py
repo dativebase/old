@@ -1442,6 +1442,13 @@ class TestFormsSearchController(TestController):
         resultSet = list(set(viewerRememberedForms) | set(administratorRememberedForms))
         assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
 
+        # Try the same query as above except use the "memorizers" attribute
+        jsonQuery = json.dumps({'query': {'filter':
+            ['Form', 'memorizers', 'role', 'in', [u'administrator', u'viewer']]}})
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+
         # Everything memorized by the contributor matching a regex
         jsonQuery = json.dumps({'query': {'filter':
             ['and', [['Memorizer', 'id', '=', contributorId],
@@ -1453,6 +1460,15 @@ class TestFormsSearchController(TestController):
         assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
         assert response.content_type == 'application/json'
 
+        # The same query as above except use the "memorizers" attribute
+        jsonQuery = json.dumps({'query': {'filter':
+            ['and', [['Form', 'memorizers', 'id', '=', contributorId],
+                     ['Form', 'transcription', 'regex', '[13580]']]]}})
+        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+        assert response.content_type == 'application/json'
+
         # Invalid memorizer search
         jsonQuery = json.dumps({'query': {'filter': ['Memorizer', 'username', 'like', u'%e%']}})
         response = self.app.post(url('/forms/search'), jsonQuery,
@@ -1460,6 +1476,14 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['errors']['Memorizer.username'] == u'Searching on Memorizer.username is not permitted'
+
+        # Invalid memorizer search using the "memorizers" attribute
+        jsonQuery = json.dumps({'query': {'filter': ['Form', 'memorizers', 'username', 'like', u'%e%']}})
+        response = self.app.post(url('/forms/search'), jsonQuery,
+                self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert resp['errors']['User.username'] == u'Searching on User.username is not permitted'
 
     #@nottest
     def test_search_w_in(self):

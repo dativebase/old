@@ -438,7 +438,8 @@ class SQLAQueryBuilder(object):
             'translations': {'foreignModel': 'Translation', 'type': 'collection'},
             'tags': {'foreignModel': 'Tag', 'type': 'collection'},
             'files': {'foreignModel': 'File', 'type': 'collection'},
-            'collections': {'foreignModel': 'Collection', 'type': 'collection'}
+            'collections': {'foreignModel': 'Collection', 'type': 'collection'},
+            'memorizers': {'foreignModel': 'User', 'type': 'collection'}
         },
         'FormBackup': {
             'id': {},
