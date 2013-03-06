@@ -2990,6 +2990,24 @@ class TestFormsController(TestController):
         assert xyzPhrase.breakGlossCategory == u'x|7|Num-y|8|?-z|9|?'
         assert xyzPhrase.syntacticCategoryString == u'Num-?-?'
 
+        # Update the xyz form so that the delimiters used in the morphemeBreak
+        # and morphemeGloss lines do not match.  Show that the morpheme
+        # delimiters from the morphemeBreak line are the ones that are used in
+        # the breakGlossCategory and syntacticCategoryString values.
+        params = self.createParams.copy()
+        params.update({
+            'transcription': u'xyz',
+            'morphemeBreak': u'x=y-z',
+            'morphemeGloss': u'7-8=9',
+            'translations': [{'transcription': u'789', 'grammaticality': u''}]
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('form', id=xyzId), params, self.json_headers, extra_environ)
+        resp = json.loads(response.body)
+        assert resp['syntacticCategoryString'] == u'Num=?-?'
+        assert resp['morphemeGlossIDs'] == xyzMorphemeGlossIDs
+        assert resp['breakGlossCategory'] == u'x|7|Num=y|8|?-z|9|?'
+
     #@nottest
     def test_morphemic_analysis_compilation(self):
         """Tests the behaviour of compileMorphemicAnalysis in the forms controller.

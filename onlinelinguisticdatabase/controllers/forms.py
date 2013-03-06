@@ -731,14 +731,17 @@ def _compileMorphemicAnalysis(form, morphemeDelimiters=None, **kwargs):
 
     def join(bgc, morphemeDelimiters, bgcDelimiter):
         """This function joins the bgc ("break-gloss-category") triple using the
-        supplied bgc delimiter.  If the bgc is a list of identical morpheme
-        delimiters, the relevant delimiter is returned, e.g.,
-        join([('le', 'the', 'Det')], ['-', '=']) yields u'le|the|Det' while
-        join([('-', '-', '-')], ['-', '=']) yields u'-'.
+        supplied bgc delimiter.  If the bgc is a list of morpheme/word
+        delimiters, then the first such delimiter is returned, e.g.,
+        join([('le', 'the', 'Det')], ['-', '=', ' '], '|') yields u'le|the|Det',
+        join([('-', '-', '-')], ['-', '=', ' '], '|') yields u'-' and
+        join([('=', '-', '=')], ['-', '=', ' '], '|') yields u'='.
         """
-        if bgc not in [(d, d, d) for d in morphemeDelimiters]:
-            return bgcDelimiter.join(bgc)
-        return bgc[0]
+
+        if bgc[0] in morphemeDelimiters and bgc[1] in morphemeDelimiters and \
+        bgc[2] in morphemeDelimiters:
+            return bgc[0]
+        return bgcDelimiter.join(bgc)
 
     def morphemicAnalysisIsConsistent(**kwargs):
         """Return True only if the morphemeBreak and morphemeGloss fields are not
