@@ -4,57 +4,80 @@
 Installation & Configuration
 ================================================================================
 
-This section explains how to get, install and configure an OLD application.  The
-bird's-eye view of the process is as follows:
+This section explains how to get, install and configure an OLD application.  An
+overview of the process:
 
 #. Download and install the OLD.
 #. Generate an OLD config file and edit it.
-#. Run the ``paster setup-app`` script to create the database tables and
-   directory structure.
+#. Run the setup command to create the database tables and directory structure.
 #. Serve the application and test that it is working properly.
 
 Note that these installation instructions assume a Unix-like system, e.g.,
-Linux or Mac OS X.  If you are using Windows, please refer to the Pylons
+Linux or Mac OS X.  If you are using Windows [#f1]_, please refer to the Pylons
 or the virtualenv documentation for instructions on how to create and activate
 a Python virtual environment and install and download a Pylons application.
 
 
-Get the OLD
+QuickStart
 --------------------------------------------------------------------------------
 
-The source code for the OLD can be found on
-`GitHub <https://github.com/jrwdunham/old.>`_.
+For the impatient, here is the quickest way to install, configure and serve an
+OLD application.  Before blindly issuing the following commands, however, it is
+recommended that you read the detailed instructions in the following sections ::
 
-Pre-packaged eggs of stable OLD releases can be found on the
+    virtualenv --no-site-packages env
+    source env/bin/activate
+    easy_install onlinelinguisticdatabase
+    mkdir xyzold
+    cd xyzold
+    paster make-config onlinelinguisticdatabase production.ini
+    paster setup-app production.ini
+    paster serve production.ini
+
+Open a new terminal window and run the basic test script to ensure that the OLD
+application is being served and is operating correctly::
+
+    python _requests_tests.py
+
+You should see ``All requests tests passed.`` as output.  Congratulations.
+
+
+Download
+--------------------------------------------------------------------------------
+
+Pre-packaged eggs of stable OLD releases can be downloaded from the
 `Python Package Index <http://pypi.python.org/pypi/onlinelinguisticdatabase.>`_
 
-The easiest way to get and install the OLD is to use the Python command-line
-program Easy Install and run::
+The easiest way to get and install the OLD is via the Python command-line
+program Easy Install.  Before issuing the following command, read the
+:ref:`virtual-env` and consider installing the OLD in a virtual environment.
+To download and install the OLD with Easy Install, run::
 
     sudo easy_install onlinelinguisticdatabase
 
-To get the development version of the OLD from GitHub via git, first install
-`Git <http://git-scm.com/>`_ and then clone the repository::
+For developers, the full source code for the OLD can be found on
+`GitHub <https://github.com/jrwdunham/old.>`_.  To clone the OLD repository,
+first install `Git <http://git-scm.com/>`_ and then run::
 
     git clone git://github.com/jrwdunham/old.git
 
 See below for detailed instructions.
 
 
-Installation
+Install
 --------------------------------------------------------------------------------
 
+
+.. _virtual-env:
 
 Create a virtual Python environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is generally recommended that you install the OLD using a virtual Python
-environment.  A virtual environment is an isolated Python environment within
-which you can install the OLD and its dependencies without inadvertently
-rendering other programs unworkable by, say, upgrading *their* dependencies
-in incompatible ways.
-
-If you do not want to install the OLD and its dependencies in a virtual
+It is recommended that the OLD be installed in a virtual Python environment.  A
+virtual environment is an isolated Python environment within which you can
+install the OLD and its dependencies without inadvertently rendering other
+programs unworkable by, say, upgrading *their* dependencies in incompatible
+ways.  If you do not want to install the OLD and its dependencies in a virtual
 environment, skip this section.
 
 Use `virtualenv <http://www.virtualenv.org>`_ to create a virtual Python
@@ -124,8 +147,14 @@ dependencies for onlinelinguisticdatabase``.  (If you used ``pip``, you will see
 something like ``Successfully installed onlinelinguisticdatabase``.)  This means
 that the OLD and all of its dependencies have been successfully installed.
 
+If you have downloaded the OLD source code and need to install the dependencies,
+then move to the root directory of the source, i.e., the one containing the
+``setup.py`` file, and run::
 
-Configure the OLD
+    python setup.py develop
+
+
+Configure
 --------------------------------------------------------------------------------
 
 .. _gen-config:
@@ -139,8 +168,11 @@ setup script is run, several directories will be created in the same directory
 as the config file.  Therefore, it is a good idea to create the config file in
 its own directory.  I use the convention of naming production systems using the
 `ISO 639-3 <http://www-01.sil.org/iso639-3/codes.asp>`_ three-character id of
-the object language.  So, using *xyz* as an example (fictitious) language id,
-make a new directory called ``xyzold`` and change to it. ::
+the object language.  To illustrate, I will use the fictitious language id *xyz*
+and will name the directory ``xyzold``, the MySQL database ``xyzold`` and the
+MySQL user ``xyzuser``.  If following this convention, replace "xyz" with the Id
+of the language your OLD application will be documenting.  To make a new
+directory called ``xyzold`` and change to it, issue the following commands. ::
 
     mkdir xyzold
     cd xyzold
@@ -160,10 +192,14 @@ everything is working ok.  On a production system you will need to change the
 right away, see the :ref:`mysql-config` section; otherwise, continue on to
 :ref:`edit-config`.
 
+Developers will not need to generate a config file.  The ``test.ini`` and
+``development.ini`` config file should already be present in the root directory
+of the source.  See the :ref:`developers`` section for details.
+
 
 .. _mysql-config:
 
-Setup MySQL/MySQLdb
+Set up MySQL/MySQLdb
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The OLD can be configured to use either MySQL or SQLite as its relational
@@ -184,7 +220,7 @@ Then create a database to store your OLD data::
     mysql> create database xyzold default character set utf8;
 
 Now create a MySQL user with sufficient access to the above-created database.
-In the first command ``xyzuser`` is the username and ``4R5gvC9x`` is the
+In the first command, ``xyzuser`` is the username and ``4R5gvC9x`` is the
 password. ::
 
     mysql> create user 'xyzuser'@'localhost' identified by '4R5gvC9x';
@@ -197,7 +233,7 @@ Make sure that the above commands worked::
     mysql> use xyzold;
     mysql> show tables;
 
-Now MySQL is setup with a database called ``xyzold`` (with UTF-8 as its default
+Now MySQL is set up with a database called ``xyzold`` (with UTF-8 as its default
 character set) and a user ``xyzuser`` who has access to ``xyzold``.  The next
 step is to make sure that the python module ``MySQLdb`` is installed.  Enter a
 Python prompt (using your virtual environment, if applicable) and check::
@@ -237,13 +273,16 @@ any desired changes.  While the config file is self-documenting, this section
 supplements that documentation.
 
 (Note that once the OLD is downloaded and installed, it may be used to run
-several distinct web services.  To do this, simply repeat the configuration
-steps with different settings.)
+several distinct OLD web services, e.g., for different languages.  To do this,
+repeat the configuration steps with different settings.  For example, to create
+two OLD web services, one for language *xyz* and one for language *abc*, create
+two directories, ``xyzold`` and ``abcold``, generate a config file in each, and
+edit each config file appropriately, following these instructions.)
 
 The host and port where the application will be served are configured here.
 The defaults of ``127.0.0.1`` (i.e., localhost) and ``5000`` are fine for
-initial setup and testing.  During deployment and server configuration, return
-here to change these values.
+initial setup and testing.  During deployment and server configuration, the host
+will certainly need to be changed and the port probably also.
 
 The ``set debug = false`` line should be left as is on a production setup.
 However, for initial testing it is a good idea to comment out this line with a
@@ -290,13 +329,13 @@ if you would like to create .mp3 copies of your users' .wav files instead of
 convert .wav to .mp3 without installation of some additional libraries.)
 
 
-Setup an OLD application
+Setup
 --------------------------------------------------------------------------------
 
 Once the OLD has been installed and a config file has been created and edited,
-it is time to run the setup command.  This will generate the tables in the
+it is time to run the ``setup`` command.  This will generate the tables in the
 database, insert some defaults (e.g., some users and useful tags) and create
-the requisite directory structure.  To setup an OLD application, move to the
+the requisite directory structure.  To set up an OLD application, move to the
 directory containing the config file (e.g., ``xyzold`` containing
 ``production.ini``) and run the ``paster setup-app`` command::
 
@@ -326,8 +365,12 @@ been created and the defaults inserted. ::
     mysql> show tables;
     mysql> select username from user;
 
+You should also see two new directories (``analysis`` and ``files``), the
+application log file ``application.log`` and Python script
+``_requests_tests.py``.
 
-Serve the OLD application
+
+Serve
 --------------------------------------------------------------------------------
 
 To begin serving an OLD application, use Paster's ``serve`` command::
@@ -342,9 +385,11 @@ The output should be something like the following. ::
 If you visit ``http://127.0.0.1:5000`` in a web browser, you should see
 ``{"error": "The resource could not be found."}`` displayed.  If you visit 
 ``http://127.0.0.1:5000/forms`` in a web browser, you should see
-``{"error": "Authentication is required to access this resource."}``.
-Congratulations, this means an OLD application has successfully been setup and
-is being served locally.
+``{"error": "Authentication is required to access this resource."}``.  These
+error responses are to be expected: the first because no resource was specified
+in the request URL and the second because authentication is required before
+forms can be read.  Congratulations, this means an OLD application has
+successfully been set up and is being served locally.
 
 When ``paster setup-app`` is run, a Python script called ``_requests_tests.py``
 is created in the current working directory.  This script uses the Python
@@ -356,25 +401,26 @@ served locally on port 5000, running the following command will run the
     python _requests_tests.py
 
 If everything is working correctly, you should see ``All requests tests
-passed.``  Note that if you have changed the config file (i.e., the host or port
-values), then you will need to change the values of the ``host`` and/or ``port``
-variables in ``_requests_tests.py``.
+passed.``  (Note that if you have changed the config file, i.e., the host or
+port values, then you will need to change the values of the ``host`` and/or
+``port`` variables in ``_requests_tests.py`` to match.)
 
 
 .. _soft-dependecies:
 
-Install soft dependencies
+Soft dependencies
 --------------------------------------------------------------------------------
 
 In order to create smaller copies of image files and .wav files, the OLD uses
 the `Python Imaging Library (PIL) <http://www.pythonware.com/products/pil/>`_
 and the `FFmpeg <http://www.ffmpeg.org/>`_ command-line program.  If you would
-like your OLD application to automatically create reduced-size images and .wav
-files, then these programs should be downloaded and installed using the
-instructions on the above-linked pages.  I will provide brief instructions here.
+like your OLD application to automatically create reduced-size images and lossy
+(i.e., .ogg or .mp3) copies of .wav files, then these programs should be
+downloaded and installed using the instructions on the above-linked pages.  I
+provide brief instructions here.
 
 
-Install PIL
+PIL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To install PIL, download and decompress the source.  Then change to the root
@@ -395,7 +441,7 @@ created a smaller version of each image::
     >>> im.save('small_image.jpg')
 
 
-Install FFmpeg
+FFmpeg
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 FFmpeg is a command-line tool that can convert .wav files to the lossy formats
@@ -415,7 +461,7 @@ If successful, you will have created a .ogg and a .mp3 version of your .wav
 file.
 
 
-Deploy an OLD Application
+Deploy
 --------------------------------------------------------------------------------
 
 Deploying an OLD application means getting a domain name, serving the
@@ -423,9 +469,10 @@ application on the world wide web and setting up some admin scripts.  There are
 many possible ways to achieve this.  In my production systems I have followed
 the approach of using Apache to proxy requests to Pylons as described in
 `Chapter 21: Deployment <http://pylonsbook.com/en/1.1/deployment.html>`_ of
-`The Pylons Book <http://pylonsbook.com/>`_ and have had success with that.
+`The Pylons Book <http://pylonsbook.com/>`_ and have had success with that.  I
+review that approach here.
 
-Assuming, Apache 2, ``mod_proxy`` and ``mod_proxy_http`` are installed, you
+Assuming Apache 2, ``mod_proxy`` and ``mod_proxy_http`` are installed, you
 first enable the latter two::
 
     sudo a2enmod proxy
@@ -434,7 +481,7 @@ first enable the latter two::
 Then you create a config file such as the one below in
 ``/etc/apache2/sites-available/`` or in the equivalent location for your
 platform.  I used the config file below for an OLD application deployed for
-documenting the Okanagan language.  The domain name is www.okaold.org.  I saved
+documenting the Okanagan language.  The domain name is *okaold.org*.  I saved
 the file as ``/etc/apache2/sites-available/okaold.org`` and  created the error
 logs directory, i.e., ``/home/old/log``.  The only configuration necessary for
 the *OLD* config file (i.e., the ``production.ini`` file whose creation was
@@ -506,8 +553,41 @@ of the relevant databases.  I will further document my backup setup at a later
 date.
 
 
-Development installation
+.. _developers:
+
+Developers
 --------------------------------------------------------------------------------
 
-* install sphinx
+This section provides an overview of OLD installation and configuration for
+developers.
+
+To download the most up-to-date source code, make sure you have
+`Git <http://git-scm.com/>`_ installed and run::
+
+    git clone git://github.com/jrwdunham/old.git
+
+Then change to the newly created ``old`` directory and install the
+dependencies::
+
+    cd old
+    python setup.py develop
+
+
+To upload an egg of a stable OLD release to PyPI, run:: 
+
+    python setup.py bdist_egg register upload
+
+* Precis of the directory structure and where things are in a Pylons app
+* install developer tools: sphinx
 * run setup.py develop ...
+* how to run tests
+* development cycle ...
+
+
+.. [#f1] The OLD has not been tested on Windows.  Some alterations to the source
+   may be required in order to get it running on a Windows OS.  To be clear,
+   this does *not* mean that users running a Windows OS will not be able to use
+   a production OLD web application.  A live OLD application is a web service
+   and users with any operating system should be able to interact with it,
+   assuming an internet connection is available.  What this does mean is that
+   the OLD, as is, may not run on a Windows *server*.

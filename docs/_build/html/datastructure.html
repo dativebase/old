@@ -58,7 +58,7 @@ the object-relational mapping provided by SQLAlchemy.</p>
 <p>The prototypical OLD model object is the <tt class="docutils literal"><span class="pre">form</span></tt>  which represents a linguistic
 form, i.e., a morpheme, word, phrase or sentence elicited by a linguistic
 fieldworker.  Some of the representative attributes of the form model are
-<tt class="docutils literal"><span class="pre">transcription</span></tt>, <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt>, <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt>, <tt class="docutils literal"><span class="pre">glosses</span></tt>,
+<tt class="docutils literal"><span class="pre">transcription</span></tt>, <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt>, <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt>, <tt class="docutils literal"><span class="pre">translations</span></tt>,
 <tt class="docutils literal"><span class="pre">grammaticality</span></tt>, <tt class="docutils literal"><span class="pre">speaker</span></tt> and <tt class="docutils literal"><span class="pre">dateElicited</span></tt>.</p>
 <p>This exposition is structured according to the models defined by the OLD.<a class="footnote-reference" href="#f1" id="id1">[1]</a>
 Each section begins with an overview of the model.  The attributes of the model
@@ -189,8 +189,8 @@ character.  See the <a class="reference internal" href="interface.html#object-la
 <h3><tt class="docutils literal"><span class="pre">grammaticalities</span></tt><a class="headerlink" href="#grammaticalities" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">grammaticalities</span></tt> attribute holds a comma-delimited list of
 grammaticality values that will be the available options for the
-<tt class="docutils literal"><span class="pre">grammaticality</span></tt> attributes of form models and the <tt class="docutils literal"><span class="pre">glossGrammaticality</span></tt>
-attributes of gloss models.  The default value for this field is &#8220;*,#,?&#8221; as
+<tt class="docutils literal"><span class="pre">grammaticality</span></tt> attributes of form models and the <tt class="docutils literal"><span class="pre">grammaticality</span></tt>
+attributes of translation models.  The default value for this field is &#8220;*,#,?&#8221; as
 defined in the <tt class="docutils literal"><span class="pre">generateDefaultApplicationSettings</span></tt> function of
 <tt class="docutils literal"><span class="pre">lib/utils.py</span></tt>.</p>
 </div>
@@ -226,8 +226,8 @@ standard.  The default value for the <tt class="docutils literal"><span class="p
 <h3><tt class="docutils literal"><span class="pre">metalanguageInventory</span></tt><a class="headerlink" href="#metalanguageinventory" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">metalanguageInventory</span></tt> attribute is a comma-delimited
 string representing the inventory of graphemes (i.e., single characters or
-strings of characters) that should be used to construct the glosses in the
-<tt class="docutils literal"><span class="pre">glosses</span></tt> attribute of form models.  Note that the OLD is not set up to use
+strings of characters) that should be used to construct the translations in the
+<tt class="docutils literal"><span class="pre">translations</span></tt> attribute of form models.  Note that the OLD is not set up to use
 the inventory in the <tt class="docutils literal"><span class="pre">metalanguageInventory</span></tt> attribute for validation.</p>
 </div>
 <div class="section" id="metalanguagename">
@@ -1178,13 +1178,13 @@ it is a recording of an utterance of the object language, i.e., Blackfoot) and
 assume that the <tt class="docutils literal"><span class="pre">utteranceType</span></tt> value of <em>F2</em> is &#8220;Metalanguage Utterance&#8221;
 (since it is a recording of an utterance in the language of analysis and
 translation, i.e., English).  Now imagine a form <em>F</em> whose transcription is
-&#8220;oki&#8221; and whose only gloss is &#8220;hello&#8221; and which is associated to files <em>F1</em> and
-<em>F2</em>.  If there are a good number of forms like <em>F</em>, then an application making
-use of this OLD web service would be able to reasonably assume that <em>F1</em>, being
-an object language utterance associated to <em>F</em> is a recording of a speaker
-uttering the linguistic form that is transcribed in <em>F</em>.  Such an application
-could then use such forms to automatically generate audio/textual language
-learning games or talking dictionaries.</p>
+&#8220;oki&#8221; and whose only translation is &#8220;hello&#8221; and which is associated to files
+<em>F1</em> and <em>F2</em>.  If there are a good number of forms like <em>F</em>, then an
+application making use of this OLD web service would be able to reasonably
+assume that <em>F1</em>, being an object language utterance associated to <em>F</em> is a
+recording of a speaker uttering the linguistic form that is transcribed in <em>F</em>.
+Such an application could then use such forms to automatically generate
+audio/textual language learning games or talking dictionaries.</p>
 </div>
 </div>
 <div class="section" id="form">
@@ -1201,7 +1201,7 @@ form.</p>
     <span class="s2">&quot;elicitationMethod&quot;</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span> <span class="c1">// valid elicitation method model id or null</span>
     <span class="s2">&quot;elicitor&quot;</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span> <span class="c1">// valid user model id or null</span>
     <span class="s2">&quot;files&quot;</span><span class="o">:</span> <span class="p">[],</span> <span class="c1">// array of valid file model ids or []</span>
-    <span class="s2">&quot;glosses&quot;</span><span class="o">:</span> <span class="p">[{</span><span class="s2">&quot;gloss&quot;</span><span class="o">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">,</span> <span class="s2">&quot;glossGrammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">}],</span>
+    <span class="s2">&quot;translations&quot;</span><span class="o">:</span> <span class="p">[{</span><span class="s2">&quot;transcription&quot;</span><span class="o">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">,</span> <span class="s2">&quot;grammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">}],</span>
     <span class="s2">&quot;grammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;morphemeBreak&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;morphemeGloss&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -1229,7 +1229,7 @@ form.</p>
     <span class="s2">&quot;elicitor&quot;</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span> <span class="c1">// an object representation of a user or null</span>
     <span class="s2">&quot;enterer&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="p">...</span> <span class="p">},</span> <span class="c1">// an object representation of a user</span>
     <span class="s2">&quot;files&quot;</span><span class="o">:</span> <span class="p">[],</span> <span class="c1">// an array of object representations of files or []</span>
-    <span class="s2">&quot;glosses&quot;</span><span class="o">:</span> <span class="p">[{...}],</span> <span class="c1">// an array of object representations of glosses</span>
+    <span class="s2">&quot;translations&quot;</span><span class="o">:</span> <span class="p">[{...}],</span> <span class="c1">// an array of object representations of translations</span>
     <span class="s2">&quot;grammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1">// the integer id assigned by the database</span>
     <span class="s2">&quot;morphemeBreak&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -1324,17 +1324,18 @@ an OLD application, the value of the <tt class="docutils literal"><span class="p
 will be an array containing JSON object representations of any associated file
 models.</p>
 </div>
-<div class="section" id="glosses">
-<h3><tt class="docutils literal"><span class="pre">glosses</span></tt><a class="headerlink" href="#glosses" title="Permalink to this headline">¶</a></h3>
-<p>A form model must have at least one gloss but may have more.  The glosses of a
-form are each gloss model objects that are listed in the <tt class="docutils literal"><span class="pre">glosses</span></tt> attribute
-of the form.  (In the relational database schema, the <tt class="docutils literal"><span class="pre">form</span></tt> and <tt class="docutils literal"><span class="pre">gloss</span></tt>
-tables are in a one-to-many relationship.)  Forms with multiple glosses, e.g.,
-sentences with multiple valid translations, should use separate gloss models for
-each such gloss.  Gloss models can also have grammaticalities (cf. the
-<tt class="docutils literal"><span class="pre">glossGrammaticality</span></tt> attribute) &#8211; this feature may be used to indicate a
-translation that is not appropriate to a grammatical form.  Thus, as a
-simplified example, &#8220;chien&#8221; may be glossed as &#8220;dog&#8221; and &#8220;*wolf&#8221;.</p>
+<div class="section" id="translations">
+<h3><tt class="docutils literal"><span class="pre">translations</span></tt><a class="headerlink" href="#translations" title="Permalink to this headline">¶</a></h3>
+<p>A form model must have at least one translation but may have more.  The
+translations of a form are each translation model objects that are listed in the
+<tt class="docutils literal"><span class="pre">translations</span></tt> attribute of the form.  (In the relational database schema, the
+<tt class="docutils literal"><span class="pre">form</span></tt> and <tt class="docutils literal"><span class="pre">translation</span></tt> tables are in a one-to-many relationship.)  Forms
+with multiple translations, e.g., sentences with multiple valid translations,
+should use separate translation models for each such translation.  Translation
+models can also have grammaticalities (cf. the <tt class="docutils literal"><span class="pre">grammaticality</span></tt> attribute) &#8211;
+this feature may be used to indicate a translation that is not appropriate to a
+grammatical form.  Thus, as a simplistic example, &#8220;chien&#8221; may be translationed
+as &#8220;dog&#8221; and &#8220;*wolf&#8221; using two translation models.</p>
 </div>
 <div class="section" id="grammaticality">
 <h3><tt class="docutils literal"><span class="pre">grammaticality</span></tt><a class="headerlink" href="#grammaticality" title="Permalink to this headline">¶</a></h3>
@@ -1537,7 +1538,7 @@ following form.</p>
     <span class="s2">&quot;enterer&quot;</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span> <span class="c1">// an object representation of an elicitation method or null</span>
     <span class="s2">&quot;files&quot;</span><span class="o">:</span> <span class="p">[],</span> <span class="c1">// an array of objects representing file models or []</span>
     <span class="s2">&quot;form_id&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="s2">&quot;glosses&quot;</span><span class="o">:</span> <span class="p">[],</span> <span class="c1">// an array of objects representing gloss models or []</span>
+    <span class="s2">&quot;translations&quot;</span><span class="o">:</span> <span class="p">[],</span> <span class="c1">// an array of objects representing translation models or []</span>
     <span class="s2">&quot;grammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
     <span class="s2">&quot;morphemeBreak&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -1618,22 +1619,23 @@ create the form search.  This value is generated automatically by the system
 upon form search creation.</p>
 </div>
 </div>
-<div class="section" id="gloss">
-<span id="gloss-data-structure"></span><h2><tt class="docutils literal"><span class="pre">Gloss</span></tt><a class="headerlink" href="#gloss" title="Permalink to this headline">¶</a></h2>
-<p>Glosses are translations of forms into the metalanguage.  A form model can
-have multiple glosses and each of these glosses is a gloss model.  Each gloss
-model has <tt class="docutils literal"><span class="pre">gloss</span></tt> and <tt class="docutils literal"><span class="pre">glossGrammaticality</span></tt> attributes.  In relational
-database terminology, the form and gloss tables are in a one-to-many
-relationship; that is, a form may have many glosses but each gloss has one and
-only one form.  When a form is deleted, so too are its glosses.</p>
-<p>Glosses are created not directly (i.e., there is no &#8220;glosses&#8221; resource) but upon
-form create and update requests.  The input JSON object of such requests has a
-<tt class="docutils literal"><span class="pre">glosses</span></tt> attribute whose value is an array of objects with <tt class="docutils literal"><span class="pre">gloss</span></tt> and
-<tt class="docutils literal"><span class="pre">glossGrammaticality</span></tt> attributes, e.g.,</p>
+<div class="section" id="translation">
+<span id="translation-data-structure"></span><h2><tt class="docutils literal"><span class="pre">Translation</span></tt><a class="headerlink" href="#translation" title="Permalink to this headline">¶</a></h2>
+<p>Translations are translations of forms into the metalanguage.  A form model can
+have multiple translations and each of these translations is a translation
+model.  Each translation model has <tt class="docutils literal"><span class="pre">transcription</span></tt> and <tt class="docutils literal"><span class="pre">grammaticality</span></tt>
+attributes.  In relational database terminology, the form and translation tables
+are in a one-to-many relationship; that is, a form may have many translations
+but each translation has one and only one form.  When a form is deleted, so too
+are its translations.</p>
+<p>Translations are created not directly (i.e., there is no &#8220;translations&#8221;
+resource) but upon form create and update requests.  The input JSON object of
+such requests has a <tt class="docutils literal"><span class="pre">translations</span></tt> attribute whose value is an array of
+objects with <tt class="docutils literal"><span class="pre">transcription</span></tt> and <tt class="docutils literal"><span class="pre">grammaticality</span></tt> attributes, e.g.,</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
-    <span class="s2">&quot;glosses&quot;</span><span class="o">:</span> <span class="p">[</span>
-        <span class="p">{</span><span class="s2">&quot;gloss&quot;</span><span class="o">:</span> <span class="s2">&quot;dog&quot;</span><span class="p">,</span> <span class="s2">&quot;glossGrammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
-        <span class="p">{</span><span class="s2">&quot;gloss&quot;</span><span class="o">:</span> <span class="s2">&quot;wolf&quot;</span><span class="p">,</span> <span class="s2">&quot;glossGrammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;*&quot;</span><span class="p">}</span>
+    <span class="s2">&quot;translations&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;transcription&quot;</span><span class="o">:</span> <span class="s2">&quot;dog&quot;</span><span class="p">,</span> <span class="s2">&quot;grammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;transcription&quot;</span><span class="o">:</span> <span class="s2">&quot;wolf&quot;</span><span class="p">,</span> <span class="s2">&quot;grammaticality&quot;</span><span class="o">:</span> <span class="s2">&quot;*&quot;</span><span class="p">}</span>
     <span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
@@ -1717,9 +1719,9 @@ attribute.</p>
 </div>
 <div class="section" id="id30">
 <h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id30" title="Permalink to this headline">¶</a></h3>
-<p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds a name for the orthography.  A unique name of less
-than 255 characters is required.  The name should facilitate identification of
-the orthography.</p>
+<p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds a name for the orthography.  The name must be
+unique among orthography names and may not exceed 255 characters.  The name
+should facilitate identification of the orthography.</p>
 </div>
 <div class="section" id="id31">
 <h3><tt class="docutils literal"><span class="pre">orthography</span></tt><a class="headerlink" href="#id31" title="Permalink to this headline">¶</a></h3>
@@ -1901,8 +1903,10 @@ file model.</p>
 value of the <tt class="docutils literal"><span class="pre">contents</span></tt> attribute of collection models.</p>
 <p>Requests to create or update source resources must contain a JSON object of
 the following form.  Source representations returned by the OLD are JSON objects
-of the same form, with the addition of <tt class="docutils literal"><span class="pre">id</span></tt> and <tt class="docutils literal"><span class="pre">datetimeModified</span></tt>
-attributes.</p>
+of the same form, with the addition of <tt class="docutils literal"><span class="pre">id</span></tt>, <tt class="docutils literal"><span class="pre">datetimeModified</span></tt> and
+<tt class="docutils literal"><span class="pre">crossrefSource</span></tt>  attributes.  The value of the <tt class="docutils literal"><span class="pre">crossrefSource</span></tt> attribute
+is either <tt class="docutils literal"><span class="pre">null</span></tt> (if no <tt class="docutils literal"><span class="pre">crossref</span></tt> value was supplied by the user) or a JSON
+object representing the cross-referenced source.</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
     <span class="s2">&quot;abstract&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;address&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -2003,12 +2007,25 @@ length is 255 characters.</p>
 that are missing from the source model are inherited from the source
 cross-referenced via the <tt class="docutils literal"><span class="pre">crossref</span></tt> attribute.  Maximum length is 1000
 characters.</p>
-<p>Note that the OLD does not yet make use of the <tt class="docutils literal"><span class="pre">crossref</span></tt> attribute during
-validation.  That is, a source whose <tt class="docutils literal"><span class="pre">type</span></tt> value is, for example,
-&#8220;inproceedings&#8221; will fail validation if it lacks a value for its <tt class="docutils literal"><span class="pre">booktitle</span></tt>
-attribute, even though it cross-references another source whose <tt class="docutils literal"><span class="pre">type</span></tt> value
-is &#8220;proceedings&#8221; and which has a content-ful <tt class="docutils literal"><span class="pre">booktitle</span></tt> attribute value.
-This should be remedied in future versions of the OLD.</p>
+<p>If a valid <tt class="docutils literal"><span class="pre">key</span></tt> value is supplied as the value of the <tt class="docutils literal"><span class="pre">crossref</span></tt> attribute,
+the system will use the attributes of the cross-referenced source when
+validating the input.  That is, a source whose <tt class="docutils literal"><span class="pre">type</span></tt> value is, for example,
+&#8220;inproceedings&#8221; would normally fail validation if it lacks a value for its
+<tt class="docutils literal"><span class="pre">booktitle</span></tt> attribute; however, if it cross-references another source whose
+<tt class="docutils literal"><span class="pre">type</span></tt> value is &#8220;proceedings&#8221; and which has a content-ful <tt class="docutils literal"><span class="pre">booktitle</span></tt> value,
+then it will pass validaton.  If a valid <tt class="docutils literal"><span class="pre">crossref</span></tt> value is passed on input,
+then, on output, the value of <tt class="docutils literal"><span class="pre">crossrefSource</span></tt> will be an object representing
+the cross-referenced source.</p>
+</div>
+<div class="section" id="crossrefsource">
+<h3><tt class="docutils literal"><span class="pre">crossrefSource</span></tt><a class="headerlink" href="#crossrefsource" title="Permalink to this headline">¶</a></h3>
+<p>The value of the <tt class="docutils literal"><span class="pre">crossrefSource</span></tt> attribute is either <tt class="docutils literal"><span class="pre">null</span></tt> or the source
+model that is cross-referenced via the <tt class="docutils literal"><span class="pre">crossref</span></tt> attribute.  That is, a valid
+<tt class="docutils literal"><span class="pre">crossref</span></tt> value passed on input will cause the system to set the
+cross-referenced source as the value of the <tt class="docutils literal"><span class="pre">crossrefSource</span></tt> attribute.  When
+returning a JSON representation of the original source, the value of the
+<tt class="docutils literal"><span class="pre">crossrefSource</span></tt> attribute will be a JSON object representing the
+cross-referenced source.</p>
 </div>
 <div class="section" id="edition">
 <h3><tt class="docutils literal"><span class="pre">edition</span></tt><a class="headerlink" href="#edition" title="Permalink to this headline">¶</a></h3>
@@ -2242,10 +2259,11 @@ linguistic form or collection thereof or who is the speaker on a recording.</p>
 <p>Requests to create or update speaker resources must contain a JSON object of the
 following form.</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
-    <span class="s1">&#39;dialect&#39;</span><span class="o">:</span> <span class="nx">u</span><span class="s1">&#39;dialect&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;firstName&#39;</span><span class="o">:</span> <span class="nx">u</span><span class="s1">&#39;John&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;lastName&#39;</span><span class="o">:</span> <span class="nx">u</span><span class="s1">&#39;Doe&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;pageContent&#39;</span><span class="o">:</span> <span class="nx">u</span><span class="s1">&#39;pageContent&#39;</span>
+    <span class="s2">&quot;dialect&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;firstName&quot;</span><span class="o">:</span> <span class="s2">&quot;John&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lastName&quot;</span><span class="o">:</span> <span class="s2">&quot;Doe&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;markupLanguage&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="s2">&quot;pageContent&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -2255,8 +2273,10 @@ form.</p>
     <span class="s2">&quot;datetimeModified&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;dialect&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;firstName&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;html&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
     <span class="s2">&quot;lastName&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;markupLanguage&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;pageContent&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
 <span class="p">}</span>
 </pre></div>
@@ -2274,10 +2294,27 @@ facilitate search, e.g., &#8220;dialect:dialect_name&#8221;.</p>
 <p>The <tt class="docutils literal"><span class="pre">firstName</span></tt> attribute holds the first name of the speaker.  A value is
 obligatory and cannot exceed 255 characters.</p>
 </div>
+<div class="section" id="id48">
+<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id48" title="Permalink to this headline">¶</a></h3>
+<p>The value of the <tt class="docutils literal"><span class="pre">html</span></tt> attribute is a string of HTML that is generated by the
+system using the value of the <tt class="docutils literal"><span class="pre">pageContent</span></tt> attribute and the markup language
+specified in the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute.</p>
+</div>
 <div class="section" id="lastname">
 <h3><tt class="docutils literal"><span class="pre">lastName</span></tt><a class="headerlink" href="#lastname" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">lastName</span></tt> attribute holds the last name of the speaker.  A value is
 obligatory and cannot exceed 255 characters.</p>
+</div>
+<div class="section" id="id49">
+<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id49" title="Permalink to this headline">¶</a></h3>
+<p>The value of the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute is one of &#8220;Markdown&#8221; or
+&#8220;reStructuredText&#8221; as defined in the <tt class="docutils literal"><span class="pre">markupLanguages</span></tt> variable of
+<tt class="docutils literal"><span class="pre">lib/utils.py</span></tt>.  <a class="reference external" href="&lt;http://daringfireball.net/projects/markdown/&gt;">Markdown</a> and <a class="reference external" href="&lt;http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html&gt;">reStructuredText</a> are <em>lightweight markup
+languages</em>.  A lightweight markup language is a markup language (i.e., a system
+for annotating a document) that is designed to be easy to read in its raw form.
+This value determines which markup-to-HTML function is employed when the system
+attempts to generate the <tt class="docutils literal"><span class="pre">html</span></tt> value from the user-supplied <tt class="docutils literal"><span class="pre">pageContent</span></tt>
+value.  If no value is specified, &#8220;reStructuredText&#8221; will be the default.</p>
 </div>
 <div class="section" id="pagecontent">
 <h3><tt class="docutils literal"><span class="pre">pageContent</span></tt><a class="headerlink" href="#pagecontent" title="Permalink to this headline">¶</a></h3>
@@ -2289,7 +2326,7 @@ HTML.</p>
 </div>
 </div>
 <div class="section" id="syntactic-category-data-structure">
-<span id="id48"></span><h2><tt class="docutils literal"><span class="pre">SyntacticCategory</span></tt><a class="headerlink" href="#syntactic-category-data-structure" title="Permalink to this headline">¶</a></h2>
+<span id="id50"></span><h2><tt class="docutils literal"><span class="pre">SyntacticCategory</span></tt><a class="headerlink" href="#syntactic-category-data-structure" title="Permalink to this headline">¶</a></h2>
 <p>Syntactic category models are used to categorize form models into morphological
 or syntactic classes.</p>
 <p>Requests to create or update syntactic category resources must contain a JSON
@@ -2312,26 +2349,27 @@ following form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id49">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id49" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id51">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id51" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute can be used to describe the category
 and/or clarify its intended usage.</p>
 </div>
-<div class="section" id="id50">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id50" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id52">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id52" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds the name of the category.  Example names might be
 &#8220;N&#8221;, &#8220;S&#8221;, &#8220;Agr&#8221;, &#8220;VP&#8221;, &#8220;V&#8217;&#8221;, &#8220;Noun&#8221;, &#8220;Sentence&#8221;, &#8220;CP&#8221;, etc.  A non-empty value
 for this attribute is obligatory, must be unique among other syntactic category
 <tt class="docutils literal"><span class="pre">name</span></tt> values and may not exceed 255 characters.</p>
 </div>
-<div class="section" id="id51">
-<h3><tt class="docutils literal"><span class="pre">type</span></tt><a class="headerlink" href="#id51" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id53">
+<h3><tt class="docutils literal"><span class="pre">type</span></tt><a class="headerlink" href="#id53" title="Permalink to this headline">¶</a></h3>
 <p>Syntactic categories are themselves categorized via the <tt class="docutils literal"><span class="pre">type</span></tt> attribute.
 Valid values, as defined in the <tt class="docutils literal"><span class="pre">syntacticCategoryTypes</span></tt> tuple of
-<tt class="docutils literal"><span class="pre">lib/utils.py</span></tt> are &#8220;lexical&#8221;, &#8220;phrasal&#8221; and &#8220;sentential&#8221;.  The purpose of this
-attribute is to help the system to better understand the categorization.  This
-categorization could be useful for functionality that, say, seeks to induce a
-grammar of the morphology of the language.  The available syntactic category
+<tt class="docutils literal"><span class="pre">lib/utils.py</span></tt> are &#8220;lexical&#8221;, &#8220;phrasal&#8221; and &#8220;sentential&#8221;.  An input  value of
+<tt class="docutils literal"><span class="pre">null</span></tt> or the empty string will result in <tt class="docutils literal"><span class="pre">null</span></tt> as value.  The purpose of
+this attribute is to help the system to better understand the categorization.
+This categorization could be useful for functionality that, say, seeks to induce
+a grammar of the morphology of the language.  The available syntactic category
 types may change in future versions of the OLD.</p>
 </div>
 </div>
@@ -2365,13 +2403,13 @@ following form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id52">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id52" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id54">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id54" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute can be used to describe the tag
 and/or clarify its intended usage.</p>
 </div>
-<div class="section" id="id53">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id53" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id55">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id55" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds the name of the tag.  Example names might be &#8220;VP
 ellipsis&#8221;, &#8220;double object&#8221; or &#8220;needs verification&#8221;.  A non-empty value for this
 attribute is obligatory, must be unique among other tag <tt class="docutils literal"><span class="pre">name</span></tt> values and may
@@ -2426,8 +2464,8 @@ attribute is present only in the return value of DELETE, POST and PUT requests.<
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id54">
-<h3><tt class="docutils literal"><span class="pre">affiliation</span></tt><a class="headerlink" href="#id54" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id56">
+<h3><tt class="docutils literal"><span class="pre">affiliation</span></tt><a class="headerlink" href="#id56" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">affiliation</span></tt> attribute is a string representing the school
 or institution with which the user is affiliated.  A value here is optional.
 Maximum allowable length is 255 characters.</p>
@@ -2437,19 +2475,19 @@ Maximum allowable length is 255 characters.</p>
 <p>The <tt class="docutils literal"><span class="pre">email</span></tt> attribute holds the email address of the user.  A valid email must
 be provided.  Maximum allowable length is 255 characters.</p>
 </div>
-<div class="section" id="id55">
-<h3><tt class="docutils literal"><span class="pre">firstName</span></tt><a class="headerlink" href="#id55" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id57">
+<h3><tt class="docutils literal"><span class="pre">firstName</span></tt><a class="headerlink" href="#id57" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">firstName</span></tt> attribute is the first name(s) of the user.  A
 value here is obligatory.  Maximum allowable length is 255 characters.</p>
 </div>
-<div class="section" id="id56">
-<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id56" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id58">
+<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id58" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">html</span></tt> attribute is a string of HTML that is generated by the
 system using the value of the <tt class="docutils literal"><span class="pre">pageContent</span></tt> attribute and the markup language
 specified in the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute.</p>
 </div>
-<div class="section" id="id57">
-<h3><tt class="docutils literal"><span class="pre">inputOrthography</span></tt><a class="headerlink" href="#id57" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id59">
+<h3><tt class="docutils literal"><span class="pre">inputOrthography</span></tt><a class="headerlink" href="#id59" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">inputOrthography</span></tt> is a reference to an existing orthography model object.
 The purpose of a user-specific input orthography is to allow for the possibility
 that users will enter form transcriptions (and possibly also morpheme
@@ -2462,24 +2500,24 @@ user-specific orthography conversion server-side.  However, with the new
 architecture of the OLD &gt;= 1.0 this added complication seems best implemented
 client-side.</p>
 </div>
-<div class="section" id="id58">
-<h3><tt class="docutils literal"><span class="pre">lastName</span></tt><a class="headerlink" href="#id58" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id60">
+<h3><tt class="docutils literal"><span class="pre">lastName</span></tt><a class="headerlink" href="#id60" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">lastName</span></tt> attribute is the last name of the user.  A value
 here is obligatory.  Maximum allowable length is 255 characters.</p>
 </div>
-<div class="section" id="id59">
-<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id59" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id61">
+<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id61" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute is one of &#8220;Markdown&#8221; or
 &#8220;reStructuredText&#8221; as defined in the <tt class="docutils literal"><span class="pre">markupLanguages</span></tt> variable of
 <tt class="docutils literal"><span class="pre">lib/utils.py</span></tt>.  <a class="reference external" href="&lt;http://daringfireball.net/projects/markdown/&gt;">Markdown</a> and <a class="reference external" href="&lt;http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html&gt;">reStructuredText</a> are <em>lightweight markup
 languages</em>.  A lightweight markup language is a markup language (i.e., a system
 for annotating a document) that is designed to be easy to read in its raw form.
 This value determines which markup-to-HTML function is employed when the system
-attempt so generate the <tt class="docutils literal"><span class="pre">html</span></tt> value from the user-supplied <tt class="docutils literal"><span class="pre">pageContent</span></tt>
+attempts to generate the <tt class="docutils literal"><span class="pre">html</span></tt> value from the user-supplied <tt class="docutils literal"><span class="pre">pageContent</span></tt>
 value.  If no value is specified, &#8220;reStructuredText&#8221; will be the default.</p>
 </div>
-<div class="section" id="id60">
-<h3><tt class="docutils literal"><span class="pre">outputOrthography</span></tt><a class="headerlink" href="#id60" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id62">
+<h3><tt class="docutils literal"><span class="pre">outputOrthography</span></tt><a class="headerlink" href="#id62" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">outputOrthography</span></tt> is a reference to an existing orthography model
 object.  The purpose of a user-specific input orthography is to allow for the
 possibility that users will enter form transcriptions (and possibly also
@@ -2492,14 +2530,14 @@ implemented this user-specific orthography conversion server-side.  However,
 with the new architecture of the OLD &gt;= 1.0 this added complication seems best
 implemented client-side.</p>
 </div>
-<div class="section" id="id61">
-<h3><tt class="docutils literal"><span class="pre">pageContent</span></tt><a class="headerlink" href="#id61" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id63">
+<h3><tt class="docutils literal"><span class="pre">pageContent</span></tt><a class="headerlink" href="#id63" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">pageContent</span></tt> attribute holds a string representing the content of the
 user&#8217;s page.  This content should be written using the markup language specified
 in the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute.</p>
 </div>
-<div class="section" id="id62">
-<h3><tt class="docutils literal"><span class="pre">password</span></tt><a class="headerlink" href="#id62" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id64">
+<h3><tt class="docutils literal"><span class="pre">password</span></tt><a class="headerlink" href="#id64" title="Permalink to this headline">¶</a></h3>
 <p>When creating a user, a valid value for the <tt class="docutils literal"><span class="pre">password</span></tt> attribute must be
 supplied.  A valid password is composed of at least eight characters but no more
 than 255.  It must contain either at least one printable character not in the
@@ -2697,7 +2735,7 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#id21"><tt class="docutils literal"><span class="pre">elicitor</span></tt></a></li>
 <li><a class="reference internal" href="#id22"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
 <li><a class="reference internal" href="#id23"><tt class="docutils literal"><span class="pre">files</span></tt></a></li>
-<li><a class="reference internal" href="#glosses"><tt class="docutils literal"><span class="pre">glosses</span></tt></a></li>
+<li><a class="reference internal" href="#translations"><tt class="docutils literal"><span class="pre">translations</span></tt></a></li>
 <li><a class="reference internal" href="#grammaticality"><tt class="docutils literal"><span class="pre">grammaticality</span></tt></a></li>
 <li><a class="reference internal" href="#memorizers"><tt class="docutils literal"><span class="pre">memorizers</span></tt></a></li>
 <li><a class="reference internal" href="#morphemebreak"><tt class="docutils literal"><span class="pre">morphemeBreak</span></tt></a></li>
@@ -2728,7 +2766,7 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#searcher"><tt class="docutils literal"><span class="pre">searcher</span></tt></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#gloss"><tt class="docutils literal"><span class="pre">Gloss</span></tt></a></li>
+<li><a class="reference internal" href="#translation"><tt class="docutils literal"><span class="pre">Translation</span></tt></a></li>
 <li><a class="reference internal" href="#language"><tt class="docutils literal"><span class="pre">Language</span></tt></a></li>
 <li><a class="reference internal" href="#orthography"><tt class="docutils literal"><span class="pre">Orthography</span></tt></a><ul>
 <li><a class="reference internal" href="#initialglottalstops"><tt class="docutils literal"><span class="pre">initialGlottalStops</span></tt></a></li>
@@ -2765,6 +2803,7 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#id40"><tt class="docutils literal"><span class="pre">contents</span></tt></a></li>
 <li><a class="reference internal" href="#copyright"><tt class="docutils literal"><span class="pre">copyright</span></tt></a></li>
 <li><a class="reference internal" href="#crossref"><tt class="docutils literal"><span class="pre">crossref</span></tt></a></li>
+<li><a class="reference internal" href="#crossrefsource"><tt class="docutils literal"><span class="pre">crossrefSource</span></tt></a></li>
 <li><a class="reference internal" href="#edition"><tt class="docutils literal"><span class="pre">edition</span></tt></a></li>
 <li><a class="reference internal" href="#editor"><tt class="docutils literal"><span class="pre">editor</span></tt></a></li>
 <li><a class="reference internal" href="#id41"><tt class="docutils literal"><span class="pre">file</span></tt></a></li>
@@ -2801,32 +2840,34 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#speaker-data-structure"><tt class="docutils literal"><span class="pre">Speaker</span></tt></a><ul>
 <li><a class="reference internal" href="#dialect"><tt class="docutils literal"><span class="pre">dialect</span></tt></a></li>
 <li><a class="reference internal" href="#firstname"><tt class="docutils literal"><span class="pre">firstName</span></tt></a></li>
+<li><a class="reference internal" href="#id48"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
 <li><a class="reference internal" href="#lastname"><tt class="docutils literal"><span class="pre">lastName</span></tt></a></li>
+<li><a class="reference internal" href="#id49"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
 <li><a class="reference internal" href="#pagecontent"><tt class="docutils literal"><span class="pre">pageContent</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#syntactic-category-data-structure"><tt class="docutils literal"><span class="pre">SyntacticCategory</span></tt></a><ul>
-<li><a class="reference internal" href="#id49"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id50"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
-<li><a class="reference internal" href="#id51"><tt class="docutils literal"><span class="pre">type</span></tt></a></li>
+<li><a class="reference internal" href="#id51"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id52"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id53"><tt class="docutils literal"><span class="pre">type</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#tag"><tt class="docutils literal"><span class="pre">Tag</span></tt></a><ul>
-<li><a class="reference internal" href="#id52"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id53"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id54"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id55"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#user"><tt class="docutils literal"><span class="pre">User</span></tt></a><ul>
-<li><a class="reference internal" href="#id54"><tt class="docutils literal"><span class="pre">affiliation</span></tt></a></li>
+<li><a class="reference internal" href="#id56"><tt class="docutils literal"><span class="pre">affiliation</span></tt></a></li>
 <li><a class="reference internal" href="#email"><tt class="docutils literal"><span class="pre">email</span></tt></a></li>
-<li><a class="reference internal" href="#id55"><tt class="docutils literal"><span class="pre">firstName</span></tt></a></li>
-<li><a class="reference internal" href="#id56"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
-<li><a class="reference internal" href="#id57"><tt class="docutils literal"><span class="pre">inputOrthography</span></tt></a></li>
-<li><a class="reference internal" href="#id58"><tt class="docutils literal"><span class="pre">lastName</span></tt></a></li>
-<li><a class="reference internal" href="#id59"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
-<li><a class="reference internal" href="#id60"><tt class="docutils literal"><span class="pre">outputOrthography</span></tt></a></li>
-<li><a class="reference internal" href="#id61"><tt class="docutils literal"><span class="pre">pageContent</span></tt></a></li>
-<li><a class="reference internal" href="#id62"><tt class="docutils literal"><span class="pre">password</span></tt></a></li>
+<li><a class="reference internal" href="#id57"><tt class="docutils literal"><span class="pre">firstName</span></tt></a></li>
+<li><a class="reference internal" href="#id58"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
+<li><a class="reference internal" href="#id59"><tt class="docutils literal"><span class="pre">inputOrthography</span></tt></a></li>
+<li><a class="reference internal" href="#id60"><tt class="docutils literal"><span class="pre">lastName</span></tt></a></li>
+<li><a class="reference internal" href="#id61"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
+<li><a class="reference internal" href="#id62"><tt class="docutils literal"><span class="pre">outputOrthography</span></tt></a></li>
+<li><a class="reference internal" href="#id63"><tt class="docutils literal"><span class="pre">pageContent</span></tt></a></li>
+<li><a class="reference internal" href="#id64"><tt class="docutils literal"><span class="pre">password</span></tt></a></li>
 <li><a class="reference internal" href="#rememberedforms"><tt class="docutils literal"><span class="pre">rememberedForms</span></tt></a></li>
 <li><a class="reference internal" href="#role"><tt class="docutils literal"><span class="pre">role</span></tt></a></li>
 <li><a class="reference internal" href="#salt"><tt class="docutils literal"><span class="pre">salt</span></tt></a></li>

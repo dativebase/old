@@ -435,8 +435,9 @@ JSON is a widely-used standard for converting certain data types and (nested)
 data structures to and from strings.  Strings, numbers, arrays (lists) and
 associative arrays (dictionaries) can all be serialized to a JSON string.  For
 example, a Python dictionary, i.e., a set of key/value pairs such as
-<tt class="docutils literal"><span class="pre">{'transcription':</span> <span class="pre">'dog',</span> <span class="pre">'glosses':</span> <span class="pre">[{'gloss':</span> <span class="pre">'chien'}]}</span></tt> when converted to
-JSON would be <tt class="docutils literal"><span class="pre">'{&quot;transcription&quot;:</span> <span class="pre">&quot;dog&quot;,</span> <span class="pre">&quot;glosses&quot;:</span> <span class="pre">[{&quot;gloss&quot;:</span> <span class="pre">&quot;chien&quot;}]}'</span></tt>.
+<tt class="docutils literal"><span class="pre">{'transcription':</span> <span class="pre">'dog',</span> <span class="pre">'translations':</span> <span class="pre">[{'transcription':</span> <span class="pre">'chien'}]}</span></tt> when
+converted to JSON would be
+<tt class="docutils literal"><span class="pre">'{&quot;transcription&quot;:</span> <span class="pre">&quot;dog&quot;,</span> <span class="pre">&quot;translations&quot;:</span> <span class="pre">[{&quot;transcription&quot;:</span> <span class="pre">&quot;chien&quot;}]}'</span></tt>.
 In most cases, when an OLD web service requires user input, that input is
 expected to be JSON in the request body <a class="footnote-reference" href="#f3" id="id4">[3]</a>.</p>
 </div>
@@ -576,7 +577,7 @@ that do not have &#8220;a&#8221; in their transcriptions.</p>
 </div>
 <p>Finally, an example of a complex filter expression involving multiple levels
 of embedding.</p>
-<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Gloss&#39;</span><span class="p">,</span> <span class="s1">&#39;gloss&#39;</span><span class="p">,</span> <span class="s1">&#39;like&#39;</span><span class="p">,</span> <span class="s1">&#39;%1%&#39;</span><span class="p">],</span>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Translation&#39;</span><span class="p">,</span> <span class="s1">&#39;transcription&#39;</span><span class="p">,</span> <span class="s1">&#39;like&#39;</span><span class="p">,</span> <span class="s1">&#39;%1%&#39;</span><span class="p">],</span>
          <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;morphemeBreak&#39;</span><span class="p">,</span> <span class="s1">&#39;regex&#39;</span><span class="p">,</span> <span class="s1">&#39;[28][5-7]&#39;</span><span class="p">]],</span>
          <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="s1">&#39;2012-03-01T00:00:00&#39;</span><span class="p">],</span>
                  <span class="p">[</span><span class="s1">&#39;Form&#39;</span><span class="p">,</span> <span class="s1">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;2012-01-01T00:00:00&#39;</span><span class="p">]]]]]</span>
@@ -672,9 +673,9 @@ contain a &#8220;k&#8221;, followed by <em>anything but</em> a &#8220;q&#8221; o
 </div>
 <p>The vertical bar &#8220;|&#8221; is the alternation metacharacter.  It matches either the
 string to its left or the string to its right.  For example, the following OLD
-filter expression will return all forms containing a gloss that contains either
-&#8220;the cat ran&#8221; or &#8220;the dog ran&#8221;.</p>
-<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;glosses&quot;</span><span class="p">,</span> <span class="s2">&quot;gloss&quot;</span><span class="p">,</span> <span class="s2">&quot;the (cat|dog) ran&quot;</span><span class="p">]</span>
+filter expression will return all forms containing a translation that contains
+either &#8220;the cat ran&#8221; or &#8220;the dog ran&#8221;.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">[</span><span class="s2">&quot;Form&quot;</span><span class="p">,</span> <span class="s2">&quot;translations&quot;</span><span class="p">,</span> <span class="s2">&quot;transcription&quot;</span><span class="p">,</span> <span class="s2">&quot;the (cat|dog) ran&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>Regular expressions also support quantification.  That is, it is possible to
@@ -1175,7 +1176,7 @@ i.e., an object of the form
 <p>Standard validation is validation on user input that is applied by all OLD
 applications</p>
 <p>Some representative examples will illustrate.  All forms require some string in
-their transcription field and at least one gloss.  References to other OLD
+their transcription field and at least one translation.  References to other OLD
 resources via their ids are validated for existence; e.g., when an elicitor for
 a form is specified via a user id, then validation ensures that the id
 corresponds to a user in the database.  User-supplied values for date fields

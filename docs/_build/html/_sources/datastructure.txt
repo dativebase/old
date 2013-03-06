@@ -14,7 +14,7 @@ the object-relational mapping provided by SQLAlchemy.
 The prototypical OLD model object is the ``form``  which represents a linguistic
 form, i.e., a morpheme, word, phrase or sentence elicited by a linguistic
 fieldworker.  Some of the representative attributes of the form model are
-``transcription``, ``morphemeBreak``, ``morphemeGloss``, ``glosses``,
+``transcription``, ``morphemeBreak``, ``morphemeGloss``, ``translations``,
 ``grammaticality``, ``speaker`` and ``dateElicited``.
 
 This exposition is structured according to the models defined by the OLD.\ [#f1]_
@@ -165,8 +165,8 @@ character.  See the :ref:`object-language-validation` section for more details.
 
 The ``grammaticalities`` attribute holds a comma-delimited list of
 grammaticality values that will be the available options for the
-``grammaticality`` attributes of form models and the ``glossGrammaticality``
-attributes of gloss models.  The default value for this field is "\*,#,?" as
+``grammaticality`` attributes of form models and the ``grammaticality``
+attributes of translation models.  The default value for this field is "\*,#,?" as
 defined in the ``generateDefaultApplicationSettings`` function of
 ``lib/utils.py``.
 
@@ -208,8 +208,8 @@ standard.  The default value for the ``metalanguageId`` attribute is "eng".
 
 The value of the ``metalanguageInventory`` attribute is a comma-delimited
 string representing the inventory of graphemes (i.e., single characters or
-strings of characters) that should be used to construct the glosses in the
-``glosses`` attribute of form models.  Note that the OLD is not set up to use
+strings of characters) that should be used to construct the translations in the
+``translations`` attribute of form models.  Note that the OLD is not set up to use
 the inventory in the ``metalanguageInventory`` attribute for validation.
 
 
@@ -1262,13 +1262,13 @@ it is a recording of an utterance of the object language, i.e., Blackfoot) and
 assume that the ``utteranceType`` value of *F2* is "Metalanguage Utterance"
 (since it is a recording of an utterance in the language of analysis and
 translation, i.e., English).  Now imagine a form *F* whose transcription is
-"oki" and whose only gloss is "hello" and which is associated to files *F1* and
-*F2*.  If there are a good number of forms like *F*, then an application making
-use of this OLD web service would be able to reasonably assume that *F1*, being
-an object language utterance associated to *F* is a recording of a speaker
-uttering the linguistic form that is transcribed in *F*.  Such an application
-could then use such forms to automatically generate audio/textual language
-learning games or talking dictionaries.
+"oki" and whose only translation is "hello" and which is associated to files
+*F1* and *F2*.  If there are a good number of forms like *F*, then an
+application making use of this OLD web service would be able to reasonably
+assume that *F1*, being an object language utterance associated to *F* is a
+recording of a speaker uttering the linguistic form that is transcribed in *F*.
+Such an application could then use such forms to automatically generate
+audio/textual language learning games or talking dictionaries.
 
 
 .. _form-data-structure:
@@ -1292,7 +1292,7 @@ form.
         "elicitationMethod": null, // valid elicitation method model id or null
         "elicitor": null, // valid user model id or null
         "files": [], // array of valid file model ids or []
-        "glosses": [{"gloss": "hello", "glossGrammaticality": ""}],
+        "translations": [{"transcription": "hello", "grammaticality": ""}],
         "grammaticality": "",
         "morphemeBreak": "",
         "morphemeGloss": "",
@@ -1322,7 +1322,7 @@ Forms representations returned by the OLD are JSON objects of the following form
         "elicitor": null, // an object representation of a user or null
         "enterer": { ... }, // an object representation of a user
         "files": [], // an array of object representations of files or []
-        "glosses": [{...}], // an array of object representations of glosses
+        "translations": [{...}], // an array of object representations of translations
         "grammaticality": "",
         "id": 1, // the integer id assigned by the database
         "morphemeBreak": "",
@@ -1434,18 +1434,19 @@ will be an array containing JSON object representations of any associated file
 models.
 
 
-``glosses``
+``translations``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A form model must have at least one gloss but may have more.  The glosses of a
-form are each gloss model objects that are listed in the ``glosses`` attribute
-of the form.  (In the relational database schema, the ``form`` and ``gloss``
-tables are in a one-to-many relationship.)  Forms with multiple glosses, e.g.,
-sentences with multiple valid translations, should use separate gloss models for
-each such gloss.  Gloss models can also have grammaticalities (cf. the
-``glossGrammaticality`` attribute) -- this feature may be used to indicate a
-translation that is not appropriate to a grammatical form.  Thus, as a
-simplified example, "chien" may be glossed as "dog" and "\*wolf".
+A form model must have at least one translation but may have more.  The
+translations of a form are each translation model objects that are listed in the
+``translations`` attribute of the form.  (In the relational database schema, the
+``form`` and ``translation`` tables are in a one-to-many relationship.)  Forms
+with multiple translations, e.g., sentences with multiple valid translations,
+should use separate translation models for each such translation.  Translation
+models can also have grammaticalities (cf. the ``grammaticality`` attribute) --
+this feature may be used to indicate a translation that is not appropriate to a
+grammatical form.  Thus, as a simplistic example, "chien" may be translationed
+as "dog" and "\*wolf" using two translation models.
 
 
 ``grammaticality``
@@ -1695,7 +1696,7 @@ following form.
         "enterer": null, // an object representation of an elicitation method or null
         "files": [], // an array of objects representing file models or []
         "form_id": 1,
-        "glosses": [], // an array of objects representing gloss models or []
+        "translations": [], // an array of objects representing translation models or []
         "grammaticality": "",
         "id": 1,
         "morphemeBreak": "",
@@ -1792,29 +1793,30 @@ create the form search.  This value is generated automatically by the system
 upon form search creation.
 
 
-.. _gloss-data-structure:
+.. _translation-data-structure:
 
-``Gloss``
+``Translation``
 --------------------------------------------------------------------------------
 
-Glosses are translations of forms into the metalanguage.  A form model can
-have multiple glosses and each of these glosses is a gloss model.  Each gloss
-model has ``gloss`` and ``glossGrammaticality`` attributes.  In relational
-database terminology, the form and gloss tables are in a one-to-many
-relationship; that is, a form may have many glosses but each gloss has one and
-only one form.  When a form is deleted, so too are its glosses.
+Translations are translations of forms into the metalanguage.  A form model can
+have multiple translations and each of these translations is a translation
+model.  Each translation model has ``transcription`` and ``grammaticality``
+attributes.  In relational database terminology, the form and translation tables
+are in a one-to-many relationship; that is, a form may have many translations
+but each translation has one and only one form.  When a form is deleted, so too
+are its translations.
 
-Glosses are created not directly (i.e., there is no "glosses" resource) but upon
-form create and update requests.  The input JSON object of such requests has a
-``glosses`` attribute whose value is an array of objects with ``gloss`` and
-``glossGrammaticality`` attributes, e.g.,
+Translations are created not directly (i.e., there is no "translations"
+resource) but upon form create and update requests.  The input JSON object of
+such requests has a ``translations`` attribute whose value is an array of
+objects with ``transcription`` and ``grammaticality`` attributes, e.g.,
 
 .. code-block:: javascript
 
     {
-        "glosses": [
-            {"gloss": "dog", "glossGrammaticality": ""},
-            {"gloss": "wolf", "glossGrammaticality": "*"}
+        "translations": [
+            {"transcription": "dog", "grammaticality": ""},
+            {"transcription": "wolf", "grammaticality": "*"}
         ]
     }
 
@@ -1917,9 +1919,9 @@ attribute.
 ``name``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``name`` attribute holds a name for the orthography.  A unique name of less
-than 255 characters is required.  The name should facilitate identification of
-the orthography.
+The ``name`` attribute holds a name for the orthography.  The name must be
+unique among orthography names and may not exceed 255 characters.  The name
+should facilitate identification of the orthography.
 
 
 ``orthography``
@@ -2151,8 +2153,10 @@ value of the ``contents`` attribute of collection models.
 
 Requests to create or update source resources must contain a JSON object of
 the following form.  Source representations returned by the OLD are JSON objects
-of the same form, with the addition of ``id`` and ``datetimeModified``
-attributes.
+of the same form, with the addition of ``id``, ``datetimeModified`` and
+``crossrefSource``  attributes.  The value of the ``crossrefSource`` attribute
+is either ``null`` (if no ``crossref`` value was supplied by the user) or a JSON
+object representing the cross-referenced source.
 
 .. code-block:: javascript
 
@@ -2275,14 +2279,29 @@ Copyright information.  Maximum length is 255 characters.
 The ``key`` value of another source to be cross-referenced. Any attribute values
 that are missing from the source model are inherited from the source
 cross-referenced via the ``crossref`` attribute.  Maximum length is 1000
-characters.  
+characters.
 
-Note that the OLD does not yet make use of the ``crossref`` attribute during
-validation.  That is, a source whose ``type`` value is, for example,
-"inproceedings" will fail validation if it lacks a value for its ``booktitle``
-attribute, even though it cross-references another source whose ``type`` value
-is "proceedings" and which has a content-ful ``booktitle`` attribute value.
-This should be remedied in future versions of the OLD.
+If a valid ``key`` value is supplied as the value of the ``crossref`` attribute,
+the system will use the attributes of the cross-referenced source when
+validating the input.  That is, a source whose ``type`` value is, for example,
+"inproceedings" would normally fail validation if it lacks a value for its
+``booktitle`` attribute; however, if it cross-references another source whose
+``type`` value is "proceedings" and which has a content-ful ``booktitle`` value,
+then it will pass validaton.  If a valid ``crossref`` value is passed on input,
+then, on output, the value of ``crossrefSource`` will be an object representing
+the cross-referenced source.
+
+
+``crossrefSource``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The value of the ``crossrefSource`` attribute is either ``null`` or the source
+model that is cross-referenced via the ``crossref`` attribute.  That is, a valid
+``crossref`` value passed on input will cause the system to set the
+cross-referenced source as the value of the ``crossrefSource`` attribute.  When
+returning a JSON representation of the original source, the value of the
+``crossrefSource`` attribute will be a JSON object representing the
+cross-referenced source.
 
 
 ``edition``
@@ -2562,10 +2581,11 @@ following form.
 .. code-block:: javascript
 
     {
-        'dialect': u'dialect',
-        'firstName': u'John',
-        'lastName': u'Doe',
-        'pageContent': u'pageContent'
+        "dialect": "",
+        "firstName": "John",
+        "lastName": "Doe",
+        "markupLanguage": ""
+        "pageContent": ""
     }
 
 Speaker representations returned by the OLD are JSON objects of the following
@@ -2577,8 +2597,10 @@ form.
         "datetimeModified": "",
         "dialect": "",
         "firstName": "",
+        "html": "",
         "id": 1,
         "lastName": "",
+        "markupLanguage": "",
         "pageContent": ""
     }
 
@@ -2601,11 +2623,32 @@ The ``firstName`` attribute holds the first name of the speaker.  A value is
 obligatory and cannot exceed 255 characters.
 
 
+``html``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The value of the ``html`` attribute is a string of HTML that is generated by the
+system using the value of the ``pageContent`` attribute and the markup language
+specified in the ``markupLanguage`` attribute.
+
+
 ``lastName``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``lastName`` attribute holds the last name of the speaker.  A value is
 obligatory and cannot exceed 255 characters.
+
+
+``markupLanguage``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The value of the ``markupLanguage`` attribute is one of "Markdown" or
+"reStructuredText" as defined in the ``markupLanguages`` variable of
+``lib/utils.py``.  `Markdown`_ and `reStructuredText`_ are *lightweight markup
+languages*.  A lightweight markup language is a markup language (i.e., a system
+for annotating a document) that is designed to be easy to read in its raw form.
+This value determines which markup-to-HTML function is employed when the system
+attempts to generate the ``html`` value from the user-supplied ``pageContent``
+value.  If no value is specified, "reStructuredText" will be the default.
 
 
 ``pageContent``
@@ -2672,10 +2715,11 @@ for this attribute is obligatory, must be unique among other syntactic category
 
 Syntactic categories are themselves categorized via the ``type`` attribute.
 Valid values, as defined in the ``syntacticCategoryTypes`` tuple of
-``lib/utils.py`` are "lexical", "phrasal" and "sentential".  The purpose of this
-attribute is to help the system to better understand the categorization.  This
-categorization could be useful for functionality that, say, seeks to induce a
-grammar of the morphology of the language.  The available syntactic category
+``lib/utils.py`` are "lexical", "phrasal" and "sentential".  An input  value of
+``null`` or the empty string will result in ``null`` as value.  The purpose of
+this attribute is to help the system to better understand the categorization.
+This categorization could be useful for functionality that, say, seeks to induce
+a grammar of the morphology of the language.  The available syntactic category
 types may change in future versions of the OLD.
 
 
@@ -2853,7 +2897,7 @@ The value of the ``markupLanguage`` attribute is one of "Markdown" or
 languages*.  A lightweight markup language is a markup language (i.e., a system
 for annotating a document) that is designed to be easy to read in its raw form.
 This value determines which markup-to-HTML function is employed when the system
-attempt so generate the ``html`` value from the user-supplied ``pageContent``
+attempts to generate the ``html`` value from the user-supplied ``pageContent``
 value.  If no value is specified, "reStructuredText" will be the default.
 
 

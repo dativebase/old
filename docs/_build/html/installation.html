@@ -63,35 +63,55 @@ directory structure.</li>
 <li>Serve the application and test that it is working properly.</li>
 </ol>
 <p>Note that these installation instructions assume a Unix-like system, e.g.,
-Linux or Mac OS X.  If you are using Windows, please refer to the Pylons
+Linux or Mac OS X.  If you are using Windows <a class="footnote-reference" href="#f1" id="id1">[1]</a>, please refer to the Pylons
 or the virtualenv documentation for instructions on how to create and activate
 a Python virtual environment and install and download a Pylons application.</p>
-<div class="section" id="get-the-old">
-<h2>Get the OLD<a class="headerlink" href="#get-the-old" title="Permalink to this headline">¶</a></h2>
-<p>The source code for the OLD can be found on
-<a class="reference external" href="https://github.com/jrwdunham/old.">GitHub</a>.</p>
-<p>Pre-packaged eggs of stable OLD releases can be found on the
+<div class="section" id="quickstart">
+<h2>QuickStart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
+<p>For the impatient, here is the quickest way to install, configure and serve an
+OLD application.  Before blindly the following commands, however, it is
+recommended that you read the detailed instructions in the following sections</p>
+<div class="highlight-python"><pre>virtualenv --no-site-packages env
+source env/bin/activate
+easy_install onlinelinguisticdatabase
+mkdir xyzold
+cd xyzold
+paster make-config onlinelinguisticdatabase production.ini
+paster setup-app production.ini
+paster serve production.ini</pre>
+</div>
+<p>Open a new terminal window and run the basic test script to ensure that the OLD
+application is being served and is operating correctly:</p>
+<div class="highlight-python"><pre>python _requests_tests.py</pre>
+</div>
+<p>You should see <tt class="docutils literal"><span class="pre">All</span> <span class="pre">requests</span> <span class="pre">tests</span> <span class="pre">passed.</span></tt> as output.  Congratulations.</p>
+</div>
+<div class="section" id="download">
+<h2>Download<a class="headerlink" href="#download" title="Permalink to this headline">¶</a></h2>
+<p>Pre-packaged eggs of stable OLD releases can be downloaded from the
 <a class="reference external" href="http://pypi.python.org/pypi/onlinelinguisticdatabase.">Python Package Index</a></p>
-<p>The easiest way to get and install the OLD is to use the Python command-line
-program Easy Install and run:</p>
+<p>The easiest way to get and install the OLD is via the Python command-line
+program Easy Install.  Before issuing the following command, read the
+<a class="reference internal" href="#virtual-env"><em>Create a virtual Python environment</em></a> and consider installing the OLD in a virtual environment.
+To download and install the OLD with Easy Install, run:</p>
 <div class="highlight-python"><pre>sudo easy_install onlinelinguisticdatabase</pre>
 </div>
-<p>To get the development version of the OLD from GitHub via git, first install
-<a class="reference external" href="http://git-scm.com/">Git</a> and then clone the repository:</p>
+<p>For developers, the full source code for the OLD can be found on
+<a class="reference external" href="https://github.com/jrwdunham/old.">GitHub</a>.  To clone the OLD repository,
+first install <a class="reference external" href="http://git-scm.com/">Git</a> and then run:</p>
 <div class="highlight-python"><pre>git clone git://github.com/jrwdunham/old.git</pre>
 </div>
 <p>See below for detailed instructions.</p>
 </div>
-<div class="section" id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="install">
+<h2>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="create-a-virtual-python-environment">
-<h3>Create a virtual Python environment<a class="headerlink" href="#create-a-virtual-python-environment" title="Permalink to this headline">¶</a></h3>
-<p>It is generally recommended that you install the OLD using a virtual Python
-environment.  A virtual environment is an isolated Python environment within
-which you can install the OLD and its dependencies without inadvertently
-rendering other programs unworkable by, say, upgrading <em>their</em> dependencies
-in incompatible ways.</p>
-<p>If you do not want to install the OLD and its dependencies in a virtual
+<span id="virtual-env"></span><h3>Create a virtual Python environment<a class="headerlink" href="#create-a-virtual-python-environment" title="Permalink to this headline">¶</a></h3>
+<p>It is recommended that one install the OLD in a virtual Python environment.  A
+virtual environment is an isolated Python environment within which you can
+install the OLD and its dependencies without inadvertently rendering other
+programs unworkable by, say, upgrading <em>their</em> dependencies in incompatible
+ways.  If you do not want to install the OLD and its dependencies in a virtual
 environment, skip this section.</p>
 <p>Use <a class="reference external" href="http://www.virtualenv.org">virtualenv</a> to create a virtual Python
 environment.  First, follow the steps on the aforementioned web site to
@@ -152,8 +172,8 @@ something like <tt class="docutils literal"><span class="pre">Successfully</span
 that the OLD and all of its dependencies have been successfully installed.</p>
 </div>
 </div>
-<div class="section" id="configure-the-old">
-<h2>Configure the OLD<a class="headerlink" href="#configure-the-old" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="configure">
+<h2>Configure<a class="headerlink" href="#configure" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="generate-the-config-file">
 <span id="gen-config"></span><h3>Generate the config file<a class="headerlink" href="#generate-the-config-file" title="Permalink to this headline">¶</a></h3>
 <p>Once the OLD is installed, it is necessary to configure it.  This is done by
@@ -162,8 +182,11 @@ setup script is run, several directories will be created in the same directory
 as the config file.  Therefore, it is a good idea to create the config file in
 its own directory.  I use the convention of naming production systems using the
 <a class="reference external" href="http://www-01.sil.org/iso639-3/codes.asp">ISO 639-3</a> three-character id of
-the object language.  So, using <em>xyz</em> as an example (fictitious) language id,
-make a new directory called <tt class="docutils literal"><span class="pre">xyzold</span></tt> and change to it.</p>
+the object language.  To illustrate, I will use the fictitious language id <em>xyz</em>
+and will name the directory <tt class="docutils literal"><span class="pre">xyzold</span></tt>, the MySQL database <tt class="docutils literal"><span class="pre">xyzold</span></tt> and the
+MySQL user <tt class="docutils literal"><span class="pre">xyzuser</span></tt>.  If following this convention, replace &#8220;xyz&#8221; with the Id
+of the language your OLD application will be documenting.  To make a new
+directory called <tt class="docutils literal"><span class="pre">xyzold</span></tt> and change to it, issue the following commands.</p>
 <div class="highlight-python"><pre>mkdir xyzold
 cd xyzold</pre>
 </div>
@@ -178,11 +201,11 @@ created in the current directory). These defaults are good for verifying that
 everything is working ok.  On a production system you will need to change the
 <tt class="docutils literal"><span class="pre">host</span></tt> and <tt class="docutils literal"><span class="pre">port</span></tt> values in the config file as well as set the database to
 <a class="reference external" href="http://www.mysql.com/">MySQL</a>. If you want to get up and running with MySQL
-right away, see the <a class="reference internal" href="#mysql-config"><em>Setup MySQL/MySQLdb</em></a> section; otherwise, continue on to
+right away, see the <a class="reference internal" href="#mysql-config"><em>Set up MySQL/MySQLdb</em></a> section; otherwise, continue on to
 <a class="reference internal" href="#edit-config"><em>Edit the config file</em></a>.</p>
 </div>
-<div class="section" id="setup-mysql-mysqldb">
-<span id="mysql-config"></span><h3>Setup MySQL/MySQLdb<a class="headerlink" href="#setup-mysql-mysqldb" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="set-up-mysql-mysqldb">
+<span id="mysql-config"></span><h3>Set up MySQL/MySQLdb<a class="headerlink" href="#set-up-mysql-mysqldb" title="Permalink to this headline">¶</a></h3>
 <p>The OLD can be configured to use either MySQL or SQLite as its relational
 database management system (RDBMS).</p>
 <p>While SQLite is easy to install (both the SQLite library and the <tt class="docutils literal"><span class="pre">pysqlite</span></tt>
@@ -197,7 +220,7 @@ successfully installed the MySQL server on your system.</p>
 <div class="highlight-python"><pre>mysql&gt; create database xyzold default character set utf8;</pre>
 </div>
 <p>Now create a MySQL user with sufficient access to the above-created database.
-In the first command <tt class="docutils literal"><span class="pre">xyzuser</span></tt> is the username and <tt class="docutils literal"><span class="pre">4R5gvC9x</span></tt> is the
+In the first command, <tt class="docutils literal"><span class="pre">xyzuser</span></tt> is the username and <tt class="docutils literal"><span class="pre">4R5gvC9x</span></tt> is the
 password.</p>
 <div class="highlight-python"><pre>mysql&gt; create user 'xyzuser'@'localhost' identified by '4R5gvC9x';
 mysql&gt; grant select, insert, update, delete, create, drop on xyzold.* to 'xyzuser'@'localhost';
@@ -208,7 +231,7 @@ mysql&gt; quit;</pre>
 mysql&gt; use xyzold;
 mysql&gt; show tables;</pre>
 </div>
-<p>Now MySQL is setup with a database called <tt class="docutils literal"><span class="pre">xyzold</span></tt> (with UTF-8 as its default
+<p>Now MySQL is set up with a database called <tt class="docutils literal"><span class="pre">xyzold</span></tt> (with UTF-8 as its default
 character set) and a user <tt class="docutils literal"><span class="pre">xyzuser</span></tt> who has access to <tt class="docutils literal"><span class="pre">xyzold</span></tt>.  The next
 step is to make sure that the python module <tt class="docutils literal"><span class="pre">MySQLdb</span></tt> is installed.  Enter a
 Python prompt (using your virtual environment, if applicable) and check:</p>
@@ -239,12 +262,15 @@ OLD app is configured.  Open the config file (e.g., <tt class="docutils literal"
 any desired changes.  While the config file is self-documenting, this section
 supplements that documentation.</p>
 <p>(Note that once the OLD is downloaded and installed, it may be used to run
-several distinct web services.  To do this, simply repeat the configuration
-steps with different settings.)</p>
+several distinct OLD web services, e.g., for different languages.  To do this,
+repeat the configuration steps with different settings.  For example, to create
+two OLD web services, one for language <em>xyz</em> and one for language <em>abc</em>, create
+two directories, <tt class="docutils literal"><span class="pre">xyzold</span></tt> and <tt class="docutils literal"><span class="pre">abcold</span></tt>, generate a config file in each, and
+edit each config file appropriately, following these instructions.)</p>
 <p>The host and port where the application will be served are configured here.
 The defaults of <tt class="docutils literal"><span class="pre">127.0.0.1</span></tt> (i.e., localhost) and <tt class="docutils literal"><span class="pre">5000</span></tt> are fine for
-initial setup and testing.  During deployment and server configuration, return
-here to change these values.</p>
+initial setup and testing.  During deployment and server configuration, the host
+will certainly need to be changed and the port probably also.</p>
 <p>The <tt class="docutils literal"><span class="pre">set</span> <span class="pre">debug</span> <span class="pre">=</span> <span class="pre">false</span></tt> line should be left as is on a production setup.
 However, for initial testing it is a good idea to comment out this line with a
 hash mark (i.e., <tt class="docutils literal"><span class="pre">#set</span> <span class="pre">debug</span> <span class="pre">=</span> <span class="pre">false</span></tt>) so that errors can be debugged.  When
@@ -263,7 +289,7 @@ sqlalchemy.url = mysql://username:password@localhost:3306/dbname
 sqlalchemy.pool_recycle = 3600</pre>
 </div>
 <p>Then, change the first MySQL line so that it contains the appropriate values for
-your MySQL setup.  E.g., using the example setup from <a class="reference internal" href="#mysql-config"><em>Setup MySQL/MySQLdb</em></a> would
+your MySQL setup.  E.g., using the example setup from <a class="reference internal" href="#mysql-config"><em>Set up MySQL/MySQLdb</em></a> would
 involve changing it to the following:</p>
 <div class="highlight-python"><pre>sqlalchemy.url = mysql://xyzuser:4R5gvC9x@localhost:3306/xyzold</pre>
 </div>
@@ -276,19 +302,19 @@ the system to send emails using a Gmail account specified in a separate
 to create copies of images and .wav files with reduced sizes.  Note that in
 order for the reduced-copies functionality to succeed with images and .wav files
 it is necessary to install the Python Imaging Library (PIL) and FFmpeg,
-respectively (see the <a class="reference internal" href="#soft-dependecies"><em>Install soft dependencies</em></a> section below).</p>
+respectively (see the <a class="reference internal" href="#soft-dependecies"><em>Soft dependencies</em></a> section below).</p>
 <p>Finally, set the <tt class="docutils literal"><span class="pre">preferred_lossy_audio_format</span></tt> to <tt class="docutils literal"><span class="pre">mp3</span></tt> instead of <tt class="docutils literal"><span class="pre">ogg</span></tt>
 if you would like to create .mp3 copies of your users&#8217; .wav files instead of
 .ogg ones. (Note that a default installation of FFmpeg may not be able to
 convert .wav to .mp3 without installation of some additional libraries.)</p>
 </div>
 </div>
-<div class="section" id="setup-an-old-application">
-<h2>Setup an OLD application<a class="headerlink" href="#setup-an-old-application" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
 <p>Once the OLD has been installed and a config file has been created and edited,
-it is time to run the setup command.  This will generate the tables in the
+it is time to run the <tt class="docutils literal"><span class="pre">setup</span></tt> command.  This will generate the tables in the
 database, insert some defaults (e.g., some users and useful tags) and create
-the requisite directory structure.  To setup an OLD application, move to the
+the requisite directory structure.  To set up an OLD application, move to the
 directory containing the config file (e.g., <tt class="docutils literal"><span class="pre">xyzold</span></tt> containing
 <tt class="docutils literal"><span class="pre">production.ini</span></tt>) and run the <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">setup-app</span></tt> command:</p>
 <div class="highlight-python"><pre>cd xyzold
@@ -315,9 +341,12 @@ mysql&gt; use xyzold;
 mysql&gt; show tables;
 mysql&gt; select username from user;</pre>
 </div>
+<p>You should also see two new directories (<tt class="docutils literal"><span class="pre">analysis</span></tt> and <tt class="docutils literal"><span class="pre">files</span></tt>), the
+application log file <tt class="docutils literal"><span class="pre">application.log</span></tt> and Python script
+<tt class="docutils literal"><span class="pre">_requests_tests.py</span></tt>.</p>
 </div>
-<div class="section" id="serve-the-old-application">
-<h2>Serve the OLD application<a class="headerlink" href="#serve-the-old-application" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="serve">
+<h2>Serve<a class="headerlink" href="#serve" title="Permalink to this headline">¶</a></h2>
 <p>To begin serving an OLD application, use Paster&#8217;s <tt class="docutils literal"><span class="pre">serve</span></tt> command:</p>
 <div class="highlight-python"><pre>paster serve production.ini</pre>
 </div>
@@ -328,9 +357,11 @@ serving on http://127.0.0.1:5000</pre>
 <p>If you visit <tt class="docutils literal"><span class="pre">http://127.0.0.1:5000</span></tt> in a web browser, you should see
 <tt class="docutils literal"><span class="pre">{&quot;error&quot;:</span> <span class="pre">&quot;The</span> <span class="pre">resource</span> <span class="pre">could</span> <span class="pre">not</span> <span class="pre">be</span> <span class="pre">found.&quot;}</span></tt> displayed.  If you visit
 <tt class="docutils literal"><span class="pre">http://127.0.0.1:5000/forms</span></tt> in a web browser, you should see
-<tt class="docutils literal"><span class="pre">{&quot;error&quot;:</span> <span class="pre">&quot;Authentication</span> <span class="pre">is</span> <span class="pre">required</span> <span class="pre">to</span> <span class="pre">access</span> <span class="pre">this</span> <span class="pre">resource.&quot;}</span></tt>.
-Congratulations, this means an OLD application has successfully been setup and
-is being served locally.</p>
+<tt class="docutils literal"><span class="pre">{&quot;error&quot;:</span> <span class="pre">&quot;Authentication</span> <span class="pre">is</span> <span class="pre">required</span> <span class="pre">to</span> <span class="pre">access</span> <span class="pre">this</span> <span class="pre">resource.&quot;}</span></tt>.  These
+error responses are to be expected: the first because no resource was specified
+in the request URL and the second because authentication is required before
+forms can be read.  Congratulations, this means an OLD application has
+successfully been set up and is being served locally.</p>
 <p>When <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">setup-app</span></tt> is run, a Python script called <tt class="docutils literal"><span class="pre">_requests_tests.py</span></tt>
 is created in the current working directory.  This script uses the Python
 Requests module to test that a live OLD application is working correctly.
@@ -340,20 +371,21 @@ served locally on port 5000, running the following command will run the
 <div class="highlight-python"><pre>python _requests_tests.py</pre>
 </div>
 <p>If everything is working correctly, you should see <tt class="docutils literal"><span class="pre">All</span> <span class="pre">requests</span> <span class="pre">tests</span>
-<span class="pre">passed.</span></tt>  Note that if you have changed the config file (i.e., the host or port
-values), then you will need to change the values of the <tt class="docutils literal"><span class="pre">host</span></tt> and/or <tt class="docutils literal"><span class="pre">port</span></tt>
-variables in <tt class="docutils literal"><span class="pre">_requests_tests.py</span></tt>.</p>
+<span class="pre">passed.</span></tt>  (Note that if you have changed the config file, i.e., the host or
+port values, then you will need to change the values of the <tt class="docutils literal"><span class="pre">host</span></tt> and/or
+<tt class="docutils literal"><span class="pre">port</span></tt> variables in <tt class="docutils literal"><span class="pre">_requests_tests.py</span></tt> to match.)</p>
 </div>
-<div class="section" id="install-soft-dependencies">
-<span id="soft-dependecies"></span><h2>Install soft dependencies<a class="headerlink" href="#install-soft-dependencies" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="soft-dependencies">
+<span id="soft-dependecies"></span><h2>Soft dependencies<a class="headerlink" href="#soft-dependencies" title="Permalink to this headline">¶</a></h2>
 <p>In order to create smaller copies of image files and .wav files, the OLD uses
 the <a class="reference external" href="http://www.pythonware.com/products/pil/">Python Imaging Library (PIL)</a>
 and the <a class="reference external" href="http://www.ffmpeg.org/">FFmpeg</a> command-line program.  If you would
-like your OLD application to automatically create reduced-size images and .wav
-files, then these programs should be downloaded and installed using the
-instructions on the above-linked pages.  I will provide brief instructions here.</p>
-<div class="section" id="install-pil">
-<h3>Install PIL<a class="headerlink" href="#install-pil" title="Permalink to this headline">¶</a></h3>
+like your OLD application to automatically create reduced-size images and lossy
+(i.e., .ogg or .mp3) copies of .wav files, then these programs should be
+downloaded and installed using the instructions on the above-linked pages.  I
+provide brief instructions here.</p>
+<div class="section" id="pil">
+<h3>PIL<a class="headerlink" href="#pil" title="Permalink to this headline">¶</a></h3>
 <p>To install PIL, download and decompress the source.  Then change to the root
 folder and run <tt class="docutils literal"><span class="pre">setup.py</span> <span class="pre">install</span></tt> (remembering to use your <tt class="docutils literal"><span class="pre">virtualenv</span></tt>
 Python executable, if necessary):</p>
@@ -371,8 +403,8 @@ created a smaller version of each image:</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="install-ffmpeg">
-<h3>Install FFmpeg<a class="headerlink" href="#install-ffmpeg" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id2">
+<h3>FFmpeg<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
 <p>FFmpeg is a command-line tool that can convert .wav files to the lossy formats
 .ogg and .mp3.  It can be somewhat tricky to install FFmpeg properly and some
 installs will not support .mp3 creation by default.  For Debian 6.0 (Squeeze), I
@@ -388,15 +420,16 @@ ffmpeg -i old_test.wav old_test.mp3</pre>
 file.</p>
 </div>
 </div>
-<div class="section" id="deploy-an-old-application">
-<h2>Deploy an OLD Application<a class="headerlink" href="#deploy-an-old-application" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="deploy">
+<h2>Deploy<a class="headerlink" href="#deploy" title="Permalink to this headline">¶</a></h2>
 <p>Deploying an OLD application means getting a domain name, serving the
 application on the world wide web and setting up some admin scripts.  There are
-many possible ways to achieve this.  In my production systems I have used the
-approach of using Apache to proxy requests to Pylons as described in
+many possible ways to achieve this.  In my production systems I have followed
+the approach of using Apache to proxy requests to Pylons as described in
 <a class="reference external" href="http://pylonsbook.com/en/1.1/deployment.html">Chapter 21: Deployment</a> of
-<a class="reference external" href="http://pylonsbook.com/">The Pylons Book</a> and have had success with that.</p>
-<p>Assuming, Apache 2, <tt class="docutils literal"><span class="pre">mod_proxy</span></tt> and <tt class="docutils literal"><span class="pre">mod_proxy_http</span></tt> are installed, you
+<a class="reference external" href="http://pylonsbook.com/">The Pylons Book</a> and have had success with that.  I
+review that approach here.</p>
+<p>Assuming Apache 2, <tt class="docutils literal"><span class="pre">mod_proxy</span></tt> and <tt class="docutils literal"><span class="pre">mod_proxy_http</span></tt> are installed, you
 first enable the latter two:</p>
 <div class="highlight-python"><pre>sudo a2enmod proxy
 sudo a2enmod proxy_http</pre>
@@ -404,7 +437,7 @@ sudo a2enmod proxy_http</pre>
 <p>Then you create a config file such as the one below in
 <tt class="docutils literal"><span class="pre">/etc/apache2/sites-available/</span></tt> or in the equivalent location for your
 platform.  I used the config file below for an OLD application deployed for
-documenting the Okanagan language.  The domain name is www.okaold.org.  I saved
+documenting the Okanagan language.  The domain name is <em>okaold.org</em>.  I saved
 the file as <tt class="docutils literal"><span class="pre">/etc/apache2/sites-available/okaold.org</span></tt> and  created the error
 logs directory, i.e., <tt class="docutils literal"><span class="pre">/home/old/log</span></tt>.  The only configuration necessary for
 the <em>OLD</em> config file (i.e., the <tt class="docutils literal"><span class="pre">production.ini</span></tt> file whose creation was
@@ -468,12 +501,27 @@ A Python script is run periodically on the second server to perform a <tt class=
 of the relevant databases.  I will further document my backup setup at a later
 date.</p>
 </div>
-<div class="section" id="development-installation">
-<h2>Development installation<a class="headerlink" href="#development-installation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="developers">
+<h2>Developers<a class="headerlink" href="#developers" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>install sphinx</li>
+<li>Precis of the directory structure and where things are in a Pylons app</li>
+<li>install developer tools: sphinx</li>
 <li>run setup.py develop ...</li>
+<li>how to run tests</li>
+<li>development cycle ...</li>
 </ul>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>The OLD has not been tested on Windows.  Some alterations to the source
+may be required in order to get it running on a Windows OS.  to be clear,
+this does <em>not</em> mean that users running a Windows OS will not be able to use
+a production OLD web application.  A live OLD application is a web service
+and users with any operating system should be able to interact with it,
+assuming an internet connection is available.  What this does mean is that
+the OLD, as is, may not run on a Windows <em>server</em>.</td></tr>
+</tbody>
+</table>
 </div>
 </div>
 
@@ -486,27 +534,28 @@ date.</p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Installation &amp; Configuration</a><ul>
-<li><a class="reference internal" href="#get-the-old">Get the OLD</a></li>
-<li><a class="reference internal" href="#installation">Installation</a><ul>
+<li><a class="reference internal" href="#quickstart">QuickStart</a></li>
+<li><a class="reference internal" href="#download">Download</a></li>
+<li><a class="reference internal" href="#install">Install</a><ul>
 <li><a class="reference internal" href="#create-a-virtual-python-environment">Create a virtual Python environment</a></li>
 <li><a class="reference internal" href="#install-the-old">Install the OLD</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#configure-the-old">Configure the OLD</a><ul>
+<li><a class="reference internal" href="#configure">Configure</a><ul>
 <li><a class="reference internal" href="#generate-the-config-file">Generate the config file</a></li>
-<li><a class="reference internal" href="#setup-mysql-mysqldb">Setup MySQL/MySQLdb</a></li>
+<li><a class="reference internal" href="#set-up-mysql-mysqldb">Set up MySQL/MySQLdb</a></li>
 <li><a class="reference internal" href="#edit-the-config-file">Edit the config file</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#setup-an-old-application">Setup an OLD application</a></li>
-<li><a class="reference internal" href="#serve-the-old-application">Serve the OLD application</a></li>
-<li><a class="reference internal" href="#install-soft-dependencies">Install soft dependencies</a><ul>
-<li><a class="reference internal" href="#install-pil">Install PIL</a></li>
-<li><a class="reference internal" href="#install-ffmpeg">Install FFmpeg</a></li>
+<li><a class="reference internal" href="#setup">Setup</a></li>
+<li><a class="reference internal" href="#serve">Serve</a></li>
+<li><a class="reference internal" href="#soft-dependencies">Soft dependencies</a><ul>
+<li><a class="reference internal" href="#pil">PIL</a></li>
+<li><a class="reference internal" href="#id2">FFmpeg</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#deploy-an-old-application">Deploy an OLD Application</a></li>
-<li><a class="reference internal" href="#development-installation">Development installation</a></li>
+<li><a class="reference internal" href="#deploy">Deploy</a></li>
+<li><a class="reference internal" href="#developers">Developers</a></li>
 </ul>
 </li>
 </ul>

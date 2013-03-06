@@ -310,8 +310,9 @@ JSON is a widely-used standard for converting certain data types and (nested)
 data structures to and from strings.  Strings, numbers, arrays (lists) and
 associative arrays (dictionaries) can all be serialized to a JSON string.  For
 example, a Python dictionary, i.e., a set of key/value pairs such as
-``{'transcription': 'dog', 'glosses': [{'gloss': 'chien'}]}`` when converted to
-JSON would be ``'{"transcription": "dog", "glosses": [{"gloss": "chien"}]}'``.
+``{'transcription': 'dog', 'translations': [{'transcription': 'chien'}]}`` when
+converted to JSON would be
+``'{"transcription": "dog", "translations": [{"transcription": "chien"}]}'``.
 In most cases, when an OLD web service requires user input, that input is
 expected to be JSON in the request body [#f3]_.
 
@@ -484,7 +485,7 @@ of embedding.
 
 .. code-block:: javascript
 
-   ['and', [['Gloss', 'gloss', 'like', '%1%'],
+   ['and', [['Translation', 'transcription', 'like', '%1%'],
             ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
             ['or', [['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
                     ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]
@@ -604,12 +605,12 @@ contain a "k", followed by *anything but* a "q" or another "k", followed by a
 
 The vertical bar "\|" is the alternation metacharacter.  It matches either the
 string to its left or the string to its right.  For example, the following OLD
-filter expression will return all forms containing a gloss that contains either
-"the cat ran" or "the dog ran".
+filter expression will return all forms containing a translation that contains
+either "the cat ran" or "the dog ran".
 
 .. code-block:: javascript
 
-   ["Form", "glosses", "gloss", "the (cat|dog) ran"]
+   ["Form", "translations", "transcription", "the (cat|dog) ran"]
 
 Regular expressions also support quantification.  That is, it is possible to
 specify that a pattern zero or one times (using "?"), zero or more times (using
@@ -1131,7 +1132,7 @@ Standard validation is validation on user input that is applied by all OLD
 applications
 
 Some representative examples will illustrate.  All forms require some string in
-their transcription field and at least one gloss.  References to other OLD
+their transcription field and at least one translation.  References to other OLD
 resources via their ids are validated for existence; e.g., when an elicitor for
 a form is specified via a user id, then validation ensures that the id
 corresponds to a user in the database.  User-supplied values for date fields
