@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>The OLD Data Structure &mdash; OLD 1.0a documentation</title>
+    <title>Data Structure &mdash; OLD 1.0a1 documentation</title>
     
     <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.0a',
+        VERSION:     '1.0a1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,8 +25,9 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="OLD 1.0a documentation" href="index.html" />
-    <link rel="prev" title="The OLD Interface" href="interface.html" /> 
+    <link rel="top" title="OLD 1.0a1 documentation" href="index.html" />
+    <link rel="next" title="onlinelinguisticdatabase" href="api.html" />
+    <link rel="prev" title="Interface" href="interface.html" /> 
   </head>
   <body>
     <div class="related">
@@ -36,9 +37,15 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="interface.html" title="The OLD Interface"
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="onlinelinguisticdatabase"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="interface.html" title="Interface"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">OLD 1.0a documentation</a> &raquo;</li> 
+        <li><a href="index.html">OLD 1.0a1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -47,8 +54,8 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="the-old-data-structure">
-<span id="data-structure"></span><h1>The OLD Data Structure<a class="headerlink" href="#the-old-data-structure" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="data-structure">
+<span id="id1"></span><h1>Data Structure<a class="headerlink" href="#data-structure" title="Permalink to this headline">¶</a></h1>
 <p>This page describes the data structure of the OLD.  The OLD data structure is a
 representation of the artifacts of linguistic fieldwork and their properties.
 This data structure is implemented as tables and their inter-relations in a
@@ -60,10 +67,10 @@ form, i.e., a morpheme, word, phrase or sentence elicited by a linguistic
 fieldworker.  Some of the representative attributes of the form model are
 <tt class="docutils literal"><span class="pre">transcription</span></tt>, <tt class="docutils literal"><span class="pre">morphemeBreak</span></tt>, <tt class="docutils literal"><span class="pre">morphemeGloss</span></tt>, <tt class="docutils literal"><span class="pre">translations</span></tt>,
 <tt class="docutils literal"><span class="pre">grammaticality</span></tt>, <tt class="docutils literal"><span class="pre">speaker</span></tt> and <tt class="docutils literal"><span class="pre">dateElicited</span></tt>.</p>
-<p>This exposition is structured according to the models defined by the OLD.<a class="footnote-reference" href="#f1" id="id1">[1]</a>
+<p>This exposition is structured according to the models defined by the OLD.<a class="footnote-reference" href="#f1" id="id2">[1]</a>
 Each section begins with an overview of the model.  The attributes of the model
 are described and justified in alphabetically ordered subsections.  Included in
-these subsections are specifications of what constitutes a licit<a class="footnote-reference" href="#f4" id="id2">[2]</a> value
+these subsections are specifications of what constitutes a licit<a class="footnote-reference" href="#f4" id="id3">[2]</a> value
 for each attribute as well as the methods of construction for system-generated
 values.  Each model section details the format of the input expected upon create
 or update requests as well as the format of the model when returned.  Note that
@@ -91,14 +98,14 @@ are stored.  For example, form resources are accessed via the <tt class="docutil
 controller and the data for each form is represented internally as a <tt class="docutils literal"><span class="pre">form</span></tt>
 model object which is persisted to a <tt class="docutils literal"><span class="pre">form</span></tt> table in the database.  Some
 resources, such as the <tt class="docutils literal"><span class="pre">rememberedforms</span></tt> quasi-resource described in
-<a class="reference internal" href="interface.html#interface"><em>The OLD Interface</em></a>, have no corresponding model or table while some tables, e.g.,
+<a class="reference internal" href="interface.html#interface"><em>Interface</em></a>, have no corresponding model or table while some tables, e.g.,
 the <tt class="docutils literal"><span class="pre">formtag</span></tt> table that stores the many-to-many relations between the
 <tt class="docutils literal"><span class="pre">form</span></tt> and <tt class="docutils literal"><span class="pre">tag</span></tt> tables, have no model or controller.  (Note that because
 of a naming conflict, the controller responsible for OLD collections resources
 is in <tt class="docutils literal"><span class="pre">controllers/oldcollections.py</span></tt> not <tt class="docutils literal"><span class="pre">controllers/collections.py</span></tt>.)</p>
 <p>Note finally that the OLD treats all strings as unicode.  Data input to the
 database or written to disk are UTF-8 encoded.  The OLD applies unicode
-canonical decomposition normalization <a class="footnote-reference" href="#f2" id="id3">[3]</a> to all string data (including user
+canonical decomposition normalization <a class="footnote-reference" href="#f2" id="id4">[3]</a> to all string data (including user
 input, search query patterns and system-generated data).  This means that the
 character &#8220;á&#8221; will be stored as &#8220;LATIN SMALL LETTER A&#8221; (U+0061) followed by the
 combining character &#8220;COMBINING ACCUTE ACCENT&#8221; (U+0301) even when it is entered
@@ -583,7 +590,7 @@ collection creation.</p>
 <div class="section" id="files">
 <h3><tt class="docutils literal"><span class="pre">files</span></tt><a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h3>
 <p>A collection may be associated to zero or more files via the <tt class="docutils literal"><span class="pre">files</span></tt> attribute
-which references a collection <a class="footnote-reference" href="#f5" id="id4">[6]</a> of file models.  Files are OLD objects that
+which references a collection <a class="footnote-reference" href="#f5" id="id5">[6]</a> of file models.  Files are OLD objects that
 represent a binary file (e.g., an audio, video or image file) along with
 metadata.  An example use case would be a collection that represents an
 elicitation session and which is associated to one or more files whose file data
@@ -761,8 +768,8 @@ following form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id5">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id6">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute is a user-supplied string that
 describes the elicitation method and (perhaps) provides guidance on its use.</p>
 </div>
@@ -792,7 +799,7 @@ The form of the input passed with create requests will determine which type of
 file model is created. Whatever the type of file being created, the URL and HTTP
 method for such requests remains the same, i.e., <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/files</span></tt>.</p>
 <p>When creating a <em>local</em> OLD file, it is necessary to upload a binary file to the
-OLD.<a class="footnote-reference" href="#f6" id="id6">[5]</a>  The traditional way of doing this in web applications is to
+OLD.<a class="footnote-reference" href="#f6" id="id7">[5]</a>  The traditional way of doing this in web applications is to
 specify the <tt class="docutils literal"><span class="pre">Content-Type</span></tt> of the HTTP request as <tt class="docutils literal"><span class="pre">multipart/form-data</span></tt> and
 pass the binary file data in the body of the request in a special format.  When
 using this method, additional parameters are restricted to simple name-value
@@ -851,7 +858,7 @@ approach, the binary file is converted to a string using
 value of the <tt class="docutils literal"><span class="pre">base64EncodedFile</span></tt> attribute of the JSON object passed in the
 request body.  Because it is inefficient to Base64-encode large files on the
 client and then decode them in memory on the server, requests to <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/files</span></tt>
-with a request body that is greater than 20MB <a class="footnote-reference" href="#f3" id="id7">[4]</a> will be rejected with a 400
+with a request body that is greater than 20MB <a class="footnote-reference" href="#f3" id="id8">[4]</a> will be rejected with a 400
 error code.  File creation requests for <em>local</em> files using the
 <tt class="docutils literal"><span class="pre">application/json</span></tt> content type must contain a JSON object of the following
 form.</p>
@@ -943,14 +950,14 @@ form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id8">
-<h3><tt class="docutils literal"><span class="pre">dateElicited</span></tt><a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id9">
+<h3><tt class="docutils literal"><span class="pre">dateElicited</span></tt><a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">dateElicited</span></tt> attribute is a user-supplied date value which indicates the
 date when the file was elicited, if applicable, e.g., when a recording of an
 elicitation was made.  The date must be in mm/dd/yyyy format.</p>
 </div>
-<div class="section" id="id9">
-<h3><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt><a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id10">
+<h3><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt><a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">datetimeEntered</span></tt> attribute is a UTC timestamp generated by
 the system when a file is created.  Note that this value is distinct from the
 <tt class="docutils literal"><span class="pre">datetimeModified</span></tt> attribute that is common to all model types since that
@@ -958,13 +965,13 @@ value is generated upon creation <em>and</em> update requests while the
 <tt class="docutils literal"><span class="pre">datetimeEntered</span></tt> value is only generated upon creation requests and is not
 altered thereafter.</p>
 </div>
-<div class="section" id="id10">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id11">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute is a user-supplied string that
 describes the file.</p>
 </div>
-<div class="section" id="id11">
-<h3><tt class="docutils literal"><span class="pre">elicitor</span></tt><a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id12">
+<h3><tt class="docutils literal"><span class="pre">elicitor</span></tt><a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">elicitor</span></tt> attribute references a valid user model who is the elicitor of
 the file, if applicable.</p>
 </div>
@@ -978,8 +985,8 @@ audio file <em>F1</em> as its parent file.  A value of 3.7 for the <tt class="do
 ends at 3.7 seconds.  Note that only subinterval-referencing files should have
 values for the <tt class="docutils literal"><span class="pre">end</span></tt> attribute.</p>
 </div>
-<div class="section" id="id12">
-<h3><tt class="docutils literal"><span class="pre">enterer</span></tt><a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id13">
+<h3><tt class="docutils literal"><span class="pre">enterer</span></tt><a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">enterer</span></tt> attribute references the user model whose account was used to
 create the file.  This value is generated automatically by the system upon file
 creation.</p>
@@ -1003,8 +1010,8 @@ file data will be saved to something like <tt class="docutils literal"><span cla
 the value of the <tt class="docutils literal"><span class="pre">filename</span></tt> attribute of the file model will be
 &#8220;johns_file_3Df6Nop0.wav&#8221;.</p>
 </div>
-<div class="section" id="id13">
-<h3><tt class="docutils literal"><span class="pre">forms</span></tt><a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id14">
+<h3><tt class="docutils literal"><span class="pre">forms</span></tt><a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h3>
 <p>A file model may be associated to zero or more forms.  On file create and update
 requests, associated forms are specified by providing an array of valid form ids
 as the value of the <tt class="docutils literal"><span class="pre">forms</span></tt> attribute.  When JSON object representations of
@@ -1097,8 +1104,8 @@ MIME/Internet Media types are listed in the table below.</p>
 </tbody>
 </table>
 </div>
-<div class="section" id="id14">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id15">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h3>
 <p>Externally hosted and subinterval-referencing files may supply a value for the
 <tt class="docutils literal"><span class="pre">name</span></tt> attribute.  Since these types of files do not have values for the
 <tt class="docutils literal"><span class="pre">filename</span></tt> attribute, the <tt class="docutils literal"><span class="pre">name</span></tt> attribute can be useful in identifying
@@ -1129,8 +1136,8 @@ service itself.</p>
 representing the size of the binary file in bytes.  This is calculated upon a
 successful file creation request.</p>
 </div>
-<div class="section" id="id15">
-<h3><tt class="docutils literal"><span class="pre">speaker</span></tt><a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id16">
+<h3><tt class="docutils literal"><span class="pre">speaker</span></tt><a class="headerlink" href="#id16" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">speaker</span></tt> attribute references a valid speaker model who is the speaker or
 consultant of the file.  This is appropriate in cases where the file is, say,
 an audio recording of a speaker telling a story or a recording of an
@@ -1146,15 +1153,15 @@ of <em>F1</em> means that the content of <em>F1</em> is a portion of the audio f
 begins at 2.1 seconds.  Note that only subinterval-referencing files should have
 values for the <tt class="docutils literal"><span class="pre">start</span></tt> attribute.</p>
 </div>
-<div class="section" id="id16">
-<h3><tt class="docutils literal"><span class="pre">tags</span></tt><a class="headerlink" href="#id16" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id17">
+<h3><tt class="docutils literal"><span class="pre">tags</span></tt><a class="headerlink" href="#id17" title="Permalink to this headline">¶</a></h3>
 <p>A file may be associated to zero or more tags.  Tags are user-defined models
 that can be used to arbitrarily categorize other OLD models.  If a file is to be
 restricted, then the special &#8220;restricted&#8221; tag should be associated to id.  See
 the <a class="reference internal" href="#tag-data-structure"><em>Tag</em></a> section for more details on the tag model.</p>
 </div>
-<div class="section" id="id17">
-<h3><tt class="docutils literal"><span class="pre">url</span></tt><a class="headerlink" href="#id17" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id18">
+<h3><tt class="docutils literal"><span class="pre">url</span></tt><a class="headerlink" href="#id18" title="Permalink to this headline">¶</a></h3>
 <p>Externally hosted files are identified by possession of a non-empty value for
 the <tt class="docutils literal"><span class="pre">url</span></tt> attribute.  The value should be a valid URL that will serve the
 content of the file when requested.  This value will allow user-facing
@@ -1279,14 +1286,14 @@ of the form resource.  If multiple forms are to be tagged or classified in some
 way, it is better to use the <tt class="docutils literal"><span class="pre">tags</span></tt> attribute for this purpose and not the
 <tt class="docutils literal"><span class="pre">comments</span></tt> attribute.</p>
 </div>
-<div class="section" id="id18">
-<h3><tt class="docutils literal"><span class="pre">dateElicited</span></tt><a class="headerlink" href="#id18" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id19">
+<h3><tt class="docutils literal"><span class="pre">dateElicited</span></tt><a class="headerlink" href="#id19" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">dateElicited</span></tt> attribute is a user-supplied date value which indicates the
 date when the form was elicited.  The date must be in mm/dd/yyyy format.  For
 abstract lexical forms this value may not be appropriate.</p>
 </div>
-<div class="section" id="id19">
-<h3><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt><a class="headerlink" href="#id19" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id20">
+<h3><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt><a class="headerlink" href="#id20" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">datetimeEntered</span></tt> attribute is a UTC timestamp generated by
 the system when a form is created.  Note that this value is distinct from the
 <tt class="docutils literal"><span class="pre">datetimeModified</span></tt> attribute that is common to all model types since that
@@ -1294,25 +1301,25 @@ value is generated upon creation <em>and</em> update requests while the
 <tt class="docutils literal"><span class="pre">datetimeEntered</span></tt> value is only generated upon creation requests and is not
 altered thereafter.</p>
 </div>
-<div class="section" id="id20">
-<h3><tt class="docutils literal"><span class="pre">elicitationMethod</span></tt><a class="headerlink" href="#id20" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id21">
+<h3><tt class="docutils literal"><span class="pre">elicitationMethod</span></tt><a class="headerlink" href="#id21" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">elicitationMethod</span></tt> attribute references a valid elicitation method model
 that classifies the way in which the form was elicited.  See the
 <a class="reference internal" href="#elicitation-method-data-structure"><em>ElicitationMethod</em></a> section for details.</p>
 </div>
-<div class="section" id="id21">
-<h3><tt class="docutils literal"><span class="pre">elicitor</span></tt><a class="headerlink" href="#id21" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id22">
+<h3><tt class="docutils literal"><span class="pre">elicitor</span></tt><a class="headerlink" href="#id22" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">elicitor</span></tt> attribute references a valid user model who is the elicitor of
 the form.</p>
 </div>
-<div class="section" id="id22">
-<h3><tt class="docutils literal"><span class="pre">enterer</span></tt><a class="headerlink" href="#id22" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id23">
+<h3><tt class="docutils literal"><span class="pre">enterer</span></tt><a class="headerlink" href="#id23" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">enterer</span></tt> attribute references the user model whose account was used to
 enter the form.  This value is generated automatically by the system upon form
 creation.</p>
 </div>
-<div class="section" id="id23">
-<h3><tt class="docutils literal"><span class="pre">files</span></tt><a class="headerlink" href="#id23" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id24">
+<h3><tt class="docutils literal"><span class="pre">files</span></tt><a class="headerlink" href="#id24" title="Permalink to this headline">¶</a></h3>
 <p>A form may be associated to zero or more files via the <tt class="docutils literal"><span class="pre">files</span></tt> attribute which
 references a collection of file models.  Files are OLD objects that represent a
 binary file (e.g., an audio, video or image file) along with metadata (e.g., a
@@ -1415,16 +1422,16 @@ representation of the form, e.g., a denotation.  Maximum length is 1023
 characters.  At some future point candidate values for this attribute may be
 auto-generated.</p>
 </div>
-<div class="section" id="id24">
-<h3><tt class="docutils literal"><span class="pre">source</span></tt><a class="headerlink" href="#id24" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id25">
+<h3><tt class="docutils literal"><span class="pre">source</span></tt><a class="headerlink" href="#id25" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">source</span></tt> attribute references a valid source model that indicates the
 textual (or other) source of the form.  This is useful for when data are taken
 from papers or dictionaries and need to be attributed.  The source model is
 based on the BibTeX format. See the <a class="reference internal" href="#source-data-structure"><em>Source</em></a> section for
 details.</p>
 </div>
-<div class="section" id="id25">
-<h3><tt class="docutils literal"><span class="pre">speaker</span></tt><a class="headerlink" href="#id25" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id26">
+<h3><tt class="docutils literal"><span class="pre">speaker</span></tt><a class="headerlink" href="#id26" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">speaker</span></tt> attribute references a valid speaker model who is the speaker or
 consultant of the form.</p>
 </div>
@@ -1468,8 +1475,8 @@ of the form, e.g., a phrase structure tree in bracket notation.  Maximum length
 is 1023 characters.  At some future point candidate values for this attribute
 may be auto-generated.</p>
 </div>
-<div class="section" id="id26">
-<h3><tt class="docutils literal"><span class="pre">tags</span></tt><a class="headerlink" href="#id26" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id27">
+<h3><tt class="docutils literal"><span class="pre">tags</span></tt><a class="headerlink" href="#id27" title="Permalink to this headline">¶</a></h3>
 <p>A form may be associated to zero or more tags.  Tags are user-defined models
 that can be used to arbitrarily categorize other OLD models.  An example usage
 would be to define a tag model with a <tt class="docutils literal"><span class="pre">name</span></tt> value of &#8220;VP ellipsis&#8221; and use
@@ -1489,8 +1496,8 @@ application settings resource and configure form transcription validation so
 that values not generable using the orthography are rejected.  See
 <a class="reference internal" href="interface.html#object-language-validation"><em>Object language validation</em></a> for details.</p>
 </div>
-<div class="section" id="id27">
-<h3><tt class="docutils literal"><span class="pre">UUID</span></tt><a class="headerlink" href="#id27" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id28">
+<h3><tt class="docutils literal"><span class="pre">UUID</span></tt><a class="headerlink" href="#id28" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">UUID</span></tt> attribute is a universally unique identifier (UUID),
 i.e., a number represented by 32 hexadecimal digits displayed in five groups
 using four hyphens.  A valid UUID is a 36-character string that looks like
@@ -1585,13 +1592,13 @@ following form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id28">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id28" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id29">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id29" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute is a user-supplied string that
 describes the search resource.</p>
 </div>
-<div class="section" id="id29">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id29" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id30">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id30" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">name</span></tt> attribute is a user-supplied string used to identify
 the search resource.  Names are obligatory, may not exceed 255 characters and no
 two searches may have the same name.</p>
@@ -1717,14 +1724,14 @@ characters and can be useful for orthography conversion algorithms and for
 reducing the number of graphemes that must be specified in the <tt class="docutils literal"><span class="pre">orthography</span></tt>
 attribute.</p>
 </div>
-<div class="section" id="id30">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id30" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id31">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id31" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds a name for the orthography.  The name must be
 unique among orthography names and may not exceed 255 characters.  The name
 should facilitate identification of the orthography.</p>
 </div>
-<div class="section" id="id31">
-<h3><tt class="docutils literal"><span class="pre">orthography</span></tt><a class="headerlink" href="#id31" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id32">
+<h3><tt class="docutils literal"><span class="pre">orthography</span></tt><a class="headerlink" href="#id32" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">orthography</span></tt> attribute is a comma-delimited list of strings
 representing the graphemes of the orthography.  A non-empty value for this
 attribute is required.</p>
@@ -1779,14 +1786,14 @@ written in the specified markup language.</p>
 <p>The value of the <tt class="docutils literal"><span class="pre">heading</span></tt> attribute is a user-supplied string, no longer than
 255 characters, which could be used as a heading or title for the page.</p>
 </div>
-<div class="section" id="id32">
-<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id32" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id33">
+<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id33" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">html</span></tt> attribute is the HTML generated from the user-supplied
 <tt class="docutils literal"><span class="pre">content</span></tt> value using the markup-to-HTML function corresponding to the
 specified markup language.</p>
 </div>
-<div class="section" id="id33">
-<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id33" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id34">
+<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id34" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute is one of &#8220;Markdown&#8221; or
 &#8220;reStructuredText&#8221; as defined in the <tt class="docutils literal"><span class="pre">markupLanguages</span></tt> variable of
 <tt class="docutils literal"><span class="pre">lib/utils.py</span></tt>.  <a class="reference external" href="&lt;http://daringfireball.net/projects/markdown/&gt;">Markdown</a> and <a class="reference external" href="&lt;http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html&gt;">reStructuredText</a> are <em>lightweight markup
@@ -1797,8 +1804,8 @@ in the specified markup language and will choose a markup-to-HTML function
 corresponding to that markup language when generating the HTML of the page.  If
 no value is specified, &#8220;reStructuredText&#8221; will be the default.</p>
 </div>
-<div class="section" id="id34">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id34" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id35">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id35" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">name</span></tt> attribute is a string used to identify the page.  This
 value may not exceed 255 characters and a non-empty value must be provided.</p>
 </div>
@@ -1838,8 +1845,8 @@ form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id35">
-<h3><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt><a class="headerlink" href="#id35" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id36">
+<h3><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt><a class="headerlink" href="#id36" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">datetimeEntered</span></tt> attribute is a UTC timestamp generated by
 the system when a phonology is created.  Note that this value is distinct from
 the <tt class="docutils literal"><span class="pre">datetimeModified</span></tt> attribute that is common to all model types since that
@@ -1847,13 +1854,13 @@ value is generated upon creation <em>and</em> update requests while the
 <tt class="docutils literal"><span class="pre">datetimeEntered</span></tt> value is only generated upon creation requests and is not
 altered thereafter.</p>
 </div>
-<div class="section" id="id36">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id36" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id37">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id37" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute is an open-ended, user-supplied
 description of the phonology.</p>
 </div>
-<div class="section" id="id37">
-<h3><tt class="docutils literal"><span class="pre">enterer</span></tt><a class="headerlink" href="#id37" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id38">
+<h3><tt class="docutils literal"><span class="pre">enterer</span></tt><a class="headerlink" href="#id38" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">enterer</span></tt> attribute references the user model whose account was used to
 create the phonology.  This value is generated automatically by the system upon
 phonology creation.</p>
@@ -1864,8 +1871,8 @@ phonology creation.</p>
 perform the most recent update on the phonology.  This value is generated
 automatically by the system upon successfuly phonology update requests.</p>
 </div>
-<div class="section" id="id38">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id38" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id39">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id39" title="Permalink to this headline">¶</a></h3>
 <p>The value of the obligatory <tt class="docutils literal"><span class="pre">name</span></tt> attribute is a unique string, not to exceed
 255 characters, that identifies the phonology.</p>
 </div>
@@ -1880,7 +1887,7 @@ requests if the compile attempt fails.</p>
 </div>
 </div>
 <div class="section" id="source-data-structure">
-<span id="id39"></span><h2><tt class="docutils literal"><span class="pre">Source</span></tt><a class="headerlink" href="#source-data-structure" title="Permalink to this headline">¶</a></h2>
+<span id="id40"></span><h2><tt class="docutils literal"><span class="pre">Source</span></tt><a class="headerlink" href="#source-data-structure" title="Permalink to this headline">¶</a></h2>
 <p>Sources are references to texts that can be cited in the <tt class="docutils literal"><span class="pre">source</span></tt> attribute of
 form and collection models.  The source schema is that of the
 <a class="reference external" href="http://www.bibtex.org/Format/">BibTeX</a> file format.  The OLD validates input
@@ -1993,8 +2000,8 @@ length is 255 characters.</p>
 <h3><tt class="docutils literal"><span class="pre">chapter</span></tt><a class="headerlink" href="#chapter" title="Permalink to this headline">¶</a></h3>
 <p>A chapter (or section or whatever) number.  Maximum length is 255 characters.</p>
 </div>
-<div class="section" id="id40">
-<h3><tt class="docutils literal"><span class="pre">contents</span></tt><a class="headerlink" href="#id40" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id41">
+<h3><tt class="docutils literal"><span class="pre">contents</span></tt><a class="headerlink" href="#id41" title="Permalink to this headline">¶</a></h3>
 <p>A table of contents.  Maximum length is 255 characters.</p>
 </div>
 <div class="section" id="copyright">
@@ -2041,8 +2048,8 @@ this means either as <em>Given Names Surname</em> or <em>Surname, Given Names</e
 <tt class="docutils literal"><span class="pre">author</span></tt> attribute, then the <tt class="docutils literal"><span class="pre">editor</span></tt> attribute gives the editor of the book
 or collection in which the reference appears.  Maximum length is 255 characters.</p>
 </div>
-<div class="section" id="id41">
-<h3><tt class="docutils literal"><span class="pre">file</span></tt><a class="headerlink" href="#id41" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id42">
+<h3><tt class="docutils literal"><span class="pre">file</span></tt><a class="headerlink" href="#id42" title="Permalink to this headline">¶</a></h3>
 <p>Source models may reference an OLD file model object via the <tt class="docutils literal"><span class="pre">file</span></tt> attribute,
 thus permitting the association to a source of a document containing the source
 text itself.  Note that the <tt class="docutils literal"><span class="pre">file</span></tt> attribute does not correspond to a standard
@@ -2093,8 +2100,8 @@ source&#8217;s <tt class="docutils literal"><span class="pre">key</span></tt> at
 <p>Key words used for searching or possibly for annotation.  Maximum length is 255
 characters.</p>
 </div>
-<div class="section" id="id42">
-<h3><tt class="docutils literal"><span class="pre">language</span></tt><a class="headerlink" href="#id42" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id43">
+<h3><tt class="docutils literal"><span class="pre">language</span></tt><a class="headerlink" href="#id43" title="Permalink to this headline">¶</a></h3>
 <p>The language the document is in.  Maximum length is 255 characters.</p>
 </div>
 <div class="section" id="location">
@@ -2159,17 +2166,17 @@ attribute gives its title and an optional <tt class="docutils literal"><span cla
 a series or multi-volume set in which the book is published.  Maximum length is
 255 characters.</p>
 </div>
-<div class="section" id="id43">
-<h3><tt class="docutils literal"><span class="pre">size</span></tt><a class="headerlink" href="#id43" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id44">
+<h3><tt class="docutils literal"><span class="pre">size</span></tt><a class="headerlink" href="#id44" title="Permalink to this headline">¶</a></h3>
 <p>The physical dimensions of a work.  Maximum length is 255 characters.</p>
 </div>
-<div class="section" id="id44">
-<h3><tt class="docutils literal"><span class="pre">title</span></tt><a class="headerlink" href="#id44" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id45">
+<h3><tt class="docutils literal"><span class="pre">title</span></tt><a class="headerlink" href="#id45" title="Permalink to this headline">¶</a></h3>
 <p>The work&#8217;s title, typed as explained in the <a class="reference internal" href="#kopka-2004">Kopka.2004</a>.  Maximum length is 255
 characters.</p>
 </div>
-<div class="section" id="id45">
-<h3><tt class="docutils literal"><span class="pre">type</span></tt><a class="headerlink" href="#id45" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id46">
+<h3><tt class="docutils literal"><span class="pre">type</span></tt><a class="headerlink" href="#id46" title="Permalink to this headline">¶</a></h3>
 <p>The value of the OLD source <tt class="docutils literal"><span class="pre">type</span></tt> attribute is the BibTeX entry type, e.g.,
 &#8220;article&#8221;, &#8220;book&#8221;, etc.  The valid entry types and their required fields are
 specified as the keys of the <tt class="docutils literal"><span class="pre">entryTypes</span></tt> dictionary in <tt class="docutils literal"><span class="pre">lib/bibtex.py</span></tt>.  A
@@ -2237,8 +2244,8 @@ cf. the table below.</p>
 <p>The type of a technical report&#8212;for example, &#8220;Research Note&#8221;.  Maximum length
 is 255 characters.</p>
 </div>
-<div class="section" id="id46">
-<h3><tt class="docutils literal"><span class="pre">url</span></tt><a class="headerlink" href="#id46" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id47">
+<h3><tt class="docutils literal"><span class="pre">url</span></tt><a class="headerlink" href="#id47" title="Permalink to this headline">¶</a></h3>
 <p>The universal resource locator for online documents; this is not standard but
 supplied by more modern bibliography styles.  Maximum length is 1000 characters.</p>
 </div>
@@ -2253,7 +2260,7 @@ Generally it should consist of four numerals, such as 1984.</p>
 </div>
 </div>
 <div class="section" id="speaker-data-structure">
-<span id="id47"></span><h2><tt class="docutils literal"><span class="pre">Speaker</span></tt><a class="headerlink" href="#speaker-data-structure" title="Permalink to this headline">¶</a></h2>
+<span id="id48"></span><h2><tt class="docutils literal"><span class="pre">Speaker</span></tt><a class="headerlink" href="#speaker-data-structure" title="Permalink to this headline">¶</a></h2>
 <p>An OLD speaker model represents a speaker or consultant who is the source of a
 linguistic form or collection thereof or who is the speaker on a recording.</p>
 <p>Requests to create or update speaker resources must contain a JSON object of the
@@ -2294,8 +2301,8 @@ facilitate search, e.g., &#8220;dialect:dialect_name&#8221;.</p>
 <p>The <tt class="docutils literal"><span class="pre">firstName</span></tt> attribute holds the first name of the speaker.  A value is
 obligatory and cannot exceed 255 characters.</p>
 </div>
-<div class="section" id="id48">
-<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id48" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id49">
+<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id49" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">html</span></tt> attribute is a string of HTML that is generated by the
 system using the value of the <tt class="docutils literal"><span class="pre">pageContent</span></tt> attribute and the markup language
 specified in the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute.</p>
@@ -2305,8 +2312,8 @@ specified in the <tt class="docutils literal"><span class="pre">markupLanguage</
 <p>The <tt class="docutils literal"><span class="pre">lastName</span></tt> attribute holds the last name of the speaker.  A value is
 obligatory and cannot exceed 255 characters.</p>
 </div>
-<div class="section" id="id49">
-<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id49" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id50">
+<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id50" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute is one of &#8220;Markdown&#8221; or
 &#8220;reStructuredText&#8221; as defined in the <tt class="docutils literal"><span class="pre">markupLanguages</span></tt> variable of
 <tt class="docutils literal"><span class="pre">lib/utils.py</span></tt>.  <a class="reference external" href="&lt;http://daringfireball.net/projects/markdown/&gt;">Markdown</a> and <a class="reference external" href="&lt;http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html&gt;">reStructuredText</a> are <em>lightweight markup
@@ -2326,7 +2333,7 @@ HTML.</p>
 </div>
 </div>
 <div class="section" id="syntactic-category-data-structure">
-<span id="id50"></span><h2><tt class="docutils literal"><span class="pre">SyntacticCategory</span></tt><a class="headerlink" href="#syntactic-category-data-structure" title="Permalink to this headline">¶</a></h2>
+<span id="id51"></span><h2><tt class="docutils literal"><span class="pre">SyntacticCategory</span></tt><a class="headerlink" href="#syntactic-category-data-structure" title="Permalink to this headline">¶</a></h2>
 <p>Syntactic category models are used to categorize form models into morphological
 or syntactic classes.</p>
 <p>Requests to create or update syntactic category resources must contain a JSON
@@ -2349,20 +2356,20 @@ following form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id51">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id51" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id52">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id52" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute can be used to describe the category
 and/or clarify its intended usage.</p>
 </div>
-<div class="section" id="id52">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id52" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id53">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id53" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds the name of the category.  Example names might be
 &#8220;N&#8221;, &#8220;S&#8221;, &#8220;Agr&#8221;, &#8220;VP&#8221;, &#8220;V&#8217;&#8221;, &#8220;Noun&#8221;, &#8220;Sentence&#8221;, &#8220;CP&#8221;, etc.  A non-empty value
 for this attribute is obligatory, must be unique among other syntactic category
 <tt class="docutils literal"><span class="pre">name</span></tt> values and may not exceed 255 characters.</p>
 </div>
-<div class="section" id="id53">
-<h3><tt class="docutils literal"><span class="pre">type</span></tt><a class="headerlink" href="#id53" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id54">
+<h3><tt class="docutils literal"><span class="pre">type</span></tt><a class="headerlink" href="#id54" title="Permalink to this headline">¶</a></h3>
 <p>Syntactic categories are themselves categorized via the <tt class="docutils literal"><span class="pre">type</span></tt> attribute.
 Valid values, as defined in the <tt class="docutils literal"><span class="pre">syntacticCategoryTypes</span></tt> tuple of
 <tt class="docutils literal"><span class="pre">lib/utils.py</span></tt> are &#8220;lexical&#8221;, &#8220;phrasal&#8221; and &#8220;sentential&#8221;.  An input  value of
@@ -2403,13 +2410,13 @@ following form.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id54">
-<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id54" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id55">
+<h3><tt class="docutils literal"><span class="pre">description</span></tt><a class="headerlink" href="#id55" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">description</span></tt> attribute can be used to describe the tag
 and/or clarify its intended usage.</p>
 </div>
-<div class="section" id="id55">
-<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id55" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id56">
+<h3><tt class="docutils literal"><span class="pre">name</span></tt><a class="headerlink" href="#id56" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">name</span></tt> attribute holds the name of the tag.  Example names might be &#8220;VP
 ellipsis&#8221;, &#8220;double object&#8221; or &#8220;needs verification&#8221;.  A non-empty value for this
 attribute is obligatory, must be unique among other tag <tt class="docutils literal"><span class="pre">name</span></tt> values and may
@@ -2464,8 +2471,8 @@ attribute is present only in the return value of DELETE, POST and PUT requests.<
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id56">
-<h3><tt class="docutils literal"><span class="pre">affiliation</span></tt><a class="headerlink" href="#id56" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id57">
+<h3><tt class="docutils literal"><span class="pre">affiliation</span></tt><a class="headerlink" href="#id57" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">affiliation</span></tt> attribute is a string representing the school
 or institution with which the user is affiliated.  A value here is optional.
 Maximum allowable length is 255 characters.</p>
@@ -2475,19 +2482,19 @@ Maximum allowable length is 255 characters.</p>
 <p>The <tt class="docutils literal"><span class="pre">email</span></tt> attribute holds the email address of the user.  A valid email must
 be provided.  Maximum allowable length is 255 characters.</p>
 </div>
-<div class="section" id="id57">
-<h3><tt class="docutils literal"><span class="pre">firstName</span></tt><a class="headerlink" href="#id57" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id58">
+<h3><tt class="docutils literal"><span class="pre">firstName</span></tt><a class="headerlink" href="#id58" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">firstName</span></tt> attribute is the first name(s) of the user.  A
 value here is obligatory.  Maximum allowable length is 255 characters.</p>
 </div>
-<div class="section" id="id58">
-<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id58" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id59">
+<h3><tt class="docutils literal"><span class="pre">html</span></tt><a class="headerlink" href="#id59" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">html</span></tt> attribute is a string of HTML that is generated by the
 system using the value of the <tt class="docutils literal"><span class="pre">pageContent</span></tt> attribute and the markup language
 specified in the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute.</p>
 </div>
-<div class="section" id="id59">
-<h3><tt class="docutils literal"><span class="pre">inputOrthography</span></tt><a class="headerlink" href="#id59" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id60">
+<h3><tt class="docutils literal"><span class="pre">inputOrthography</span></tt><a class="headerlink" href="#id60" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">inputOrthography</span></tt> is a reference to an existing orthography model object.
 The purpose of a user-specific input orthography is to allow for the possibility
 that users will enter form transcriptions (and possibly also morpheme
@@ -2500,13 +2507,13 @@ user-specific orthography conversion server-side.  However, with the new
 architecture of the OLD &gt;= 1.0 this added complication seems best implemented
 client-side.</p>
 </div>
-<div class="section" id="id60">
-<h3><tt class="docutils literal"><span class="pre">lastName</span></tt><a class="headerlink" href="#id60" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id61">
+<h3><tt class="docutils literal"><span class="pre">lastName</span></tt><a class="headerlink" href="#id61" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">lastName</span></tt> attribute is the last name of the user.  A value
 here is obligatory.  Maximum allowable length is 255 characters.</p>
 </div>
-<div class="section" id="id61">
-<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id61" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id62">
+<h3><tt class="docutils literal"><span class="pre">markupLanguage</span></tt><a class="headerlink" href="#id62" title="Permalink to this headline">¶</a></h3>
 <p>The value of the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute is one of &#8220;Markdown&#8221; or
 &#8220;reStructuredText&#8221; as defined in the <tt class="docutils literal"><span class="pre">markupLanguages</span></tt> variable of
 <tt class="docutils literal"><span class="pre">lib/utils.py</span></tt>.  <a class="reference external" href="&lt;http://daringfireball.net/projects/markdown/&gt;">Markdown</a> and <a class="reference external" href="&lt;http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html&gt;">reStructuredText</a> are <em>lightweight markup
@@ -2516,8 +2523,8 @@ This value determines which markup-to-HTML function is employed when the system
 attempts to generate the <tt class="docutils literal"><span class="pre">html</span></tt> value from the user-supplied <tt class="docutils literal"><span class="pre">pageContent</span></tt>
 value.  If no value is specified, &#8220;reStructuredText&#8221; will be the default.</p>
 </div>
-<div class="section" id="id62">
-<h3><tt class="docutils literal"><span class="pre">outputOrthography</span></tt><a class="headerlink" href="#id62" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id63">
+<h3><tt class="docutils literal"><span class="pre">outputOrthography</span></tt><a class="headerlink" href="#id63" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">outputOrthography</span></tt> is a reference to an existing orthography model
 object.  The purpose of a user-specific input orthography is to allow for the
 possibility that users will enter form transcriptions (and possibly also
@@ -2530,14 +2537,14 @@ implemented this user-specific orthography conversion server-side.  However,
 with the new architecture of the OLD &gt;= 1.0 this added complication seems best
 implemented client-side.</p>
 </div>
-<div class="section" id="id63">
-<h3><tt class="docutils literal"><span class="pre">pageContent</span></tt><a class="headerlink" href="#id63" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id64">
+<h3><tt class="docutils literal"><span class="pre">pageContent</span></tt><a class="headerlink" href="#id64" title="Permalink to this headline">¶</a></h3>
 <p>The <tt class="docutils literal"><span class="pre">pageContent</span></tt> attribute holds a string representing the content of the
 user&#8217;s page.  This content should be written using the markup language specified
 in the <tt class="docutils literal"><span class="pre">markupLanguage</span></tt> attribute.</p>
 </div>
-<div class="section" id="id64">
-<h3><tt class="docutils literal"><span class="pre">password</span></tt><a class="headerlink" href="#id64" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id65">
+<h3><tt class="docutils literal"><span class="pre">password</span></tt><a class="headerlink" href="#id65" title="Permalink to this headline">¶</a></h3>
 <p>When creating a user, a valid value for the <tt class="docutils literal"><span class="pre">password</span></tt> attribute must be
 supplied.  A valid password is composed of at least eight characters but no more
 than 255.  It must contain either at least one printable character not in the
@@ -2589,7 +2596,7 @@ can update the username of a user model.</p>
 <table class="docutils footnote" frame="void" id="f1" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>The models are defined in the <tt class="docutils literal"><span class="pre">model</span></tt> directory of the source code.
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>The models are defined in the <tt class="docutils literal"><span class="pre">model</span></tt> directory of the source code.
 Each model has its own appropriately named module where it is declared.  The
 form model, for example, is declared in <tt class="docutils literal"><span class="pre">model/form.py</span></tt>.</td></tr>
 </tbody>
@@ -2597,27 +2604,27 @@ form model, for example, is declared in <tt class="docutils literal"><span class
 <table class="docutils footnote" frame="void" id="f4" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id2">[2]</a></td><td>The code that validates user input is located in <tt class="docutils literal"><span class="pre">lib/schemata.py</span></tt>.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>The code that validates user input is located in <tt class="docutils literal"><span class="pre">lib/schemata.py</span></tt>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="f2" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id3">[3]</a></td><td>Cf. <a class="reference external" href="http://unicode.org/reports/tr15/">http://unicode.org/reports/tr15/</a> and
+<tr><td class="label"><a class="fn-backref" href="#id4">[3]</a></td><td>Cf. <a class="reference external" href="http://unicode.org/reports/tr15/">http://unicode.org/reports/tr15/</a> and
 <a class="reference external" href="http://en.wikipedia.org/wiki/Unicode_equivalence">http://en.wikipedia.org/wiki/Unicode_equivalence</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="f3" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id7">[4]</a></td><td>Technically, such requests will be rejected if the length of the
+<tr><td class="label"><a class="fn-backref" href="#id8">[4]</a></td><td>Technically, such requests will be rejected if the length of the
 request body (as a Python unicode object) is greater than 20971520.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="f6" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id6">[5]</a></td><td>Note that updates to a local file model/resource cannot alter the
+<tr><td class="label"><a class="fn-backref" href="#id7">[5]</a></td><td>Note that updates to a local file model/resource cannot alter the
 binary data of the file model.  That is, if the wrong file is uploaded, it is
 necessary to delete the miscreated file and to create a new one with the
 correct file data.</td></tr>
@@ -2626,7 +2633,7 @@ correct file data.</td></tr>
 <table class="docutils footnote" frame="void" id="f5" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id4">[6]</a></td><td>Note the distinction between OLD <em>collections</em> which are a type of
+<tr><td class="label"><a class="fn-backref" href="#id5">[6]</a></td><td>Note the distinction between OLD <em>collections</em> which are a type of
 model and <em>collections</em> in the ORM sense where the term refers to a type of
 model attribute which references a set of zero or more other models.  E.g.,
 <tt class="docutils literal"><span class="pre">form.files</span></tt> is a collection of file models and is an example of a
@@ -2652,7 +2659,7 @@ Addison-Wesley Professional.</td></tr>
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">The OLD Data Structure</a><ul>
+<li><a class="reference internal" href="#">Data Structure</a><ul>
 <li><a class="reference internal" href="#applicationsettings"><tt class="docutils literal"><span class="pre">ApplicationSettings</span></tt></a><ul>
 <li><a class="reference internal" href="#broadphoneticinventory"><tt class="docutils literal"><span class="pre">broadPhoneticInventory</span></tt></a></li>
 <li><a class="reference internal" href="#broadphoneticvalidation"><tt class="docutils literal"><span class="pre">broadPhoneticValidation</span></tt></a></li>
@@ -2699,29 +2706,29 @@ Addison-Wesley Professional.</td></tr>
 </li>
 <li><a class="reference internal" href="#collectionbackup"><tt class="docutils literal"><span class="pre">CollectionBackup</span></tt></a></li>
 <li><a class="reference internal" href="#elicitationmethod"><tt class="docutils literal"><span class="pre">ElicitationMethod</span></tt></a><ul>
-<li><a class="reference internal" href="#id5"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id6"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
 <li><a class="reference internal" href="#name"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#file"><tt class="docutils literal"><span class="pre">File</span></tt></a><ul>
-<li><a class="reference internal" href="#id8"><tt class="docutils literal"><span class="pre">dateElicited</span></tt></a></li>
-<li><a class="reference internal" href="#id9"><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt></a></li>
-<li><a class="reference internal" href="#id10"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id11"><tt class="docutils literal"><span class="pre">elicitor</span></tt></a></li>
+<li><a class="reference internal" href="#id9"><tt class="docutils literal"><span class="pre">dateElicited</span></tt></a></li>
+<li><a class="reference internal" href="#id10"><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt></a></li>
+<li><a class="reference internal" href="#id11"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id12"><tt class="docutils literal"><span class="pre">elicitor</span></tt></a></li>
 <li><a class="reference internal" href="#end"><tt class="docutils literal"><span class="pre">end</span></tt></a></li>
-<li><a class="reference internal" href="#id12"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
+<li><a class="reference internal" href="#id13"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
 <li><a class="reference internal" href="#filename"><tt class="docutils literal"><span class="pre">filename</span></tt></a></li>
-<li><a class="reference internal" href="#id13"><tt class="docutils literal"><span class="pre">forms</span></tt></a></li>
+<li><a class="reference internal" href="#id14"><tt class="docutils literal"><span class="pre">forms</span></tt></a></li>
 <li><a class="reference internal" href="#lossyfilename"><tt class="docutils literal"><span class="pre">lossyFilename</span></tt></a></li>
 <li><a class="reference internal" href="#mimetype"><tt class="docutils literal"><span class="pre">MIMEtype</span></tt></a></li>
-<li><a class="reference internal" href="#id14"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id15"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 <li><a class="reference internal" href="#parentfile"><tt class="docutils literal"><span class="pre">parentFile</span></tt></a></li>
 <li><a class="reference internal" href="#password"><tt class="docutils literal"><span class="pre">password</span></tt></a></li>
 <li><a class="reference internal" href="#size"><tt class="docutils literal"><span class="pre">size</span></tt></a></li>
-<li><a class="reference internal" href="#id15"><tt class="docutils literal"><span class="pre">speaker</span></tt></a></li>
+<li><a class="reference internal" href="#id16"><tt class="docutils literal"><span class="pre">speaker</span></tt></a></li>
 <li><a class="reference internal" href="#start"><tt class="docutils literal"><span class="pre">start</span></tt></a></li>
-<li><a class="reference internal" href="#id16"><tt class="docutils literal"><span class="pre">tags</span></tt></a></li>
-<li><a class="reference internal" href="#id17"><tt class="docutils literal"><span class="pre">url</span></tt></a></li>
+<li><a class="reference internal" href="#id17"><tt class="docutils literal"><span class="pre">tags</span></tt></a></li>
+<li><a class="reference internal" href="#id18"><tt class="docutils literal"><span class="pre">url</span></tt></a></li>
 <li><a class="reference internal" href="#utterancetype"><tt class="docutils literal"><span class="pre">utteranceType</span></tt></a></li>
 </ul>
 </li>
@@ -2729,12 +2736,12 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#breakglosscategory"><tt class="docutils literal"><span class="pre">breakGlossCategory</span></tt></a></li>
 <li><a class="reference internal" href="#collections"><tt class="docutils literal"><span class="pre">collections</span></tt></a></li>
 <li><a class="reference internal" href="#comments"><tt class="docutils literal"><span class="pre">comments</span></tt></a></li>
-<li><a class="reference internal" href="#id18"><tt class="docutils literal"><span class="pre">dateElicited</span></tt></a></li>
-<li><a class="reference internal" href="#id19"><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt></a></li>
-<li><a class="reference internal" href="#id20"><tt class="docutils literal"><span class="pre">elicitationMethod</span></tt></a></li>
-<li><a class="reference internal" href="#id21"><tt class="docutils literal"><span class="pre">elicitor</span></tt></a></li>
-<li><a class="reference internal" href="#id22"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
-<li><a class="reference internal" href="#id23"><tt class="docutils literal"><span class="pre">files</span></tt></a></li>
+<li><a class="reference internal" href="#id19"><tt class="docutils literal"><span class="pre">dateElicited</span></tt></a></li>
+<li><a class="reference internal" href="#id20"><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt></a></li>
+<li><a class="reference internal" href="#id21"><tt class="docutils literal"><span class="pre">elicitationMethod</span></tt></a></li>
+<li><a class="reference internal" href="#id22"><tt class="docutils literal"><span class="pre">elicitor</span></tt></a></li>
+<li><a class="reference internal" href="#id23"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
+<li><a class="reference internal" href="#id24"><tt class="docutils literal"><span class="pre">files</span></tt></a></li>
 <li><a class="reference internal" href="#translations"><tt class="docutils literal"><span class="pre">translations</span></tt></a></li>
 <li><a class="reference internal" href="#grammaticality"><tt class="docutils literal"><span class="pre">grammaticality</span></tt></a></li>
 <li><a class="reference internal" href="#memorizers"><tt class="docutils literal"><span class="pre">memorizers</span></tt></a></li>
@@ -2745,23 +2752,23 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#narrowphonetictranscription"><tt class="docutils literal"><span class="pre">narrowPhoneticTranscription</span></tt></a></li>
 <li><a class="reference internal" href="#phonetictranscription"><tt class="docutils literal"><span class="pre">phoneticTranscription</span></tt></a></li>
 <li><a class="reference internal" href="#semantics"><tt class="docutils literal"><span class="pre">semantics</span></tt></a></li>
-<li><a class="reference internal" href="#id24"><tt class="docutils literal"><span class="pre">source</span></tt></a></li>
-<li><a class="reference internal" href="#id25"><tt class="docutils literal"><span class="pre">speaker</span></tt></a></li>
+<li><a class="reference internal" href="#id25"><tt class="docutils literal"><span class="pre">source</span></tt></a></li>
+<li><a class="reference internal" href="#id26"><tt class="docutils literal"><span class="pre">speaker</span></tt></a></li>
 <li><a class="reference internal" href="#speakercomments"><tt class="docutils literal"><span class="pre">speakerComments</span></tt></a></li>
 <li><a class="reference internal" href="#status"><tt class="docutils literal"><span class="pre">status</span></tt></a></li>
 <li><a class="reference internal" href="#syntacticcategory"><tt class="docutils literal"><span class="pre">syntacticCategory</span></tt></a></li>
 <li><a class="reference internal" href="#syntacticcategorystring"><tt class="docutils literal"><span class="pre">syntacticCategoryString</span></tt></a></li>
 <li><a class="reference internal" href="#syntax"><tt class="docutils literal"><span class="pre">syntax</span></tt></a></li>
-<li><a class="reference internal" href="#id26"><tt class="docutils literal"><span class="pre">tags</span></tt></a></li>
+<li><a class="reference internal" href="#id27"><tt class="docutils literal"><span class="pre">tags</span></tt></a></li>
 <li><a class="reference internal" href="#transcription"><tt class="docutils literal"><span class="pre">transcription</span></tt></a></li>
-<li><a class="reference internal" href="#id27"><tt class="docutils literal"><span class="pre">UUID</span></tt></a></li>
+<li><a class="reference internal" href="#id28"><tt class="docutils literal"><span class="pre">UUID</span></tt></a></li>
 <li><a class="reference internal" href="#verifier"><tt class="docutils literal"><span class="pre">verifier</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#formbackup"><tt class="docutils literal"><span class="pre">FormBackup</span></tt></a></li>
 <li><a class="reference internal" href="#formsearch"><tt class="docutils literal"><span class="pre">FormSearch</span></tt></a><ul>
-<li><a class="reference internal" href="#id28"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id29"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id29"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id30"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 <li><a class="reference internal" href="#search"><tt class="docutils literal"><span class="pre">search</span></tt></a></li>
 <li><a class="reference internal" href="#searcher"><tt class="docutils literal"><span class="pre">searcher</span></tt></a></li>
 </ul>
@@ -2771,24 +2778,24 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#orthography"><tt class="docutils literal"><span class="pre">Orthography</span></tt></a><ul>
 <li><a class="reference internal" href="#initialglottalstops"><tt class="docutils literal"><span class="pre">initialGlottalStops</span></tt></a></li>
 <li><a class="reference internal" href="#lowercase"><tt class="docutils literal"><span class="pre">lowercase</span></tt></a></li>
-<li><a class="reference internal" href="#id30"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
-<li><a class="reference internal" href="#id31"><tt class="docutils literal"><span class="pre">orthography</span></tt></a></li>
+<li><a class="reference internal" href="#id31"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id32"><tt class="docutils literal"><span class="pre">orthography</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#page"><tt class="docutils literal"><span class="pre">Page</span></tt></a><ul>
 <li><a class="reference internal" href="#content"><tt class="docutils literal"><span class="pre">content</span></tt></a></li>
 <li><a class="reference internal" href="#heading"><tt class="docutils literal"><span class="pre">heading</span></tt></a></li>
-<li><a class="reference internal" href="#id32"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
-<li><a class="reference internal" href="#id33"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
-<li><a class="reference internal" href="#id34"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id33"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
+<li><a class="reference internal" href="#id34"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
+<li><a class="reference internal" href="#id35"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#phonology"><tt class="docutils literal"><span class="pre">Phonology</span></tt></a><ul>
-<li><a class="reference internal" href="#id35"><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt></a></li>
-<li><a class="reference internal" href="#id36"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id37"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
+<li><a class="reference internal" href="#id36"><tt class="docutils literal"><span class="pre">datetimeEntered</span></tt></a></li>
+<li><a class="reference internal" href="#id37"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id38"><tt class="docutils literal"><span class="pre">enterer</span></tt></a></li>
 <li><a class="reference internal" href="#modifier"><tt class="docutils literal"><span class="pre">modifier</span></tt></a></li>
-<li><a class="reference internal" href="#id38"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id39"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 <li><a class="reference internal" href="#script"><tt class="docutils literal"><span class="pre">script</span></tt></a></li>
 </ul>
 </li>
@@ -2800,13 +2807,13 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#author"><tt class="docutils literal"><span class="pre">author</span></tt></a></li>
 <li><a class="reference internal" href="#booktitle"><tt class="docutils literal"><span class="pre">booktitle</span></tt></a></li>
 <li><a class="reference internal" href="#chapter"><tt class="docutils literal"><span class="pre">chapter</span></tt></a></li>
-<li><a class="reference internal" href="#id40"><tt class="docutils literal"><span class="pre">contents</span></tt></a></li>
+<li><a class="reference internal" href="#id41"><tt class="docutils literal"><span class="pre">contents</span></tt></a></li>
 <li><a class="reference internal" href="#copyright"><tt class="docutils literal"><span class="pre">copyright</span></tt></a></li>
 <li><a class="reference internal" href="#crossref"><tt class="docutils literal"><span class="pre">crossref</span></tt></a></li>
 <li><a class="reference internal" href="#crossrefsource"><tt class="docutils literal"><span class="pre">crossrefSource</span></tt></a></li>
 <li><a class="reference internal" href="#edition"><tt class="docutils literal"><span class="pre">edition</span></tt></a></li>
 <li><a class="reference internal" href="#editor"><tt class="docutils literal"><span class="pre">editor</span></tt></a></li>
-<li><a class="reference internal" href="#id41"><tt class="docutils literal"><span class="pre">file</span></tt></a></li>
+<li><a class="reference internal" href="#id42"><tt class="docutils literal"><span class="pre">file</span></tt></a></li>
 <li><a class="reference internal" href="#howpublished"><tt class="docutils literal"><span class="pre">howpublished</span></tt></a></li>
 <li><a class="reference internal" href="#institution"><tt class="docutils literal"><span class="pre">institution</span></tt></a></li>
 <li><a class="reference internal" href="#isbn"><tt class="docutils literal"><span class="pre">ISBN</span></tt></a></li>
@@ -2815,7 +2822,7 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#key"><tt class="docutils literal"><span class="pre">key</span></tt></a></li>
 <li><a class="reference internal" href="#keyfield"><tt class="docutils literal"><span class="pre">keyField</span></tt></a></li>
 <li><a class="reference internal" href="#keywords"><tt class="docutils literal"><span class="pre">keywords</span></tt></a></li>
-<li><a class="reference internal" href="#id42"><tt class="docutils literal"><span class="pre">language</span></tt></a></li>
+<li><a class="reference internal" href="#id43"><tt class="docutils literal"><span class="pre">language</span></tt></a></li>
 <li><a class="reference internal" href="#location"><tt class="docutils literal"><span class="pre">location</span></tt></a></li>
 <li><a class="reference internal" href="#lccn"><tt class="docutils literal"><span class="pre">LCCN</span></tt></a></li>
 <li><a class="reference internal" href="#month"><tt class="docutils literal"><span class="pre">month</span></tt></a></li>
@@ -2828,11 +2835,11 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#publisher"><tt class="docutils literal"><span class="pre">publisher</span></tt></a></li>
 <li><a class="reference internal" href="#school"><tt class="docutils literal"><span class="pre">school</span></tt></a></li>
 <li><a class="reference internal" href="#series"><tt class="docutils literal"><span class="pre">series</span></tt></a></li>
-<li><a class="reference internal" href="#id43"><tt class="docutils literal"><span class="pre">size</span></tt></a></li>
-<li><a class="reference internal" href="#id44"><tt class="docutils literal"><span class="pre">title</span></tt></a></li>
-<li><a class="reference internal" href="#id45"><tt class="docutils literal"><span class="pre">type</span></tt></a></li>
+<li><a class="reference internal" href="#id44"><tt class="docutils literal"><span class="pre">size</span></tt></a></li>
+<li><a class="reference internal" href="#id45"><tt class="docutils literal"><span class="pre">title</span></tt></a></li>
+<li><a class="reference internal" href="#id46"><tt class="docutils literal"><span class="pre">type</span></tt></a></li>
 <li><a class="reference internal" href="#typefield"><tt class="docutils literal"><span class="pre">typeField</span></tt></a></li>
-<li><a class="reference internal" href="#id46"><tt class="docutils literal"><span class="pre">url</span></tt></a></li>
+<li><a class="reference internal" href="#id47"><tt class="docutils literal"><span class="pre">url</span></tt></a></li>
 <li><a class="reference internal" href="#volume"><tt class="docutils literal"><span class="pre">volume</span></tt></a></li>
 <li><a class="reference internal" href="#year"><tt class="docutils literal"><span class="pre">year</span></tt></a></li>
 </ul>
@@ -2840,34 +2847,34 @@ Addison-Wesley Professional.</td></tr>
 <li><a class="reference internal" href="#speaker-data-structure"><tt class="docutils literal"><span class="pre">Speaker</span></tt></a><ul>
 <li><a class="reference internal" href="#dialect"><tt class="docutils literal"><span class="pre">dialect</span></tt></a></li>
 <li><a class="reference internal" href="#firstname"><tt class="docutils literal"><span class="pre">firstName</span></tt></a></li>
-<li><a class="reference internal" href="#id48"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
+<li><a class="reference internal" href="#id49"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
 <li><a class="reference internal" href="#lastname"><tt class="docutils literal"><span class="pre">lastName</span></tt></a></li>
-<li><a class="reference internal" href="#id49"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
+<li><a class="reference internal" href="#id50"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
 <li><a class="reference internal" href="#pagecontent"><tt class="docutils literal"><span class="pre">pageContent</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#syntactic-category-data-structure"><tt class="docutils literal"><span class="pre">SyntacticCategory</span></tt></a><ul>
-<li><a class="reference internal" href="#id51"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id52"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
-<li><a class="reference internal" href="#id53"><tt class="docutils literal"><span class="pre">type</span></tt></a></li>
+<li><a class="reference internal" href="#id52"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id53"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id54"><tt class="docutils literal"><span class="pre">type</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#tag"><tt class="docutils literal"><span class="pre">Tag</span></tt></a><ul>
-<li><a class="reference internal" href="#id54"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
-<li><a class="reference internal" href="#id55"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
+<li><a class="reference internal" href="#id55"><tt class="docutils literal"><span class="pre">description</span></tt></a></li>
+<li><a class="reference internal" href="#id56"><tt class="docutils literal"><span class="pre">name</span></tt></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#user"><tt class="docutils literal"><span class="pre">User</span></tt></a><ul>
-<li><a class="reference internal" href="#id56"><tt class="docutils literal"><span class="pre">affiliation</span></tt></a></li>
+<li><a class="reference internal" href="#id57"><tt class="docutils literal"><span class="pre">affiliation</span></tt></a></li>
 <li><a class="reference internal" href="#email"><tt class="docutils literal"><span class="pre">email</span></tt></a></li>
-<li><a class="reference internal" href="#id57"><tt class="docutils literal"><span class="pre">firstName</span></tt></a></li>
-<li><a class="reference internal" href="#id58"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
-<li><a class="reference internal" href="#id59"><tt class="docutils literal"><span class="pre">inputOrthography</span></tt></a></li>
-<li><a class="reference internal" href="#id60"><tt class="docutils literal"><span class="pre">lastName</span></tt></a></li>
-<li><a class="reference internal" href="#id61"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
-<li><a class="reference internal" href="#id62"><tt class="docutils literal"><span class="pre">outputOrthography</span></tt></a></li>
-<li><a class="reference internal" href="#id63"><tt class="docutils literal"><span class="pre">pageContent</span></tt></a></li>
-<li><a class="reference internal" href="#id64"><tt class="docutils literal"><span class="pre">password</span></tt></a></li>
+<li><a class="reference internal" href="#id58"><tt class="docutils literal"><span class="pre">firstName</span></tt></a></li>
+<li><a class="reference internal" href="#id59"><tt class="docutils literal"><span class="pre">html</span></tt></a></li>
+<li><a class="reference internal" href="#id60"><tt class="docutils literal"><span class="pre">inputOrthography</span></tt></a></li>
+<li><a class="reference internal" href="#id61"><tt class="docutils literal"><span class="pre">lastName</span></tt></a></li>
+<li><a class="reference internal" href="#id62"><tt class="docutils literal"><span class="pre">markupLanguage</span></tt></a></li>
+<li><a class="reference internal" href="#id63"><tt class="docutils literal"><span class="pre">outputOrthography</span></tt></a></li>
+<li><a class="reference internal" href="#id64"><tt class="docutils literal"><span class="pre">pageContent</span></tt></a></li>
+<li><a class="reference internal" href="#id65"><tt class="docutils literal"><span class="pre">password</span></tt></a></li>
 <li><a class="reference internal" href="#rememberedforms"><tt class="docutils literal"><span class="pre">rememberedForms</span></tt></a></li>
 <li><a class="reference internal" href="#role"><tt class="docutils literal"><span class="pre">role</span></tt></a></li>
 <li><a class="reference internal" href="#salt"><tt class="docutils literal"><span class="pre">salt</span></tt></a></li>
@@ -2880,7 +2887,8 @@ Addison-Wesley Professional.</td></tr>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="interface.html" title="previous chapter">The OLD Interface</a></li>
+      <li>Previous: <a href="interface.html" title="previous chapter">Interface</a></li>
+      <li>Next: <a href="api.html" title="next chapter"><tt class="docutils literal docutils literal"><span class="pre">onlinelinguisticdatabase</span></tt></a></li>
   </ul></li>
 </ul>
   <h3>This Page</h3>

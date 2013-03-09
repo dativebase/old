@@ -1,0 +1,356 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.phonologies &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.phonologies</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`PhonologiesController` and its auxiliary functions.</span>
+
+<span class="sd">.. module:: phonologies</span>
+<span class="sd">   :synopsis: Contains the phonologies controller and its auxiliary functions.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">asc</span>
+
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.schemata</span> <span class="kn">import</span> <span class="n">PhonologySchema</span>
+<span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">import</span> <span class="n">Phonology</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PhonologiesController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController">[docs]</a><span class="k">class</span> <span class="nc">PhonologiesController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate responses to requests on phonology resources.</span>
+
+<span class="sd">    REST Controller styled on the Atom Publishing Protocol.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       The ``h.jsonify`` decorator converts the return value of the methods to</span>
+<span class="sd">       JSON.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="s">&#39;Phonology&#39;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="PhonologiesController.index"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all phonology resources.</span>
+
+<span class="sd">        :URL: ``GET /phonologies`` with optional query string parameters for</span>
+<span class="sd">            ordering and pagination.</span>
+<span class="sd">        :returns: a list of all phonology resources.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the</span>
+<span class="sd">           query string parameters that effect ordering and pagination.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadPhonology</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Phonology</span><span class="p">))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="PhonologiesController.create"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new phonology resource and return it.</span>
+
+<span class="sd">        :URL: ``POST /phonologies``</span>
+<span class="sd">        :request body: JSON object representing the phonology to create.</span>
+<span class="sd">        :returns: the newly created phonology.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">PhonologySchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">phonology</span> <span class="o">=</span> <span class="n">createNewPhonology</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">phonology</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">phonology</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="PhonologiesController.new"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new phonology.</span>
+
+<span class="sd">        :URL: ``GET /phonologies/new``.</span>
+<span class="sd">        :returns: an empty dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="PhonologiesController.update"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a phonology and return it.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``PUT /phonologies/id``</span>
+<span class="sd">        :Request body: JSON object representing the phonology with updated attribute values.</span>
+<span class="sd">        :param str id: the ``id`` value of the phonology to be updated.</span>
+<span class="sd">        :returns: the updated phonology model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">phonology</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadPhonology</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Phonology</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">phonology</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">schema</span> <span class="o">=</span> <span class="n">PhonologySchema</span><span class="p">()</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                <span class="n">phonology</span> <span class="o">=</span> <span class="n">updatePhonology</span><span class="p">(</span><span class="n">phonology</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                <span class="c"># phonology will be False if there are no changes (cf. updatePhonology).</span>
+                <span class="k">if</span> <span class="n">phonology</span><span class="p">:</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">phonology</span><span class="p">)</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">phonology</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                        <span class="s">u&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+            <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+            <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no phonology with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="PhonologiesController.delete"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete an existing phonology and return it.</span>
+
+<span class="sd">        :URL: ``DELETE /phonologies/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the phonology to be deleted.</span>
+<span class="sd">        :returns: the deleted phonology model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">phonology</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadPhonology</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Phonology</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phonology</span><span class="p">:</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">phonology</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">phonology</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no phonology with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="PhonologiesController.show"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a phonology.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``GET /phonologies/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the phonology to be returned.</span>
+<span class="sd">        :returns: a phonology model object.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">phonology</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadPhonology</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Phonology</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phonology</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">phonology</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no phonology with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="PhonologiesController.edit"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.PhonologiesController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a phonology and the data needed to update it.</span>
+
+<span class="sd">        :URL: ``GET /phonologies/edit``</span>
+<span class="sd">        :param str id: the ``id`` value of the phonology that will be updated.</span>
+<span class="sd">        :returns: a dictionary of the form::</span>
+
+<span class="sd">                {&quot;phonology&quot;: {...}, &quot;data&quot;: {...}}</span>
+
+<span class="sd">            where the value of the ``phonology`` key is a dictionary</span>
+<span class="sd">            representation of the phonology and the value of the ``data`` key</span>
+<span class="sd">            is an empty dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">phonology</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadPhonology</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Phonology</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phonology</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="p">{},</span> <span class="s">&#39;phonology&#39;</span><span class="p">:</span> <span class="n">phonology</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no phonology with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Phonology Create &amp; Update Functions</span>
+<span class="c">################################################################################</span>
+</div></div>
+<div class="viewcode-block" id="createNewPhonology"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.createNewPhonology">[docs]</a><span class="k">def</span> <span class="nf">createNewPhonology</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a new phonology.</span>
+
+<span class="sd">    :param dict data: the data for the phonology to be created.</span>
+<span class="sd">    :returns: an SQLAlchemy model object representing the phonology.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">phonology</span> <span class="o">=</span> <span class="n">Phonology</span><span class="p">()</span>
+    <span class="n">phonology</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+    <span class="n">phonology</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">])</span>
+    <span class="n">phonology</span><span class="o">.</span><span class="n">script</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;script&#39;</span><span class="p">])</span>  <span class="c"># normalize or not?</span>
+
+    <span class="n">phonology</span><span class="o">.</span><span class="n">enterer</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+    <span class="n">phonology</span><span class="o">.</span><span class="n">modifier</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="n">phonology</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="n">phonology</span><span class="o">.</span><span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="k">return</span> <span class="n">phonology</span>
+</div>
+<div class="viewcode-block" id="updatePhonology"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.phonologies.updatePhonology">[docs]</a><span class="k">def</span> <span class="nf">updatePhonology</span><span class="p">(</span><span class="n">phonology</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update a phonology.</span>
+
+<span class="sd">    :param page: the phonology model to be updated.</span>
+<span class="sd">    :param dict data: representation of the updated phonology.</span>
+<span class="sd">    :returns: the updated phonology model or, if ``changed`` has not been set</span>
+<span class="sd">        to ``True``, ``False``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="c"># Unicode Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">phonology</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">phonology</span><span class="p">,</span> <span class="s">&#39;description&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">phonology</span><span class="p">,</span> <span class="s">&#39;script&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;script&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">phonology</span><span class="o">.</span><span class="n">modifier</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+        <span class="n">phonology</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">phonology</span>
+    <span class="k">return</span> <span class="n">changed</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

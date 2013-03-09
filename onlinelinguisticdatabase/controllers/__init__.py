@@ -13,5 +13,9 @@
 #  limitations under the License.
 
 """OLD controllers process user requests and return responses.  The response
-body invariable consists of a JSON object.  
+body almost invariably consists of a JSON object.
+
+.. module:: controllers
+   :synopsis: Contains all of the controller modules.
+
 """

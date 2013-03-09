@@ -1,0 +1,149 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.error &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.error</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`ErrorController`.</span>
+
+<span class="sd">.. module:: error</span>
+<span class="sd">   :synopsis: Contains the error controller.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">cgi</span>
+<span class="kn">from</span> <span class="nn">paste.urlparser</span> <span class="kn">import</span> <span class="n">PkgResourcesParser</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span>
+<span class="kn">from</span> <span class="nn">pylons.controllers.util</span> <span class="kn">import</span> <span class="n">forward</span>
+<span class="kn">from</span> <span class="nn">pylons.middleware</span> <span class="kn">import</span> <span class="n">error_document_template</span>
+<span class="kn">from</span> <span class="nn">webhelpers.html.builder</span> <span class="kn">import</span> <span class="n">literal</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+
+<div class="viewcode-block" id="ErrorController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.error.ErrorController">[docs]</a><span class="k">class</span> <span class="nc">ErrorController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate JSON error objects as required.</span>
+
+<span class="sd">    The ``StatusCodeRedirect`` middleware forwards to ``ErrorController`` when</span>
+<span class="sd">    error-related status codes are returned from the application.</span>
+
+<span class="sd">    This behaviour can be altered by changing the parameters to the</span>
+<span class="sd">    ``StatusCodeRedirect`` middleware in the ``config/middleware.py`` file.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ErrorController.document"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.error.ErrorController.document">[docs]</a>    <span class="k">def</span> <span class="nf">document</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a JSON object representing the error.</span>
+
+<span class="sd">        Instead of returning an HTML error document (the Pylons default),</span>
+<span class="sd">        return the JSON object that the controller has specified for the</span>
+<span class="sd">        response body.  If the response body is not valid JSON, then it has been</span>
+<span class="sd">        created by Routes; make it into valid JSON.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;pylons.original_response&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_int</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">JSONResp</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">resp</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The resource could not be found.&#39;</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_int</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">JSONResp</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">resp</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Internal Server Error&#39;</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">body</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

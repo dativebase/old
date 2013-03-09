@@ -1,0 +1,230 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.login &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.login</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`LoginController`.</span>
+
+<span class="sd">.. module:: login</span>
+<span class="sd">   :synopsis: Contains the login controller.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">paste.deploy</span> <span class="kn">import</span> <span class="n">appconfig</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">url</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators</span> <span class="kn">import</span> <span class="n">validate</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.schemata</span> <span class="kn">import</span> <span class="n">LoginSchema</span><span class="p">,</span> <span class="n">PasswordResetSchema</span>
+<span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">import</span> <span class="n">Form</span><span class="p">,</span> <span class="n">User</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LoginController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.login.LoginController">[docs]</a><span class="k">class</span> <span class="nc">LoginController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Handles authentication-related functionality.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       The ``h.jsonify`` decorator converts the return value of the methods to</span>
+<span class="sd">       JSON.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">here</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getConfig</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;here&#39;</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="LoginController.authenticate"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.login.LoginController.authenticate">[docs]</a>    <span class="k">def</span> <span class="nf">authenticate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Session-based authentication.</span>
+
+<span class="sd">        :URL: ``POST /login/authenticate``</span>
+<span class="sd">        :request body: A JSON object with ``&quot;username&quot;`` and ``&quot;password&quot;``</span>
+<span class="sd">            string values</span>
+<span class="sd">        :returns: ``{&quot;authenticated&quot;: True}`` on success, an error dictionary on</span>
+<span class="sd">            failure.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">LoginSchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">username</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">]</span>
+            <span class="n">userFromUsername</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">userFromUsername</span><span class="p">:</span>
+                <span class="n">salt</span> <span class="o">=</span> <span class="n">userFromUsername</span><span class="o">.</span><span class="n">salt</span>
+                <span class="n">password</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">encryptPassword</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">salt</span><span class="p">)))</span>
+                <span class="n">user</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">User</span><span class="o">.</span><span class="n">password</span><span class="o">==</span><span class="n">password</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+                    <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user</span>
+                    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;authenticated&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">401</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The username and password provided are not valid.&#39;</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">401</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The username and password provided are not valid.&#39;</span><span class="p">}</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="LoginController.logout"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.login.LoginController.logout">[docs]</a>    <span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Logout user by deleting the session.</span>
+
+<span class="sd">        :URL: ``POST /login/logout``.</span>
+<span class="sd">        :returns: ``{&quot;authenticated&quot;: False}``.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;authenticated&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="LoginController.email_reset_password"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.login.LoginController.email_reset_password">[docs]</a>    <span class="k">def</span> <span class="nf">email_reset_password</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset the user&#39;s password and email them a new one.</span>
+
+<span class="sd">        :URL: ``POST /login/email_reset_password``</span>
+<span class="sd">        :request body: a JSON object with a ``&quot;username&quot;`` attribute.</span>
+<span class="sd">        :returns: a dictionary with ``&#39;validUsername&#39;`` and ``&#39;passwordReset&#39;``</span>
+<span class="sd">            keys whose values are booleans.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">PasswordResetSchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="n">result</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">newPassword</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">generatePassword</span><span class="p">()</span>
+                    <span class="n">h</span><span class="o">.</span><span class="n">sendPasswordResetEmailTo</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">newPassword</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+                    <span class="n">user</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">encryptPassword</span><span class="p">(</span><span class="n">newPassword</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">salt</span><span class="p">)))</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;__file__&#39;</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;test.ini&#39;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;validUsername&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&#39;passwordReset&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+                                <span class="s">&#39;newPassword&#39;</span><span class="p">:</span> <span class="n">newPassword</span><span class="p">}</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;validUsername&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&#39;passwordReset&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+                <span class="k">except</span><span class="p">:</span>     <span class="c"># socket.error was too specific ...</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">500</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;The server is unable to send email.&#39;</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;The username provided is not valid.&#39;</span><span class="p">}</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

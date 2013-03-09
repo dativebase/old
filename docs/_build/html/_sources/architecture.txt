@@ -1,5 +1,5 @@
 ================================================================================
-Architecture Overview
+Introduction
 ================================================================================
 
 An OLD web service consists of a data structure for storing the artifacts of
@@ -49,7 +49,3 @@ As illustrated in the diagram, the Models and RDBMS components can be
 conceptually grouped together as the *data structure* of an OLD web service.
 The :ref:`data-structure` section describes and argues for the utility of the
 data structure of the OLD.
-
-
-Fake subsection
---------------------------------------------------------------------------------

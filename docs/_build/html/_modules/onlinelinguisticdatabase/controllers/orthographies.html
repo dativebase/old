@@ -1,0 +1,372 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.orthographies &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.orthographies</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`OrthographiesController` and its auxiliary functions.</span>
+
+<span class="sd">.. module:: orthographies</span>
+<span class="sd">   :synopsis: Contains the orthographies controller and its auxiliary functions.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">asc</span>
+
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.schemata</span> <span class="kn">import</span> <span class="n">OrthographySchema</span>
+<span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">import</span> <span class="n">Orthography</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OrthographiesController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController">[docs]</a><span class="k">class</span> <span class="nc">OrthographiesController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate responses to requests on orthography resources.</span>
+
+<span class="sd">    REST Controller styled on the Atom Publishing Protocol.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       The ``h.jsonify`` decorator converts the return value of the methods to</span>
+<span class="sd">       JSON.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="s">&#39;Orthography&#39;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OrthographiesController.index"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all orthography resources.</span>
+
+<span class="sd">        :URL: ``GET /orthographies`` with optional query string parameters</span>
+<span class="sd">            for ordering and pagination.</span>
+<span class="sd">        :returns: a list of all orthography resources.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the</span>
+<span class="sd">           query string parameters that effect ordering and pagination.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Orthography</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OrthographiesController.create"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new orthography resource and return it.</span>
+
+<span class="sd">        :URL: ``POST /orthographies``</span>
+<span class="sd">        :request body: JSON object representing the orthography to create.</span>
+<span class="sd">        :returns: the newly created orthography.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">OrthographySchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">orthography</span> <span class="o">=</span> <span class="n">createNewOrthography</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">orthography</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">orthography</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OrthographiesController.new"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new orthography.</span>
+
+<span class="sd">        :URL: ``GET /orthographies/new``</span>
+<span class="sd">        :returns: an empty dictionary</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OrthographiesController.update"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update an orthography and return it.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``PUT /orthographies/id``</span>
+<span class="sd">        :Request body: JSON object representing the orthography with updated attribute values.</span>
+<span class="sd">        :param str id: the ``id`` value of the orthography to be updated.</span>
+<span class="sd">        :returns: the updated orthography model.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">        </span>
+<span class="sd">            Contributors can only update orthographies that are not used in the</span>
+<span class="sd">            active application settings.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orthography</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Orthography</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">orthography</span><span class="p">:</span>
+            <span class="n">appSet</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getApplicationSettings</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s">u&#39;administrator&#39;</span> <span class="ow">or</span> <span class="n">orthography</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="n">appSet</span><span class="o">.</span><span class="n">storageOrthography</span><span class="p">,</span> <span class="n">appSet</span><span class="o">.</span><span class="n">inputOrthography</span><span class="p">,</span> <span class="n">appSet</span><span class="o">.</span><span class="n">outputOrthography</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">schema</span> <span class="o">=</span> <span class="n">OrthographySchema</span><span class="p">()</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                    <span class="n">state</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                    <span class="n">orthography</span> <span class="o">=</span> <span class="n">updateOrthography</span><span class="p">(</span><span class="n">orthography</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+                    <span class="c"># orthography will be False if there are no changes (cf. updateOrthography).</span>
+                    <span class="k">if</span> <span class="n">orthography</span><span class="p">:</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">orthography</span><span class="p">)</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                        <span class="k">return</span> <span class="n">orthography</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                            <span class="s">u&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+                <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+                <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Only administrators are permitted to update orthographies that are used in the active application settings.&#39;</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no orthography with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OrthographiesController.delete"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete an existing orthography and return it.</span>
+
+<span class="sd">        :URL: ``DELETE /orthographies/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the orthography to be deleted.</span>
+<span class="sd">        :returns: the deleted orthography model.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">        </span>
+<span class="sd">            Contributors can only delete orthographies that are not used in the</span>
+<span class="sd">            active application settings.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orthography</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Orthography</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orthography</span><span class="p">:</span>
+            <span class="n">appSet</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getApplicationSettings</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s">u&#39;administrator&#39;</span> <span class="ow">or</span> <span class="n">orthography</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="n">appSet</span><span class="o">.</span><span class="n">storageOrthography</span><span class="p">,</span> <span class="n">appSet</span><span class="o">.</span><span class="n">inputOrthography</span><span class="p">,</span> <span class="n">appSet</span><span class="o">.</span><span class="n">outputOrthography</span><span class="p">):</span>
+                <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">orthography</span><span class="p">)</span>
+                <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">orthography</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Only administrators are permitted to delete orthographies that are used in the active application settings.&#39;</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no orthography with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OrthographiesController.show"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return an orthography.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``GET /orthographies/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the orthography to be returned.</span>
+<span class="sd">        :returns: an orthography model object.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orthography</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Orthography</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orthography</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">orthography</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no orthography with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OrthographiesController.edit"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.OrthographiesController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return an orthography and the data needed to update it.</span>
+
+<span class="sd">        :URL: ``GET /orthographies/edit``</span>
+<span class="sd">        :param str id: the ``id`` value of the orthography that will be updated.</span>
+<span class="sd">        :returns: a dictionary of the form::</span>
+
+<span class="sd">                {&quot;orthography&quot;: {...}, &quot;data&quot;: {...}}</span>
+
+<span class="sd">            where the value of the ``orthography`` key is a dictionary</span>
+<span class="sd">            representation of the orthography and the value of the ``data`` key</span>
+<span class="sd">            is an empty dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orthography</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Orthography</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orthography</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="p">{},</span> <span class="s">&#39;orthography&#39;</span><span class="p">:</span> <span class="n">orthography</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no orthography with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Orthography Create &amp; Update Functions</span>
+<span class="c">################################################################################</span>
+</div></div>
+<div class="viewcode-block" id="createNewOrthography"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.createNewOrthography">[docs]</a><span class="k">def</span> <span class="nf">createNewOrthography</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a new orthography.</span>
+
+<span class="sd">    :param dict data: the data for the orthography to be created.</span>
+<span class="sd">    :returns: an SQLAlchemy model object representing the orthography.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">orthography</span> <span class="o">=</span> <span class="n">Orthography</span><span class="p">()</span>
+    <span class="n">orthography</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+    <span class="n">orthography</span><span class="o">.</span><span class="n">orthography</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;orthography&#39;</span><span class="p">])</span>
+    <span class="n">orthography</span><span class="o">.</span><span class="n">lowercase</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;lowercase&#39;</span><span class="p">]</span>
+    <span class="n">orthography</span><span class="o">.</span><span class="n">initialGlottalStops</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;initialGlottalStops&#39;</span><span class="p">]</span>
+    <span class="n">orthography</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">orthography</span>
+</div>
+<div class="viewcode-block" id="updateOrthography"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.orthographies.updateOrthography">[docs]</a><span class="k">def</span> <span class="nf">updateOrthography</span><span class="p">(</span><span class="n">orthography</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update an orthography.</span>
+
+<span class="sd">    :param orthography: the orthography model to be updated.</span>
+<span class="sd">    :param dict data: representation of the updated orthography.</span>
+<span class="sd">    :returns: the updated orthography model or, if ``changed`` has not been set</span>
+<span class="sd">        to ``True``, ``False``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">orthography</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">orthography</span><span class="p">,</span> <span class="s">&#39;orthography&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;orthography&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">orthography</span><span class="p">,</span> <span class="s">&#39;lowercase&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;lowercase&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">orthography</span><span class="p">,</span> <span class="s">&#39;initialGlottalStops&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;initialGlottalStops&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">orthography</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">orthography</span>
+    <span class="k">return</span> <span class="n">changed</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

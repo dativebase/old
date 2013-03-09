@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`LanguagesController`.
+
+.. module:: languages
+   :synopsis: Contains the languages controller.
+
+"""
+
 import logging
 import datetime
 import re
@@ -32,11 +39,21 @@ from onlinelinguisticdatabase.model import Language
 log = logging.getLogger(__name__)
 
 class LanguagesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol
+    """Generate responses to requests on language resources.
 
-    The language table is populated from an ISO 639-3 file upon application setup.
-    The Language resouces is read-only.  This controller facilitates searching
-    and getting of languages only.
+    REST Controller styled on the Atom Publishing Protocol.
+    
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    .. note::
+    
+        The language table is populated from an ISO 639-3 file upon application
+        setup.  The language resouces are read-only.  This controller
+        facilitates searching and getting of languages resources.
+
     """
 
     queryBuilder = SQLAQueryBuilder('Language', 'Id', config=config)
@@ -45,14 +62,18 @@ class LanguagesController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /languages: Return all languages matching the filter passed as JSON in the request body.
-        Note: POST /languages/search also routes to this action. The request body must be
-        a JSON object with a 'query' attribute; a 'paginator' attribute is
-        optional.  The 'query' object is passed to the getSQLAQuery() method of
-        an SQLAQueryBuilder instance and an SQLA query is returned or an error
-        is raised.  The 'query' object requires a 'filter' attribute; an
-        'orderBy' attribute is optional.
+        """Return the list of language resources matching the input JSON query.
+
+        :URL: ``SEARCH /languages`` (or ``POST /languages/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
+
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
@@ -72,8 +93,11 @@ class LanguagesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /languages/new_search: Return the data necessary to inform a search
-        on the languages resource.
+        """Return the data necessary to search the language resources.
+
+        :URL: ``GET /languages/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
@@ -81,7 +105,12 @@ class LanguagesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /languages: Return all languages."""
+        """Get all language resources.
+
+        :URL: ``GET /languages`` 
+        :returns: a list of all language resources.
+
+        """
         try:
             query = Session.query(Language)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder, 'Id')
@@ -114,13 +143,12 @@ class LanguagesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /languages/id: Return a JSON object representation of the
-        language with id=id.
+        """Return a language.
+        
+        :URL: ``GET /languages/id``
+        :param str id: the ``id`` value of the language to be returned.
+        :returns: a language model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         language = Session.query(Language).get(id)
         if language:

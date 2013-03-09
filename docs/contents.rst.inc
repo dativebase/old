@@ -1,8 +1,8 @@
 Getting Started
 --------------------------------------------------------------------------------
 
-If you want to learn what the Online Linguistic Database does or how to get and
-install it, you should start here.
+This section describes what the Online Linguistic Database does and how to get
+and install it.
 
 .. toctree::
    :maxdepth: 2
@@ -14,7 +14,7 @@ install it, you should start here.
 Architecture
 --------------------------------------------------------------------------------
 
-Look here to find details about the design of the OLD.
+The architecture section provides details about the design of the OLD.
 
 .. toctree::
    :maxdepth: 2
@@ -24,25 +24,22 @@ Look here to find details about the design of the OLD.
    datastructure
 
 
-Tutorial
+API Documentation
 --------------------------------------------------------------------------------
+ 
+This section contains the API documentation automatically extracted from the
+source code.
 
-This section will contain a whiz-bang! tutorial of the OLD: quick installation,
-testing and getting started playing with the system.
+.. toctree::
+   :maxdepth: 4
 
-
-API
---------------------------------------------------------------------------------
-
-This section will contain the API documentation automatically extracted from the
-docstrings of the source code.
+   api
 
 
-If you can’t find the information you’re looking for, have a look at the index
+If you can't find the information you're looking for, have a look at the index
 or try to find it using the search function:
 
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

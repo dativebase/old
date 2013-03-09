@@ -4,13 +4,12 @@
 Installation & Configuration
 ================================================================================
 
-This section explains how to get, install and configure an OLD application.  The
-bird's-eye view of the process is as follows:
+This section explains how to get, install and configure an OLD application.  An
+overview of the process:
 
 #. Download and install the OLD.
 #. Generate an OLD config file and edit it.
-#. Run the ``paster setup-app`` script to create the database tables and
-   directory structure.
+#. Run the setup command to create the database tables and directory structure.
 #. Serve the application and test that it is working properly.
 
 Note that these installation instructions assume a Unix-like system, e.g.,
@@ -23,7 +22,7 @@ QuickStart
 --------------------------------------------------------------------------------
 
 For the impatient, here is the quickest way to install, configure and serve an
-OLD application.  Before blindly the following commands, however, it is
+OLD application.  Before blindly issuing the following commands, however, it is
 recommended that you read the detailed instructions in the following sections ::
 
     virtualenv --no-site-packages env
@@ -47,7 +46,7 @@ Download
 --------------------------------------------------------------------------------
 
 Pre-packaged eggs of stable OLD releases can be downloaded from the
-`Python Package Index <http://pypi.python.org/pypi/onlinelinguisticdatabase.>`_
+`Python Package Index <http://pypi.python.org/pypi/onlinelinguisticdatabase>`_.
 
 The easiest way to get and install the OLD is via the Python command-line
 program Easy Install.  Before issuing the following command, read the
@@ -74,7 +73,7 @@ Install
 Create a virtual Python environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is recommended that one install the OLD in a virtual Python environment.  A
+It is recommended that the OLD be installed in a virtual Python environment.  A
 virtual environment is an isolated Python environment within which you can
 install the OLD and its dependencies without inadvertently rendering other
 programs unworkable by, say, upgrading *their* dependencies in incompatible
@@ -148,6 +147,12 @@ dependencies for onlinelinguisticdatabase``.  (If you used ``pip``, you will see
 something like ``Successfully installed onlinelinguisticdatabase``.)  This means
 that the OLD and all of its dependencies have been successfully installed.
 
+If you have downloaded the OLD source code and need to install the dependencies,
+then move to the root directory of the source, i.e., the one containing the
+``setup.py`` file, and run::
+
+    python setup.py develop
+
 
 Configure
 --------------------------------------------------------------------------------
@@ -186,6 +191,10 @@ everything is working ok.  On a production system you will need to change the
 `MySQL <http://www.mysql.com/>`_. If you want to get up and running with MySQL
 right away, see the :ref:`mysql-config` section; otherwise, continue on to
 :ref:`edit-config`.
+
+Developers will not need to generate a config file.  The ``test.ini`` and
+``development.ini`` config file should already be present in the root directory
+of the source.  See the :ref:`developers` section for details.
 
 
 .. _mysql-config:
@@ -361,6 +370,8 @@ application log file ``application.log`` and Python script
 ``_requests_tests.py``.
 
 
+.. _serve:
+
 Serve
 --------------------------------------------------------------------------------
 
@@ -460,7 +471,7 @@ application on the world wide web and setting up some admin scripts.  There are
 many possible ways to achieve this.  In my production systems I have followed
 the approach of using Apache to proxy requests to Pylons as described in
 `Chapter 21: Deployment <http://pylonsbook.com/en/1.1/deployment.html>`_ of
-`The Pylons Book <http://pylonsbook.com/>`_ and have had success with that.  I
+`The Pylons Book`_ and have had success with that.  I
 review that approach here.
 
 Assuming Apache 2, ``mod_proxy`` and ``mod_proxy_http`` are installed, you
@@ -544,20 +555,225 @@ of the relevant databases.  I will further document my backup setup at a later
 date.
 
 
+.. _developers:
+
 Developers
 --------------------------------------------------------------------------------
 
-* Precis of the directory structure and where things are in a Pylons app
-* install developer tools: sphinx
-* run setup.py develop ...
-* how to run tests
-* development cycle ...
+This section provides an overview of the OLD for developers.  It covers (1) how
+to download the source and install the dependencies, (2) the structure of the
+source, (3) how to write and compile the documentation to HTML and PDF, (4) the
+creation of Python version-specific virtual environments and (5) the building of
+OLD releases as eggs or archives.
+
+For detailed documentation on developing a Pylons application, consult the
+excellent documentation for the Pylons framework, i.e., `The Pylons Book`_.
+
+
+Download & depencency installation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This subsection details how to get the OLD source and install its dependencies.
+To download the most up-to-date source code, make sure you have
+`Git <http://git-scm.com/>`_ installed and run::
+
+    git clone git://github.com/jrwdunham/old.git
+
+To install the dependencies, move to the newly created ``old`` directory and
+run::
+
+    python setup.py develop
+
+
+Directory structure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``onlinelinguisticdatabase`` directory contains all of the files and
+directories that will be packaged into the final distribution.  Its
+subdirectories are ``config``, ``controllers``, ``lib``, ``model``, ``public``,
+and ``tests``.  This section gives an overview of the contents of these
+directories and the ``websetup.py`` file.
+
+The ``websetup.py`` file controls how an OLD application is set up.  That is,
+when ``paster setup-app config_file.ini`` is run (or when ``nosetests`` is run),
+the contents of ``websetup.py`` determine what database tables are created, what
+defaults are entered into them and what directories are created.
+
+The ``config`` directory houses the ``deployment.ini_tmpl`` and ``routing.py``
+files.  The former is the template used to generate the config file when
+something like ``paster make-config production.ini`` is run.  The ``routing.py``
+module is where the mappings from URL paths to OLD controller actions are
+specified.  When a new controller is created or the interface to an existing
+controller needs to be changed, the ``routing.py`` file must be edited.
+
+The ``controllers`` directory holds a module for each OLD controller.  For
+example, the ``controllers/forms.py`` module defines a ``FormsController``
+class; the methods of this class (the controller's *actions*) return values
+which determine the content of particular responses.  The ``index`` method
+(action) of the ``FormsController`` class, for example, returns a list of all
+form models in the database; since ``config/routing.py`` maps ``GET /forms`` to
+``FormsController.index``, it is this list of forms that is returned when
+``GET /forms`` is requested.
+
+The ``lib`` directory holds modules that define functionality used by multiple
+controllers.  The ``utils.py`` module defines a large number of widely-used
+functions, classes and data structures; these are made available in controllers
+under the ``h`` namespace, e.g., the value of ``h.markupLanguages`` is the list
+of valid markup language string values, as defined in ``utils.py``.  The
+``auth.py`` script holds the decorators that control authentication and
+authorization.  The ``schemata.py`` module contains the validators that are
+applied against user input.  The other modules in the ``lib`` directory are
+mentioned in this document where appropriate; consult the docstrings for more
+information.
+
+The ``model`` directory contains a module for each SQLAlchemy model used by the
+OLD.  For example, ``model/file.py`` houses the ``File`` class which defines the
+attributes of the file model and their implementation as columns and relations
+in a relational database.  The ``model/model.py`` is special; it defines the
+``Model`` class from which all of the other models inherit a number of methods.
+Note that in order to make a model available in the
+``onlinelinguisticdatabase.model`` namespace, it must be imported in
+``model/__init__.py``.
+
+The ``public`` directory may contain static files, HTML, CSS and JavaScript.
+Since the client-side OLD application has not yet been implemented, the
+``public`` directory contains, at present, only the ``iso_639_3_languages_data``
+which stores the tab-delimited files containing the ISO-639-3 dataset.
+
+The ``tests`` directory contains all of the test modules.  When the
+``nosetests`` command is run, it is the modules here that define the tests.  For
+example, ``tests/functional/test_forms.py`` defines a ``TestFormsController``
+class whose methods test the various actions (or functionalities) of the forms
+controller.  For example, the ``test_create`` method of the
+``TestFormsController`` class simulates ``POST /forms`` requests and confirms
+that the system behaves as expected.  When testing new funcionality, new tests
+should be defined in ``tests/functional`` or existing tests should be
+supplemented.  Note the ``_toggle_tests.py`` script which does not define tests
+but provides an easy way to turn large numbers of them on or off.  For example,
+``./onlinelinguisticdatabase/tests/functional/_toggle_tests.py on`` will turn
+all tests on and
+``./onlinelinguisticdatabase/tests/functional/_toggle_tests.py off`` will turn
+them all off.  See its docstrings for further usage instructions.  Finally, the
+``tests`` directory also contains the ``_requests_tests.py`` script which
+defines some simple tests (using the Requests module) which (as described in the
+:ref:`serve` section) can be run on a live OLD application to ensure that it is
+working correctly.
+
+The ``websetup.py`` module defines the ``setup_app`` function that is called
+when the OLD is set up, i.e., when ``paster setup-app config_file.ini`` is
+issued.  The behaviour of the setup process is determined by the name of the
+config file.  If ``test.ini`` is the config file (as is the case when
+``nosetests`` is run), then test-specific setup will be performed, i.e., all
+database tables will be dropped and then re-created.  Otherwise, only the tables
+that do not already exist will be created.
+
+
+Documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section reviews the OLD documentation creation process.  The OLD
+documentation (i.e., this document) is written using
+`Sphinx <http://sphinx-doc.org/>`_ and the reStructuredText lightweight markup
+language.  In order to edit and build the documentation, Sphinx must be
+installed::
+
+    easy_install sphinx
+
+The reStructuredText source files for the OLD documentation are the
+``.rst``-suffixed files in the ``docs`` directory.  The
+`Sphinx documentation <http://sphinx-doc.org/contents.html>`_ has a good
+overview of the reStructuredText syntax.  Once the source files have been
+edited, build the documentation HTML (in ``docs/_build/html``) by moving to the
+``docs`` directory and running::
+
+    sphinx-build -b html . ./_build/html
+
+To generate a LaTeX version of the documentation in ``docs/_build/latex``, run
+(from the ``docs`` directory)::
+
+    sphinx-build -b latex . ./_build/latex
+
+If ``pdflatex`` is installed [#f2]_, generate a PDF of the documentation by moving to
+``docs/_build/latex`` and running::
+
+    pdflatex -interaction=nonstopmode OLD.tex
+
+
+Virtualenv & Python distros
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In order to test whether the OLD works on different Python versions or to build
+distributions for those versions, it is necessary to create virtual environments
+for each such Python distribution.
+
+The `pythonbrew <https://pypi.python.org/pypi/pythonbrew/>`_ utility facilitates
+the building and installation of different Pythons in a user's home directory.
+Install ``pythonbrew`` using the instructions on its web site.
+
+Now run ``pythonbrew install`` to install the desired Pythons.  For example, to
+install Python 2.4.6, 2.5.6 and 2.7.3, run::
+
+    pythonbrew install 2.4.6
+    pythonbrew install 2.5.6
+    pythonbrew install 2.7.3
+
+Once complete, new Python executables should be installed in
+``~/.pythonbrew/pythons/Python-2.4.6``, ``~/.pythonbrew/pythons/Python-2.5.6``,
+etc.  For example, to launch the Python 2.5.6 interactive console, run::
+
+    ~/.pythonbrew/pythons/Python-2.5.6/bin/python
+
+To create a virtual environment using one of these Pythons, run ``virtualenv``
+with the ``-p`` option followed by the path to the desired Python executable.
+It is also a good idea to choose a name for the virtual environment that makes
+it easy to tell what version of Python it uses.  For example::
+
+    virtualenv -p ~/.pythonbrew/pythons/Python-2.5.6/bin/python env-2.5.6
+
+Make sure that the new virtual environment has the correct python::
+
+    ~/env-2.5.6/bin/python --version
+
+Note that the OLD works with Python 2.6 and 2.7 but not with 2.4 or 2.5.  It has
+not been tested with Python 3.
+
+
+Releases
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section explains how to build stable OLD releases and how to upload them to
+PyPI.
+
+To build an egg or a source distribution of a stable release, run the following
+two commands, respectively::
+
+    python setup.py bdist_egg
+    python setup.py sdist
+
+Each of these commands will create a new archive in the ``dist`` directory.
+
+In order to build an OLD egg distribution and upload it to PyPI in one command,
+run the following command.  (Note that you will need the OLD's PyPI password in
+order to be permitted to do this.) ::
+
+    python setup.py bdist_egg register upload
+
+To create and upload the source distribution to PyPI (so that, e.g., Pip can be
+used to install the OLD), run::
+
+    python setup.py sdist register upload
+
 
 
 .. [#f1] The OLD has not been tested on Windows.  Some alterations to the source
-   may be required in order to get it running on a Windows OS.  to be clear,
+   may be required in order to get it running on a Windows OS.  To be clear,
    this does *not* mean that users running a Windows OS will not be able to use
    a production OLD web application.  A live OLD application is a web service
    and users with any operating system should be able to interact with it,
    assuming an internet connection is available.  What this does mean is that
    the OLD, as is, may not run on a Windows *server*.
+
+.. [#f2] See `this page <http://www.charlietanksley.net/philtex/basics-of-latex-from-the-command-line/>`_
+   for an overview of how to use the TeX command-line utilities.
+
+.. _`The Pylons Book`: <http://pylonsbook.com/>

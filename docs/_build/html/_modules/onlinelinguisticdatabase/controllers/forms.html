@@ -1,0 +1,1336 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.forms &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.forms</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`FormsController` and its auxiliary functions.</span>
+
+<span class="sd">.. module:: forms</span>
+<span class="sd">   :synopsis: Contains the forms controller and its auxiliary functions.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">uuid</span> <span class="kn">import</span> <span class="n">uuid4</span>
+
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">asc</span><span class="p">,</span> <span class="n">or_</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">subqueryload</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.schemata</span> <span class="kn">import</span> <span class="n">FormSchema</span><span class="p">,</span> <span class="n">FormIdsSchema</span>
+<span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">import</span> <span class="n">Form</span><span class="p">,</span> <span class="n">FormBackup</span><span class="p">,</span> <span class="n">Translation</span><span class="p">,</span> <span class="n">User</span><span class="p">,</span> <span class="n">Collection</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.controllers.oldcollections</span> <span class="kn">import</span> <span class="n">updateCollectionByDeletionOfReferencedForm</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FormsController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController">[docs]</a><span class="k">class</span> <span class="nc">FormsController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate responses to requests on form resources.</span>
+
+<span class="sd">    REST Controller styled on the Atom Publishing Protocol.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       The ``h.jsonify`` decorator converts the return value of the methods to</span>
+<span class="sd">       JSON.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;SEARCH&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FormsController.search"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.search">[docs]</a>    <span class="k">def</span> <span class="nf">search</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of form resources matching the input JSON query.</span>
+
+<span class="sd">        :URL: ``SEARCH /forms`` (or ``POST /forms/search``)</span>
+<span class="sd">        :request body: A JSON object of the form::</span>
+
+<span class="sd">                {&quot;query&quot;: {&quot;filter&quot;: [ ... ], &quot;orderBy&quot;: [ ... ]},</span>
+<span class="sd">                 &quot;paginator&quot;: { ... }}</span>
+
+<span class="sd">            where the ``orderBy`` and ``paginator`` attributes are optional.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">jsonSearchParams</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">)</span>
+            <span class="n">pythonSearchParams</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">jsonSearchParams</span><span class="p">)</span>
+            <span class="n">SQLAQuery</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="o">.</span><span class="n">getSQLAQuery</span><span class="p">(</span><span class="n">pythonSearchParams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;query&#39;</span><span class="p">))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">SQLAQuery</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">filterRestrictedModels</span><span class="p">(</span><span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="n">SQLAQuery</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">pythonSearchParams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;paginator&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">OLDSearchParseError</span><span class="p">,</span> <span class="n">Invalid</span><span class="p">),</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&#39;s filter expression (</span><span class="si">%s</span><span class="s">) raised an unexpected exception: </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="n">h</span><span class="o">.</span><span class="n">getUserFullName</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]),</span> <span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The specified search parameters generated an invalid database query&#39;</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FormsController.new_search"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.new_search">[docs]</a>    <span class="k">def</span> <span class="nf">new_search</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to search the form resources.</span>
+
+<span class="sd">        :URL: ``GET /forms/new_search``</span>
+<span class="sd">        :returns: ``{&quot;searchParameters&quot;: {&quot;attributes&quot;: { ... }, &quot;relations&quot;: { ... }}``</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;searchParameters&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getSearchParameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FormsController.index"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all form resources.</span>
+
+<span class="sd">        :URL: ``GET /forms`` with optional query string parameters for ordering</span>
+<span class="sd">            and pagination.</span>
+<span class="sd">        :returns: a list of all form resources.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the</span>
+<span class="sd">           query string parameters that effect ordering and pagination.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">filterRestrictedModels</span><span class="p">(</span><span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FormsController.create"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new form resource and return it.</span>
+
+<span class="sd">        :URL: ``POST /forms``</span>
+<span class="sd">        :request body: JSON object representing the form to create.</span>
+<span class="sd">        :returns: the newly created form.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">FormSchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="n">form</span> <span class="o">=</span> <span class="n">createNewForm</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">updateApplicationSettingsIfFormIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+            <span class="n">updateFormsContainingThisFormAsMorpheme</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">form</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FormsController.new"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new form.</span>
+
+<span class="sd">        :URL: ``GET /forms/new`` with optional query string parameters </span>
+<span class="sd">        :returns: A dictionary of lists of resources</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">        </span>
+<span class="sd">           See :func:`getNewEditFormData` to understand how the query string</span>
+<span class="sd">           parameters can affect the contents of the lists in the returned</span>
+<span class="sd">           dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">getNewEditFormData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FormsController.update"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a form and return it.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``PUT /forms/id``</span>
+<span class="sd">        :Request body: JSON object representing the form with updated attribute values.</span>
+<span class="sd">        :param str id: the ``id`` value of the form to be updated.</span>
+<span class="sd">        :returns: the updated form model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">schema</span> <span class="o">=</span> <span class="n">FormSchema</span><span class="p">()</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                    <span class="n">formDict</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+                    <span class="n">form</span> <span class="o">=</span> <span class="n">updateForm</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                    <span class="c"># form will be False if there are no changes (cf. updateForm).</span>
+                    <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+                        <span class="n">backupForm</span><span class="p">(</span><span class="n">formDict</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">datetimeModified</span><span class="p">)</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                        <span class="n">updateApplicationSettingsIfFormIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">updateHasChangedTheAnalysis</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">formDict</span><span class="p">):</span>
+                            <span class="n">updateFormsContainingThisFormAsMorpheme</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;update&#39;</span><span class="p">,</span> <span class="n">formDict</span><span class="p">)</span>
+                        <span class="k">return</span> <span class="n">form</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                            <span class="s">u&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+                <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+                <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no form with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FormsController.delete"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete an existing form and return it.</span>
+
+<span class="sd">        :URL: ``DELETE /forms/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the form to be deleted.</span>
+<span class="sd">        :returns: the deleted form model.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Only administrators and a form&#39;s enterer can delete it.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s">u&#39;administrator&#39;</span> <span class="ow">or</span> \
+            <span class="n">form</span><span class="o">.</span><span class="n">enterer</span> <span class="ow">is</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]:</span>
+                <span class="n">formDict</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+                <span class="n">backupForm</span><span class="p">(</span><span class="n">formDict</span><span class="p">)</span>
+                <span class="n">updateCollectionsReferencingThisForm</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+                <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+                <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="n">updateApplicationSettingsIfFormIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+                <span class="n">updateFormsContainingThisFormAsMorpheme</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;delete&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">form</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no form with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FormsController.show"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a form.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``GET /forms/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the form to be returned.</span>
+<span class="sd">        :returns: a form model object.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">form</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no form with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FormsController.edit"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a form and the data needed to update it.</span>
+
+<span class="sd">        :URL: ``GET /forms/edit`` with optional query string parameters </span>
+<span class="sd">        :param str id: the ``id`` value of the form that will be updated.</span>
+<span class="sd">        :returns: a dictionary of the form::</span>
+
+<span class="sd">                {&quot;form&quot;: {...}, &quot;data&quot;: {...}}</span>
+
+<span class="sd">            where the value of the ``form`` key is a dictionary representation</span>
+<span class="sd">            of the form and the value of the ``data`` key is a dictionary</span>
+<span class="sd">            containing the objects necessary to update a form, viz. the return</span>
+<span class="sd">            value of :func:`FormsController.new`</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">        </span>
+<span class="sd">           This action can be thought of as a combination of</span>
+<span class="sd">           :func:`FormsController.show` and :func:`FormsController.new`.  See</span>
+<span class="sd">           :func:`getNewEditFormData` to understand how the query string</span>
+<span class="sd">           parameters can affect the contents of the lists in the ``data``</span>
+<span class="sd">           dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">],</span> <span class="n">form</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="n">getNewEditFormData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="s">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no form with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FormsController.history"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.history">[docs]</a>    <span class="k">def</span> <span class="nf">history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the form with ``form.id==id`` and its previous versions.</span>
+
+<span class="sd">        :URL: ``GET /forms/history/id``</span>
+<span class="sd">        :param str id: a string matching the ``id`` or ``UUID`` value of the</span>
+<span class="sd">            form whose history is requested.</span>
+<span class="sd">        :returns: A dictionary of the form::</span>
+
+<span class="sd">                {&quot;form&quot;: { ... }, &quot;previousVersions&quot;: [ ... ]}</span>
+
+<span class="sd">            where the value of the ``form`` key is the form whose history is</span>
+<span class="sd">            requested and the value of the ``previousVersions`` key is a list of</span>
+<span class="sd">            dictionaries representing previous versions of the form.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">form</span><span class="p">,</span> <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">getFormAndPreviousVersions</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span> <span class="ow">or</span> <span class="n">previousVersions</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="n">accessible</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span>
+            <span class="n">unrestrictedPreviousVersions</span> <span class="o">=</span> <span class="p">[</span><span class="n">fb</span> <span class="k">for</span> <span class="n">fb</span> <span class="ow">in</span> <span class="n">previousVersions</span>
+                                    <span class="k">if</span> <span class="n">accessible</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">fb</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)]</span>
+            <span class="n">formIsRestricted</span> <span class="o">=</span> <span class="n">form</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">accessible</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)</span>
+            <span class="n">previousVersionsAreRestricted</span> <span class="o">=</span> <span class="n">previousVersions</span> <span class="ow">and</span> <span class="ow">not</span> \
+                <span class="n">unrestrictedPreviousVersions</span>
+            <span class="k">if</span> <span class="n">formIsRestricted</span> <span class="ow">or</span> <span class="n">previousVersionsAreRestricted</span> <span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span>
+                        <span class="s">&#39;previousVersions&#39;</span><span class="p">:</span> <span class="n">unrestrictedPreviousVersions</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;No forms or form backups match </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="FormsController.remember"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.remember">[docs]</a>    <span class="k">def</span> <span class="nf">remember</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Cause the logged in user to remember the forms referenced in the request body.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``POST /forms/remember``</span>
+<span class="sd">        :request body: A JSON object of the form ``{&quot;forms&quot;: [ ... ]}`` where</span>
+<span class="sd">            the value of the ``forms`` attribute is the array of form ``id``</span>
+<span class="sd">            values representing the forms that are to be remembered.</span>
+<span class="sd">        :returns: A list of form ``id`` values corresponding to the forms that</span>
+<span class="sd">            were remembered.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">FormIdsSchema</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">forms</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;forms&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">forms</span><span class="p">:</span>
+                <span class="n">accessible</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span>
+                <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+                <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+                <span class="n">unrestrictedForms</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">forms</span>
+                                     <span class="k">if</span> <span class="n">accessible</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="n">unrestrictedForms</span><span class="p">:</span>
+                    <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">rememberedForms</span> <span class="o">+=</span> <span class="n">unrestrictedForms</span>
+                    <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">unrestrictedForms</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;No valid form ids were provided.&#39;</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="FormsController.update_morpheme_references"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.FormsController.update_morpheme_references">[docs]</a>    <span class="k">def</span> <span class="nf">update_morpheme_references</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the morphological analysis-related attributes of all forms.</span>
+
+<span class="sd">        That is, update the values of the ``morphemeBreakIDs``,</span>
+<span class="sd">        ``morphemeGlossIDs``, ``syntacticCategoryString`` and</span>
+<span class="sd">        ``breakGlossCategory`` attributes of every form in the database.</span>
+
+<span class="sd">        :URL: ``PUT /forms/update_morpheme_references``</span>
+<span class="sd">        :returns: a list of ids corresponding to the forms where the update</span>
+<span class="sd">            caused a change in the values of the target attributes.</span>
+
+<span class="sd">        .. warning::</span>
+<span class="sd">        </span>
+<span class="sd">           It should not be necessary to request the regeneration of morpheme</span>
+<span class="sd">           references via this action since this should already be accomplished</span>
+<span class="sd">           automatically by the calls to</span>
+<span class="sd">           ``updateFormsContainingThisFormAsMorpheme`` on all successful</span>
+<span class="sd">           update, create and delete requests on form resources.  This action</span>
+<span class="sd">           is, therefore, deprecated (read: use it with caution) and may be</span>
+<span class="sd">           removed in future versions of the OLD.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">updateMorphemeReferencesOfForms</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">getForms</span><span class="p">(),</span> <span class="n">h</span><span class="o">.</span><span class="n">getMorphemeDelimiters</span><span class="p">())</span>
+
+</div></div>
+<div class="viewcode-block" id="updateApplicationSettingsIfFormIsForeignWord"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateApplicationSettingsIfFormIsForeignWord">[docs]</a><span class="k">def</span> <span class="nf">updateApplicationSettingsIfFormIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the transcription validation functionality of the active application settings if the input form is a foreign word.</span>
+
+<span class="sd">    :param form: a form model object</span>
+<span class="sd">    :returns: ``None``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">formIsForeignWord</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">applicationSettings</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">app_globals</span><span class="p">,</span> <span class="s">&#39;applicationSettings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="n">applicationSettings</span><span class="o">.</span><span class="n">getAttributes</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">app_globals</span><span class="o">.</span><span class="n">applicationSettings</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">ApplicationSettings</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="getNewEditFormData"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.getNewEditFormData">[docs]</a><span class="k">def</span> <span class="nf">getNewEditFormData</span><span class="p">(</span><span class="n">GET_params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new OLD form or update an existing one.</span>
+<span class="sd">    </span>
+<span class="sd">    :param GET_params: the ``request.GET`` dictionary-like object generated by</span>
+<span class="sd">        Pylons which contains the query string parameters of the request.</span>
+<span class="sd">    :returns: A dictionary whose values are lists of objects needed to create or</span>
+<span class="sd">        update forms.</span>
+
+<span class="sd">    If ``GET_params`` has no keys, then return all data, i.e., grammaticalities,</span>
+<span class="sd">    speakers, etc.  If ``GET_params`` does have keys, then for each key whose</span>
+<span class="sd">    value is a non-empty string (and not a valid ISO 8601 datetime) add the</span>
+<span class="sd">    appropriate list of objects to the return dictionary.  If the value of a key</span>
+<span class="sd">    is a valid ISO 8601 datetime string, add the corresponding list of objects</span>
+<span class="sd">    *only* if the datetime does *not* match the most recent ``datetimeModified``</span>
+<span class="sd">    value of the resource.  That is, a non-matching datetime indicates that the</span>
+<span class="sd">    requester has out-of-date data.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Map param names to the OLD model objects from which they are derived.</span>
+    <span class="n">paramName2ModelName</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;grammaticalities&#39;</span><span class="p">:</span> <span class="s">&#39;ApplicationSettings&#39;</span><span class="p">,</span>
+        <span class="s">&#39;elicitationMethods&#39;</span><span class="p">:</span> <span class="s">&#39;ElicitationMethod&#39;</span><span class="p">,</span>
+        <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="s">&#39;Tag&#39;</span><span class="p">,</span>
+        <span class="s">&#39;syntacticCategories&#39;</span><span class="p">:</span> <span class="s">&#39;SyntacticCategory&#39;</span><span class="p">,</span>
+        <span class="s">&#39;speakers&#39;</span><span class="p">:</span> <span class="s">&#39;Speaker&#39;</span><span class="p">,</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span>
+        <span class="s">&#39;sources&#39;</span><span class="p">:</span> <span class="s">&#39;Source&#39;</span>
+    <span class="p">}</span>
+
+    <span class="c"># map_ maps param names to functions that retrieve the appropriate data</span>
+    <span class="c"># from the db.</span>
+    <span class="n">map_</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;grammaticalities&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getGrammaticalities</span><span class="p">,</span>
+        <span class="s">&#39;elicitationMethods&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;ElicitationMethod&#39;</span><span class="p">),</span>
+        <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Tag&#39;</span><span class="p">),</span>
+        <span class="s">&#39;syntacticCategories&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;SyntacticCategory&#39;</span><span class="p">),</span>
+        <span class="s">&#39;speakers&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Speaker&#39;</span><span class="p">),</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">),</span>
+        <span class="s">&#39;sources&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Source&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c"># result is initialized as a dict with empty list values.</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">])</span>
+
+    <span class="c"># There are GET params, so we are selective in what we return.</span>
+    <span class="k">if</span> <span class="n">GET_params</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">GET_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="c"># Proceed so long as val is not an empty string.</span>
+            <span class="k">if</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">valAsDatetimeObj</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">datetimeString2datetime</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">valAsDatetimeObj</span><span class="p">:</span>
+                    <span class="c"># Value of param is an ISO 8601 datetime string that</span>
+                    <span class="c"># does not match the most recent datetimeModified of the</span>
+                    <span class="c"># relevant model in the db: therefore we return a list</span>
+                    <span class="c"># of objects/dicts.  If the datetimes do match, this</span>
+                    <span class="c"># indicates that the requester&#39;s own stores are</span>
+                    <span class="c"># up-to-date so we return nothing.</span>
+                    <span class="k">if</span> <span class="n">valAsDatetimeObj</span> <span class="o">!=</span> \
+                    <span class="n">h</span><span class="o">.</span><span class="n">getMostRecentModificationDatetime</span><span class="p">(</span>
+                    <span class="n">paramName2ModelName</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+
+    <span class="c"># There are no GET params, so we get everything from the db and return it.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+</div>
+<div class="viewcode-block" id="getFormAndPreviousVersions"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.getFormAndPreviousVersions">[docs]</a><span class="k">def</span> <span class="nf">getFormAndPreviousVersions</span><span class="p">(</span><span class="nb">id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return a form and its previous versions.</span>
+
+<span class="sd">    :param str id: the ``id`` or ``UUID`` value of the form whose history is</span>
+<span class="sd">        requested.</span>
+<span class="sd">    :returns: a tuple whose first element is the form model and whose second</span>
+<span class="sd">        element is a list of form backup models.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">previousVersions</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadForm</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+            <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getFormBackupsByUUID</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">UUID</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getFormBackupsByFormId</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">UUID</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">UUID</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+            <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getFormByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">)</span>
+            <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getFormBackupsByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">pass</span>    <span class="c"># id is neither an integer nor a UUID</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">previousVersions</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Backup form</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="backupForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.backupForm">[docs]</a><span class="k">def</span> <span class="nf">backupForm</span><span class="p">(</span><span class="n">formDict</span><span class="p">,</span> <span class="n">datetimeModified</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Backup a form.</span>
+
+<span class="sd">    :param dict formDict: a representation of a form model.</span>
+<span class="sd">    :param ``datetime.datetime`` datetimeModified: the time of the form&#39;s last update.</span>
+<span class="sd">    :returns: ``None``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">formBackup</span> <span class="o">=</span> <span class="n">FormBackup</span><span class="p">()</span>
+    <span class="n">formBackup</span><span class="o">.</span><span class="n">vivify</span><span class="p">(</span><span class="n">formDict</span><span class="p">,</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">],</span> <span class="n">datetimeModified</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">formBackup</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Form Create &amp; Update Functions</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="createNewForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.createNewForm">[docs]</a><span class="k">def</span> <span class="nf">createNewForm</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a new form.</span>
+
+<span class="sd">    :param dict data: the form to be created.</span>
+<span class="sd">    :returns: an SQLAlchemy model object representing the form.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">Form</span><span class="p">()</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
+
+    <span class="c"># Unicode Data</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">transcription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;transcription&#39;</span><span class="p">]))</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">phoneticTranscription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span>
+                                            <span class="n">data</span><span class="p">[</span><span class="s">&#39;phoneticTranscription&#39;</span><span class="p">]))</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">narrowPhoneticTranscription</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span>
+                                        <span class="n">data</span><span class="p">[</span><span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">]))</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreak</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">]))</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">morphemeGloss</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">]))</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">comments</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;comments&#39;</span><span class="p">])</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">speakerComments</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;speakerComments&#39;</span><span class="p">])</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">grammaticality</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;grammaticality&#39;</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;status&#39;</span><span class="p">]</span>
+
+    <span class="c"># User-entered date: dateElicited</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">dateElicited</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">]</span>
+
+    <span class="c"># Many-to-One</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">elicitationMethod</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitationMethod&#39;</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;syntacticCategory&#39;</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">elicitor</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">verifier</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;verifier&#39;</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">]</span>
+
+    <span class="c"># One-to-Many Data: translations</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">translations</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;translations&#39;</span><span class="p">]</span>
+
+    <span class="c"># Many-to-Many Data: tags &amp; files</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;files&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+
+    <span class="c"># Restrict the entire form if it is associated to restricted files.</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">tags</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">files</span><span class="p">]</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tagList</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tagList</span><span class="p">]</span>
+    <span class="n">restrictedTags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">restrictedTags</span><span class="p">:</span>
+        <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">restrictedTags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">restrictedTag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span>
+
+    <span class="c"># OLD-generated Data</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">enterer</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+
+    <span class="c"># Create the morphemeBreakIDs and morphemeGlossIDs attributes.</span>
+    <span class="c"># We add the form first to get an ID so that monomorphemic Forms can be</span>
+    <span class="c"># self-referential.</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+    <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreakIDs</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeGlossIDs</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">breakGlossCategory</span> <span class="o">=</span> \
+                                                        <span class="n">compileMorphemicAnalysis</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">form</span>
+</div>
+<div class="viewcode-block" id="updateForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateForm">[docs]</a><span class="k">def</span> <span class="nf">updateForm</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update a form model.</span>
+
+<span class="sd">    :param form: the form model to be updated.</span>
+<span class="sd">    :param dict data: representation of the updated form.</span>
+<span class="sd">    :returns: the updated form model or, if ``changed`` has not been set to</span>
+<span class="sd">        ``True``, then ``False``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="c"># Unicode Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;transcription&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;transcription&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;phoneticTranscription&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;phoneticTranscription&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;morphemeBreak&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;morphemeGloss&#39;</span><span class="p">,</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">toSingleSpace</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">])),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;comments&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;comments&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;speakerComments&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;speakerComments&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;grammaticality&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;grammaticality&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;status&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;status&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># User-entered date: dateElicited</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;dateElicited&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># One-to-Many Data: Translations</span>
+    <span class="c"># First check if the user has made any changes to the translations.</span>
+    <span class="c"># If there are changes, then delete all translations and replace with new</span>
+    <span class="c">#  ones.  (Note: this will result in the deletion of a translation and the</span>
+    <span class="c">#  recreation of an identical one with a different index.  There may be a</span>
+    <span class="c">#  &quot;better&quot; way of doing this, but this way is simple...</span>
+    <span class="n">translationsWeHave</span> <span class="o">=</span> <span class="p">[(</span><span class="n">t</span><span class="o">.</span><span class="n">transcription</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">grammaticality</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">translations</span><span class="p">]</span>
+    <span class="n">translationsToAdd</span> <span class="o">=</span> <span class="p">[(</span><span class="n">t</span><span class="o">.</span><span class="n">transcription</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">grammaticality</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;translations&#39;</span><span class="p">]]</span>
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">translationsWeHave</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">translationsToAdd</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">translations</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;translations&#39;</span><span class="p">]</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c"># Many-to-One Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;elicitationMethod&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitationMethod&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;syntacticCategory&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;syntacticCategory&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;source&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;elicitor&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;verifier&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;verifier&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;speaker&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># Many-to-Many Data: tags &amp; files</span>
+    <span class="c"># Update only if the user has made changes.</span>
+    <span class="n">filesToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;files&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">tagsToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">filesToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">files</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="n">filesToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="c"># Cause the entire form to be tagged as restricted if any one of its</span>
+        <span class="c"># files are so tagged.</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">tags</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">files</span><span class="p">]</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tagList</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tagList</span><span class="p">]</span>
+        <span class="n">restrictedTags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">restrictedTags</span><span class="p">:</span>
+            <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">restrictedTags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">restrictedTag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tagsToAdd</span><span class="p">:</span>
+                <span class="n">tagsToAdd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">tagsToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">tags</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">tagsToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c"># Create the morphemeBreakIDs and morphemeGlossIDs attributes.</span>
+    <span class="n">morphemeBreakIDs</span><span class="p">,</span> <span class="n">morphemeGlossIDs</span><span class="p">,</span> <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">breakGlossCategory</span> <span class="o">=</span> \
+                                                        <span class="n">compileMorphemicAnalysis</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;morphemeBreakIDs&#39;</span><span class="p">,</span> <span class="n">morphemeBreakIDs</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;morphemeGlossIDs&#39;</span><span class="p">,</span> <span class="n">morphemeGlossIDs</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;syntacticCategoryString&#39;</span><span class="p">,</span> <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;breakGlossCategory&#39;</span><span class="p">,</span> <span class="n">breakGlossCategory</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">form</span>
+    <span class="k">return</span> <span class="n">changed</span>
+
+</div>
+<div class="viewcode-block" id="updateMorphemeReferencesOfForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateMorphemeReferencesOfForm">[docs]</a><span class="k">def</span> <span class="nf">updateMorphemeReferencesOfForm</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">validDelimiters</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the morphological analysis-related attributes of a form model.</span>
+
+<span class="sd">    Attempt to update the values of the ``morphemeBreakIDs``,</span>
+<span class="sd">    ``morphemeGlossIDs``, ``syntacticCategoryString`` and ``breakGlossCategory``</span>
+<span class="sd">    attributes of a form using only the lexical items specified in the list</span>
+<span class="sd">    ``kwargs[&#39;lexicalItems&#39;]`` or the list ``kwargs[&#39;deletedLexicalItems&#39;]``.</span>
+
+<span class="sd">    :param form: the form model to be updated.</span>
+<span class="sd">    :param list validDelimiters: morpheme delimiters as strings.</span>
+<span class="sd">    :param list kwargs[&#39;lexicalItems&#39;]: a list of form models.</span>
+<span class="sd">    :param list kwargs[&#39;deletedLexicalItems&#39;]: a list of form models.</span>
+<span class="sd">    :returns: the form if updated; else ``False``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">morphemeBreakIDs</span><span class="p">,</span> <span class="n">morphemeGlossIDs</span><span class="p">,</span> <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">breakGlossCategory</span> <span class="o">=</span> \
+        <span class="n">compileMorphemicAnalysis</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">validDelimiters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;morphemeBreakIDs&#39;</span><span class="p">,</span> <span class="n">morphemeBreakIDs</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;morphemeGlossIDs&#39;</span><span class="p">,</span> <span class="n">morphemeGlossIDs</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;syntacticCategoryString&#39;</span><span class="p">,</span> <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;breakGlossCategory&#39;</span><span class="p">,</span> <span class="n">breakGlossCategory</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">form</span>
+    <span class="k">return</span> <span class="n">changed</span>
+</div>
+<div class="viewcode-block" id="updateMorphemeReferencesOfForms"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateMorphemeReferencesOfForms">[docs]</a><span class="k">def</span> <span class="nf">updateMorphemeReferencesOfForms</span><span class="p">(</span><span class="n">forms</span><span class="p">,</span> <span class="n">validDelimiters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the morphological analysis-related attributes of a list of form models.</span>
+
+<span class="sd">    Attempt to update the values of the ``morphemeBreakIDs``,</span>
+<span class="sd">    ``morphemeGlossIDs``, ``syntacticCategoryString`` and ``breakGlossCategory``</span>
+<span class="sd">    attributes of all forms in ``forms`` using only the lexical items specified</span>
+<span class="sd">    in the list ``kwargs[&#39;lexicalItems&#39;]`` or ``kwargs[&#39;deletedLexicalItems&#39;]``.</span>
+<span class="sd">    Whenever an update occurs, backup the form and commit the changes.</span>
+
+<span class="sd">    :param list forms: the form models to be updated.</span>
+<span class="sd">    :param list validDelimiters: morpheme delimiters as strings.</span>
+<span class="sd">    :param list kwargs[&#39;lexicalItems&#39;]: a list of form models.</span>
+<span class="sd">    :param list kwargs[&#39;deletedLexicalItems&#39;]: a list of form models.</span>
+<span class="sd">    :returns: a list of form ``id`` values corresponding to the forms that have</span>
+<span class="sd">        been updated.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">updatedFormIds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">forms</span><span class="p">:</span>
+        <span class="n">formDict</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">updateMorphemeReferencesOfForm</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">validDelimiters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c"># form will be False if there are no changes.</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">:</span>
+            <span class="n">backupForm</span><span class="p">(</span><span class="n">formDict</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">datetimeModified</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">updatedFormIds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">updatedFormIds</span>
+
+</div>
+<div class="viewcode-block" id="compileMorphemicAnalysis"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.compileMorphemicAnalysis">[docs]</a><span class="k">def</span> <span class="nf">compileMorphemicAnalysis</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">morphemeDelimiters</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An error-handling wrapper arround :func:`compileMorphemicAnalysis_`.</span>
+
+<span class="sd">    Catch any error, log it and return a default 4-tuple.</span>
+
+<span class="sd">    :param form: the form model for which the morphological values are to be generated.</span>
+<span class="sd">    :param list validDelimiters: morpheme delimiters as strings.</span>
+<span class="sd">    :param dict kwargs: arguments that can affect the degree to which the database is queried.</span>
+<span class="sd">    :returns: the output of :func:`compileMorphemicAnalysis_` or, if an error</span>
+<span class="sd">        occurs, a 4-tuple of ``None`` objects.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">compileMorphemicAnalysis_</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">morphemeDelimiters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;compileMorphemicAnalysis raised an error (</span><span class="si">%s</span><span class="s">) on &quot;</span><span class="si">%s</span><span class="s">&quot;/&quot;</span><span class="si">%s</span><span class="s">&quot;.&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">e</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="compileMorphemicAnalysis_"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.compileMorphemicAnalysis_">[docs]</a><span class="k">def</span> <span class="nf">compileMorphemicAnalysis_</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">morphemeDelimiters</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate values fo the morphological analysis-related attributes of a form model.</span>
+
+<span class="sd">    :param form: the form model for which the morphological values are to be generated.</span>
+<span class="sd">    :param list validDelimiters: morpheme delimiters as strings.</span>
+<span class="sd">    :param dict kwargs: arguments that can affect the degree to which the database is queried.</span>
+<span class="sd">    :returns: a 4-tuple containing the generated values or all four ``None``</span>
+<span class="sd">        objects if no values can be generated.</span>
+
+<span class="sd">    Generate values for the ``morphemeBreakIDs``, ``morphemeGlossIDs``,</span>
+<span class="sd">    ``syntacticCategoryString`` and ``breakGlossCategory`` attributes of the</span>
+<span class="sd">    input form.</span>
+
+<span class="sd">    For each morpheme detected in the ``form``, search the database for forms</span>
+<span class="sd">    whose ``morphemeBreak`` value matches the morpheme&#39;s phonemic form and whose</span>
+<span class="sd">    ``morphemeGloss`` value matches the morpheme&#39;s gloss.  If a perfect match is</span>
+<span class="sd">    not found, searc the database for forms matching just the phonemic form or</span>
+<span class="sd">    just the gloss.</span>
+
+<span class="sd">    Matching forms are represented as triples where the first element is the</span>
+<span class="sd">    ``id`` value of the match, the second is its ``morphemeBreak`` or</span>
+<span class="sd">    ``morphemeGloss`` value and the third is its ``syntacticCategory.name``</span>
+<span class="sd">    value.  To illustrate, consider a form with ``morphemeBreak`` value</span>
+<span class="sd">    u&#39;chien-s&#39; and ``morphemeGloss`` value u&#39;dog-PL&#39; and assume the lexical</span>
+<span class="sd">    entries &#39;chien/dog/N/33&#39;, &#39;s/PL/Agr/103&#39; and &#39;s/PL/Num/111&#39; (where, for</span>
+<span class="sd">    */a/b/c/d*, *a* is the ``morphemeBreak`` value, *b* is the ``morphemeGloss``</span>
+<span class="sd">    value, *c* is the ``syntacticCategory.name`` value and *d* is the ``id``</span>
+<span class="sd">    value.  Running :func:`compileMorphemicAnalysis` on the target form returns</span>
+<span class="sd">    the following 4-tuple ``q``::</span>
+
+<span class="sd">        (</span>
+<span class="sd">            json.dumps([[[[33, u&#39;dog&#39;, u&#39;N&#39;]], [[111, u&#39;PL&#39;, u&#39;Num&#39;], [103, u&#39;PL&#39;, u&#39;Agr&#39;]]]]),</span>
+<span class="sd">            json.dumps([[[[33, u&#39;chien&#39;, u&#39;N&#39;]], [[111, u&#39;s&#39;, u&#39;Num&#39;], [103, u&#39;s&#39;, u&#39;Agr&#39;]]]]),</span>
+<span class="sd">            u&#39;N-Num&#39;,</span>
+<span class="sd">            u&#39;chien|dog|N-s|PL|Num&#39;</span>
+<span class="sd">        )</span>
+
+<span class="sd">    where ``q[0]`` is the ``morphemeBreakIDs`` value, ``q[1]`` is the</span>
+<span class="sd">    ``morphemeGlossIDs`` value, ``q[2]`` is ``syntacticCategoryString`` value</span>
+<span class="sd">    and ``q[3]`` is ``breakGlossCategory`` value.</span>
+
+<span class="sd">    If ``kwargs`` contains a &#39;lexicalItems&#39; or a &#39;deletedLexicalItems&#39; key, then</span>
+<span class="sd">    :func:`compileMorphemicAnalysis` will *update* (i.e., not re-create) the 4</span>
+<span class="sd">    relevant values of the form using only the items in</span>
+<span class="sd">    ``kwargs[&#39;lexicalItems&#39;]`` or ``kwargs[&#39;deletedLexicalItems&#39;]``.  This</span>
+<span class="sd">    facilitates lexical change percolation without massively redundant database</span>
+<span class="sd">    queries.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">join</span><span class="p">(</span><span class="n">bgc</span><span class="p">,</span> <span class="n">morphemeDelimiters</span><span class="p">,</span> <span class="n">bgcDelimiter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert a break-gloss-category tuple into a delimited string.</span>
+<span class="sd">        </span>
+<span class="sd">        Join the break-gloss-category 3-tuple ``bgc`` using the delimiter</span>
+<span class="sd">        string.  If ``bgc`` contains only morpheme/word delimiters, then the</span>
+<span class="sd">        first such delimiter is returned::</span>
+
+<span class="sd">        :param list bgc: the morpheme as phonemic form, gloss and category.</span>
+<span class="sd">        :param list morphemeDelimiters: morpheme delimiters as strings.</span>
+<span class="sd">        :param str bgcDelimiter: delimiter used to join the elements of the morpheme.</span>
+<span class="sd">        :returns: a string representation of the morpheme.</span>
+
+<span class="sd">            &gt;&gt;&gt; join([u&#39;le&#39;, u&#39;the&#39;, u&#39;Det&#39;], [u&#39;-&#39;, u&#39;=&#39;, u&#39; &#39;], u&#39;|&#39;)</span>
+<span class="sd">            u&#39;le|the|Det&#39;</span>
+
+<span class="sd">            &gt;&gt;&gt; join([u&#39;-&#39;, u&#39;-&#39;, u&#39;-&#39;], [u&#39;-&#39;, u&#39;=&#39;, u&#39; &#39;], u&#39;|&#39;)</span>
+<span class="sd">            u&#39;-&#39;</span>
+
+<span class="sd">            &gt;&gt;&gt; join([u&#39;=&#39;, u&#39;-&#39;, u&#39;=&#39;], [u&#39;-&#39;, u&#39;=&#39;, u&#39; &#39;], u&#39;|&#39;)</span>
+<span class="sd">            u&#39;=&#39;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">bgc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">morphemeDelimiters</span> <span class="ow">and</span> <span class="n">bgc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">morphemeDelimiters</span> <span class="ow">and</span> \
+        <span class="n">bgc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="n">morphemeDelimiters</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bgc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bgcDelimiter</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bgc</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">morphemicAnalysisIsConsistent</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Determine whether a morphemic analysis is consistent.</span>
+<span class="sd">        </span>
+<span class="sd">        :param dict kwargs: contains the morphological data in various pre-processed states.</span>
+<span class="sd">        :returns: ``True`` if the morphemic analysis is consistent; ``False`` otherwise.</span>
+
+<span class="sd">        &quot;Consistent&quot; means that the ``morphemeBreak`` and ``morphemeGloss``</span>
+<span class="sd">        values of ``kargs`` are not empty, there are equal numbers of morpheme</span>
+<span class="sd">        break and morpheme gloss &quot;words&quot; and each morpheme break word has the</span>
+<span class="sd">        same number of morphemes as its morpheme gloss counterpart.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">u&#39;&#39;</span> <span class="ow">and</span> \
+        <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">u&#39;&#39;</span> <span class="ow">and</span> \
+        <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;mbWords&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;mgWords&#39;</span><span class="p">])</span> <span class="ow">and</span> \
+        <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;morphemeSplitter&#39;</span><span class="p">],</span> <span class="n">mbw</span><span class="p">))</span> <span class="k">for</span> <span class="n">mbw</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;mbWords&#39;</span><span class="p">]]</span> <span class="o">==</span> \
+        <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;morphemeSplitter&#39;</span><span class="p">],</span> <span class="n">mgw</span><span class="p">))</span> <span class="k">for</span> <span class="n">mgw</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;mgWords&#39;</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">getCategoryFromPartialMatch</span><span class="p">(</span><span class="n">morphemeMatches</span><span class="p">,</span> <span class="n">glossMatches</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a syntactic category name for a partially matched morpheme.</span>
+
+<span class="sd">        :param list morphemeMatches: forms matching the morpheme&#39;s transcription.</span>
+<span class="sd">        :param list glossMatches: forms matching the morpheme&#39;s gloss.</span>
+<span class="sd">        :returns: the category name of the first morpheme match, else that of</span>
+<span class="sd">            the first gloss match, else ``u&#39;?&#39;``.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">filter</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span>
+            <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">morphemeMatches</span><span class="p">]</span> <span class="o">+</span>
+            <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">glossMatches</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s">u&#39;?&#39;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">getBreakGlossCategory</span><span class="p">(</span><span class="n">morphemeDelimiters</span><span class="p">,</span> <span class="n">morphemeBreak</span><span class="p">,</span> <span class="n">morphemeGloss</span><span class="p">,</span>
+                              <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">bgcDelimiter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a ``breakGlossCategory`` string, e.g., u&#39;le|the|Det-s|PL|Num chien|dog|N-s|PL|Num&#39;.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">delimiters</span> <span class="o">=</span> <span class="p">[</span><span class="s">u&#39; &#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">morphemeDelimiters</span>
+            <span class="n">splitter</span> <span class="o">=</span> <span class="s">u&#39;([</span><span class="si">%s</span><span class="s">])&#39;</span> <span class="o">%</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">h</span><span class="o">.</span><span class="n">escREMetaChars</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">delimiters</span><span class="p">])</span>
+            <span class="n">mbSplit</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">morphemeBreak</span><span class="p">))</span>
+            <span class="n">mgSplit</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">morphemeGloss</span><span class="p">))</span>
+            <span class="n">scSplit</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">syntacticCategoryString</span><span class="p">))</span>
+            <span class="n">breakGlossCategory</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mbSplit</span><span class="p">,</span> <span class="n">mgSplit</span><span class="p">,</span> <span class="n">scSplit</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s">u&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">join</span><span class="p">(</span><span class="n">bgc</span><span class="p">,</span> <span class="n">delimiters</span><span class="p">,</span> <span class="n">bgcDelimiter</span><span class="p">)</span> <span class="k">for</span> <span class="n">bgc</span> <span class="ow">in</span> <span class="n">breakGlossCategory</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">getFakeForm</span><span class="p">(</span><span class="n">quadruple</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return ``quadruple`` as a form-like object.</span>
+<span class="sd">        </span>
+<span class="sd">        :param tuple quadruple: ``(id, mb, mg, sc)``.</span>
+<span class="sd">        :returns: a :class:`FakeForm` instance.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">class</span> <span class="nc">FakeForm</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">class</span> <span class="nc">FakeSyntacticCategory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="n">fakeForm</span> <span class="o">=</span> <span class="n">FakeForm</span><span class="p">()</span>
+        <span class="n">fakeSyntacticCategory</span> <span class="o">=</span> <span class="n">FakeSyntacticCategory</span><span class="p">()</span>
+        <span class="n">fakeSyntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">quadruple</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">fakeForm</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">quadruple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">fakeForm</span><span class="o">.</span><span class="n">morphemeBreak</span> <span class="o">=</span> <span class="n">quadruple</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">fakeForm</span><span class="o">.</span><span class="n">morphemeGloss</span> <span class="o">=</span> <span class="n">quadruple</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">fakeForm</span><span class="o">.</span><span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">fakeSyntacticCategory</span>
+        <span class="k">return</span> <span class="n">fakeForm</span>
+
+    <span class="k">def</span> <span class="nf">getPerfectMatches</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">wordIndex</span><span class="p">,</span> <span class="n">morphemeIndex</span><span class="p">,</span> <span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">,</span> <span class="n">matchesFound</span><span class="p">,</span>
+                          <span class="n">lexicalItems</span><span class="p">,</span> <span class="n">deletedLexicalItems</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of forms that perfectly match a given morpheme.</span>
+<span class="sd">        </span>
+<span class="sd">        That is, return all forms ``f`` such that ``f.morphemeBreak==morpheme``</span>
+<span class="sd">        *and* ``f.morphemeGloss==gloss``.</span>
+
+<span class="sd">        If one of ``lexicalItems`` or ``deletedLexicalItems`` is truthy, then</span>
+<span class="sd">        the result is generated using only those lists plus the existing</span>
+<span class="sd">        references ``form.morphemeBreakIDs`` and ``form.morphemeGlossIDs``.</span>
+<span class="sd">        This facilitates lexical change percolation while eliminating</span>
+<span class="sd">        unnecessary database requests.  Note that the presence of a non-empty</span>
+<span class="sd">        ``lexicalItems`` or ``deletedLexicalItems`` list implies that the</span>
+<span class="sd">        supplied forms represent the only changes to the database relevant to</span>
+<span class="sd">        the morphological analysis of ``form``.</span>
+
+<span class="sd">        One complication arises from the fact that perfect matches mask partial</span>
+<span class="sd">        ones.  If :func:`getPerfectMatches` removes the only perfect matches for</span>
+<span class="sd">        a given morpheme, then it is possible that there are partial matches not</span>
+<span class="sd">        listed in ``lexicalItems``.  Therefore, :ref:`getPartialMatches` must be</span>
+<span class="sd">        made to query the database *only* when the morpheme in question is</span>
+<span class="sd">        encountered.  This message is passed to :ref:`getPartialMatches` by</span>
+<span class="sd">        returning an ordered pair (tuple) containing the newly match-less</span>
+<span class="sd">        morpheme instead of the usual list of matches.</span>
+
+<span class="sd">        :param form: the form model whose morphological analysis-related attributes are being generated.</span>
+<span class="sd">        :param int wordIndex: the index of the word containing the morpheme being analyzed.</span>
+<span class="sd">        :param int morphemeIndex: the index, within the word, of the morpheme being analyzed.</span>
+<span class="sd">        :param str morpheme: the transcription of the morpheme.</span>
+<span class="sd">        :param str gloss: the gloss of the morpheme.</span>
+<span class="sd">        :param dict matchesFound: keys are morpheme 2-tuples and values are lists of matches.</span>
+<span class="sd">        :param list lexicalItems: forms constituting the exclusive pool of potential matches.</span>
+<span class="sd">        :param list deletedLexicalItems: forms that must be deleted from the matches.</span>
+<span class="sd">        :returns: an ordered pair (tuple), where the second element is always</span>
+<span class="sd">            the (potentially updated) ``matchesFound`` dictionary.  In the</span>
+<span class="sd">            normal case, the first element is the list of perfect matches for</span>
+<span class="sd">            the input morpheme.  When it is necessary to force</span>
+<span class="sd">            :func:`getPartialMatches` to query the database, the first element</span>
+<span class="sd">            of the return value is the ``(morpheme, gloss)`` tuple representing</span>
+<span class="sd">            the morpheme.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">)</span> <span class="ow">in</span> <span class="n">matchesFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">matchesFound</span><span class="p">[(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">)],</span> <span class="n">matchesFound</span>
+        <span class="k">if</span> <span class="n">lexicalItems</span> <span class="ow">or</span> <span class="n">deletedLexicalItems</span><span class="p">:</span>
+            <span class="n">extantMorphemeBreakIDs</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">morphemeBreakIDs</span><span class="p">)</span>
+            <span class="n">extantMorphemeGlossIDs</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">morphemeGlossIDs</span><span class="p">)</span>
+            <span class="c"># Extract extant perfect matches as quadruples: (id, mb, mg, sc)</span>
+            <span class="n">extantPerfectMatchesOriginally</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">extantMorphemeBreakIDs</span><span class="p">[</span><span class="n">wordIndex</span><span class="p">][</span><span class="n">morphemeIndex</span><span class="p">],</span>
+                             <span class="n">extantMorphemeGlossIDs</span><span class="p">[</span><span class="n">wordIndex</span><span class="p">][</span><span class="n">morphemeIndex</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="c"># Make extant matches look like form objects and remove those that</span>
+            <span class="c"># may have been deleted or updated</span>
+            <span class="n">extantPerfectMatches</span> <span class="o">=</span> <span class="p">[</span><span class="n">getFakeForm</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">extantPerfectMatchesOriginally</span>
+                <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">lexicalItems</span> <span class="o">+</span> <span class="n">deletedLexicalItems</span><span class="p">]]</span>
+            <span class="n">perfectMatchesInLexicalItems</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">lexicalItems</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">morphemeBreak</span> <span class="o">==</span> <span class="n">morpheme</span> <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">morphemeGloss</span> <span class="o">==</span> <span class="n">gloss</span><span class="p">]</span>
+            <span class="n">perfectMatchesNow</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">extantPerfectMatches</span> <span class="o">+</span> <span class="n">perfectMatchesInLexicalItems</span><span class="p">,</span>
+                                       <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="c"># If perfect matches have been emptied by us, we return a tuple so that</span>
+            <span class="c"># getPartialMatches knows to query the database for this morpheme only</span>
+            <span class="k">if</span> <span class="n">perfectMatchesNow</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">and</span> <span class="n">extantPerfectMatchesOriginally</span> <span class="o">!=</span> <span class="p">[]:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">),</span> <span class="n">matchesFound</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">perfectMatchesNow</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span>\
+                <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="o">==</span><span class="n">morpheme</span><span class="p">)</span>\
+                <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="o">==</span><span class="n">gloss</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">asc</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="n">matchesFound</span><span class="p">[(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">matchesFound</span>
+
+    <span class="k">def</span> <span class="nf">getPartialMatches</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">wordIndex</span><span class="p">,</span> <span class="n">morphemeIndex</span><span class="p">,</span> <span class="n">matchesFound</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of forms that partially match a given morpheme.</span>
+<span class="sd">        </span>
+<span class="sd">        If ``kwargs[&#39;morpheme&#39;]`` is present, return all forms ``f`` such that</span>
+<span class="sd">        ``f.morphemeBreak==kwargs[&#39;morpheme&#39;]``; else if ``kwargs[&#39;gloss&#39;]`` is</span>
+<span class="sd">        present, return all forms such that</span>
+<span class="sd">        ``f.morphemeGloss==kwargs[&#39;gloss&#39;]``.</span>
+
+<span class="sd">        If ``kwargs[&#39;lexicalItems&#39;]`` or ``kwargs[&#39;deletedLexicalItems&#39;]`` are</span>
+<span class="sd">        present, then that list of forms will be used to build the list of</span>
+<span class="sd">        partial matches and database will, usually, not be queried, cf.</span>
+<span class="sd">        :func:`getPerfectMatches` above.  The only case where the db will be</span>
+<span class="sd">        queried (when ``lexicalItems`` or ``deletedLexicalItems`` are supplied)</span>
+<span class="sd">        is when ``kwargs[&#39;morpheme&#39;]`` or ``kwargs[&#39;gloss&#39;]`` is in</span>
+<span class="sd">        ``forceQuery``.  When this is so, it indicates that</span>
+<span class="sd">        :func:`getPerfectMatches` is communicating that the supplied lexical</span>
+<span class="sd">        info resulted in all perfect matches for the given morpheme being</span>
+<span class="sd">        emptied and that, therefore, the database must be searched for partial</span>
+<span class="sd">        matches.</span>
+
+<span class="sd">        :param form: the form model whose morphological analysis-related attributes are being generated.</span>
+<span class="sd">        :param int wordIndex: the index of the word containing the morpheme being analyzed.</span>
+<span class="sd">        :param int morphemeIndex: the index, within the word, of the morpheme being analyzed.</span>
+<span class="sd">        :param dict matchesFound: keys are morpheme 2-tuples and values are lists of matches.</span>
+<span class="sd">        :param str kwargs[&#39;morpheme&#39;]: the phonemic representation of the morpheme, if present.</span>
+<span class="sd">        :param str kwargs[&#39;gloss&#39;]: the gloss of the morpheme, if present.</span>
+<span class="sd">        :param list kwargs[&#39;lexicalItems&#39;]: forms constituting the exclusive pool of potential matches.</span>
+<span class="sd">        :param list kwargs[&#39;deletedLexicalItems&#39;]: forms that must be deleted from the matches.</span>
+<span class="sd">        :param iterable kwargs[&#39;forceQuery&#39;]: a 2-tuple representing a morpheme or a list of perfect matches.</span>
+<span class="sd">        :returns: an ordered pair (tuple), where the first element is the list</span>
+<span class="sd">            of partial matches found and the second is the (potentially updated)</span>
+<span class="sd">            ``matchesFound`` dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lexicalItems</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;lexicalItems&#39;</span><span class="p">)</span>
+        <span class="n">deletedLexicalItems</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;deletedLexicalItems&#39;</span><span class="p">)</span>
+        <span class="n">forceQuery</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;forceQuery&#39;</span><span class="p">)</span>   <span class="c"># The output of getPerfectMatches: [] or (morpheme, gloss)</span>
+        <span class="n">morpheme</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;morpheme&#39;</span><span class="p">)</span>
+        <span class="n">gloss</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;gloss&#39;</span><span class="p">)</span>
+        <span class="n">attribute</span> <span class="o">=</span> <span class="n">morpheme</span> <span class="ow">and</span> <span class="s">u&#39;morphemeBreak&#39;</span> <span class="ow">or</span> <span class="s">u&#39;morphemeGloss&#39;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">morpheme</span> <span class="ow">or</span> <span class="n">gloss</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">)</span> <span class="ow">in</span> <span class="n">matchesFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">matchesFound</span><span class="p">[(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">)],</span> <span class="n">matchesFound</span>
+        <span class="k">if</span> <span class="n">lexicalItems</span> <span class="ow">or</span> <span class="n">deletedLexicalItems</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">forceQuery</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span>\
+                        <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Form</span><span class="p">,</span> <span class="n">attribute</span><span class="p">)</span><span class="o">==</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">asc</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">extantAnalyses</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">attribute</span> <span class="o">+</span> <span class="s">&#39;IDs&#39;</span><span class="p">))[</span><span class="n">wordIndex</span><span class="p">][</span><span class="n">morphemeIndex</span><span class="p">]</span>
+                <span class="c"># Extract extant partial matches as quadruples of the form (id, mb, mg, sc)</span>
+                <span class="c"># where one of mb or mg will be None.</span>
+                <span class="n">extantPartialMatches</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">None</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="k">if</span> <span class="n">morpheme</span> <span class="k">else</span>
+                                    <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">None</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">extantAnalyses</span><span class="p">]</span>
+                <span class="c"># Make extant matches look like form objects and remove those that</span>
+                <span class="c"># may have been deleted or updated</span>
+                <span class="n">extantPartialMatches</span> <span class="o">=</span> <span class="p">[</span><span class="n">getFakeForm</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">extantPartialMatches</span>
+                    <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">lexicalItems</span> <span class="o">+</span> <span class="n">deletedLexicalItems</span><span class="p">]]</span>
+                <span class="n">partialMatchesInLexicalItems</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">lexicalItems</span>
+                                                <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">attribute</span><span class="p">)</span> <span class="o">==</span> <span class="n">value</span><span class="p">]</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">extantPartialMatches</span> <span class="o">+</span> <span class="n">partialMatchesInLexicalItems</span><span class="p">,</span>
+                              <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Form</span><span class="p">,</span> <span class="n">attribute</span><span class="p">)</span><span class="o">==</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">asc</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="n">matchesFound</span><span class="p">[(</span><span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">matchesFound</span>
+
+    <span class="n">bgcDelimiter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;bgcDelimiter&#39;</span><span class="p">,</span> <span class="s">u&#39;|&#39;</span><span class="p">)</span>     <span class="c"># The default delimiter for the breakGlossCategory field</span>
+    <span class="n">lexicalItems</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;lexicalItems&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">deletedLexicalItems</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;deletedLexicalItems&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">morphemeBreakIDs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">morphemeGlossIDs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">syntacticCategoryString</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">morphemeDelimiters</span> <span class="o">=</span> <span class="n">morphemeDelimiters</span> <span class="ow">or</span> <span class="n">h</span><span class="o">.</span><span class="n">getMorphemeDelimiters</span><span class="p">()</span>
+    <span class="n">morphemeSplitter</span> <span class="o">=</span> <span class="n">morphemeDelimiters</span> <span class="ow">and</span> <span class="s">u&#39;[</span><span class="si">%s</span><span class="s">]&#39;</span> <span class="o">%</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">escREMetaChars</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">morphemeDelimiters</span><span class="p">])</span> <span class="ow">or</span> <span class="s">u&#39;&#39;</span>
+    <span class="n">morphemeBreak</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreak</span>
+    <span class="n">morphemeGloss</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeGloss</span>
+    <span class="n">mbWords</span> <span class="o">=</span> <span class="n">morphemeBreak</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>     <span class="c"># e.g., u&#39;le-s chien-s&#39;</span>
+    <span class="n">mgWords</span> <span class="o">=</span> <span class="n">morphemeGloss</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>     <span class="c"># e.g., u&#39;the-PL dog-PL&#39;</span>
+    <span class="n">scWords</span> <span class="o">=</span> <span class="n">morphemeBreak</span><span class="o">.</span><span class="n">split</span><span class="p">()[:]</span>  <span class="c"># e.g., u&#39;le-s chien-s&#39; (placeholder)</span>
+
+    <span class="k">if</span> <span class="n">morphemicAnalysisIsConsistent</span><span class="p">(</span><span class="n">morphemeDelimiters</span><span class="o">=</span><span class="n">morphemeDelimiters</span><span class="p">,</span>
+        <span class="n">morphemeBreak</span><span class="o">=</span><span class="n">morphemeBreak</span><span class="p">,</span> <span class="n">morphemeGloss</span><span class="o">=</span><span class="n">morphemeGloss</span><span class="p">,</span> <span class="n">mbWords</span><span class="o">=</span><span class="n">mbWords</span><span class="p">,</span>
+        <span class="n">mgWords</span><span class="o">=</span><span class="n">mgWords</span><span class="p">,</span> <span class="n">morphemeSplitter</span><span class="o">=</span><span class="n">morphemeSplitter</span><span class="p">):</span>
+        <span class="n">matchesFound</span> <span class="o">=</span> <span class="p">{}</span>   <span class="c"># temporary store -- eliminates redundant queries &amp; processing -- updated as a byproduct of getPerfectMatches and getPartialMatches</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mbWords</span><span class="p">)):</span>
+            <span class="n">mbWordAnalysis</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">mgWordAnalysis</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">mbWord</span> <span class="o">=</span> <span class="n">mbWords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>     <span class="c"># e.g., u&#39;chien-s&#39;</span>
+            <span class="n">mgWord</span> <span class="o">=</span> <span class="n">mgWords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>     <span class="c"># e.g., u&#39;dog-PL&#39;</span>
+            <span class="n">scWord</span> <span class="o">=</span> <span class="n">scWords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>     <span class="c"># e.g., u&#39;chien-s&#39;</span>
+            <span class="n">morphemeAndDelimiterSplitter</span> <span class="o">=</span> <span class="s">&#39;(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">morphemeSplitter</span>    <span class="c"># splits on delimiters while retaining them</span>
+            <span class="n">mbWordMorphemesList</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">morphemeAndDelimiterSplitter</span><span class="p">,</span> <span class="n">mbWord</span><span class="p">)[::</span><span class="mi">2</span><span class="p">]</span>   <span class="c"># e.g., [&#39;chien&#39;, &#39;s&#39;]</span>
+            <span class="n">mgWordMorphemesList</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">morphemeAndDelimiterSplitter</span><span class="p">,</span> <span class="n">mgWord</span><span class="p">)[::</span><span class="mi">2</span><span class="p">]</span>   <span class="c"># e.g., [&#39;dog&#39;, &#39;PL&#39;]</span>
+            <span class="n">scWordAnalysis</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">morphemeAndDelimiterSplitter</span><span class="p">,</span> <span class="n">scWord</span><span class="p">)</span>    <span class="c"># e.g., [&#39;chien&#39;, &#39;-&#39;, &#39;s&#39;]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mbWordMorphemesList</span><span class="p">)):</span>
+                <span class="n">morpheme</span> <span class="o">=</span> <span class="n">mbWordMorphemesList</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">gloss</span> <span class="o">=</span> <span class="n">mgWordMorphemesList</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">perfectMatches</span><span class="p">,</span> <span class="n">matchesFound</span> <span class="o">=</span> <span class="n">getPerfectMatches</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">morpheme</span><span class="p">,</span> <span class="n">gloss</span><span class="p">,</span>
+                                            <span class="n">matchesFound</span><span class="p">,</span> <span class="n">lexicalItems</span><span class="p">,</span> <span class="n">deletedLexicalItems</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">perfectMatches</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">perfectMatches</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="n">mbWordAnalysis</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="p">,</span>
+                        <span class="nb">getattr</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">perfectMatches</span><span class="p">])</span>
+                    <span class="n">mgWordAnalysis</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="p">,</span>
+                        <span class="nb">getattr</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">perfectMatches</span><span class="p">])</span>
+                    <span class="n">scWordAnalysis</span><span class="p">[</span><span class="n">j</span> <span class="o">*</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">perfectMatches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">u&#39;?&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">morphemeMatches</span><span class="p">,</span> <span class="n">matchesFound</span> <span class="o">=</span> <span class="n">getPartialMatches</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">matchesFound</span><span class="p">,</span> <span class="n">morpheme</span><span class="o">=</span><span class="n">morpheme</span><span class="p">,</span>
+                                        <span class="n">forceQuery</span><span class="o">=</span><span class="n">perfectMatches</span><span class="p">,</span> <span class="n">lexicalItems</span><span class="o">=</span><span class="n">lexicalItems</span><span class="p">,</span>
+                                        <span class="n">deletedLexicalItems</span><span class="o">=</span><span class="n">deletedLexicalItems</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">morphemeMatches</span><span class="p">:</span>
+                        <span class="n">mbWordAnalysis</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="p">,</span>
+                            <span class="nb">getattr</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">morphemeMatches</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">mbWordAnalysis</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                    <span class="n">glossMatches</span><span class="p">,</span> <span class="n">matchesFound</span> <span class="o">=</span> <span class="n">getPartialMatches</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">matchesFound</span><span class="p">,</span> <span class="n">gloss</span><span class="o">=</span><span class="n">gloss</span><span class="p">,</span>
+                                        <span class="n">forceQuery</span><span class="o">=</span><span class="n">perfectMatches</span><span class="p">,</span> <span class="n">lexicalItems</span><span class="o">=</span><span class="n">lexicalItems</span><span class="p">,</span>
+                                        <span class="n">deletedLexicalItems</span><span class="o">=</span><span class="n">deletedLexicalItems</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">glossMatches</span><span class="p">:</span>
+                        <span class="n">mgWordAnalysis</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="p">,</span>
+                            <span class="nb">getattr</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">glossMatches</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">mgWordAnalysis</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                    <span class="n">scWordAnalysis</span><span class="p">[</span><span class="n">j</span> <span class="o">*</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">getCategoryFromPartialMatch</span><span class="p">(</span><span class="n">morphemeMatches</span><span class="p">,</span> <span class="n">glossMatches</span><span class="p">)</span>
+            <span class="n">morphemeBreakIDs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mbWordAnalysis</span><span class="p">)</span>
+            <span class="n">morphemeGlossIDs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mgWordAnalysis</span><span class="p">)</span>
+            <span class="n">syntacticCategoryString</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">scWordAnalysis</span><span class="p">))</span>
+        <span class="n">syntacticCategoryString</span> <span class="o">=</span> <span class="s">u&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">syntacticCategoryString</span><span class="p">)</span>
+        <span class="n">breakGlossCategory</span> <span class="o">=</span> <span class="n">getBreakGlossCategory</span><span class="p">(</span><span class="n">morphemeDelimiters</span><span class="p">,</span> <span class="n">morphemeBreak</span><span class="p">,</span>
+                                                   <span class="n">morphemeGloss</span><span class="p">,</span> <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">bgcDelimiter</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">morphemeBreakIDs</span> <span class="o">=</span> <span class="n">morphemeGlossIDs</span> <span class="o">=</span> <span class="n">syntacticCategoryString</span> <span class="o">=</span> <span class="n">breakGlossCategory</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">morphemeBreakIDs</span><span class="p">)),</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">morphemeGlossIDs</span><span class="p">)),</span> \
+           <span class="n">syntacticCategoryString</span><span class="p">,</span> <span class="n">breakGlossCategory</span>
+
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Form -&gt; Morpheme updating functionality</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="updateFormsContainingThisFormAsMorpheme"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateFormsContainingThisFormAsMorpheme">[docs]</a><span class="k">def</span> <span class="nf">updateFormsContainingThisFormAsMorpheme</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">change</span><span class="o">=</span><span class="s">&#39;create&#39;</span><span class="p">,</span> <span class="n">previousVersion</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update the morphological analysis-related attributes of every form containing the input form as morpheme.</span>
+<span class="sd">    </span>
+<span class="sd">    Update the values of the ``morphemeBreadIDs``, ``morphemeGlossIDs``,</span>
+<span class="sd">    ``syntacticCategoryString``, and ``breakGlossCategory`` attributes of each</span>
+<span class="sd">    form that contains the input form in its morphological analysis, i.e., each</span>
+<span class="sd">    form whose ``morphemeBreak`` value contains the input form&#39;s</span>
+<span class="sd">    ``morphemeBreak`` value as a morpheme or whose ``morphemeGloss`` value</span>
+<span class="sd">    contains the input form&#39;s ``morphemeGloss`` line as a gloss.  If the input</span>
+<span class="sd">    form is not lexical (i.e., if it contains the space character or a</span>
+<span class="sd">    morpheme delimiter), then no updates occur.</span>
+
+<span class="sd">    :param form: a form model object.</span>
+<span class="sd">    :param str change: indicates whether the form has just been deleted or created/updated.</span>
+<span class="sd">    :param dict previousVersion: a representation of the form prior to update.</span>
+<span class="sd">    :returns: ``None``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">isLexical</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+        <span class="c"># Here we construct the query to get all forms that may have been affected</span>
+        <span class="c"># by the change to the lexical item (i.e., form).</span>
+        <span class="n">morphemeDelimiters</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getMorphemeDelimiters</span><span class="p">()</span>
+        <span class="n">escapedMorphemeDelimiters</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="o">.</span><span class="n">escREMetaChars</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">morphemeDelimiters</span><span class="p">]</span>
+        <span class="n">startPatt</span> <span class="o">=</span> <span class="s">&#39;(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="s">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">escapedMorphemeDelimiters</span> <span class="o">+</span> <span class="p">[</span><span class="s">u&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;^&#39;</span><span class="p">])</span>
+        <span class="n">endPatt</span> <span class="o">=</span> <span class="s">&#39;(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="s">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">escapedMorphemeDelimiters</span> <span class="o">+</span> <span class="p">[</span><span class="s">u&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;$&#39;</span><span class="p">])</span>
+        <span class="n">morphemePatt</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">startPatt</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="p">,</span> <span class="n">endPatt</span><span class="p">)</span>
+        <span class="n">glossPatt</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">startPatt</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="p">,</span> <span class="n">endPatt</span><span class="p">)</span>
+        <span class="n">disjunctiveConditions</span> <span class="o">=</span> <span class="p">[</span><span class="n">Form</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)(</span><span class="n">morphemePatt</span><span class="p">),</span>
+                                 <span class="n">Form</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)(</span><span class="n">glossPatt</span><span class="p">)]</span>
+        <span class="n">matchesQuery</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span><span class="o">.</span><span class="n">options</span><span class="p">(</span><span class="n">subqueryload</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">))</span>
+
+        <span class="c"># Updates entail a wider range of possibly affected forms</span>
+        <span class="k">if</span> <span class="n">previousVersion</span> <span class="ow">and</span> <span class="n">h</span><span class="o">.</span><span class="n">isLexical</span><span class="p">(</span><span class="n">previousVersion</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">previousVersion</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="p">:</span>
+                <span class="n">morphemePattPV</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">startPatt</span><span class="p">,</span> <span class="n">previousVersion</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">],</span> <span class="n">endPatt</span><span class="p">)</span>
+                <span class="n">disjunctiveConditions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">morphemeBreak</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)(</span><span class="n">morphemePattPV</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">previousVersion</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="p">:</span>
+                <span class="n">glossPattPV</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">startPatt</span><span class="p">,</span> <span class="n">previousVersion</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">],</span> <span class="n">endPatt</span><span class="p">)</span>
+                <span class="n">disjunctiveConditions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">morphemeGloss</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)(</span><span class="n">glossPattPV</span><span class="p">))</span>
+
+        <span class="n">matchesQuery</span> <span class="o">=</span> <span class="n">matchesQuery</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">or_</span><span class="p">(</span><span class="o">*</span><span class="n">disjunctiveConditions</span><span class="p">))</span>
+        <span class="c">#matches = [f for f in matchesQuery.all() if f.id != form.id]</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">matchesQuery</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">change</span> <span class="o">==</span> <span class="s">&#39;delete&#39;</span><span class="p">:</span>
+            <span class="n">updatedFormIds</span> <span class="o">=</span> <span class="n">updateMorphemeReferencesOfForms</span><span class="p">(</span><span class="n">matches</span><span class="p">,</span>
+                                <span class="n">morphemeDelimiters</span><span class="p">,</span> <span class="n">deletedLexicalItems</span><span class="o">=</span><span class="p">[</span><span class="n">form</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">updatedFormIds</span> <span class="o">=</span> <span class="n">updateMorphemeReferencesOfForms</span><span class="p">(</span><span class="n">matches</span><span class="p">,</span>
+                                <span class="n">morphemeDelimiters</span><span class="p">,</span> <span class="n">lexicalItems</span><span class="o">=</span><span class="p">[</span><span class="n">form</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="updateHasChangedTheAnalysis"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateHasChangedTheAnalysis">[docs]</a><span class="k">def</span> <span class="nf">updateHasChangedTheAnalysis</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">formDict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return ``True`` if the update from formDict to form has changed the morphological analysis of the form.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">oldSyntacticCategoryName</span> <span class="o">=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;syntacticCategory&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">oldSyntacticCategoryName</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">form</span><span class="o">.</span><span class="n">morphemeBreak</span> <span class="o">!=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;morphemeBreak&#39;</span><span class="p">]</span> <span class="ow">or</span> \
+           <span class="n">form</span><span class="o">.</span><span class="n">morphemeGloss</span> <span class="o">!=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;morphemeGloss&#39;</span><span class="p">]</span> <span class="ow">or</span> \
+           <span class="n">form</span><span class="o">.</span><span class="n">breakGlossCategory</span> <span class="o">!=</span> <span class="n">formDict</span><span class="p">[</span><span class="s">&#39;breakGlossCategory&#39;</span><span class="p">]</span> <span class="ow">or</span> \
+           <span class="nb">getattr</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="o">!=</span> <span class="n">oldSyntacticCategoryName</span>
+
+</div>
+<div class="viewcode-block" id="updateCollectionsReferencingThisForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.forms.updateCollectionsReferencingThisForm">[docs]</a><span class="k">def</span> <span class="nf">updateCollectionsReferencingThisForm</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update all collections that reference the input form in their ``contents`` value.</span>
+
+<span class="sd">    When a form is deleted, it is necessary to update all collections whose</span>
+<span class="sd">    ``contents`` value references the deleted form.  The update removes the</span>
+<span class="sd">    reference, recomputes the ``contentsUnpacked``, ``html`` and ``forms``</span>
+<span class="sd">    attributes of the affected collection and causes all of these changes to</span>
+<span class="sd">    percolate through the collection-collection reference chain.</span>
+
+<span class="sd">    :param form: a form model object</span>
+<span class="sd">    :returns: ``None``</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       Getting the collections that reference this form by searching for those</span>
+<span class="sd">       whose ``forms`` attribute contain it is not quite the correct way to do</span>
+<span class="sd">       this because many of these collections will not *directly* reference this</span>
+<span class="sd">       form -- in short, this will result in redundant updates and backups.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">formReferencePattern</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;[0-9]+&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">id</span><span class="p">)))</span>
+    <span class="n">collectionsReferencingThisForm</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">)</span><span class="o">.</span>\
+        <span class="nb">filter</span><span class="p">(</span><span class="n">Collection</span><span class="o">.</span><span class="n">contents</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)(</span><span class="n">pattern</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">collection</span> <span class="ow">in</span> <span class="n">collectionsReferencingThisForm</span><span class="p">:</span>
+        <span class="n">updateCollectionByDeletionOfReferencedForm</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">form</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

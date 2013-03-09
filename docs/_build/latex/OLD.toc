@@ -1,172 +1,297 @@
 \select@language {english}
-\contentsline {chapter}{\numberline {1}1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Structure}{3}{chapter.1}
-\contentsline {chapter}{\numberline {2}2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Introduction}{5}{chapter.2}
-\contentsline {section}{\numberline {2.1}2.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Objectives}{5}{section.2.1}
-\contentsline {section}{\numberline {2.2}2.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }What the OLD Will Allow You To:}{7}{section.2.2}
-\contentsline {section}{\numberline {2.3}2.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Technical Specifications:}{7}{section.2.3}
-\contentsline {chapter}{\numberline {3}3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }How to Get the OLD}{9}{chapter.3}
-\contentsline {chapter}{\numberline {4}4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }How to Use the OLD}{11}{chapter.4}
-\contentsline {section}{\numberline {4.1}4.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Basics}{11}{section.4.1}
-\contentsline {section}{\numberline {4.2}4.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }User Interface}{11}{section.4.2}
-\contentsline {chapter}{\numberline {5}5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Forms}{13}{chapter.5}
-\contentsline {section}{\numberline {5.1}5.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Form Data}{13}{section.5.1}
-\contentsline {subsection}{\numberline {5.1.1}5.1.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }ID}{13}{subsection.5.1.1}
-\contentsline {subsection}{\numberline {5.1.2}5.1.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }transcription}{13}{subsection.5.1.2}
-\contentsline {subsection}{\numberline {5.1.3}5.1.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }grammaticality}{14}{subsection.5.1.3}
-\contentsline {subsection}{\numberline {5.1.4}5.1.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }morpheme break}{14}{subsection.5.1.4}
-\contentsline {subsection}{\numberline {5.1.5}5.1.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }morpheme gloss}{15}{subsection.5.1.5}
-\contentsline {subsection}{\numberline {5.1.6}5.1.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }gloss}{15}{subsection.5.1.6}
-\contentsline {subsection}{\numberline {5.1.7}5.1.7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }gloss grammaticality}{15}{subsection.5.1.7}
-\contentsline {subsection}{\numberline {5.1.8}5.1.8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }general comments}{15}{subsection.5.1.8}
-\contentsline {subsection}{\numberline {5.1.9}5.1.9\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }speaker comments}{15}{subsection.5.1.9}
-\contentsline {subsection}{\numberline {5.1.10}5.1.10\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }elicitation method}{15}{subsection.5.1.10}
-\contentsline {subsection}{\numberline {5.1.11}5.1.11\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }keywords}{16}{subsection.5.1.11}
-\contentsline {subsection}{\numberline {5.1.12}5.1.12\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }category}{16}{subsection.5.1.12}
-\contentsline {subsection}{\numberline {5.1.13}5.1.13\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }category string}{16}{subsection.5.1.13}
-\contentsline {subsection}{\numberline {5.1.14}5.1.14\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }speaker}{16}{subsection.5.1.14}
-\contentsline {subsection}{\numberline {5.1.15}5.1.15\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }elicitor}{16}{subsection.5.1.15}
-\contentsline {subsection}{\numberline {5.1.16}5.1.16\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }enterer}{17}{subsection.5.1.16}
-\contentsline {subsection}{\numberline {5.1.17}5.1.17\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }verifier}{17}{subsection.5.1.17}
-\contentsline {subsection}{\numberline {5.1.18}5.1.18\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }source}{17}{subsection.5.1.18}
-\contentsline {subsection}{\numberline {5.1.19}5.1.19\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date elicited}{17}{subsection.5.1.19}
-\contentsline {subsection}{\numberline {5.1.20}5.1.20\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date and time entered}{17}{subsection.5.1.20}
-\contentsline {subsection}{\numberline {5.1.21}5.1.21\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date and time last modified}{17}{subsection.5.1.21}
-\contentsline {section}{\numberline {5.2}5.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Adding a Form}{17}{section.5.2}
-\contentsline {section}{\numberline {5.3}5.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Searching Forms}{18}{section.5.3}
-\contentsline {subsection}{\numberline {5.3.1}5.3.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }search expressions}{18}{subsection.5.3.1}
-\contentsline {subsection}{\numberline {5.3.2}5.3.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }order by expression}{18}{subsection.5.3.2}
-\contentsline {subsection}{\numberline {5.3.3}5.3.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }additional search filters}{19}{subsection.5.3.3}
-\contentsline {subsection}{\numberline {5.3.4}5.3.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }previous searches}{19}{subsection.5.3.4}
-\contentsline {subsection}{\numberline {5.3.5}5.3.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }as a phrase}{19}{subsection.5.3.5}
-\contentsline {subsection}{\numberline {5.3.6}5.3.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }all of these}{19}{subsection.5.3.6}
-\contentsline {subsection}{\numberline {5.3.7}5.3.7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }any of these}{19}{subsection.5.3.7}
-\contentsline {subsection}{\numberline {5.3.8}5.3.8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }exactly}{19}{subsection.5.3.8}
-\contentsline {subsection}{\numberline {5.3.9}5.3.9\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }as a reg exp}{20}{subsection.5.3.9}
-\contentsline {subsection}{\numberline {5.3.10}5.3.10\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }searching and orthographies}{20}{subsection.5.3.10}
-\contentsline {section}{\numberline {5.4}5.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Browsing Forms}{20}{section.5.4}
-\contentsline {section}{\numberline {5.5}5.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Other Form Actions}{20}{section.5.5}
-\contentsline {subsection}{\numberline {5.5.1}5.5.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }update}{20}{subsection.5.5.1}
-\contentsline {subsection}{\numberline {5.5.2}5.5.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete}{21}{subsection.5.5.2}
-\contentsline {subsection}{\numberline {5.5.3}5.5.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }history}{21}{subsection.5.5.3}
-\contentsline {subsection}{\numberline {5.5.4}5.5.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }associate}{21}{subsection.5.5.4}
-\contentsline {subsection}{\numberline {5.5.5}5.5.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }remember}{21}{subsection.5.5.5}
-\contentsline {subsection}{\numberline {5.5.6}5.5.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }export}{21}{subsection.5.5.6}
-\contentsline {subsection}{\numberline {5.5.7}5.5.7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }export all}{22}{subsection.5.5.7}
-\contentsline {subsection}{\numberline {5.5.8}5.5.8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }remember all}{22}{subsection.5.5.8}
-\contentsline {chapter}{\numberline {6}6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Files}{23}{chapter.6}
-\contentsline {section}{\numberline {6.1}6.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }File Data}{23}{section.6.1}
-\contentsline {subsection}{\numberline {6.1.1}6.1.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }ID}{23}{subsection.6.1.1}
-\contentsline {subsection}{\numberline {6.1.2}6.1.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }name}{23}{subsection.6.1.2}
-\contentsline {subsection}{\numberline {6.1.3}6.1.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }MIME type}{23}{subsection.6.1.3}
-\contentsline {subsection}{\numberline {6.1.4}6.1.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }size}{23}{subsection.6.1.4}
-\contentsline {subsection}{\numberline {6.1.5}6.1.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }enterer}{23}{subsection.6.1.5}
-\contentsline {subsection}{\numberline {6.1.6}6.1.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }description}{24}{subsection.6.1.6}
-\contentsline {subsection}{\numberline {6.1.7}6.1.7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }speaker}{24}{subsection.6.1.7}
-\contentsline {subsection}{\numberline {6.1.8}6.1.8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }elicitor}{24}{subsection.6.1.8}
-\contentsline {subsection}{\numberline {6.1.9}6.1.9\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date elicited}{24}{subsection.6.1.9}
-\contentsline {subsection}{\numberline {6.1.10}6.1.10\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }utterance type}{24}{subsection.6.1.10}
-\contentsline {subsection}{\numberline {6.1.11}6.1.11\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date and time entered}{24}{subsection.6.1.11}
-\contentsline {subsection}{\numberline {6.1.12}6.1.12\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date and time modified}{24}{subsection.6.1.12}
-\contentsline {section}{\numberline {6.2}6.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Adding a File}{25}{section.6.2}
-\contentsline {section}{\numberline {6.3}6.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Searching Files}{25}{section.6.3}
-\contentsline {section}{\numberline {6.4}6.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Browsing Files}{25}{section.6.4}
-\contentsline {section}{\numberline {6.5}6.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Other File Actions}{26}{section.6.5}
-\contentsline {subsection}{\numberline {6.5.1}6.5.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }update}{26}{subsection.6.5.1}
-\contentsline {subsection}{\numberline {6.5.2}6.5.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete}{26}{subsection.6.5.2}
-\contentsline {subsection}{\numberline {6.5.3}6.5.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }associate}{26}{subsection.6.5.3}
-\contentsline {subsection}{\numberline {6.5.4}6.5.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }export all}{26}{subsection.6.5.4}
-\contentsline {chapter}{\numberline {7}7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Collections}{27}{chapter.7}
-\contentsline {section}{\numberline {7.1}7.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Collection Data}{27}{section.7.1}
-\contentsline {subsection}{\numberline {7.1.1}7.1.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }ID}{27}{subsection.7.1.1}
-\contentsline {subsection}{\numberline {7.1.2}7.1.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }title}{27}{subsection.7.1.2}
-\contentsline {subsection}{\numberline {7.1.3}7.1.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }type}{27}{subsection.7.1.3}
-\contentsline {subsection}{\numberline {7.1.4}7.1.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }description}{27}{subsection.7.1.4}
-\contentsline {subsection}{\numberline {7.1.5}7.1.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }speaker}{27}{subsection.7.1.5}
-\contentsline {subsection}{\numberline {7.1.6}7.1.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }elicitor}{27}{subsection.7.1.6}
-\contentsline {subsection}{\numberline {7.1.7}7.1.7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }source}{28}{subsection.7.1.7}
-\contentsline {subsection}{\numberline {7.1.8}7.1.8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }date elicited}{28}{subsection.7.1.8}
-\contentsline {subsection}{\numberline {7.1.9}7.1.9\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }content}{28}{subsection.7.1.9}
-\contentsline {subsection}{\numberline {7.1.10}7.1.10\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }associated files}{29}{subsection.7.1.10}
-\contentsline {subsection}{\numberline {7.1.11}7.1.11\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }associated forms}{29}{subsection.7.1.11}
-\contentsline {section}{\numberline {7.2}7.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Viewing a Collection}{29}{section.7.2}
-\contentsline {section}{\numberline {7.3}7.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Adding a Collection}{29}{section.7.3}
-\contentsline {section}{\numberline {7.4}7.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Searching Collections}{29}{section.7.4}
-\contentsline {section}{\numberline {7.5}7.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Browsing Collections}{29}{section.7.5}
-\contentsline {section}{\numberline {7.6}7.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Other Collection Actions}{29}{section.7.6}
-\contentsline {subsection}{\numberline {7.6.1}7.6.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }update}{29}{subsection.7.6.1}
-\contentsline {subsection}{\numberline {7.6.2}7.6.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete}{30}{subsection.7.6.2}
-\contentsline {subsection}{\numberline {7.6.3}7.6.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }associate}{30}{subsection.7.6.3}
-\contentsline {chapter}{\numberline {8}8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }People}{31}{chapter.8}
-\contentsline {section}{\numberline {8.1}8.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Speakers}{31}{section.8.1}
-\contentsline {subsection}{\numberline {8.1.1}8.1.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }view a speaker}{31}{subsection.8.1.1}
-\contentsline {subsection}{\numberline {8.1.2}8.1.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }add a speaker}{31}{subsection.8.1.2}
-\contentsline {subsection}{\numberline {8.1.3}8.1.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }update a speaker}{31}{subsection.8.1.3}
-\contentsline {subsection}{\numberline {8.1.4}8.1.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete a speaker}{32}{subsection.8.1.4}
-\contentsline {section}{\numberline {8.2}8.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Users}{32}{section.8.2}
-\contentsline {subsection}{\numberline {8.2.1}8.2.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }administrators}{32}{subsection.8.2.1}
-\contentsline {subsection}{\numberline {8.2.2}8.2.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }contributors}{32}{subsection.8.2.2}
-\contentsline {subsection}{\numberline {8.2.3}8.2.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }viewers}{32}{subsection.8.2.3}
-\contentsline {subsection}{\numberline {8.2.4}8.2.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }view a user}{32}{subsection.8.2.4}
-\contentsline {subsection}{\numberline {8.2.5}8.2.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }add a user}{33}{subsection.8.2.5}
-\contentsline {subsection}{\numberline {8.2.6}8.2.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }edit a user}{33}{subsection.8.2.6}
-\contentsline {subsection}{\numberline {8.2.7}8.2.7\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete a user}{33}{subsection.8.2.7}
-\contentsline {subsection}{\numberline {8.2.8}8.2.8\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }user settings}{33}{subsection.8.2.8}
-\contentsline {chapter}{\numberline {9}9\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Tags}{35}{chapter.9}
-\contentsline {section}{\numberline {9.1}9.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Keywords}{35}{section.9.1}
-\contentsline {subsection}{\numberline {9.1.1}9.1.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }add a keyword}{35}{subsection.9.1.1}
-\contentsline {subsection}{\numberline {9.1.2}9.1.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }edit a keyword}{35}{subsection.9.1.2}
-\contentsline {subsection}{\numberline {9.1.3}9.1.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete a keyword}{35}{subsection.9.1.3}
-\contentsline {section}{\numberline {9.2}9.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Syntactic Categories}{35}{section.9.2}
-\contentsline {subsection}{\numberline {9.2.1}9.2.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }add a syntactic category}{36}{subsection.9.2.1}
-\contentsline {subsection}{\numberline {9.2.2}9.2.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }edit a syntactic category}{36}{subsection.9.2.2}
-\contentsline {subsection}{\numberline {9.2.3}9.2.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete a syntactic category}{36}{subsection.9.2.3}
-\contentsline {section}{\numberline {9.3}9.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Elicitation Methods}{36}{section.9.3}
-\contentsline {subsection}{\numberline {9.3.1}9.3.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }add an elicitation method}{36}{subsection.9.3.1}
-\contentsline {subsection}{\numberline {9.3.2}9.3.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }edit an elicitation method}{36}{subsection.9.3.2}
-\contentsline {subsection}{\numberline {9.3.3}9.3.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }delete a syntactic category}{36}{subsection.9.3.3}
-\contentsline {chapter}{\numberline {10}10\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Sources}{37}{chapter.10}
-\contentsline {section}{\numberline {10.1}10.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Add a Source}{37}{section.10.1}
-\contentsline {section}{\numberline {10.2}10.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Edit a Source}{37}{section.10.2}
-\contentsline {section}{\numberline {10.3}10.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Delete a Source}{37}{section.10.3}
-\contentsline {chapter}{\numberline {11}11\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Memory}{39}{chapter.11}
-\contentsline {section}{\numberline {11.1}11.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }forget all}{39}{section.11.1}
-\contentsline {section}{\numberline {11.2}11.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }export all}{39}{section.11.2}
-\contentsline {chapter}{\numberline {12}12\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Dictionary}{41}{chapter.12}
-\contentsline {section}{\numberline {12.1}12.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Browse}{41}{section.12.1}
-\contentsline {subsection}{\numberline {12.1.1}12.1.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }object language to metalanguage}{41}{subsection.12.1.1}
-\contentsline {subsection}{\numberline {12.1.2}12.1.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }metalanguage to object language}{41}{subsection.12.1.2}
-\contentsline {section}{\numberline {12.2}12.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Search}{41}{section.12.2}
-\contentsline {subsection}{\numberline {12.2.1}12.2.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }object language to metalanguage}{42}{subsection.12.2.1}
-\contentsline {subsection}{\numberline {12.2.2}12.2.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }metalanguage to object language}{42}{subsection.12.2.2}
-\contentsline {chapter}{\numberline {13}13\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Application Settings}{43}{chapter.13}
-\contentsline {section}{\numberline {13.1}13.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Object Language}{43}{section.13.1}
-\contentsline {section}{\numberline {13.2}13.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Storage, Input \& Output}{43}{section.13.2}
-\contentsline {section}{\numberline {13.3}13.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Object Language Orthography(/ies)}{44}{section.13.3}
-\contentsline {section}{\numberline {13.4}13.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Object Language Data}{44}{section.13.4}
-\contentsline {subsection}{\numberline {13.4.1}13.4.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Pure Object Language Fields}{44}{subsection.13.4.1}
-\contentsline {subsection}{\numberline {13.4.2}13.4.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Optionally Object Language Fields}{44}{subsection.13.4.2}
-\contentsline {subsection}{\numberline {13.4.3}13.4.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Object Language Tag Fields}{45}{subsection.13.4.3}
-\contentsline {section}{\numberline {13.5}13.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Testing Orthography Conversion}{45}{section.13.5}
-\contentsline {section}{\numberline {13.6}13.6\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Metalanguage}{45}{section.13.6}
-\contentsline {chapter}{\numberline {14}14\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Character Encoding}{47}{chapter.14}
-\contentsline {chapter}{\numberline {15}15\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Fonts}{49}{chapter.15}
-\contentsline {chapter}{\numberline {16}16\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Regular Expressions}{51}{chapter.16}
-\contentsline {section}{\numberline {16.1}16.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Metacharacters}{51}{section.16.1}
-\contentsline {section}{\numberline {16.2}16.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Some Useful Regular Expressions}{52}{section.16.2}
-\contentsline {chapter}{\numberline {17}17\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }OLD Markup}{53}{chapter.17}
-\contentsline {section}{\numberline {17.1}17.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }OLD Form Embed Markup}{53}{section.17.1}
-\contentsline {section}{\numberline {17.2}17.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }OLD Entity Link Markup}{53}{section.17.2}
-\contentsline {section}{\numberline {17.3}17.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }OLD File file Markup}{53}{section.17.3}
-\contentsline {section}{\numberline {17.4}17.4\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }OLD Image Embed Markup}{53}{section.17.4}
-\contentsline {section}{\numberline {17.5}17.5\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }OLD Metalanguage Markup}{54}{section.17.5}
-\contentsline {chapter}{\numberline {18}18\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }reStructuredText}{55}{chapter.18}
-\contentsline {chapter}{\numberline {19}19\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Markdown}{57}{chapter.19}
-\contentsline {chapter}{\numberline {20}20\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Keyboard Shortcuts}{59}{chapter.20}
-\contentsline {chapter}{\numberline {21}21\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Browser Support}{61}{chapter.21}
-\contentsline {chapter}{\numberline {22}22\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Glossary of Terms}{63}{chapter.22}
-\contentsline {chapter}{\numberline {23}23\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Future Features}{65}{chapter.23}
-\contentsline {section}{\numberline {23.1}23.1\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Priorities}{65}{section.23.1}
-\contentsline {section}{\numberline {23.2}23.2\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Relatively Easy Projects}{65}{section.23.2}
-\contentsline {section}{\numberline {23.3}23.3\IeC {\nobreakspace }\IeC {\nobreakspace }\IeC {\nobreakspace }Big Projects}{65}{section.23.3}
-\contentsline {chapter}{\numberline {24}API Documentation}{67}{chapter.24}
-\contentsline {chapter}{\numberline {25}Indices and tables}{69}{chapter.25}
+\contentsline {chapter}{\numberline {1}Getting Started}{3}{chapter.1}
+\contentsline {section}{\numberline {1.1}About}{3}{section.1.1}
+\contentsline {subsection}{\numberline {1.1.1}Purpose}{3}{subsection.1.1.1}
+\contentsline {subsection}{\numberline {1.1.2}What is it?}{3}{subsection.1.1.2}
+\contentsline {subsection}{\numberline {1.1.3}Core features}{5}{subsection.1.1.3}
+\contentsline {subsection}{\numberline {1.1.4}Technologies}{5}{subsection.1.1.4}
+\contentsline {subsection}{\numberline {1.1.5}Who should read this manual?}{5}{subsection.1.1.5}
+\contentsline {subsection}{\numberline {1.1.6}License}{5}{subsection.1.1.6}
+\contentsline {section}{\numberline {1.2}Installation \& Configuration}{5}{section.1.2}
+\contentsline {subsection}{\numberline {1.2.1}QuickStart}{6}{subsection.1.2.1}
+\contentsline {subsection}{\numberline {1.2.2}Download}{6}{subsection.1.2.2}
+\contentsline {subsection}{\numberline {1.2.3}Install}{7}{subsection.1.2.3}
+\contentsline {subsubsection}{Create a virtual Python environment}{7}{subsubsection*.3}
+\contentsline {subsubsection}{Install the OLD}{7}{subsubsection*.4}
+\contentsline {subsection}{\numberline {1.2.4}Configure}{8}{subsection.1.2.4}
+\contentsline {subsubsection}{Generate the config file}{8}{subsubsection*.5}
+\contentsline {subsubsection}{Set up MySQL/MySQLdb}{8}{subsubsection*.6}
+\contentsline {subsubsection}{Edit the config file}{9}{subsubsection*.7}
+\contentsline {subsection}{\numberline {1.2.5}Setup}{10}{subsection.1.2.5}
+\contentsline {subsection}{\numberline {1.2.6}Serve}{11}{subsection.1.2.6}
+\contentsline {subsection}{\numberline {1.2.7}Soft dependencies}{11}{subsection.1.2.7}
+\contentsline {subsubsection}{PIL}{11}{subsubsection*.8}
+\contentsline {subsubsection}{FFmpeg}{12}{subsubsection*.9}
+\contentsline {subsection}{\numberline {1.2.8}Deploy}{12}{subsection.1.2.8}
+\contentsline {subsection}{\numberline {1.2.9}Developers}{13}{subsection.1.2.9}
+\contentsline {subsubsection}{Download \& depencency installation}{13}{subsubsection*.10}
+\contentsline {subsubsection}{Directory structure}{14}{subsubsection*.11}
+\contentsline {subsubsection}{Documentation}{15}{subsubsection*.12}
+\contentsline {subsubsection}{Virtualenv \& Python distros}{15}{subsubsection*.13}
+\contentsline {subsubsection}{Releases}{16}{subsubsection*.14}
+\contentsline {chapter}{\numberline {2}Architecture}{17}{chapter.2}
+\contentsline {section}{\numberline {2.1}Introduction}{17}{section.2.1}
+\contentsline {section}{\numberline {2.2}Interface}{19}{section.2.2}
+\contentsline {subsection}{\numberline {2.2.1}RESTful API}{19}{subsection.2.2.1}
+\contentsline {subsubsection}{GET /resources}{20}{subsubsection*.15}
+\contentsline {subsubsection}{\texttt {GET /resources/id}}{20}{subsubsection*.16}
+\contentsline {subsubsection}{\texttt {GET /resources/new}}{21}{subsubsection*.17}
+\contentsline {subsubsection}{\texttt {GET /resources/id/edit}}{21}{subsubsection*.18}
+\contentsline {subsubsection}{\texttt {DELETE /resources/id}}{21}{subsubsection*.19}
+\contentsline {subsubsection}{\texttt {POST /resources}}{22}{subsubsection*.20}
+\contentsline {subsubsection}{\texttt {PUT /resources/id}}{22}{subsubsection*.21}
+\contentsline {subsubsection}{JSON}{22}{subsubsection*.22}
+\contentsline {subsection}{\numberline {2.2.2}Search}{22}{subsection.2.2.2}
+\contentsline {subsubsection}{Filter expression syntax}{23}{subsubsection*.23}
+\contentsline {subsubsection}{Simple filter expressions}{23}{subsubsection*.27}
+\contentsline {subsubsection}{Complex filter expressions}{24}{subsubsection*.28}
+\contentsline {subsubsection}{Filter relations}{25}{subsubsection*.29}
+\contentsline {subsubsection}{The \emph {like} relation}{25}{subsubsection*.30}
+\contentsline {subsubsection}{The \emph {regexp} relation}{26}{subsubsection*.31}
+\contentsline {subsubsection}{Ordering results}{27}{subsubsection*.32}
+\contentsline {subsection}{\numberline {2.2.3}Non-standard API}{27}{subsection.2.2.3}
+\contentsline {subsubsection}{Forms}{27}{subsubsection*.33}
+\contentsline {paragraph}{\texttt {GET /forms/history/id}}{27}{paragraph*.34}
+\contentsline {paragraph}{\texttt {POST /forms/remember}}{28}{paragraph*.35}
+\contentsline {paragraph}{\texttt {PUT /forms/update\_morpheme\_references}}{28}{paragraph*.36}
+\contentsline {subsubsection}{Files}{28}{subsubsection*.37}
+\contentsline {paragraph}{\texttt {GET /files/serve/id}}{28}{paragraph*.38}
+\contentsline {paragraph}{\texttt {GET /files/serve\_reduced/id}}{29}{paragraph*.39}
+\contentsline {subsubsection}{Collections}{29}{subsubsection*.40}
+\contentsline {paragraph}{\texttt {GET /collections/history/id}}{29}{paragraph*.41}
+\contentsline {subsubsection}{Application settings}{29}{subsubsection*.42}
+\contentsline {subsubsection}{Users}{29}{subsubsection*.43}
+\contentsline {subsubsection}{Remembered forms}{30}{subsubsection*.44}
+\contentsline {paragraph}{\texttt {GET /rememberedforms/id}}{30}{paragraph*.45}
+\contentsline {paragraph}{\texttt {UPDATE /rememberedforms/id}}{30}{paragraph*.46}
+\contentsline {paragraph}{\texttt {SEARCH /rememberedforms/id}}{30}{paragraph*.47}
+\contentsline {subsection}{\numberline {2.2.4}Authentication \& authorization}{30}{subsection.2.2.4}
+\contentsline {subsection}{\numberline {2.2.5}Input validation}{31}{subsection.2.2.5}
+\contentsline {subsubsection}{Standard validation}{32}{subsubsection*.48}
+\contentsline {subsubsection}{Object language validation}{32}{subsubsection*.49}
+\contentsline {subsection}{\numberline {2.2.6}Processing}{33}{subsection.2.2.6}
+\contentsline {subsubsection}{Morphological processing}{33}{subsubsection*.50}
+\contentsline {subsubsection}{Foreign words}{35}{subsubsection*.51}
+\contentsline {subsubsection}{Collection references}{35}{subsubsection*.52}
+\contentsline {subsubsection}{Lossy file copies}{36}{subsubsection*.53}
+\contentsline {section}{\numberline {2.3}Data Structure}{36}{section.2.3}
+\contentsline {subsection}{\numberline {2.3.1}\texttt {ApplicationSettings}}{37}{subsection.2.3.1}
+\contentsline {subsubsection}{\texttt {broadPhoneticInventory}}{38}{subsubsection*.54}
+\contentsline {subsubsection}{\texttt {broadPhoneticValidation}}{38}{subsubsection*.55}
+\contentsline {subsubsection}{\texttt {grammaticalities}}{38}{subsubsection*.56}
+\contentsline {subsubsection}{\texttt {inputOrthography}}{38}{subsubsection*.57}
+\contentsline {subsubsection}{\texttt {metalanguageId}}{38}{subsubsection*.58}
+\contentsline {subsubsection}{\texttt {metalanguageInventory}}{39}{subsubsection*.59}
+\contentsline {subsubsection}{\texttt {metalanguageName}}{39}{subsubsection*.60}
+\contentsline {subsubsection}{\texttt {morphemeBreakIsOrthographic}}{39}{subsubsection*.61}
+\contentsline {subsubsection}{\texttt {morphemeBreakValidation}}{39}{subsubsection*.62}
+\contentsline {subsubsection}{\texttt {morphemeDelimiters}}{39}{subsubsection*.63}
+\contentsline {subsubsection}{\texttt {narrowPhoneticInventory}}{39}{subsubsection*.64}
+\contentsline {subsubsection}{\texttt {narrowPhoneticValidation}}{40}{subsubsection*.65}
+\contentsline {subsubsection}{\texttt {objectLanguageId}}{40}{subsubsection*.66}
+\contentsline {subsubsection}{\texttt {objectLanguageName}}{40}{subsubsection*.67}
+\contentsline {subsubsection}{\texttt {orthographicValidation}}{40}{subsubsection*.68}
+\contentsline {subsubsection}{\texttt {outputOrthography}}{40}{subsubsection*.69}
+\contentsline {subsubsection}{\texttt {phonemicInventory}}{40}{subsubsection*.70}
+\contentsline {subsubsection}{\texttt {punctuation}}{41}{subsubsection*.71}
+\contentsline {subsubsection}{\texttt {storageOrthography}}{41}{subsubsection*.72}
+\contentsline {subsubsection}{\texttt {unrestrictedUsers}}{41}{subsubsection*.73}
+\contentsline {subsection}{\numberline {2.3.2}\texttt {Collection}}{41}{subsection.2.3.2}
+\contentsline {subsubsection}{\texttt {contents}}{42}{subsubsection*.74}
+\contentsline {subsubsection}{\texttt {contentsUnpacked}}{44}{subsubsection*.75}
+\contentsline {subsubsection}{\texttt {dateElicited}}{44}{subsubsection*.76}
+\contentsline {subsubsection}{\texttt {datetimeEntered}}{44}{subsubsection*.77}
+\contentsline {subsubsection}{\texttt {description}}{44}{subsubsection*.78}
+\contentsline {subsubsection}{\texttt {elicitor}}{44}{subsubsection*.79}
+\contentsline {subsubsection}{\texttt {enterer}}{44}{subsubsection*.80}
+\contentsline {subsubsection}{\texttt {files}}{44}{subsubsection*.81}
+\contentsline {subsubsection}{\texttt {forms}}{45}{subsubsection*.82}
+\contentsline {subsubsection}{\texttt {html}}{45}{subsubsection*.83}
+\contentsline {subsubsection}{\texttt {markupLanguage}}{45}{subsubsection*.84}
+\contentsline {subsubsection}{\texttt {source}}{45}{subsubsection*.85}
+\contentsline {subsubsection}{\texttt {speaker}}{45}{subsubsection*.86}
+\contentsline {subsubsection}{\texttt {tags}}{45}{subsubsection*.87}
+\contentsline {subsubsection}{\texttt {title}}{45}{subsubsection*.88}
+\contentsline {subsubsection}{\texttt {type}}{46}{subsubsection*.89}
+\contentsline {subsubsection}{\texttt {url}}{46}{subsubsection*.90}
+\contentsline {subsubsection}{\texttt {UUID}}{46}{subsubsection*.91}
+\contentsline {subsection}{\numberline {2.3.3}\texttt {CollectionBackup}}{46}{subsection.2.3.3}
+\contentsline {subsection}{\numberline {2.3.4}\texttt {ElicitationMethod}}{47}{subsection.2.3.4}
+\contentsline {subsubsection}{\texttt {description}}{47}{subsubsection*.92}
+\contentsline {subsubsection}{\texttt {name}}{47}{subsubsection*.93}
+\contentsline {subsection}{\numberline {2.3.5}\texttt {File}}{47}{subsection.2.3.5}
+\contentsline {subsubsection}{\texttt {dateElicited}}{50}{subsubsection*.94}
+\contentsline {subsubsection}{\texttt {datetimeEntered}}{50}{subsubsection*.95}
+\contentsline {subsubsection}{\texttt {description}}{50}{subsubsection*.96}
+\contentsline {subsubsection}{\texttt {elicitor}}{50}{subsubsection*.97}
+\contentsline {subsubsection}{\texttt {end}}{50}{subsubsection*.98}
+\contentsline {subsubsection}{\texttt {enterer}}{50}{subsubsection*.99}
+\contentsline {subsubsection}{\texttt {filename}}{50}{subsubsection*.100}
+\contentsline {subsubsection}{\texttt {forms}}{51}{subsubsection*.101}
+\contentsline {subsubsection}{\texttt {lossyFilename}}{51}{subsubsection*.102}
+\contentsline {subsubsection}{\texttt {MIMEtype}}{51}{subsubsection*.103}
+\contentsline {subsubsection}{\texttt {name}}{51}{subsubsection*.104}
+\contentsline {subsubsection}{\texttt {parentFile}}{52}{subsubsection*.105}
+\contentsline {subsubsection}{\texttt {password}}{52}{subsubsection*.106}
+\contentsline {subsubsection}{\texttt {size}}{52}{subsubsection*.107}
+\contentsline {subsubsection}{\texttt {speaker}}{52}{subsubsection*.108}
+\contentsline {subsubsection}{\texttt {start}}{52}{subsubsection*.109}
+\contentsline {subsubsection}{\texttt {tags}}{52}{subsubsection*.110}
+\contentsline {subsubsection}{\texttt {url}}{52}{subsubsection*.111}
+\contentsline {subsubsection}{\texttt {utteranceType}}{53}{subsubsection*.112}
+\contentsline {subsection}{\numberline {2.3.6}\texttt {Form}}{53}{subsection.2.3.6}
+\contentsline {subsubsection}{\texttt {breakGlossCategory}}{54}{subsubsection*.113}
+\contentsline {subsubsection}{\texttt {collections}}{54}{subsubsection*.114}
+\contentsline {subsubsection}{\texttt {comments}}{54}{subsubsection*.115}
+\contentsline {subsubsection}{\texttt {dateElicited}}{54}{subsubsection*.116}
+\contentsline {subsubsection}{\texttt {datetimeEntered}}{55}{subsubsection*.117}
+\contentsline {subsubsection}{\texttt {elicitationMethod}}{55}{subsubsection*.118}
+\contentsline {subsubsection}{\texttt {elicitor}}{55}{subsubsection*.119}
+\contentsline {subsubsection}{\texttt {enterer}}{55}{subsubsection*.120}
+\contentsline {subsubsection}{\texttt {files}}{55}{subsubsection*.121}
+\contentsline {subsubsection}{\texttt {translations}}{55}{subsubsection*.122}
+\contentsline {subsubsection}{\texttt {grammaticality}}{55}{subsubsection*.123}
+\contentsline {subsubsection}{\texttt {memorizers}}{56}{subsubsection*.124}
+\contentsline {subsubsection}{\texttt {morphemeBreak}}{56}{subsubsection*.125}
+\contentsline {subsubsection}{\texttt {morphemeBreakIDs}}{56}{subsubsection*.126}
+\contentsline {subsubsection}{\texttt {morphemeGloss}}{56}{subsubsection*.127}
+\contentsline {subsubsection}{\texttt {morphemeGlossIDs}}{56}{subsubsection*.128}
+\contentsline {subsubsection}{\texttt {narrowPhoneticTranscription}}{56}{subsubsection*.129}
+\contentsline {subsubsection}{\texttt {phoneticTranscription}}{56}{subsubsection*.130}
+\contentsline {subsubsection}{\texttt {semantics}}{57}{subsubsection*.131}
+\contentsline {subsubsection}{\texttt {source}}{57}{subsubsection*.132}
+\contentsline {subsubsection}{\texttt {speaker}}{57}{subsubsection*.133}
+\contentsline {subsubsection}{\texttt {speakerComments}}{57}{subsubsection*.134}
+\contentsline {subsubsection}{\texttt {status}}{57}{subsubsection*.135}
+\contentsline {subsubsection}{\texttt {syntacticCategory}}{57}{subsubsection*.136}
+\contentsline {subsubsection}{\texttt {syntacticCategoryString}}{57}{subsubsection*.137}
+\contentsline {subsubsection}{\texttt {syntax}}{57}{subsubsection*.138}
+\contentsline {subsubsection}{\texttt {tags}}{58}{subsubsection*.139}
+\contentsline {subsubsection}{\texttt {transcription}}{58}{subsubsection*.140}
+\contentsline {subsubsection}{\texttt {UUID}}{58}{subsubsection*.141}
+\contentsline {subsubsection}{\texttt {verifier}}{58}{subsubsection*.142}
+\contentsline {subsection}{\numberline {2.3.7}\texttt {FormBackup}}{58}{subsection.2.3.7}
+\contentsline {subsection}{\numberline {2.3.8}\texttt {FormSearch}}{59}{subsection.2.3.8}
+\contentsline {subsubsection}{\texttt {description}}{59}{subsubsection*.143}
+\contentsline {subsubsection}{\texttt {name}}{60}{subsubsection*.144}
+\contentsline {subsubsection}{\texttt {search}}{60}{subsubsection*.145}
+\contentsline {subsubsection}{\texttt {searcher}}{60}{subsubsection*.146}
+\contentsline {subsection}{\numberline {2.3.9}\texttt {Translation}}{60}{subsection.2.3.9}
+\contentsline {subsection}{\numberline {2.3.10}\texttt {Language}}{60}{subsection.2.3.10}
+\contentsline {subsection}{\numberline {2.3.11}\texttt {Orthography}}{61}{subsection.2.3.11}
+\contentsline {subsubsection}{\texttt {initialGlottalStops}}{61}{subsubsection*.147}
+\contentsline {subsubsection}{\texttt {lowercase}}{61}{subsubsection*.148}
+\contentsline {subsubsection}{\texttt {name}}{62}{subsubsection*.149}
+\contentsline {subsubsection}{\texttt {orthography}}{62}{subsubsection*.150}
+\contentsline {subsection}{\numberline {2.3.12}\texttt {Page}}{62}{subsection.2.3.12}
+\contentsline {subsubsection}{\texttt {content}}{62}{subsubsection*.151}
+\contentsline {subsubsection}{\texttt {heading}}{62}{subsubsection*.152}
+\contentsline {subsubsection}{\texttt {html}}{63}{subsubsection*.153}
+\contentsline {subsubsection}{\texttt {markupLanguage}}{63}{subsubsection*.154}
+\contentsline {subsubsection}{\texttt {name}}{63}{subsubsection*.155}
+\contentsline {subsection}{\numberline {2.3.13}\texttt {Phonology}}{63}{subsection.2.3.13}
+\contentsline {subsubsection}{\texttt {datetimeEntered}}{64}{subsubsection*.156}
+\contentsline {subsubsection}{\texttt {description}}{64}{subsubsection*.157}
+\contentsline {subsubsection}{\texttt {enterer}}{64}{subsubsection*.158}
+\contentsline {subsubsection}{\texttt {modifier}}{64}{subsubsection*.159}
+\contentsline {subsubsection}{\texttt {name}}{64}{subsubsection*.160}
+\contentsline {subsubsection}{\texttt {script}}{64}{subsubsection*.161}
+\contentsline {subsection}{\numberline {2.3.14}\texttt {Source}}{64}{subsection.2.3.14}
+\contentsline {subsubsection}{\texttt {abstract}}{66}{subsubsection*.162}
+\contentsline {subsubsection}{\texttt {address}}{66}{subsubsection*.163}
+\contentsline {subsubsection}{\texttt {affiliation}}{66}{subsubsection*.164}
+\contentsline {subsubsection}{\texttt {annote}}{66}{subsubsection*.165}
+\contentsline {subsubsection}{\texttt {author}}{66}{subsubsection*.166}
+\contentsline {subsubsection}{\texttt {booktitle}}{66}{subsubsection*.167}
+\contentsline {subsubsection}{\texttt {chapter}}{66}{subsubsection*.168}
+\contentsline {subsubsection}{\texttt {contents}}{66}{subsubsection*.169}
+\contentsline {subsubsection}{\texttt {copyright}}{66}{subsubsection*.170}
+\contentsline {subsubsection}{\texttt {crossref}}{67}{subsubsection*.171}
+\contentsline {subsubsection}{\texttt {crossrefSource}}{67}{subsubsection*.172}
+\contentsline {subsubsection}{\texttt {edition}}{67}{subsubsection*.173}
+\contentsline {subsubsection}{\texttt {editor}}{67}{subsubsection*.174}
+\contentsline {subsubsection}{\texttt {file}}{67}{subsubsection*.175}
+\contentsline {subsubsection}{\texttt {howpublished}}{67}{subsubsection*.176}
+\contentsline {subsubsection}{\texttt {institution}}{67}{subsubsection*.177}
+\contentsline {subsubsection}{\texttt {ISBN}}{67}{subsubsection*.178}
+\contentsline {subsubsection}{\texttt {ISSN}}{68}{subsubsection*.179}
+\contentsline {subsubsection}{\texttt {journal}}{68}{subsubsection*.180}
+\contentsline {subsubsection}{\texttt {key}}{68}{subsubsection*.181}
+\contentsline {subsubsection}{\texttt {keyField}}{68}{subsubsection*.182}
+\contentsline {subsubsection}{\texttt {keywords}}{68}{subsubsection*.183}
+\contentsline {subsubsection}{\texttt {language}}{68}{subsubsection*.184}
+\contentsline {subsubsection}{\texttt {location}}{68}{subsubsection*.185}
+\contentsline {subsubsection}{\texttt {LCCN}}{68}{subsubsection*.186}
+\contentsline {subsubsection}{\texttt {month}}{68}{subsubsection*.187}
+\contentsline {subsubsection}{\texttt {mrnumber}}{68}{subsubsection*.188}
+\contentsline {subsubsection}{\texttt {note}}{69}{subsubsection*.189}
+\contentsline {subsubsection}{\texttt {number}}{69}{subsubsection*.190}
+\contentsline {subsubsection}{\texttt {organization}}{69}{subsubsection*.191}
+\contentsline {subsubsection}{\texttt {pages}}{69}{subsubsection*.192}
+\contentsline {subsubsection}{\texttt {price}}{69}{subsubsection*.193}
+\contentsline {subsubsection}{\texttt {publisher}}{69}{subsubsection*.194}
+\contentsline {subsubsection}{\texttt {school}}{69}{subsubsection*.195}
+\contentsline {subsubsection}{\texttt {series}}{69}{subsubsection*.196}
+\contentsline {subsubsection}{\texttt {size}}{69}{subsubsection*.197}
+\contentsline {subsubsection}{\texttt {title}}{69}{subsubsection*.198}
+\contentsline {subsubsection}{\texttt {type}}{70}{subsubsection*.199}
+\contentsline {subsubsection}{\texttt {typeField}}{70}{subsubsection*.200}
+\contentsline {subsubsection}{\texttt {url}}{70}{subsubsection*.201}
+\contentsline {subsubsection}{\texttt {volume}}{70}{subsubsection*.202}
+\contentsline {subsubsection}{\texttt {year}}{70}{subsubsection*.203}
+\contentsline {subsection}{\numberline {2.3.15}\texttt {Speaker}}{70}{subsection.2.3.15}
+\contentsline {subsubsection}{\texttt {dialect}}{71}{subsubsection*.204}
+\contentsline {subsubsection}{\texttt {firstName}}{71}{subsubsection*.205}
+\contentsline {subsubsection}{\texttt {html}}{71}{subsubsection*.206}
+\contentsline {subsubsection}{\texttt {lastName}}{71}{subsubsection*.207}
+\contentsline {subsubsection}{\texttt {markupLanguage}}{71}{subsubsection*.208}
+\contentsline {subsubsection}{\texttt {pageContent}}{72}{subsubsection*.209}
+\contentsline {subsection}{\numberline {2.3.16}\texttt {SyntacticCategory}}{72}{subsection.2.3.16}
+\contentsline {subsubsection}{\texttt {description}}{72}{subsubsection*.210}
+\contentsline {subsubsection}{\texttt {name}}{72}{subsubsection*.211}
+\contentsline {subsubsection}{\texttt {type}}{72}{subsubsection*.212}
+\contentsline {subsection}{\numberline {2.3.17}\texttt {Tag}}{72}{subsection.2.3.17}
+\contentsline {subsubsection}{\texttt {description}}{73}{subsubsection*.213}
+\contentsline {subsubsection}{\texttt {name}}{73}{subsubsection*.214}
+\contentsline {subsection}{\numberline {2.3.18}\texttt {User}}{73}{subsection.2.3.18}
+\contentsline {subsubsection}{\texttt {affiliation}}{74}{subsubsection*.215}
+\contentsline {subsubsection}{\texttt {email}}{74}{subsubsection*.216}
+\contentsline {subsubsection}{\texttt {firstName}}{74}{subsubsection*.217}
+\contentsline {subsubsection}{\texttt {html}}{74}{subsubsection*.218}
+\contentsline {subsubsection}{\texttt {inputOrthography}}{74}{subsubsection*.219}
+\contentsline {subsubsection}{\texttt {lastName}}{75}{subsubsection*.220}
+\contentsline {subsubsection}{\texttt {markupLanguage}}{75}{subsubsection*.221}
+\contentsline {subsubsection}{\texttt {outputOrthography}}{75}{subsubsection*.222}
+\contentsline {subsubsection}{\texttt {pageContent}}{75}{subsubsection*.223}
+\contentsline {subsubsection}{\texttt {password}}{75}{subsubsection*.224}
+\contentsline {subsubsection}{\texttt {rememberedForms}}{75}{subsubsection*.225}
+\contentsline {subsubsection}{\texttt {role}}{76}{subsubsection*.226}
+\contentsline {subsubsection}{\texttt {salt}}{76}{subsubsection*.227}
+\contentsline {subsubsection}{\texttt {username}}{76}{subsubsection*.228}
+\contentsline {chapter}{\numberline {3}API Documentation}{77}{chapter.3}
+\contentsline {section}{\numberline {3.1}\texttt {onlinelinguisticdatabase}}{77}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}\texttt {controllers}}{77}{subsection.3.1.1}
+\contentsline {subsubsection}{\texttt {applicationsettings}}{77}{subsubsection*.230}
+\contentsline {subsubsection}{\texttt {collectionbackups}}{79}{subsubsection*.243}
+\contentsline {subsubsection}{\texttt {elicitationmethods}}{80}{subsubsection*.250}
+\contentsline {subsubsection}{\texttt {error}}{82}{subsubsection*.262}
+\contentsline {subsubsection}{\texttt {files}}{82}{subsubsection*.266}
+\contentsline {subsubsection}{\texttt {formbackups}}{87}{subsubsection*.294}
+\contentsline {subsubsection}{\texttt {forms}}{88}{subsubsection*.301}
+\contentsline {subsubsection}{\texttt {formsearches}}{94}{subsubsection*.329}
+\contentsline {subsubsection}{\texttt {languages}}{95}{subsubsection*.343}
+\contentsline {subsubsection}{\texttt {login}}{96}{subsubsection*.350}
+\contentsline {subsubsection}{\texttt {oldcollections}}{97}{subsubsection*.356}
+\contentsline {subsubsection}{\texttt {orthographies}}{104}{subsubsection*.387}
+\contentsline {subsubsection}{\texttt {pages}}{106}{subsubsection*.399}
+\contentsline {subsubsection}{\texttt {phonologies}}{107}{subsubsection*.411}
+\contentsline {subsubsection}{\texttt {rememberedforms}}{109}{subsubsection*.423}
+\contentsline {subsubsection}{\texttt {sources}}{110}{subsubsection*.429}
+\contentsline {subsubsection}{\texttt {speakers}}{112}{subsubsection*.443}
+\contentsline {subsubsection}{\texttt {syntacticcategories}}{113}{subsubsection*.455}
+\contentsline {subsubsection}{\texttt {tags}}{115}{subsubsection*.468}
+\contentsline {subsubsection}{\texttt {users}}{117}{subsubsection*.480}
+\contentsline {subsection}{\numberline {3.1.2}\texttt {lib}}{119}{subsection.3.1.2}
+\contentsline {subsubsection}{\texttt {SQLAQueryBuilder}}{119}{subsubsection*.494}
+\contentsline {chapter}{Bibliography}{123}{chapter*.499}
+\contentsline {chapter}{Python Module Index}{125}{section*.501}

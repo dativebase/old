@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`LoginController`.
+
+.. module:: login
+   :synopsis: Contains the login controller.
+
+"""
+
 import os
 import logging
 import socket
@@ -30,16 +37,28 @@ from onlinelinguisticdatabase.model.meta import Session
 log = logging.getLogger(__name__)
 
 class LoginController(BaseController):
+    """Handles authentication-related functionality.
 
-    here = h.getConfig(config=config)['here']
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
+
+    here = h.getConfig(config=config).get('here')
 
     @h.jsonify
     @h.restrict('POST')
     def authenticate(self):
-        """POST /login/authenticate: request body should be a JSON object of the
-        form {username: '...', password: '...'}.  Response is a JSON object with
-        a boolean 'authenticated' property and (optionally) an 'errors' object
-        property.
+        """Session-based authentication.
+
+        :URL: ``POST /login/authenticate``
+        :request body: A JSON object with ``"username"`` and ``"password"``
+            string values
+        :returns: ``{"authenticated": True}`` on success, an error dictionary on
+            failure.
+
         """
         try:
             schema = LoginSchema()
@@ -73,17 +92,25 @@ class LoginController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def logout(self):
-        """Logout user by deleting the session."""
+        """Logout user by deleting the session.
+
+        :URL: ``POST /login/logout``.
+        :returns: ``{"authenticated": False}``.
+
+        """
         session.delete()
         return {'authenticated': False}
 
     @h.jsonify
     @h.restrict('POST')
     def email_reset_password(self):
-        """Try to reset the user's password and email them a new one.
-        Response is a JSON object with two boolean properties:
+        """Reset the user's password and email them a new one.
 
-            {'validUsername': True/False, 'passwordReset': False/False}
+        :URL: ``POST /login/email_reset_password``
+        :request body: a JSON object with a ``"username"`` attribute.
+        :returns: a dictionary with ``'validUsername'`` and ``'passwordReset'``
+            keys whose values are booleans.
+
         """
         try:
             schema = PasswordResetSchema()

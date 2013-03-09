@@ -92,10 +92,10 @@ Core features
 Technologies
 --------------------------------------------------------------------------------
 
-The OLD is written in Python, using the Pylons web framework.  It exposes a
-RESTful API based on the Atom Publishing Protocol, as implemented by the Routes
-URL routing component of Pylons.  The relational database management system
-(RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
+The OLD is written in Python [#f2]_, using the Pylons web framework.  It exposes
+a RESTful API based on the Atom Publishing Protocol, as implemented by the
+Routes URL routing component of Pylons.  The relational database management
+system (RDBMS) may be MySQL or SQLite (others are, in principle, possible also).
 SQLAlchemy provides a Pythonic interface (ORM) to the RDBMS.
 
 
@@ -132,3 +132,6 @@ The OLD is open source software licensed under
    versions 0.1 through 0.2.7, the OLD was a traditional web application, i.e.,
    it served HTML pages as user interface and expected user input as HTML form
    requests.
+
+.. [#f2] The OLD works with Python 2.6 and 2.7 but not with Python <= 2.5.  It
+   has not been tested with Python 3.

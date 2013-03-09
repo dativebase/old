@@ -1,7 +1,7 @@
 .. _data-structure:
 
 ================================================================================
-The OLD Data Structure
+Data Structure
 ================================================================================
 
 This page describes the data structure of the OLD.  The OLD data structure is a

@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`SyntacticcategoriesController` and its auxiliary functions.
+
+.. module:: syntacticcategories
+   :synopsis: Contains the syntactic category controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -32,8 +39,16 @@ from forms import updateFormsContainingThisFormAsMorpheme
 log = logging.getLogger(__name__)
 
 class SyntacticcategoriesController(BaseController):
+    """Generate responses to requests on syntactic category resources.
 
-    """REST Controller styled on the Atom Publishing Protocol"""
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('SyntacticCategory', config=config)
 
@@ -41,7 +56,18 @@ class SyntacticcategoriesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /syntacticcategories: Return all syntactic categories."""
+        """Get all syntactic category resources.
+
+        :URL: ``GET /syntacticcategorys`` with optional query string parameters
+            for ordering and pagination.
+        :returns: a list of all syntactic category resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(SyntacticCategory)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +81,13 @@ class SyntacticcategoriesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /syntacticcategories: Create a new syntactic category."""
+        """Create a new syntactic category resource and return it.
+
+        :URL: ``POST /syntacticcategorys``
+        :request body: JSON object representing the syntactic category to create.
+        :returns: the newly created syntactic category.
+
+        """
         try:
             schema = SyntacticCategorySchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,9 +108,12 @@ class SyntacticcategoriesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /syntacticcategories/new: Return the data necessary to create a new OLD
-        syntactic category.  Here we simply return the list of syntactic category
-        types defined in lib/utils.
+        """Return the data necessary to create a new syntactic category.
+
+        :URL: ``GET /syntacticcategorys/new``.
+        :returns: a dictionary containing the valid syntactic category types as
+            defined in :mod:`onlinelinguisticdatabase.lib.utils`.
+
         """
         return {'syntacticCategoryTypes': h.syntacticCategoryTypes}
 
@@ -87,7 +122,14 @@ class SyntacticcategoriesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /syntacticcategories/id: Update an existing syntactic category."""
+        """Update a syntactic category and return it.
+        
+        :URL: ``PUT /syntacticcategorys/id``
+        :Request body: JSON object representing the syntactic category with updated attribute values.
+        :param str id: the ``id`` value of the syntactic category to be updated.
+        :returns: the updated syntactic category model.
+
+        """
         syntacticCategory = Session.query(SyntacticCategory).get(int(id))
         if syntacticCategory:
             try:
@@ -124,7 +166,13 @@ class SyntacticcategoriesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /syntacticcategories/id: Delete an existing syntactic category."""
+        """Delete an existing syntactic category and return it.
+
+        :URL: ``DELETE /syntacticcategorys/id``
+        :param str id: the ``id`` value of the syntactic category to be deleted.
+        :returns: the deleted syntactic category model.
+
+        """
         syntacticCategory = Session.query(SyntacticCategory).get(id)
         if syntacticCategory:
             Session.delete(syntacticCategory)
@@ -139,13 +187,12 @@ class SyntacticcategoriesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /syntacticcategories/id: Return a JSON object representation of
-        the syntactic category with id=id.
+        """Return a syntactic category.
+        
+        :URL: ``GET /syntacticcategorys/id``
+        :param str id: the ``id`` value of the syntactic category to be returned.
+        :returns: a syntactic category model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         syntacticCategory = Session.query(SyntacticCategory).get(id)
         if syntacticCategory:
@@ -159,9 +206,19 @@ class SyntacticcategoriesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /syntacticcategories/id/edit: Return the data necessary to update an existing
-        OLD syntactic category; here we return only the syntactic category and
-        the list of syntactic category types defined in lib/utils.
+        """Return a syntactic category resource and the data needed to update it.
+
+        :URL: ``GET /syntacticcategorys/edit``
+        :param str id: the ``id`` value of the syntactic category that will be updated.
+        :returns: a dictionary of the form::
+
+                {"syntacticCategory": {...}, "data": {...}}
+
+            where the value of the ``syntacticCategory`` key is a dictionary
+            representation of the syntactic category and the value of the
+            ``data`` key is a dictionary of valid syntactic category types as
+            defined in :mod:`onlinelinguisticdatabase.lib.utils`.
+
         """
         syntacticCategory = Session.query(SyntacticCategory).get(id)
         if syntacticCategory:
@@ -179,10 +236,12 @@ class SyntacticcategoriesController(BaseController):
 ################################################################################
 
 def createNewSyntacticCategory(data):
-    """Create a new syntactic category model object given a data dictionary
-    provided by the user (as a JSON object).
-    """
+    """Create a new syntactic category.
 
+    :param dict data: the data for the syntactic category to be created.
+    :returns: an SQLAlchemy model object representing the syntactic category.
+
+    """
     syntacticCategory = SyntacticCategory()
     syntacticCategory.name = h.normalize(data['name'])
     syntacticCategory.type = data['type']
@@ -192,9 +251,13 @@ def createNewSyntacticCategory(data):
 
 
 def updateSyntacticCategory(syntacticCategory, data):
-    """Update the input syntactic category model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update a syntactic category.
+
+    :param syntacticCategory: the syntactic category model to be updated.
+    :param dict data: representation of the updated syntactic category.
+    :returns: the updated syntactic category model or, if ``changed`` has not
+        been set to ``True``, ``False``.
+
     """
     changed = False
     # Unicode Data
@@ -209,6 +272,17 @@ def updateSyntacticCategory(syntacticCategory, data):
 
 
 def updateFormsReferencingThisCategory(syntacticCategory):
+    """Update all forms that reference a syntactic category.
+
+    :param syntacticCategory: a syntactic category model object.
+    :returns: ``None``
+    
+    .. note::
+    
+        This function is only called when a syntactic category is deleted or
+        when its name is changed.
+
+    """
     formsOfThisCategory = syntacticCategory.forms
     for form in formsOfThisCategory:
         updateFormsContainingThisFormAsMorpheme(form)

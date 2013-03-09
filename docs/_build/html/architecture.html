@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Architecture Overview &mdash; OLD 1.0a documentation</title>
+    <title>Introduction &mdash; OLD 1.0a1 documentation</title>
     
     <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.0a',
+        VERSION:     '1.0a1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,8 +25,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="OLD 1.0a documentation" href="index.html" />
-    <link rel="next" title="The OLD Interface" href="interface.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="index.html" />
+    <link rel="next" title="Interface" href="interface.html" />
     <link rel="prev" title="Installation &amp; Configuration" href="installation.html" /> 
   </head>
   <body>
@@ -37,12 +37,15 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="interface.html" title="The OLD Interface"
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="interface.html" title="Interface"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="installation.html" title="Installation &amp; Configuration"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">OLD 1.0a documentation</a> &raquo;</li> 
+        <li><a href="index.html">OLD 1.0a1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -51,8 +54,8 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="architecture-overview">
-<h1>Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
 <p>An OLD web service consists of a data structure for storing the artifacts of
 linguistic fieldwork and analysis and a read-write interface to that data
 structure.</p>
@@ -80,7 +83,7 @@ input validation, data processing, linguistic analysis and database updates and
 queries are all handled by the controllers.</p>
 <p>As illustrated in the diagram, the Routes and Controllers components can be
 conceptually grouped together as the <em>interface</em> of an OLD web service.  The
-<a class="reference internal" href="interface.html#interface"><em>The OLD Interface</em></a> section details this interface.</p>
+<a class="reference internal" href="interface.html#interface"><em>Interface</em></a> section details this interface.</p>
 <p>SQLAlchemy provides an abstraction over the tables and relations of the
 underlying database.  Tables, their columns and the relations between them
 (i.e., the schema) are declared using Python data structures called <em>models</em> and
@@ -90,11 +93,8 @@ view) but also makes it easier to use different RDBMSs (e.g., SQLite, MySQL)
 with minimal changes to the application logic.</p>
 <p>As illustrated in the diagram, the Models and RDBMS components can be
 conceptually grouped together as the <em>data structure</em> of an OLD web service.
-The <a class="reference internal" href="datastructure.html#data-structure"><em>The OLD Data Structure</em></a> section describes and argues for the utility of the
+The <a class="reference internal" href="datastructure.html#data-structure"><em>Data Structure</em></a> section describes and argues for the utility of the
 data structure of the OLD.</p>
-<div class="section" id="fake-subsection">
-<h2>Fake subsection<a class="headerlink" href="#fake-subsection" title="Permalink to this headline">¶</a></h2>
-</div>
 </div>
 
 
@@ -102,19 +102,11 @@ data structure of the OLD.</p>
         </div>
       </div>
       <div class="sphinxsidebar">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Architecture Overview</a><ul>
-<li><a class="reference internal" href="#fake-subsection">Fake subsection</a></li>
-</ul>
-</li>
-</ul>
-<h3>Related Topics</h3>
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="installation.html" title="previous chapter">Installation &amp; Configuration</a></li>
-      <li>Next: <a href="interface.html" title="next chapter">The OLD Interface</a></li>
+      <li>Next: <a href="interface.html" title="next chapter">Interface</a></li>
   </ul></li>
 </ul>
   <h3>This Page</h3>

@@ -3,33 +3,32 @@
 .. _interface:
 
 ================================================================================
-The OLD Interface
+Interface
 ================================================================================
 
 This section details the RESTful interface to the OLD data structure as well as
-resource search, authentication and authorization, input validation, and the
-data processing and linguistic analysis components.  That is, it explains what
-kind of effect one can expect from requesting a particular URL (with a
-particular HTTP method and a particular JSON payload) of an OLD web service.
+resource search, authentication and authorization, input validation and notable
+data processing functionality.  That is, it explains what kind of effect one can
+expect from requesting a particular URL (with a particular HTTP method and a
+particular JSON payload) of an OLD web service.
 
 
 .. _restful-api:
 
-The RESTful API
+RESTful API
 --------------------------------------------------------------------------------
 
-The OLD exposes a RESTful interface to its data structure.  While there is some
-disagreement on what, exactly, REST means [#f1]_, in the context of the OLD it
-refers to the fact URLs are used consistently to refer to OLD resources and that
-HTTP methods dictate the action to be performed on the resource.  For example,
-URLs of the form ``/forms`` and ``/forms/id`` are always routed to the forms
-controller which provides the interface for the form resources.  If the HTTP
-method is GET and the URL is ``/forms``, the system will return all form
-resources; the same URL with a POST method will cause the system to create a new
-form resource (using JSON data passed in the request body).  The URL
-``/forms/id`` with a PUT method will result in an update to the form resource
-with ``id=id`` while a DELETE method on the same URL will cause that resource to
-be deleted.
+The OLD exposes a RESTful interface to its data structure.  In the context of
+the OLD, the term *RESTful* [#f1]_ refers to the fact URLs are used consistently
+to refer to OLD resources and that HTTP methods dictate the action to be
+performed on the resource.  For example, URLs of the form ``/forms`` and
+``/forms/id`` are always routed to the forms controller which provides the
+interface for the form resources.  If the HTTP method is GET and the URL is
+``/forms``, the system will *return* all form resources; the same URL with a
+POST method will cause the system to *create* a new form resource (using JSON
+data passed in the request body).  The URL ``/forms/id`` with a PUT method will
+result in an *update* to the form resource with ``id=id`` while a DELETE method
+on the same URL will cause that resource to be *deleted*.
 
 This pattern is detailed in the following table.
 
@@ -100,10 +99,13 @@ As indicated by the "SEARCH-able" column in the above table, some OLD resources
 can be searched using a non-standard [#f2]_ SEARCH method with the relevant URL.
 The table below uses the files resources to illustrate the search interface.
 The details of the search feature (e.g., the format of JSON search parameters)
-are laid out in the :ref:`search-old` section.  (Note that POST
-``/resources/search`` is a synonym for SEARCH ``/resources``; this is to allow
-for search requests from clients that do not allow specification of non-standard
-HTTP methods.)
+are laid out in the :ref:`search-old` section.
+
+.. note::
+
+   ``POST /resources/search`` is a synonym for ``SEARCH /resources``; this is to
+   allow for search requests from clients that do not allow specification of
+   non-standard HTTP methods.
 
 +-------------+-------------------+--------------------------------------+---------------------------+
 | HTTP Method | URL               | Effect                               | Parameters                |
@@ -119,8 +121,8 @@ Requests to ``GET /resources/new_search`` return a JSON object which summarizes
 the data structure of the relevant resource, thus facilitating query
 construction.
 
-For the read-only resources (i.e., formbackups, collectionbackups and
-languages), the only standard requests that are valid are ``GET /resources`` and
+For the read-only resources (cf. the third column in the resources table), the
+only standard requests that are valid are ``GET /resources`` and
 ``GET /resources/id``.  Since these read-only resources also happen to be
 searchable, the search-related requests of the table above are valid for them as
 well.
@@ -128,7 +130,7 @@ well.
 The core OLD resources (i.e., forms, files and collections) deviate from the
 RESTful standard in having additional valid URLs associated.  For example, the
 forms resource has a ``remember`` action such that ``POST /forms/remember`` will
-result in the system associating the forms referenced in the request body with
+result in the system associating the forms referenced in the request body to
 the user making the request (i.e., the user remembers those forms).  Similarly,
 the files resource has a ``serve`` action such that ``GET /files/serve/id`` will
 return the file data for the file with ``id=id``.  These additional actions are
@@ -138,14 +140,14 @@ Aside from those described above, the only additional valid URL/method
 combinations of an OLD web service have to do with authentication and the
 ``login`` controller.  These are detailed in the :ref:`auth` section.
 
-All other (i.e,. invalid) requests to an OLD web service will result in a
-response with a sensible HTTP error code and a JSON message in the response body
-that gives further information on the error.
+All other requests to an OLD web service will result in a response with a
+sensible HTTP error code and a JSON message in the response body that gives
+further information on the error.
 
 
 .. _get-resources:
 
-GET /resources requests
+GET /resources
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``GET /resources``, e.g., ``GET /forms``, return all
@@ -166,7 +168,7 @@ representation of files 101 through 150.  Of course, ordering and pagination
 parameters may both be supplied in a single request.
 
 
-GET /resources/id requests
+``GET /resources/id``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``GET /resources/id``, e.g., ``GET /collections/43``,
@@ -176,7 +178,7 @@ resource.
 
 .. _resources-new:
 
-GET /resources/new requests
+``GET /resources/new``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``GET /resources/new``, e.g., ``GET /forms/new``, return a
@@ -215,7 +217,7 @@ non-empty arrays for values.
 If the value of a parameter in the URL query string is a valid
 `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ datetime string of the form
 ``YYYY-MM-DDTHH:MM:SS``, then the value of the corresponding attribute in the
-response object will be non-empty only so long as input datetime does *not*
+response object will be non-empty only so long as the input datetime does *not*
 match the most recent ``datetimeModified`` value of the specified resources.
 This permits the requesting of only novel data.  For example the request
 ``GET /forms/new?sources=2013-02-22T23:28:43`` will return nothing but source
@@ -227,7 +229,7 @@ requests of the form ``GET /resources/new`` on such resources will return an
 empty JSON object.
 
 
-GET /resources/id/edit requests
+``GET /resources/id/edit``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``GET /resources/id/edit`` return the resource with the
@@ -240,14 +242,14 @@ requests can be thought of as a combination of ``GET /resources/id`` and
 
     {"resourceName": {...}, "data": {...}}
 
-where the value of ``response.body.resourceName`` is the same object as that
-returned by ``GET /resources/id`` and the value of ``resopnse.body.data`` is the
+where the value of the ``resourceName`` attribute is the same object as that
+returned by ``GET /resources/id`` and the value of the ``data`` attribute is the
 same as that returned by ``GET /resources/new``.  Parameters supplied in the
 URL query string have the same effect as those supplied to
 ``GET /resources/new`` requests (cf. :ref:`resources-new`).
 
 
-DELETE /resources/id requests
+``DELETE /resources/id``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``DELETE /resources/id`` result in the resource with the
@@ -260,7 +262,7 @@ content of the resource.  As mentioned above, only administrators and their
 enterers may delete form, file and collection resources.
 
 
-POST /resources requests
+``POST /resources``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``POST /resources`` result in the creation of a resource of
@@ -270,14 +272,16 @@ The input data are first validated (as detailed in :ref:`validation`).  If
 successful, a JSON object representation of the newly created resource is
 returned.
 
-Note that all resources receive, upon successful POST and PUT requests, a value
-for a ``datetimeModified`` attribute which is a Coordinated Universal Time (UTC)
-timestamp.  For creation requests on form, file and collection resources, the
-user who made the request is recorded in the ``enterer`` attribute of the
-resource.
+.. note::
+
+   All resources receive, upon successful POST and PUT requests, a value for a
+   ``datetimeModified`` attribute which is a Coordinated Universal Time (UTC)
+   timestamp.  For creation requests on form, file and collection resources, the
+   user who made the request is recorded in the ``enterer`` attribute of the
+   resource.
 
 
-PUT /resources/id requests
+``PUT /resources/id``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Requests of the form ``PUT /resources/id`` result in the updating of the
@@ -289,17 +293,6 @@ can occur.  If successful, a JSON object representation of the newly updated
 resource is returned.  Upon successful update, the previous versions of form and
 collection resources are saved to special backup tables of the database (i.e.,
 ``formbackup`` and ``collectionbackup``.)
-
-
-Notable resources
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Some resources require special handling beyond the standard CRUD+S (i.e.,
-create, read, update, delete & search) interface described here and in the
-:ref:`search-old` section below.  The notable and novel aspects of these
-resources are described in the resource-specific sections below, i.e.,
-:ref:`form-resource`, :ref:`file-resource`, :ref:`collection-resource`, and
-:ref:`application-settings-resource`.
 
 
 JSON
@@ -322,20 +315,19 @@ expected to be JSON in the request body [#f3]_.
 Search
 --------------------------------------------------------------------------------
 
-As discussed in the :ref:`restful-api` section, the following resources can be
-searched: collections, collectionbackups, files, forms, formbackups,
-formsearches, languages, rememberedforms and sources.  The OLD has a powerful
-search interface, allowing for an unlimited number of filter expressions
-conjoined via boolean operators into a hierarchical structure of unbounded
-depth where each filter expression references a resource attribute, a relation
-and a pattern.
+The OLD provides a powerful search interface to a subset of its resources:
+collections, collectionbackups, files, forms, formbackups, formsearches,
+languages, rememberedforms and sources.  This interface allows for an unlimited
+number of filter expressions conjoined via boolean operators into a hierarchical
+structure of unbounded depth where each filter expression references a resource
+attribute, a relation and a pattern.
 
 In terms of implementation, search expressions are JSON objects that are mapped
-to SQLAlchemy query objects which produce SQL queries.  In relational database
-speak, the OLD search interface permits multi-table queries while taking care of
-the joins and subqueries automatically.  The ``SQLAQueryBuilder`` class in
-``lib/SQLAQueryBuilder.py`` handles the conversion from JSON search expression
-objects [#f7]_ to SQLAlchemy query objects.
+to SQLAlchemy query objects which produce SQL queries.  In relational
+database-speak, the OLD search interface permits multi-table queries while
+taking care of the joins and subqueries automatically.  The ``SQLAQueryBuilder``
+class in ``lib/SQLAQueryBuilder.py`` handles the conversion from JSON search
+expression objects [#f7]_ to SQLAlchemy query objects.
 
 Valid search requests (e.g., ``SEARCH /forms``) must contain in the request body
 a JSON object representing the query.  The query object has a 'query' attribute
@@ -457,7 +449,6 @@ and all forms having one or more, respectively.
    ["Form", "files", "!=", null]
 
 
-
 Complex filter expressions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -494,8 +485,7 @@ of embedding.
 Filter relations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OLD search requests permit the relations listed below.  Note that some relations
-can be referenced by more than one name as indicated in the brackets.
+OLD search requests permit the relations listed below.  
 
 * equality ("=" or "__eq__")
 * inequality ("!=" or "__ne__")
@@ -506,6 +496,11 @@ can be referenced by more than one name as indicated in the brackets.
 * greater than (">" or "__gt__")
 * greater than or equal to (">=" or "__ge__")
 * one of ("in" or "in\_")
+
+.. note::
+
+   Some relations can be referenced by more than one name as indicated in the
+   brackets.
 
 Most of these relations should be self-explanatory.  However, the *like* and
 *regular expression* relations merit further discussion.
@@ -545,8 +540,10 @@ Find all forms that contain "k", followed by any single character, followed by
 
    ["Form", "transcription", "like", "%k_t%"]
 
-Note that, as illustrated by the above examples, OLD filter expressions are
-case-sensitive.
+.. note::
+
+   As indicated by the above examples, OLD filter expressions are
+   case-sensitive.
 
 
 The *regexp* relation
@@ -634,22 +631,25 @@ expression.
 
    ["Form", "transcription", "regex", "^.{5,10}$"]
 
-Note that regular expressions will treat unicode combining characters as
-separate characters.  Since the OLD applies unicode canonical decomposition
-normalization [#f9]_ on all input, a string like "á" will be interpreted by
-the regular expression parser as containing two strings, the "a" and the
-COMBINING ACCUTE ACCENT (u+0301) character.  Keep this in mind when using
-regular expression quantifiers to filter based on string length or when using
-character sets.  In the latter case, it is usually safer to use parentheses and
-the alternation metacharacter than character sets.  To illustrate, consider the
-two examples below.  The first OLD filter expression will match "oao", "oio" and
-"óo", which is probably not what was intended.  The second filter expression
-will match "oáo" and "oío", which is probably what was intended.
+.. note::
 
-.. code-block:: javascript
+   Regular expressions will treat unicode combining characters as separate
+   characters.  Since the OLD applies unicode canonical decomposition
+   normalization [#f9]_ on all input, a string like "á" will be interpreted by
+   the regular expression parser as containing two strings, the "a" and the
+   COMBINING ACCUTE ACCENT (u+0301) character.  Keep this in mind when using
+   regular expression quantifiers to filter based on string length or when using
+   character sets.  In the latter case, it is usually safer to use parentheses
+   and the alternation metacharacter than character sets.  To illustrate,
+   consider the two examples below.  The first OLD filter expression will match
+   "oao", "oio" and "óo", which is probably not what was intended.  The second
+   filter expression will match "oáo" and "oío", which is probably what was
+   intended.
 
-   ["Form", "transcription", "regex", "o[áí]o"]
-   ["Form", "transcription", "regex", "o(á|í)o"]
+   .. code-block:: javascript
+
+      ["Form", "transcription", "regex", "o[áí]o"]
+      ["Form", "transcription", "regex", "o(á|í)o"]
 
 
 .. _search-orderby:
@@ -683,20 +683,27 @@ ordered by id in descending order.
         "orderBy": ["Form", "id", "desc"]}}
 
 
+
+Non-standard API
+--------------------------------------------------------------------------------
+
+This section describes the valid requests that are not covered by the standard
+RESTful and search interfaces documented in the previous sections.  A subset of
+OLD resources possess such supplemental interfaces.  This section is organized
+by resource.
+
+
 .. _form-resource:
 
 Forms
---------------------------------------------------------------------------------
-
-Forms represent linguistic forms and are the core of an OLD web service.  Access
-to the forms resource is handled by the ``forms`` controller.  This controller
-has some non-standard actions, viz. ``history`` and ``remember``.  It also
-performs some additional processing during create and update requests related to
-morphological analysis.  This section describes these idiosyncracies.
-
-
-GET /forms/history/id
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Form resources represent linguistic forms and are the core of an OLD web
+service.  The non-standard interfaces of form resources are described here.
+
+
+``GET /forms/history/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Requests to ``GET /forms/history/id`` are routed to the ``history`` action of
 the ``forms`` controller.  Such requests return a JSON object representing the
@@ -716,8 +723,8 @@ previous versions of the form.  If the form has been deleted, the value of the
 deleted, the value of the "previousVersions" attribute will be an empty array.
 
 
-POST /forms/remember
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``POST /forms/remember``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Requests to ``POST /forms/remember`` are routed to the ``remember`` action of
 the ``forms`` controller and cause the forms referenced in the request body to
@@ -729,6 +736,398 @@ request.  The expected input is an object of the form
     {"forms": [id1, id2, ... ]}
 
 where ``id1``, ``id2``, etc. are form integer ids.
+
+
+``PUT /forms/update_morpheme_references``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``PUT /forms/update_morpheme_references`` regenerates values for the
+``morphemeBreakIDs``, ``morphemeGlossIDs``, ``syntacticCategoryString`` and
+``breakGlossCategory`` attributes of *all* forms in the system.  (See the
+:ref:`morphological-processing` and :ref:`form-data-structure` sections for
+details on these attributes.)  The response generated by this request contains a
+JSON array of ids corresponding to the forms that were updated.  Only
+administrators are authorized to make this request.
+
+.. warning::
+
+   It should not be necessary to request the regeneration of morpheme references
+   via this request since this should already be accomplished automatically by
+   the call to ``updateFormsContainingThisFormAsMorpheme`` on all successful
+   update and create requests on form resources.  This interface is, therefore,
+   deprecated (read: use it with caution) and may be removed in future versions
+   of the OLD.
+
+
+.. _file-resource:
+
+Files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+OLD file resources are representations of binary files stored on a filesystem.
+From a linguist's point of view, they are the audio/video records of linguistic
+fieldwork, the images (or audio or video) used as stimuli, PDFs of relevant
+papers or handouts, etc. -- anything that is relevant to a piece or a collection
+of language data.  Multiple file resources can be associated to a given form or
+collection resource.  Thus, for example, a form representing a sentence could be
+associated to a large audio recording of an elicitation session, a smaller audio
+recording of just the sentence being uttered, an image used to illustrate a
+context for a speaker, etc.  See the :ref:`file-data-structure` section for more
+details on files.
+
+
+``GET /files/serve/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``GET /files/serve/id`` return the file data of the file resource
+with the given id, assuming the authenticated user is authorized to access that
+resource.  If the file with the specified id is a subinterval-referencing file,
+the file data of the parent file is returned; if the file data are hosted
+externally, an explanatory error message is returned.  (See the
+:ref:`file-data-structure` for an explanation of subinterval-referencing and
+externally hosted files.)
+
+``GET /files/serve_reduced/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``GET /files/serve_reduced/id`` return the file content of the
+reduced-size copy of the file which was created by the OLD upon file creation.
+If there is no reduced-size copy of the file, the OLD returns an error message.
+These requests handle subinterval-referencing and externally hosted files in the
+same way as described in the above subsection.
+
+
+.. _collection-resource:
+
+Collections
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Collections are documents that can reference forms and are useful for creating
+records of elicitation sessions or for writing papers using data stored on an
+OLD application.  See the :ref:`collection-data-structure` section for more
+details on collections.
+
+
+``GET /collections/history/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``GET /collections/history/id`` are routed to the ``history`` action
+of the ``collections`` controller and return a JSON object representing the
+history, or previous versions, of the collection with the specified id.  The id
+parameter can be the integer id or the
+`Universally Unique Identifier <http://en.wikipedia.org/wiki/Universally_unique_identifier>`_
+(UUID) of the collection. [#f10]_  The JSON object returned is of the form
+
+.. code-block:: javascript
+
+    {"collection": { ... }, "previousVersions": [ ... ]}
+
+where the value of the "collection" attribute is the JSON representation of the
+collection while the value of "previousVersions" is an array of objects
+representing the previous versions of the collection.  If the collection has
+been deleted, the value of the ``collection`` attribute will be ``null`` and if
+the collection has not been updated or deleted, the value of the
+``previousVersions`` attribute will be an empty array.
+
+
+
+.. _application-settings-resource:
+
+Application settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The application-wide settings for an OLD application are stored as application
+settings objects.  These resources have non-standard interfaces insofar as only
+administrators are permitted to create, update or delete them.  Other types of
+users can only read them, i.e., request ``GET /applicationsettings`` and
+``GET /applicationsettings/id``.  The application settings resources are also
+unique in that the most recently created one (i.e., that with the largest id) is
+designated as the *active* application settings and is the one that affects the
+behaviour of the rest of the application.  Therefore, application-wide behaviour
+may be configured either by updating the active application settings resource or
+by creating a new (and hence active) one.  The latter approach is recommended
+since the previously created application settings resources will provide a
+history of previous configurations.
+
+
+Users
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+User resources represent the users (i.e., administrators, contributors and
+viewers) of an OLD application.  The interface to this resource is non-standard
+in that only administrators are authorized to create or delete user resources
+and a user resource can only be updated by administrators and the holder of the
+user account.  See the :ref:`user-data-structure` section for more details on
+users.
+
+
+.. _remembered-forms-interface:
+
+Remembered forms
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each OLD user has a ``rememberedForms`` attribute whose value is a collection of
+zero or more form resources that the user has memorized.  Since these
+collections can grow quite large, they are treated as a resources of their own
+and are not affected by interactions with user resources.  The interface to the
+remembered forms resources are non-standard in that ...
+
+
+``GET /rememberedforms/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``GET /rememberedforms/id`` return the array of forms remembered by
+the user with the supplied id.  Such requests are routed to the ``show`` action
+of the ``rememberedforms`` controller.  Ordering and pagination parameters may
+be provided in the query string of this request in exactly the same way as with
+standard ``GET /resources`` requests of conventional resources (cf.
+:ref:`get-resources`).
+
+
+``UPDATE /rememberedforms/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``UPDATE /rememberedforms/id`` are routed to the ``update`` action
+and set the remembered forms of the user with the supplied id to the set of
+forms referenced in the JSON array of form ids sent in the request body. This
+type of request accomplishes creation, updating and deletion of a
+remembered form "resource".  Only administrators and the user with the supplied
+id can make licit requests to ``UPDATE /rememberedforms/id``.  As with requests
+to ``POST /forms/remember``, requests to ``UPDATE /rememberedforms/id`` should
+contain a JSON request body of the form ``{"forms": [16, 28, 385]}``.
+
+.. note::
+
+   The ``remember`` action of the forms controller has a similar, but more
+   restricted, effect, i.e., requests to ``POST /forms/remember`` can add forms
+   to (but not delete them from) the remembered forms collection of the user who
+   makes the request.
+
+``SEARCH /rememberedforms/id``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Requests to ``SEARCH /rememberedforms/id`` return all form resources remembered
+by the user with the supplied id and which match the JSON search filter passed
+in the request body.  These requests are routed to the ``search`` action.
+Requests to ``POST /rememberedforms/id/search`` have the same effect as those to
+``SEARCH /rememberedforms/id``.
+
+.. note::
+
+   The same effect can be achieved by conjoining the filter expression
+   ``["Memorizer", "id", "=", id]`` to an existing search on form resources,
+   i.e., a request to ``SEARCH /forms``.
+
+
+.. _auth:
+
+Authentication & authorization
+--------------------------------------------------------------------------------
+
+Speakers of endangered languages and their communities often require that the
+language data gathered by researchers not be made available to the public at
+large.  Therefore, authentication (i.e., a username and password) is required in
+order to access data on an OLD web service [#f4]_.
+
+In addition to authentication, the OLD possesses a role-based system of
+authorization.  The three roles are *administrator*, *contributor* and *viewer*.
+
+Viewers are only able to perform read requests, e.g., view all form resources,
+retrieve a particular file resource, search the collections resources, etc.
+
+Contributors have read and write access to most resources, with some
+restrictions.  Contributor *U1* is not permitted to delete a form, file or
+collection entered by contributor *U2*.  Only administrators and *U1* can delete
+a form, file or collection entered by *U1*.  In addition, only administrators
+and user *U1* are permitted to update the user resource representing *U1*.
+
+Administrators have unrestricted access to read and write any resource.  Only
+administrators can create or delete users and only administrators have write
+access to application settings resources.
+
+Separate from the role-based division of users is a classification into
+restricted and unrestricted users.  While administrators are, by default, always
+unrestricted, the application settings can specify a subset of contributors and
+viewers as unrestricted.  Only unrestricted users are permitted to access
+restricted objects, i.e., forms, files or collections tagged with the
+"restricted" tag.  Users not classified as unrestricted (i.e., restricted users)
+are unable to access restricted objects in any way.  Since core objects can be
+associated to one another (e.g., a form can be associated to multiple files),
+restricted status can spread from object to object.  For example, an
+unrestricted form becomes restricted as soon as it is associated to a restricted
+file.
+
+The ``login`` controller effects authentication.  Its interface is detailed in
+the following table.
+
++-------------+-----------------------------+--------------------------------------+---------------------------+
+| HTTP Method | URL                         | Effect                               | Parameters                |
++=============+=============================+======================================+===========================+
+| POST        | /login/authenticate         | Attempt to authenticate              | JSON object               |
++-------------+-----------------------------+--------------------------------------+---------------------------+
+| GET         | /login/logout               | De-authenticate                      |                           |
++-------------+-----------------------------+--------------------------------------+---------------------------+
+| POST        | /login/email_reset_password | Email a newly generated password to  | JSON object               |
+|             |                             | the user                             |                           |
++-------------+-----------------------------+--------------------------------------+---------------------------+
+
+``POST /login/authenticate`` attempts authentication using the provided input,
+i.e., a JSON object on the request body of the form
+``{"username": " ... ", "password": " ... "}``.  If successful, authenticated
+status is persisted across requests via a cookie-based ``session`` object where
+the value of ``session['user']`` is the user model of the authenticated user.
+
+A ``GET /login/logout`` request removes the ``'user'`` key from the ``session``
+object associated with the cookie passed in the request.  That is, it
+de-authenticates, or logs out, the user.
+
+A ``POST /login/email_reset_password`` request with a JSON object in the request
+body of the form ``{"username": " ... "}`` attempts to create a new, randomly
+generated password for the user with the provided username and notify the user
+via email of the change.  If the server is unable to send email, the password
+will not be reset and a JSON error message will be returned in the response.
+
+.. note::
+
+   If an SMTP mail server cannot be used, it is possible (as detailed in the
+   comments of the config file that is generated when ``paster make-config`` is
+   run) to configure an OLD application to send email via a specified Gmail
+   account.
+
+For more details on the authentication and authorization scheme of the OLD,
+please consult the API documentation and/or the source code.  Most relevant are
+the ``lib/auth.py``, ``controllers/login.py``, ``controllers/forms.py``,
+``controllers/files.py`` and ``controllers/oldcollections.py`` modules.
+
+
+.. _validation:
+
+Input validation
+--------------------------------------------------------------------------------
+
+When users attempt to create a new resource or update an existing one, the OLD
+attempts to validate the input.  If validation fails, the status code of the
+response is set to 400 and a JSON object explaining the issue(s) is returned,
+i.e., an object of the form
+``{'error': 'error message'}`` or
+``{'errors': {'field name 1': 'error message 1', 'field name 2': 'error message 2'}}``.
+
+
+Standard validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Standard validation is validation on user input that is applied by all OLD
+applications in the same way.
+
+Some representative examples will illustrate.  All forms require some string in
+their transcription field and at least one translation.  References to other OLD
+resources via their ids are validated for existence; e.g., when an elicitor for
+a form is specified via a user id, then validation ensures that the id
+corresponds to a user in the database.  User-supplied values for date fields
+must be in ``mm/dd/yyyy`` format.  Emails must be correctly formatted.  Files
+uploaded must be one of the allowed file types (e.g., .jpg, .wav) of the OLD.
+
+The Pylons controller classes that control the creation and updating of
+resources ensure that all such validation is passed before these requests can
+succeed.  The validators that encode these validations are written using the
+`FormEncode <http://www.formencode.org>`_ library and can be found in the
+``lib/schemata.py`` module of the OLD source.  For further information on input
+validation, consult the :ref:`data-structure` section, the API documentation
+and/or the source code.
+
+
+.. _object-language-validation:
+
+Object language validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to the standard validation described above, particular OLD
+applications can control how, or whether, transcriptions of the object language
+are validated.  The relevant form attributes are ``transcription``,
+``phoneticTranscription``, ``narrowPhoneticTranscription`` and
+``morphemeBreak``.  By configuring the OLD application's settings, adminstrators
+can control what types of strings are permitted in these fields.  This is useful
+for when groups of researchers want to ensure that, say, all morpheme
+segmentation strings (i.e., ``morphemeBreak`` values) are restricted to
+sequences of phonemes from the specified inventory plus the specified morpheme
+delimiters.
+
+The table below shows how object language transcription validation is
+configured.
+
++-----------------------------+-----------------------------------+--------------------------+
+| Form attribute              | Relevant inventory or orthography | Validation parameter     |
++=============================+===================================+==========================+
+| transcription               | storageOrthography                | orthographicValidation   |
++-----------------------------+-----------------------------------+--------------------------+
+| phoneticTranscription       | broadPhoneticInventory            | broadPhoneticValidation  |
++-----------------------------+-----------------------------------+--------------------------+
+| narrowPhoneticTranscription | narrowPhoneticInventory           | narrowPhoneticValidation |
++-----------------------------+-----------------------------------+--------------------------+
+| morphemeBreak               | phonemicInventory*                | morphemeBreakValidation  |
++-----------------------------+-----------------------------------+--------------------------+
+
+The validation parameter column lists the attributes of the application settings
+resource that control whether the form attribute in the first column should be
+validated against the relevant inventory or orthography.  Each of the attributes
+in the validation parameter column can have one of three possible values:
+``None``, ``Warning`` or ``Error``.  Only if the attribute is set to ``Error``
+will inventory/orthography-based validation occur.
+
+For example, if the current application settings resource has
+``orthographicValidation`` set to ``Error``, then input validation will ensure
+that form transcriptions contain only graphemes (i.e., characters or character
+sequences) from the storage orthography plus punctuation characters and the
+space character.
+
+When validation is enabled on the phonetic transcription fields, only graphs
+from the specified inventory plus the space character are permitted (i.e., no
+punctuation).
+
+The ``morphemeBreak`` attribute's validation settings are slightly more complex
+since it is possible to choose between the storage orthography or the phonemic
+inventory when configuring validation.  This is done by setting the
+``morphemeBreakIsOrthographic`` attribute of the application settings resource
+to ``true`` in the former case and ``false`` in the latter.  For example,
+if ``morphemeBreakIsOrthographic`` is set to ``false`` and
+``morphemeBreakValidation`` is set to ``Error``, then input to the
+``morphemeBreak`` field will be rejected if it contains characters outside of
+the specified phonemic inventory, the specified morpheme delimiters and the
+space character.
+
+As implied in the above discussion, the application settings resource has
+``morphemeDelimiters`` and ``punctuation`` attributes for specifying sets of
+valid morpheme delimiters and punctuation, respectively.
+
+Sometimes it is desirable to include foreign words in the object language
+transcriptions while still permitting validation against inventories and
+orthographies on these fields.  For example, in a system where ``morphemeBreak``
+validation is enabled and the phonemic inventory is /p/, /t/, /k/, /i/, /a/,
+/u/, it might be desirable to allow a ``morphemeBreak`` value of "ki dog katti"
+but prohibit "ki dog kotti".  The OLD permits this via the special "foreign
+word" tag on form resources.  When a form is tagged as a foreign word, its
+transcription values affect validation.  So, if the system were to contain a
+foreign word form with "dog" as its ``morphemeBreak`` value, then validation
+would correctly allow both instances of "dog" in the above two examples while
+disallowing the latter example because of the illicit "o" in "kotti".  The
+function ``updateApplicationSettingsIfFormIsForeignWord`` is called in the
+``forms`` controller upon successful create and update requests and is
+responsible for updating the validators with the foreign word information.
+
+
+Processing
+--------------------------------------------------------------------------------
+
+When requests cause resources to be created or updated, the OLD may perform some
+additional processing that may affect the values of certain attributes of the
+target resource or even of other resources.  The notable data processing
+functionalities are listed below and are detailed in their own subsections.
+
+* the generation of values for form attributes related to morphological analysis
+* the updating of transcription validators when foreign words are entered
+* the resolution and cacheing of collection-collection and collection-form cross-references
+* the creation of reduced-size copies of the binary files of file resources
+
 
 
 .. _morphological-processing:
@@ -802,14 +1201,17 @@ arrays for the ``morphemeBreakIDs`` and ``morphemeGlossIDs`` attributes. ::
         ]
     ]
 
-Note that ``morphemeBreakIDs[0][1]`` contains two match triples because the
-second morpheme of the first word in the ``morphemeBreak`` line, i.e., "s",
-matches two forms, i.e., the forms with ids 2 and 3.  Similarly,
-``morphemeGlossIDs[0][1]`` contains two analogous match triples, the difference
-in this case being that the morpheme's phonemic/orthographic representation is
-listed and not its gloss.  In contrast, the morpheme break "ent" matches form 6,
-hence the single match triple in ``morphemeBreakIDs[2][1]``, whereas "3PL"
-matches nothing, hence the absence of matches in ``morphemeGlossIDs[2][1]``.
+.. note::
+
+   The ``morphemeBreakIDs[0][1]`` value contains two match triples because the
+   second morpheme of the first word in the ``morphemeBreak`` line, i.e., "s",
+   matches two forms, i.e., the forms with ids 2 and 3.  Similarly,
+   ``morphemeGlossIDs[0][1]`` contains two analogous match triples, the
+   difference in this case being that the morpheme's phonemic/orthographic
+   representation is listed and not its gloss.  In contrast, the morpheme break
+   "ent" matches form 6, hence the single match triple in
+   ``morphemeBreakIDs[2][1]``, whereas "3PL" matches nothing, hence the absence
+   of matches in ``morphemeGlossIDs[2][1]``.
 
 The purpose of the ``morphemeBreakIDs`` and ``morphemeGlossIDs`` attributes is
 that they record the extent to which the morphemic analysis of a given form is
@@ -838,11 +1240,13 @@ high-level morphological patterns.  For example, using the syntactic category
 string, one could use regular expressions to search for all forms consisting of
 an NP followed by a VP.
 
-Note that, given our example dataset, ``'D-Num N-Num V-Agr'`` is a reasonable
-(and perhaps preferable) syntactic category string value.  However, the system
-has no way of knowing this and therefore when there are two matches for a
-morpheme (as there are for "s") it arbitrarily chooses the syntactic category of
-the lexical form with the lowest id.
+.. note::
+
+   Given our example dataset, ``'D-Num N-Num V-Agr'`` is a reasonable
+   (and perhaps preferable) syntactic category string value.  However, the
+   system has no way of knowing this and therefore when there are two matches
+   for a morpheme (as there are for "s") it arbitrarily chooses the syntactic
+   category of the lexical form with the lowest id.
 
 The value of ``breakGlossCategory`` is a string that unambiguously represents
 the morphemic analysis of the form.  Each morpheme is taken to be a triplet
@@ -898,378 +1302,54 @@ is entered with ``transcription``, ``morphemeBreak`` and ``morphemeGloss``
 values of "John", "John" and "John" and is tagged as a "foreign word", then the
 system will allow the string "John" to be included in the ``transcription``
 field of other forms even if validation is set to reject forms whose
-transcriptions contain, say, "J" or "h".  Note that it is desirable to be able
-to enter such a lexical entry as "John" with a category of, say, "PN" since
-doing so will result in sensible ``syntacticCategoryString`` values for forms
-containing "John" in their ``morphemeBreak`` value.
+transcriptions contain, say, "J" or "h".
+
+.. note::
+
+   It is desirable to be able to enter such a lexical entry as "John" with a
+   category of, say, "PN" since doing so will result in sensible
+   ``syntacticCategoryString`` values for forms containing "John" in their
+   ``morphemeBreak`` value.
 
 
-.. _file-resource:
-
-File resources
---------------------------------------------------------------------------------
-
-OLD file resources are representations of binary files stored on a filesystem.
-From a linguist's point of view, they are the audio/video records of linguistic
-fieldwork, the images (or audio or video) used as stimuli, PDFs of relevant
-papers or handouts, etc. -- anything that is relevant to a piece or a collection
-of language data.  Multiple file resources can be associated to a given form or
-collection resource.  Thus, for example, a form representing a sentence could be
-associated to the following three OLD file resources: a large audio recording of
-an elicitation session, a smaller audio recording of just the sentence being
-uttered as well as an image used to illustrate a context for a speaker.
-
-There are three types of file resources and while each share a common core of
-metadata-related attributes, they have attributes unique to their type as well.
-*Local* files are stored on the filesystem (in the ``files/`` directory) of the
-machine serving an OLD applicaton.  *Subinterval-referencing* files get their
-file content from a local *audio/video* file (their ``parentFile``) and have
-``start`` and ``end`` attributes which reference start and end positions in the
-parent file.  *Externally hosted* files have content stored on another server
-and have ``url`` attributes.
-
-The file resource has two novel methods: ``serve`` and ``serve_reduced``.
-Requests to ``GET /files/serve/id`` return the file content of the file resource
-with the given id, assuming the authenticated user is authorized to access that
-resource.  Requests to ``GET /files/serve_reduced/id`` return the file content
-of the reduced-size copy of the file which was created by the OLD upon file
-creation.  If there is no reduced-size copy of the file, the OLD returns an
-error message.  Both types of request handle subinterval-referencing files by
-returning the content of the parent file.  It is the responsibility of the
-user-facing application to use the ``start`` and ``end`` attributes to play the
-appropriate portion of the parent file's contents.  When the id in one of these
-requests refers to an externally hosted file, an explanatory error message is
-returned.
-
-
-.. _collection-resource:
-
-Collections
---------------------------------------------------------------------------------
-
-As with forms, requests to ``GET /collections/history/id`` are routed to the
-``history`` action of the ``collections`` controller.  Such requests return a
-JSON object representing the history, or previous versions, of the collection
-with the specified id.  The id parameter can be the integer id or the
-`Universally Unique Identifier <http://en.wikipedia.org/wiki/Universally_unique_identifier>`_
-(UUID) of the collection. [#f10]_  The JSON object returned is of the form
-
-.. code-block:: javascript
-
-    {"collection": { ... }, "previousVersions": [ ... ]}
-
-where the value of the "collection" attribute is the JSON representation of the
-collection while the value of "previousVersions" is an array of objects
-representing the previous versions of the collection.  If the collection has
-been deleted, the value of the "collection" attribute will be ``null`` and if
-the collection has not been updated or deleted, the value of the
-"previousVersions" attribute will be an empty array.
-
-
-
-.. _application-settings-resource:
-
-Application settings
---------------------------------------------------------------------------------
-
-Only administrators are permitted to create, update or delete application
-settings resources.  Other types of users can only request
-``GET /applicationsettings`` and ``GET /applicationsettings/id``.  The
-application settings resources are unique in that the most recently created one
-(i.e., that with the largest id) is designated as the *active* application
-settings, i.e., the one that affects the behaviour of the rest of the
-application.  Therefore, application-wide behaviour may be configured either by
-updating the active application settings resource or by creating a new (and
-hence active) one.
-
-
-Users
---------------------------------------------------------------------------------
-
-Only administrators are authorized to create or delete user resources and a user
-resource can only be updated by administrators and the holder of the user
-account.  Aside from these authorization idiosyncracies, the interface to the
-user resource is standard.
-
-
-.. _remembered-forms-interface:
-
-Remembered forms
---------------------------------------------------------------------------------
-
-Each user has an attribute called ``rememberedForms`` which is a collection of
-zero or more form resources that the speaker has memorized.  Since this
-collection can grow quite large, it is treated as a resource of its own and is
-not returned when a user resource is read.
-
-In order to retrieve the forms remembered by a user, request
-``GET /rememberedforms/id``.  Such requests are routed to the ``show`` action
-of the ``rememberedforms`` controller and return all forms remembered by the
-user with the supplied id.  Note that ordering and pagination parameters may be
-supplied in the query string of this request in exactly the same way as with
-standard ``GET /resources`` requests of conventional resources (cf.
-:ref:`get-resources`).
-
-Requests to ``UPDATE /rememberedforms/id`` are routed to the ``update`` action
-and set the remembered forms of the user with the supplied id to the set of
-forms referenced in the JSON array of form ids sent in the request body. This
-type of request accomplishes creation, updating and deletion of a
-remembered form "resource".  Note that the ``remember`` action of the forms
-controller has a similar, but more restricted, effect, i.e., requests to
-``POST /forms/remember`` can add forms to (but not delete them from) the
-remembered forms collection of the user who makes the request.  Only
-administrators and the user with the supplied id can make licit requests to
-``UPDATE /rememberedforms/id``.  As with requests to ``POST /forms/remember``,
-requests to ``UPDATE /rememberedforms/id`` should contain a JSON request body of
-the form ``{"forms": [16, 28, 385]}``.
-
-Requests to ``SEARCH /rememberedforms/id`` return all form resources remembered
-by the user with the supplied id and which match the JSON search filter passed
-in the request body.  These requests are routed to the ``search`` action.
-Requests to ``POST /rememberedforms/id/search`` have the same effect as those to
-``SEARCH /rememberedforms/id``.  Note also that the same effect can be achieved
-by conjoining the following filter expression to an existing search on form
-resources, i.e., a request to ``SEARCH /forms``.
-
-.. code-block:: javascript
-
-    ["Memorizer", "id", "=", id]
-
-
-.. _auth:
-
-Authentication & authorization
---------------------------------------------------------------------------------
-
-Speakers of endangered languages and their communities often require that the
-language data gathered by researchers not be made available to the public at
-large.  Therefore, authentication (i.e., a username and password) is required in
-order to access data on an OLD web service [#f4]_.
-
-In addition to authentication, the OLD possesses a role-based system of
-authorization.  The three roles are *administrator*, *contributor* and *viewer*.
-
-Viewers are only able to perform read requests, e.g., view all form resources,
-retrieve a particular file resource or search the collections resources.
-
-Contributors have read and write access.  However, contributor *U1* is not
-permitted to delete a form, file or collection entered by contributor *U2*.
-Only administrators and *U1* can delete a form, file or collection entered by
-*U1*.  In addition, only administrators and user *U1* are permitted to update
-the user resource representing *U1*.
-
-Administrators have unrestricted access to read and write any resources.  Only
-administrators can create or delete users and only administrators have write
-access to application settings resources.
-
-Separate from the role-based division of users is a classification into
-restricted and unrestricted users.  While administrators are, by default, always
-unrestricted, the application settings can specify a subset of contributors and
-viewers as unrestricted.  Only unrestricted users are permitted to access
-restricted objects, i.e., forms, files or collections tagged with the
-"restricted" tag.  Users not classified as unrestricted (i.e., restricted users)
-are unable to access restricted objects in any way.  Since core objects can be
-associated to one another (e.g., a form can be associated to multiple files),
-restricted status can spread from object to object.  For example, an
-unrestricted form becomes restricted as soon as it is associated to a restricted
-file.
-
-The ``login`` controller effects authentication.  Its interface is detailed in
-the following table.
-
-+-------------+-----------------------------+--------------------------------------+---------------------------+
-| HTTP Method | URL                         | Effect                               | Parameters                |
-+=============+=============================+======================================+===========================+
-| POST        | /login/authenticate         | Attempt to authenticate              | JSON object               |
-+-------------+-----------------------------+--------------------------------------+---------------------------+
-| GET         | /login/logout               | De-authenticate                      |                           |
-+-------------+-----------------------------+--------------------------------------+---------------------------+
-| POST        | /login/email_reset_password | Get data for creating a new form     | JSON object               |
-+-------------+-----------------------------+--------------------------------------+---------------------------+
-
-``POST /login/authenticate`` attempts authentication using the provided input,
-i.e., a JSON object on the request body of the form
-``{"username": " ... ", "password": " ... "}``.  If successful, authenticated
-status is persisted across requests via a cookie-based ``session`` object where
-the value of ``session['user']`` is the ``User`` model of the authenticated
-user.
-
-A ``GET /login/logout`` request removes the ``'user'`` key from the ``session``
-object associated with the cookie passed in the request.
-
-A ``POST /login/email_reset_password`` request with a JSON object in the request
-body of the form ``{"username": " ... "}`` attempts to create a new, randomly
-generated password for the user with the provided username and notify the user
-via email of the change.  If the server is unable to send email, the password
-will not be reset and a JSON error message will be returned in the response.
-Note: if an SMTP mail server cannot be used, it is possible (as detailed in the
-comments of the config file that is generated when ``paster make-config`` is
-run) to configure an OLD application to send email via Gmail.
-
-For more details on the authentication and authorization scheme of the OLD,
-please consult the API documentation and/or the source code.  Most relevant are
-the ``lib/auth.py``, ``controllers/login.py``, ``controllers/forms.py``,
-``controllers/files.py`` and ``controllers/oldcollections.py`` modules.
-
-
-.. _validation:
-
-Input validation
---------------------------------------------------------------------------------
-
-When users attempt to create a new resource or update an existing one, the OLD
-attempts to validate the input.  If validation fails, the status code of the
-response is set to 400 and a JSON object explaining the issue(s) is returned,
-i.e., an object of the form
-``{'error': 'error message'}`` or
-``{'errors': {'field name 1': 'error message 1', 'field name 2': 'error message 2'}}``.
-
-
-Standard validation
+Collection references
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Standard validation is validation on user input that is applied by all OLD
-applications
+The ``contents`` attribute of collections is a string that may contain
+references to forms and other collections.  These references determine the value
+of the ``contentsUnpacked``, ``html`` and ``forms`` attributes.
 
-Some representative examples will illustrate.  All forms require some string in
-their transcription field and at least one translation.  References to other OLD
-resources via their ids are validated for existence; e.g., when an elicitor for
-a form is specified via a user id, then validation ensures that the id
-corresponds to a user in the database.  User-supplied values for date fields
-must be in ``mm/dd/yyyy`` format.  Emails must be correctly formatted.  Files
-uploaded must be one of the allowed file types (e.g., .jpg, .wav) of the OLD.
+When the value of the ``contents`` attribute of an existing collection is
+updated, the ``update`` action calls
+``updateCollectionsThatReferenceThisCollection`` in order to update the 
+``contentsUnpacked``, ``html`` and ``forms`` values of all of the collections
+that reference the updated collection.  This same function is called when a
+collection is deleted; in this case, all references to the deleted collection
+are removed from any collections that were referencing it and the appropriate
+values are updated.  Similarly, when a form is deleted, the ``delete`` action
+calls ``updateCollectionsReferencingThisForm`` and all references to the
+to-be-deleted form are removed from any collections that reference it.
 
-The Pylons controller classes that control the creation and updating of
-resources ensure that all such validation is passed before these requests can
-succeed.  The validators that encode these validations are written using the
-`FormEncode <http://www.formencode.org>`_ library and can be found on the OLD in
-the ``lib/schemata.py`` module.  For further information on input validation,
-consult the :ref:`data-structure` section, the API documentation and/or the
-source code.
+See the :ref:`collection-data-structure` section for more details on collection
+references and the attributes whose values depend on them.
 
 
-.. _object-language-validation:
-
-Object language validation
+Lossy file copies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In addition to the standard validation described above, particular OLD
-applications can control how, or whether, transcriptions of the object language
-are validated.  The relevant form attributes are ``transcription``,
-``phoneticTranscription``, ``narrowPhoneticTranscription`` and
-``morphemeBreak``.  By configuring the OLD application's settings, adminstrators
-can control what types of strings are permitted in these fields.  This is useful
-for when groups of researchers want to ensure that, say, all morpheme
-segmentation strings (i.e., ``morphemeBreak`` values) are restricted to
-sequences of phonemes from the specified inventory plus the specified morpheme
-delimiters.
-
-The table below shows how object language transcription validation is
-configured.
-
-+-----------------------------+-----------------------------------+--------------------------+
-| Form attribute              | Relevant inventory or orthography | Validation parameter     |
-+=============================+===================================+==========================+
-| transcription               | storageOrthography                | orthographicValidation   |
-+-----------------------------+-----------------------------------+--------------------------+
-| phoneticTranscription       | broadPhoneticInventory            | broadPhoneticValidation  |
-+-----------------------------+-----------------------------------+--------------------------+
-| narrowPhoneticTranscription | narrowPhoneticInventory           | narrowPhoneticValidation |
-+-----------------------------+-----------------------------------+--------------------------+
-| morphemeBreak               | phonemicInventory*                | morphemeBreakValidation  |
-+-----------------------------+-----------------------------------+--------------------------+
-
-The validation parameter column lists the settings in the application settings
-resource that control whether the object language transcription form attribute
-should be validated against the relevant inventory or orthography.  Each of the
-attributes in the validation parameter column can have one of three possible
-values: ``None``, ``Warning`` or ``Error``.  Only if the attribute is set to
-``Error`` will inventory/orthography-based validation occur.
-
-For example, if the current application settings resource has
-``orthographicValidation`` set to ``Error``, then input validation will ensure
-that form transcriptions contain only graphs (i.e., characters or character
-sequences) from the storage orthography plus punctuation characters and the
-space character.
-
-When validation is enabled on the phonetic transcription fields, only graphs
-from the specified inventory plus the space character are permitted (i.e., no
-punctuation).
-
-The ``morphemeBreak`` attribute's validation settings are slightly more complex
-since it is possible to choose between the storage orthography or the phonemic
-inventory when configuring validation.  This is done by setting the
-``morphemeBreakIsOrthographic`` attribute of the application settings resource
-to ``true`` in the former case and ``false`` in the latter.  For example,
-if ``morphemeBreakIsOrthographic`` is set to ``false`` and
-``morphemeBreakValidation`` is set to ``Error``, then input to the
-``morphemeBreak`` field will be rejected if it contains characters outside of
-the specified phonemic inventory, the specified morpheme delimiters and the
-space character.
-
-As implied in the above discussion, the application settings resource has
-``morphemeDelimiters`` and ``punctuation`` attributes for specifying sets of
-valid morpheme delimiters and punctuation, respectively.
-
-Sometimes it is desirable to include foreign words in the object language
-transcriptions while still permitting validation against inventories and
-orthographies on these fields.  For example, in a system where ``morphemeBreak``
-validation is enabled and the phonemic inventory is /p/, /t/, /k/, /i/, /a/, /u/,
-it might be desirable to allow a ``morphemeBreak`` value of "ki dog katti" but
-prohibit "ki dog kotti".  The OLD permits this via the special "foreign word"
-tag on form resources.  When a form is tagged as a foreign word, its
-transcription values affect validation.  So, if the system were to contain a
-foreign word form with "dog" as its ``morphemeBreak`` value, then validation
-would correctly allow both instances of "dog" in the above two examples while
-disallowing the latter example because of the illicit "o" in "kotti".  The
-function ``updateApplicationSettingsIfFormIsForeignWord`` is called in the
-``forms`` controller upon successful create and update requests.
-
-
-
-
-Processing
---------------------------------------------------------------------------------
-
-* unicode normalization
-
-
-
-Notes
---------------------------------------------------------------------------------
-
-In the OLD there is a near one-to-one-to-one relationship between *resources*,
-*models* and relational database *tables*.  That is, an OLD application controls
-access to *form* resources via a *forms* controller that reads and writes to a
-*form* table in the database as abstracted by an SQLAlchemy *form* model object.
-
-
-* Interface
-
-  * RESTful API
-  * SEARCH
-  * CRUD details (paginator, new/edit inputs, ...)
-  * Authentication & Authorization
-  * Validation (general, BibTex sources, orthographies/inventories, etc.)
-  * Processing (file reduction, morpheme-morpheme linking, metadata creation)
-  * Analysis (parsing)
-
-* Data Processing
-
-  * lexical-phrasal form referencing
-  * collection-collection referencing
-  * image & audio manipulation
-  * phonologies, morphologies, corpora & parsers
-  * unicode & normalization
-
-
-
-
+When new file models are created with locally stored file data, the OLD may
+create reduced-size copies of certain file types and store them, by default, in
+``files/reduced_files/``.  Such lossy copies are created when
+``create_reduced_size_file_copies`` is set to a truthy value (e.g., "1") in the
+config file and if the relevant utilities are installed, i.e., for images the
+Python Imaging Library and for WAV files the FFmpeg command-line utility.  See
+the :ref:`soft-dependecies` and :ref:`file-data-structure` sections for more
+details.
 
 
 
 .. [#f1] See `this StackOverflow page <http://stackoverflow.com/questions/671118/what-exactly-is-restful-programming>`_
-   for a discussion on what exactly it means and read
+   for a discussion on what exactly REST means and read
    `Fielding's thesis <http://www.ics.uci.edu/~fielding/pubs/dissertation/fielding_dissertation.pdf>`_
    for the source of the term.
 

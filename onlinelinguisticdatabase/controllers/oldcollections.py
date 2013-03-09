@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`OldcollectionsController` and its auxiliary functions.
+
+.. module:: collections
+   :synopsis: Contains the collections controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -36,24 +43,34 @@ from onlinelinguisticdatabase.model import Collection, CollectionBackup, User, F
 log = logging.getLogger(__name__)
 
 class OldcollectionsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol.
+    """Generate responses to requests on collection resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
 
     The collections controller is one of the more complex ones.  A great deal of
     this complexity arised from the fact that collections can reference forms
-    and other collections in the value of their contents attribute.  The
+    and other collections in the value of their ``contents`` attribute.  The
     propagation of restricted tags and associated forms and the generation of
     the html from these contents-with-references, necessitates some complex
     logic for updates and deletions.
 
-    There is a potential issue with collection-collection reference.  A
-    restricted user can restrict their own collection A and that restriction
-    would be propagated up the reference chain, possibly causing another
-    collection B (that was not created by the updater) to become restricted.
-    That is, collection-collection reference permits restricted users to
-    restrict collections they would otherwise not be permitted to restrict. This
-    will be bothersome to other restricted users since they can no longer access
-    the newly restricted collection B.  A user authorized to update collection
-    B will be able to remove this restriction.
+    .. warning::
+
+        There is a potential issue with collection-collection reference.  A
+        restricted user can restrict their own collection *A* and that
+        restriction would be propagated up the reference chain, possibly causing
+        another collection *B* (that was not created by the updater) to become
+        restricted. That is, collection-collection reference permits restricted
+        users to indirectly restrict collections they would otherwise not be
+        permitted to restrict. This will be bothersome to other restricted users
+        since they will no longer be able to access the newly restricted
+        collection *B*.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
     """
 
     queryBuilder = SQLAQueryBuilder('Collection', config=config)
@@ -62,13 +79,16 @@ class OldcollectionsController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /collections: Return all collections matching the filter passed as JSON in
-        the request body.  Note: POST /collections/search also routes to this action.
-        The request body must be a JSON object with a 'query' attribute; a
-        'paginator' attribute is optional.  The 'query' object is passed to the
-        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
-        is returned or an error is raised.  The 'query' object requires a
-        'filter' attribute; an 'orderBy' attribute is optional.
+        """Return the list of collection resources matching the input JSON query.
+
+        :URL: ``SEARCH /collections`` (or ``POST /collections/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
         try:
             jsonSearchParams = unicode(request.body, request.charset)
@@ -91,9 +111,13 @@ class OldcollectionsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /collections/new_search: Return the data necessary to inform a search
-        on the collections resource.
+        """Return the data necessary to search the collection resources.
+
+        :URL: ``GET /collections/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
+
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
     @h.jsonify
@@ -101,6 +125,18 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     def index(self):
         """GET /collections: Return all collections."""
+        """Get all collection resources.
+
+        :URL: ``GET /collections`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all collection resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = h.eagerloadCollection(Session.query(Collection))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -115,7 +151,13 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /collections: Create a new collection."""
+        """Create a new collection resource and return it.
+
+        :URL: ``POST /collections``
+        :request body: JSON object representing the collection to create.
+        :returns: the newly created collection.
+
+        """
         try:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -149,15 +191,17 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /new_collection: Return the data necessary to create a new OLD collection.
+        """Return the data necessary to create a new collection.
 
-        Return a JSON object with the following properties: 'collectionTypes',
-        'markupLanguages', 'tags', 'speakers', 'users' and 'sources', the value
-        of each of which is an array that is either empty or contains the
-        appropriate objects.
+        :URL: ``GET /collections/new`` with optional query string parameters 
+        :returns: a dictionary of lists of resources.
 
-        See the getNewEditCollectionData function to understand how the GET params can
-        affect the contents of the arrays.
+        .. note::
+        
+           See :func:`getNewEditCollectionData` to understand how the query
+           string parameters can affect the contents of the lists in the
+           returned dictionary.
+
         """
         return getNewEditCollectionData(request.GET)
 
@@ -166,7 +210,14 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /collections/id: Update an existing collection."""
+        """Update a collection and return it.
+        
+        :URL: ``PUT /collections/id``
+        :Request body: JSON object representing the collection with updated attribute values.
+        :param str id: the ``id`` value of the collection to be updated.
+        :returns: the updated collection model.
+
+        """
         collection = h.eagerloadCollection(Session.query(Collection)).get(int(id))
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
@@ -224,8 +275,16 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /collections/id: Delete an existing collection.  Only the
-        enterer and administrators can delete a collection.
+        """Delete an existing collection and return it.
+
+        :URL: ``DELETE /collections/id``
+        :param str id: the ``id`` value of the collection to be deleted.
+        :returns: the deleted collection model.
+
+        .. note::
+
+           Only administrators and a collection's enterer can delete it.
+
         """
         collection = h.eagerloadCollection(Session.query(Collection)).get(id)
         if collection:
@@ -248,13 +307,12 @@ class OldcollectionsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /collections/id: Return a JSON object representation of the collection with
-        id=id.
+        """Return a collection.
+        
+        :URL: ``GET /collections/id``
+        :param str id: the ``id`` value of the collection to be returned.
+        :returns: a collection model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         collection = h.eagerloadCollection(Session.query(Collection)).get(id)
         if collection:
@@ -274,24 +332,29 @@ class OldcollectionsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /collections/id/edit: Return the data necessary to update an
-        existing OLD collection, i.e., the collection's properties and the
-        necessary additional data, i.e., users, speakers, etc.
+        """Return a collection and the data needed to update it.
 
-        This action can be thought of as a combination of the 'show' and 'new'
-        actions.  The output will be a JSON object of the form
+        :URL: ``GET /collections/edit`` with optional query string parameters 
+        :param str id: the ``id`` value of the collection that will be updated.
+        :returns: a dictionary of the form::
 
-            {collection: {...}, data: {...}},
+                {"collection": {...}, "data": {...}}
 
-        where output.collection is an object containing the collection's
-        properties (cf. the output of show) and output.data is an object
-        containing the data required to add a new collection (cf. the output of
-        new).
+            where the value of the ``collection`` key is a dictionary
+            representation of the collection and the value of the ``data`` key
+            is a dictionary containing the objects necessary to update a
+            collection, viz. the return value of
+            :func:`CollectionsController.new`
 
-        GET parameters will affect the value of output.data in the same way as
-        for the new action, i.e., no params will result in all the necessary
-        output.data being retrieved from the db while specified params will
-        result in selective retrieval (see getNewEditCollectionData for details).
+        .. note::
+        
+           This action can be thought of as a combination of
+           :func:`CollectionsController.show` and
+           :func:`CollectionsController.new`.  See
+           :func:`getNewEditCollectionData` to understand how the query string
+           parameters can affect the contents of the lists in the ``data``
+           dictionary.
+
         """
         collection = h.eagerloadCollection(Session.query(Collection)).get(id)
         if collection:
@@ -311,15 +374,20 @@ class OldcollectionsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def history(self, id):
-        """GET /collections/history/id: Return a JSON object representation of the collection and its previous versions.
+        """Return a collection and its previous versions.
 
-        The id parameter can be either an integer id or a UUID.  If no collection and
-        no collection backups match id, then a 404 is returned.  Otherwise a 200 is
-        returned (or a 403 if the restricted keyword is relevant).  See below:
+        :URL: ``GET /collections/history/id``
+        :param str id: a string matching the ``id`` or ``UUID`` value of the
+            collection whose history is requested.
+        :returns: a dictionary of the form::
 
-        collection          None    None          collection collection
-        previousVersions    []      [1, 2,...]    []         [1, 2,...]
-        response            404     200/403       200/403    200/403
+                {"collection": { ... }, "previousVersions": [ ... ]}
+
+            where the value of the ``collection`` key is the collection whose
+            history is requested and the value of the ``previousVersions`` key
+            is a list of dictionaries representing previous versions of the
+            collection.
+
         """
         collection, previousVersions = getCollectionAndPreviousVersions(id)
         if collection or previousVersions:
@@ -342,12 +410,14 @@ class OldcollectionsController(BaseController):
 
 
 def getCollectionAndPreviousVersions(id):
-    """The id parameter is a string representing either an integer id or a UUID.
-    Return the collection such that collection.id==id or collection.UUID==UUID
-    (if there is one) as well as all collection backups such that
-    collectionBackup.UUID==id or collectionBackup.collection_id==id.
-    """
+    """Return a collection and its previous versions.
 
+    :param str id: the ``id`` or ``UUID`` value of the collection whose history
+        is requested.
+    :returns: a tuple whose first element is the collection model and whose
+        second element is a list of collection backup models.
+
+    """
     collection = None
     previousVersions = []
     try:
@@ -372,10 +442,14 @@ def getCollectionAndPreviousVersions(id):
 ################################################################################
 
 def backupCollection(collectionDict, datetimeModified=None):
-    """When a collection is updated or deleted, it is first added to the
-    collectionbackup table.
-    """
+    """Backup a collection.
 
+    :param dict formDict: a representation of a collection model.
+    :param ``datetime.datetime`` datetimeModified: the time of the collection's
+        last update.
+    :returns: ``None``
+
+    """
     collectionBackup = CollectionBackup()
     collectionBackup.vivify(collectionDict, session['user'], datetimeModified)
     Session.add(collectionBackup)
@@ -396,10 +470,19 @@ def backupCollection(collectionDict, datetimeModified=None):
 
 def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None,
                              collectionId=None, patt=None):
-    """Return a dict of the form {id: collection} where the keys are the ids of
-    all the collections referenced in the contents and all of the collection ids
-    referenced in those collections, etc., and the values are the collection
-    objects themselves.  This function is called recursively.
+    """Return the collections (recursively) referenced by the input ``contents`` value.
+    
+    That is, return all of the collections referenced in the input ``contents``
+    value, plus all of the collections referenced in those collections, etc.
+
+    :param unicode contents: the value of the ``contents`` attribute of a collection.
+    :param user: the user model who made the request.
+    :param list unrestrictedUsers: the unrestricted user models of the application.
+    :param int collectionId: the ``id`` value of a collection.
+    :param patt: a compiled regular expression object.
+    :returns: a dictionary whose keys are collection ``id`` values and whose
+        values are collection models.
+
     """
     patt = patt or re.compile(h.collectionReferencePattern)
     collectionsReferenced = dict([(int(id), getCollection(int(id), user, unrestrictedUsers))
@@ -413,52 +496,76 @@ def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None,
     return collectionsReferenced
 
 def addFormIdsListToValues(values):
-    """Add a list of form ids (extracted from contentsUnpacked) to the values
-    dict and return values.
+    """Add a list of referenced form ids to values.
+    
+    :param dict values: data for creating or updating a collection
+    :returns: ``values`` with a ``'forms'`` key whose value is a list of id integers.
+
     """
     contentsUnpacked = getUnicode('contentsUnpacked', values)
     values['forms'] = [int(id) for id in h.formReferencePattern.findall(contentsUnpacked)]
     return values
 
 def addContentsUnpackedToValues(values, collectionsReferenced):
-    """Add a 'contentsUnpacked' value to values and return values.
+    """Add a ``'contentsUnpacked'`` value to values and return values.
+    
+    :param dict values: data for creating a collection.
+    :param dict collectionsReferenced: keys are collection ``id`` values and 
+        values are collection models.
+    :returns: ``values`` updated.
+
     """
     contents = getUnicode('contents', values)
     values['contentsUnpacked'] = generateContentsUnpacked(contents, collectionsReferenced)
     return values
 
 def getCollectionsReferencedInContents(collection, collectionsReferenced):
-    """Return the list of collections referenced in the contents field of the
-    input collection.  collectionsReferenced is a pre-generated dict from ids to
-    collections that obviates the need to query the database.  The output of this
-    function is useful in determining whether directly referenced collections are
-    restricted and deciding, on that basis, whether to restrict the present collection.
+    """Get the immediately referenced collections of a collection.
+    
+    :param collection: a collection model.
+    :param dict collectionsReferenced: keys are collection ``id`` values and 
+        values are collection models.
+    :returns: a list of collection models; useful in determining whether
+        directly referenced collections are restricted.
+
     """
     return [collectionsReferenced[int(id)]
             for id in h.collectionReferencePattern.findall(collection.contents)]
 
 def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwargs):
-    """This function updates the contents, contentsUnpacked, html and/or form
+    """Update all collections that reference the input collection.
+    
+    :param collection: a collection model.
+    :param queryBuilder: an :class:`SQLAQueryBuilder` instance.
+    :param bool kwargs['contents_changed']: indicates whether the input
+        collection's ``contents`` value has changed.
+    :param bool kwargs['deleted']: indicates whether the input collection has
+        just been deleted.
+    :returns: ``None``
+
+    Update the ``contents``, ``contentsUnpacked``, ``html`` and/or ``form``
     attributes of every collection that references the input collection plus all
     of the collections that reference those collections, etc.  This function is
     called upon successful update and delete requests.
 
-    If the contents of this collection have changed (i.e.,
-    kwargs['contents_changed']==True) , then retrieve all collections
-    that reference this collection and all collections that reference those
-    referers, etc., and update their contentsUnpacked, html and forms
+    If the contents of the ``collection`` have changed (i.e.,
+    ``kwargs['contents_changed']==True``) , then retrieve all collections
+    that reference ``collection`` and all collections that reference those
+    referers, etc., and update their ``contentsUnpacked``, ``html`` and
+    ``forms`` attributes.
+
+    If the ``collection`` has been deleted (i.e., ``kwargs['deleted']==True``),
+    then recursively retrieve all collections referencing ``collection`` and
+    update their ``contents``, ``contentsUnpacked``, ``html`` and ``forms``
     attributes.
 
-    If this collection has been deleted (i.e., kwargs['deleted']==True) , then
-    recursively retrieve all collections referencing this collection and update
-    their contents, contentsUnpacked, html and forms attributes.
+    If ``collection`` has just been tagged as restricted (i.e.,
+    ``kwargs['restricted']==True``), then recursively restrict all collections
+    that reference it.
 
-    If this collection has just been tagged as restricted (i.e.,
-    kwargs['restricted']==True), then recursively restrict all collections that
-    reference this collection.
+    In all cases, update the ``datetimeModified`` value of every collection that
+    recursively references ``collection``.
 
-    In all cases, update the datetimeModified value of every collection that
-    recursively references this collection.
     """
     def updateContentsUnpackedEtc(collection, **kwargs):
         deleted = kwargs.get('deleted', False)
@@ -496,8 +603,15 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwa
         Session.commit()
 
 def getCollectionsReferencingThisCollection(collection, queryBuilder):
-    """Return a list of all collections that reference the input collection plus
-    all collections that reference those referencing collections, etc.
+    """Return all collections that recursively reference ``collection``.
+    
+    That is, return all collections that reference ``collection`` plus all
+    collections that reference those referencing collections, etc.
+    
+    :param collection: a collection model object.
+    :param queryBuilder: an :class:`SQLAQueryBuilder` instance.
+    :returns: a list of collection models.
+
     """
     patt = h.collectionReferencePattern.pattern.replace(
         '\d+', str(collection.id)).replace('\\', '')
@@ -509,10 +623,17 @@ def getCollectionsReferencingThisCollection(collection, queryBuilder):
 
 
 def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
-    """This function is called in the forms controller when a form is deleted.
-    It is called on each collection that references the deleted form and the
-    changes to each of those collections are propagated through all of the
-    collections that reference them, and so on.
+    """Update a collection based on the deletion of a form it references.
+
+    This function is called in the :class:`FormsController` when a form is
+    deleted.  It is called on each collection that references the deleted form
+    and the changes to each of those collections are propagated through all of
+    the collections that reference them, and so on.
+    
+    :param collection: a collection model object.
+    :param referencedForm: a form model object.
+    :returns: ``None``.
+
     """
     collectionDict = collection.getDict()
     collection.contents = removeReferencesToThisForm(collection.contents, referencedForm.id)
@@ -529,26 +650,29 @@ def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
     Session.commit()
 
 def removeReferencesToThisForm(contents, formId):
-    """Return the input contents string with all references to the input
-    form id removed.
+    """Remove references to a form from the ``contents`` value of another collection.
+
+    :param unicode contents: the value of the ``contents`` attribute of a collection.
+    :param int formId: an ``id`` value of a form.
+    :returns: the modified ``contents`` string.
+
     """
     patt = re.compile('[Ff]orm\[(%d)\]' % formId)
     return patt.sub('', contents)
 
-
-
-# PRIVATE FUNCTIONS
-
 def removeReferencesToThisCollection(contents, collectionId):
-    """Return the input contents string with all references to the input
-    collection id removed.
+    """Remove references to a collection from the ``contents`` value of another collection.
+    
+    :param unicode contents: the value of the ``contents`` attribute of a collection.
+    :param int collectionId: an ``id`` value of a collection.
+    :returns: the modified ``contents`` string.
+
     """
     patt = re.compile('[cC]ollection[\[\(](%d)[\]\)]' % collectionId)
     return patt.sub('', contents)
 
 def getUnicode(key, dict_):
-    """Return dict_[key], making sure it defaults to a unicode string.
-    """
+    """Return ``dict_[key]``, making sure it defaults to a unicode object."""
     value = dict_.get(key, u'')
     if isinstance(value, unicode):
         return value
@@ -557,21 +681,32 @@ def getUnicode(key, dict_):
     return u''
 
 def getContents(collectionId, collectionsReferenced):
-    """Attempt to return the contents of the collection with id=collectionId.
-    If the collection id is invalid or the collection has no stringy contents,
-    return an appropriate warning message.
+    """Return the ``contents`` value of the collection with ``collectionId`` as its ``id`` value.
+
+    :param int collectionId: the ``id`` value of a collection model.
+    :param dict collectionsReferenced: the collections (recursively) referenced by a collection.
+    :returns: the contents of a collection, or a warning message.
+
     """
     return getattr(collectionsReferenced[collectionId],
                    u'contents',
                    u'Collection %d has no contents.' % collectionId)
 
 def generateContentsUnpacked(contents, collectionsReferenced, patt=None):
-    """Generate the value for the contentsUnpacked attribute for a collection
-    based on the value of its contents attribute.  This function calls itself
-    recursively.  The collectionsReferenced dict is generated earlier and
-    obviates repeated database queries.  Note also that circular, invalid and
-    unauthorized reference chains are caught in the generation of
-    collectionsReferenced.
+    """Generate the ``contentsUnpacked`` value of a collection.
+    
+    :param unicode contents: the value of the ``contents`` attribute of a collection
+    :param dict collectionsReferenced: the collection models referenced by a
+        collection; keys are collection ``id`` values.
+    :param patt: a compiled regexp pattern object that matches collection references.
+    :returns: a unicode object as a value for the ``contentsUnpacked`` attribute
+        of a collection model.
+
+    .. note::
+    
+        Circular, invalid and unauthorized reference chains are caught in the
+        generation of ``collectionsReferenced``.
+
     """
     patt = patt or re.compile(h.collectionReferencePattern)
     return patt.sub(
@@ -592,8 +727,16 @@ class UnauthorizedCollectionReferenceError(Exception):
     pass
 
 def getCollection(collectionId, user, unrestrictedUsers):
-    """Return the collection with collectionId or, if the collection does not
-    exist or is restricted, raise an appropriate error.
+    """Return the collection such that ``collection.id==collectionId``.
+
+    If the collection does not exist or if ``user`` is not authorized to access
+    it, raise an appropriate error.
+
+    :param int collectionId: the ``id`` value of a collection.
+    :param user: a user model of the logged in user.
+    :param list unrestrictedUsers: the unrestricted users of the system.
+    :return: a collection model object.
+
     """
     collection = Session.query(Collection).get(collectionId)
     if collection:
@@ -610,24 +753,22 @@ def getCollection(collectionId, user, unrestrictedUsers):
 ################################################################################
 
 def getNewEditCollectionData(GET_params):
-    """Return the data necessary to create a new OLD collection or update an existing
-    one.  The GET_params parameter is the request.GET dictionary-like object
-    generated by Pylons.
+    """Return the data necessary to create a new OLD collection or update an existing one.
+    
+    :param GET_params: the ``request.GET`` dictionary-like object generated by
+        Pylons which contains the query string parameters of the request.
+    :returns: A dictionary whose values are lists of objects needed to create or
+        update collections.
 
-    If no parameters are provided (i.e., GET_params is empty), then retrieve all
-    data (i.e., users, speakers, etc.) from the db and return it.
+    If ``GET_params`` has no keys, then return all data.  If ``GET_params`` does
+    have keys, then for each key whose value is a non-empty string (and not a
+    valid ISO 8601 datetime) add the appropriate list of objects to the return
+    dictionary.  If the value of a key is a valid ISO 8601 datetime string, add
+    the corresponding list of objects *only* if the datetime does *not* match
+    the most recent ``datetimeModified`` value of the resource.  That is, a
+    non-matching datetime indicates that the requester has out-of-date data.
 
-    If parameters are specified, then for each parameter whose value is a
-    non-empty string (and is not a valid ISO 8601 datetime), retrieve and
-    return the appropriate list of objects.
-
-    If the value of a parameter is a valid ISO 8601 datetime string,
-    retrieve and return the appropriate list of objects *only* if the
-    datetime param does *not* match the most recent datetimeModified value
-    of the relevant data store.  This makes sense because a non-match indicates
-    that the requester has out-of-date data.
     """
-
     # Map param names to the OLD model objects from which they are derived.
     paramName2ModelName = {
         'speakers': 'Speaker',
@@ -682,10 +823,13 @@ def getNewEditCollectionData(GET_params):
 ################################################################################
 
 def createNewCollection(data, collectionsReferenced):
-    """Create a new Collection model object given a data dictionary provided by the
-    user (as a JSON object).
-    """
+    """Create a new collection.
 
+    :param dict data: the collection to be created.
+    :param dict collectionsReferenced: the collection models recursively referenced in ``data['contents']``.
+    :returns: an SQLAlchemy model object representing the collection.
+
+    """
     collection = Collection()
     collection.UUID = unicode(uuid4())
 
@@ -739,9 +883,17 @@ def createNewCollection(data, collectionsReferenced):
 
 
 def updateCollection(collection, data, collectionsReferenced):
-    """Update the input Collection model object given a data dictionary provided by
-    the user (as a JSON object).  If changed is not set to true in the course
-    of attribute setting, then None is returned and no update occurs.
+    """Update a collection model.
+
+    :param collection: the collection model to be updated.
+    :param dict data: representation of the updated collection.
+    :param dict collectionsReferenced: the collection models recursively referenced in ``data['contents']``.
+    :returns: a 3-tuple where the second and third elements are invariable
+        booleans indicating whether the collection has become restricted or has
+        had its ``contents`` value changed as a result of the update,
+        respectively.  The first element is the updated collection or ``False``
+        of the no update has occurred.
+
     """
     changed = False
     restricted = False

@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`SpeakersController` and its auxiliary functions.
+
+.. module:: speakers
+   :synopsis: Contains the speakers controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import Speaker
 log = logging.getLogger(__name__)
 
 class SpeakersController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on speaker resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('Speaker', config=config)
 
@@ -41,7 +57,18 @@ class SpeakersController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /speakers: Return all speakers."""
+        """Get all speaker resources.
+
+        :URL: ``GET /speakers`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all speaker resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(Speaker)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,13 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /speakers: Create a new speaker."""
+        """Create a new speaker resource and return it.
+
+        :URL: ``POST /speakers``
+        :request body: JSON object representing the speaker to create.
+        :returns: the newly created speaker.
+
+        """
         try:
             schema = SpeakerSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,8 +109,11 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /speakers/new: Return the data necessary to create a new OLD
-        speaker.  NOTHING TO RETURN HERE ...
+        """Return the data necessary to create a new speaker.
+
+        :URL: ``GET /speakers/new``.
+        :returns: an empty dictionary.
+
         """
         return {}
 
@@ -86,7 +122,14 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /speakers/id: Update an existing speaker."""
+        """Update a speaker and return it.
+        
+        :URL: ``PUT /speakers/id``
+        :Request body: JSON object representing the speaker with updated attribute values.
+        :param str id: the ``id`` value of the speaker to be updated.
+        :returns: the updated speaker model.
+
+        """
         speaker = Session.query(Speaker).get(int(id))
         if speaker:
             try:
@@ -118,7 +161,13 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /speakers/id: Delete an existing speaker."""
+        """Delete an existing speaker and return it.
+
+        :URL: ``DELETE /speakers/id``
+        :param str id: the ``id`` value of the speaker to be deleted.
+        :returns: the deleted speaker model.
+
+        """
         speaker = Session.query(Speaker).get(id)
         if speaker:
             Session.delete(speaker)
@@ -132,13 +181,12 @@ class SpeakersController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /speakers/id: Return a JSON object representation of the speaker
-        with id=id.
+        """Return a speaker.
+        
+        :URL: ``GET /speakers/id``
+        :param str id: the ``id`` value of the speaker to be returned.
+        :returns: a speaker model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         speaker = Session.query(Speaker).get(id)
         if speaker:
@@ -152,8 +200,18 @@ class SpeakersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /speakers/id/edit: Return the data necessary to update an existing
-        OLD speaker; here we return only the speaker and an empty JSON object.
+        """Return a speaker resource and the data needed to update it.
+
+        :URL: ``GET /speakers/edit``
+        :param str id: the ``id`` value of the speaker that will be updated.
+        :returns: a dictionary of the form::
+
+                {"speaker": {...}, "data": {...}}
+
+            where the value of the ``speaker`` key is a dictionary
+            representation of the speaker and the value of the ``data`` key
+            is an empty dictionary.
+
         """
         speaker = Session.query(Speaker).get(id)
         if speaker:
@@ -168,10 +226,12 @@ class SpeakersController(BaseController):
 ################################################################################
 
 def createNewSpeaker(data):
-    """Create a new speaker model object given a data dictionary provided by the
-    user (as a JSON object).
-    """
+    """Create a new speaker.
 
+    :param dict data: the data for the speaker to be created.
+    :returns: an SQLAlchemy model object representing the speaker.
+
+    """
     speaker = Speaker()
     speaker.firstName = h.normalize(data['firstName'])
     speaker.lastName = h.normalize(data['lastName'])
@@ -184,9 +244,13 @@ def createNewSpeaker(data):
 
 
 def updateSpeaker(speaker, data):
-    """Update the input speaker model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update a speaker.
+
+    :param speaker: the speaker model to be updated.
+    :param dict data: representation of the updated speaker.
+    :returns: the updated speaker model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
     """
     changed = False
 

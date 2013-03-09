@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`UsersController` and its auxiliary functions.
+
+.. module:: users
+   :synopsis: Contains the users controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import User
 log = logging.getLogger(__name__)
 
 class UsersController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on user resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('User', config=config)
 
@@ -41,7 +57,18 @@ class UsersController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /users: Return all users."""
+        """Get all user resources.
+
+        :URL: ``GET /users`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all user resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(User)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,17 @@ class UsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator'])
     def create(self):
-        """POST /users: Create a new user."""
+        """Create a new user resource and return it.
+
+        :URL: ``POST /users``
+        :request body: JSON object representing the user to create.
+        :returns: the newly created user.
+
+        .. note::
+        
+            Only administrators are authorized to create users.
+
+        """
         try:
             schema = UserSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,15 +113,19 @@ class UsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator'])
     def new(self):
-        """GET /users/new: Return the data necessary to create a new OLD user.
+        """Return the data necessary to create a new user.
 
-        Return a JSON object with the following properties: roles, orthographies,
-        markupLanguages, the value of each of which is an array that
-        is either empty or contains the appropriate objects.
+        :URL: ``GET /users/new`` with optional query string parameters .
+        :returns: a dictionary of lists of resources.
 
-        See the getNewUserData function to understand how the GET
-        params can affect the contents of the arrays.
+        .. note::
+        
+           See :func:`getNewUserData` to understand how the query string
+           parameters can affect the contents of the lists in the returned
+           dictionary.
+
         """
+
         return getNewUserData(request.GET)
 
     @h.jsonify
@@ -92,7 +133,14 @@ class UsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor', 'viewer'], None, True)
     def update(self, id):
-        """PUT /users/id: Update an existing user."""
+        """Update a user and return it.
+        
+        :URL: ``PUT /users/id``
+        :Request body: JSON object representing the user with updated attribute values.
+        :param str id: the ``id`` value of the user to be updated.
+        :returns: the updated user model.
+
+        """
         user = Session.query(User).get(int(id))
         if user:
             try:
@@ -127,7 +175,13 @@ class UsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator'])
     def delete(self, id):
-        """DELETE /users/id: Delete an existing user."""
+        """Delete an existing user and return it.
+
+        :URL: ``DELETE /users/id``
+        :param str id: the ``id`` value of the user to be deleted.
+        :returns: the deleted user model.
+
+        """
         user = Session.query(User).get(id)
         if user:
             h.destroyResearcherDirectory(user)
@@ -142,12 +196,12 @@ class UsersController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /users/id: Return a JSON object representation of the user with id=id.
+        """Return a user.
+        
+        :URL: ``GET /users/id``
+        :param str id: the ``id`` value of the user to be returned.
+        :returns: a user model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         user = Session.query(User).get(id)
         if user:
@@ -161,9 +215,24 @@ class UsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor', 'viewer'], userIDIsArgs1=True)
     def edit(self, id):
-        """GET /users/id/edit: Return the data necessary to update an existing
-        OLD user; here we return only the user and
-        an empty JSON object.
+        """Return a user resource and the data needed to update it.
+
+        :URL: ``GET /users/edit``
+        :param str id: the ``id`` value of the user that will be updated.
+        :returns: a dictionary of the form::
+
+                {"user": {...}, "data": {...}}
+
+            where the value of the ``user`` key is a dictionary representation
+            of the user and the value of the ``user`` key is a dictionary of
+            lists of resources.
+
+        .. note::
+
+           See :func:`getNewUserData` to understand how the query string
+           parameters can affect the contents of the lists in the returned
+           dictionary.
+
         """
         user = Session.query(User).get(id)
         if user:
@@ -179,24 +248,22 @@ class UsersController(BaseController):
 ################################################################################
 
 def getNewUserData(GET_params):
-    """Return the data necessary to create a new user or update
-    an existing one.  The GET_params parameter is the request.GET dictionary-
-    like object generated by Pylons.
+    """Return the data necessary to create a new OLD user or update an existing one.
+    
+    :param GET_params: the ``request.GET`` dictionary-like object generated by
+        Pylons which contains the query string parameters of the request.
+    :returns: A dictionary whose values are lists of objects needed to create or
+        update user.
 
-    If no parameters are provided (i.e., GET_params is empty), then retrieve all
-    data (i.e., roles, orthographies and markupLanguages) and return them.
+    If ``GET_params`` has no keys, then return all data.  If ``GET_params`` does
+    have keys, then for each key whose value is a non-empty string (and not a
+    valid ISO 8601 datetime) add the appropriate list of objects to the return
+    dictionary.  If the value of a key is a valid ISO 8601 datetime string, add
+    the corresponding list of objects *only* if the datetime does *not* match
+    the most recent ``datetimeModified`` value of the resource.  That is, a
+    non-matching datetime indicates that the requester has out-of-date data.
 
-    If parameters are specified, then for each parameter whose value is a
-    non-empty string (and is not a valid ISO 8601 datetime), retrieve and
-    return the appropriate list of objects.
-
-    If the value of a parameter is a valid ISO 8601 datetime string,
-    retrieve and return the appropriate list of objects *only* if the
-    datetime param does *not* match the most recent datetimeModified value
-    of the relevant data store.  This makes sense because a non-match indicates
-    that the requester has out-of-date data.
     """
-
     # modelNameMap maps param names to the OLD model objects from which they are
     # derived.
     modelNameMap = {'orthographies': 'Orthography'}
@@ -238,10 +305,12 @@ def getNewUserData(GET_params):
     return result
 
 def createNewUser(data):
-    """Create a new user model object given a data dictionary
-    provided by the user (as a JSON object).
-    """
+    """Create a new user.
 
+    :param dict data: the data for the user to be created.
+    :returns: an SQLAlchemy model object representing the user.
+
+    """
     user = User()
     user.salt = h.generateSalt()
     user.password = unicode(h.encryptPassword(data['password'], str(user.salt)))
@@ -271,11 +340,14 @@ def createNewUser(data):
 
 
 def updateUser(user, data):
-    """Update the input user model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
-    """
+    """Update a user.
 
+    :param user: the user model to be updated.
+    :param dict data: representation of the updated user.
+    :returns: the updated user model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
+    """
     changed = False
 
     # Unicode Data

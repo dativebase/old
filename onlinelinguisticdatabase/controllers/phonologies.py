@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`PhonologiesController` and its auxiliary functions.
+
+.. module:: phonologies
+   :synopsis: Contains the phonologies controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import Phonology
 log = logging.getLogger(__name__)
 
 class PhonologiesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on phonology resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('Phonology', config=config)
 
@@ -41,7 +57,18 @@ class PhonologiesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /phonologies: Return all phonologies."""
+        """Get all phonology resources.
+
+        :URL: ``GET /phonologies`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all phonology resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = h.eagerloadPhonology(Session.query(Phonology))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,13 @@ class PhonologiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /phonologies: Create a new phonology."""
+        """Create a new phonology resource and return it.
+
+        :URL: ``POST /phonologies``
+        :request body: JSON object representing the phonology to create.
+        :returns: the newly created phonology.
+
+        """
         try:
             schema = PhonologySchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,8 +109,11 @@ class PhonologiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /phonologies/new: Return the data necessary to create a new OLD
-        phonology.  NOTHING TO RETURN HERE ...
+        """Return the data necessary to create a new phonology.
+
+        :URL: ``GET /phonologies/new``.
+        :returns: an empty dictionary.
+
         """
         return {}
 
@@ -86,7 +122,14 @@ class PhonologiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /phonologies/id: Update an existing phonology."""
+        """Update a phonology and return it.
+        
+        :URL: ``PUT /phonologies/id``
+        :Request body: JSON object representing the phonology with updated attribute values.
+        :param str id: the ``id`` value of the phonology to be updated.
+        :returns: the updated phonology model.
+
+        """
         phonology = h.eagerloadPhonology(Session.query(Phonology)).get(int(id))
         if phonology:
             try:
@@ -120,7 +163,13 @@ class PhonologiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /phonologies/id: Delete an existing phonology."""
+        """Delete an existing phonology and return it.
+
+        :URL: ``DELETE /phonologies/id``
+        :param str id: the ``id`` value of the phonology to be deleted.
+        :returns: the deleted phonology model.
+
+        """
         phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
             Session.delete(phonology)
@@ -134,12 +183,12 @@ class PhonologiesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /phonologies/id: Return a JSON object representation of the phonology with id=id.
+        """Return a phonology.
+        
+        :URL: ``GET /phonologies/id``
+        :param str id: the ``id`` value of the phonology to be returned.
+        :returns: a phonology model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
@@ -153,9 +202,18 @@ class PhonologiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /phonologies/id/edit: Return the data necessary to update an existing
-        OLD phonology; here we return only the phonology and
-        an empty JSON object.
+        """Return a phonology and the data needed to update it.
+
+        :URL: ``GET /phonologies/edit``
+        :param str id: the ``id`` value of the phonology that will be updated.
+        :returns: a dictionary of the form::
+
+                {"phonology": {...}, "data": {...}}
+
+            where the value of the ``phonology`` key is a dictionary
+            representation of the phonology and the value of the ``data`` key
+            is an empty dictionary.
+
         """
         phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
@@ -170,10 +228,12 @@ class PhonologiesController(BaseController):
 ################################################################################
 
 def createNewPhonology(data):
-    """Create a new phonology model object given a data dictionary
-    provided by the user (as a JSON object).
-    """
+    """Create a new phonology.
 
+    :param dict data: the data for the phonology to be created.
+    :returns: an SQLAlchemy model object representing the phonology.
+
+    """
     phonology = Phonology()
     phonology.name = h.normalize(data['name'])
     phonology.description = h.normalize(data['description'])
@@ -188,9 +248,13 @@ def createNewPhonology(data):
     return phonology
 
 def updatePhonology(phonology, data):
-    """Update the input phonology model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update a phonology.
+
+    :param page: the phonology model to be updated.
+    :param dict data: representation of the updated phonology.
+    :returns: the updated phonology model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
     """
     changed = False
     # Unicode Data

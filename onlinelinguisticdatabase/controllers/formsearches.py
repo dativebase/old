@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`FormsearchesController`.
+
+.. module:: formsearches
+   :synopsis: Contains the form searches controller.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import FormSearch
 log = logging.getLogger(__name__)
 
 class FormsearchesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on form search resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('FormSearch', config=config)
 
@@ -41,16 +57,21 @@ class FormsearchesController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /formsearches: Return all form searches matching the filter passed as JSON in
-        the request body.  Note: POST /formsearches/search also routes to this action.
-        The request body must be a JSON object with a 'query' attribute; a
-        'paginator' attribute is optional.  The 'query' object is passed to the
-        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
-        is returned or an error is raised.  The 'query' object requires a
-        'filter' attribute; an 'orderBy' attribute is optional.
+        """Return the list of form search resources matching the input JSON query.
 
-        Yes, that's right, you can search form searches.  Can you search searches
-        of form searches?  No, not yet...
+        :URL: ``SEARCH /formsearches`` (or ``POST /formsearches/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
+        .. note::
+        
+            Yes, that's right, you can search form searches.  (No, you can't
+            search searches of form searches :)
+
         """
         try:
             jsonSearchParams = unicode(request.body, request.charset)
@@ -72,8 +93,11 @@ class FormsearchesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /formsearches/new_search: Return the data necessary to inform a search
-        on the form searches resource.
+        """Return the data necessary to search the form search resources.
+
+        :URL: ``GET /formsearches/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
@@ -81,7 +105,18 @@ class FormsearchesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /formsearches: Return all form searches."""
+        """Get all form search resources.
+
+        :URL: ``GET /formsearches`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all form search resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = h.eagerloadFormSearch(Session.query(FormSearch))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -95,7 +130,13 @@ class FormsearchesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /formsearches: Create a new form search."""
+        """Create a new form search resource and return it.
+
+        :URL: ``POST /formsearches``
+        :request body: JSON object representing the form search to create.
+        :returns: the newly created form search.
+
+        """
         try:
             schema = FormSearchSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -121,6 +162,12 @@ class FormsearchesController(BaseController):
         """GET /formsearches/new: Return the data necessary to create a new OLD
         form search.
         """
+        """Return the data necessary to create a new form search.
+
+        :URL: ``GET /formsearches/new`` with optional query string parameters 
+        :returns: A dictionary of lists of resources
+
+        """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
 
@@ -129,7 +176,15 @@ class FormsearchesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /formsearches/id: Update an existing form search."""
+        """Update a form search and return it.
+        
+        :URL: ``PUT /formsearches/id``
+        :Request body: JSON object representing the form search with updated
+            attribute values.
+        :param str id: the ``id`` value of the form search to be updated.
+        :returns: the updated form search model.
+
+        """
         formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(int(id))
         if formSearch:
             try:
@@ -164,7 +219,14 @@ class FormsearchesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /formsearches/id: Delete an existing form search."""
+        """Delete an existing form search and return it.
+
+        :URL: ``DELETE /formsearches/id``
+        :param str id: the ``id`` value of the form search to be deleted.
+        :returns: the deleted form search model.
+
+        """
+
         formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             Session.delete(formSearch)
@@ -178,13 +240,14 @@ class FormsearchesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /formsearches/id: Return a JSON object representation of the formsearch with id=id.
+        """Return a form search.
+        
+        :URL: ``GET /formsearches/id``
+        :param str id: the ``id`` value of the form search to be returned.
+        :returns: a form search model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
+
         formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             return formSearch
@@ -200,6 +263,20 @@ class FormsearchesController(BaseController):
         """GET /formsearches/id/edit: Return the data necessary to update an existing
         OLD form search.
         """
+        """Return a form search and the data needed to update it.
+
+        :URL: ``GET /formsearches/edit`` with optional query string parameters 
+        :param str id: the ``id`` value of the form search that will be updated.
+        :returns: a dictionary of the form::
+
+                {"formSearch": {...}, "data": {...}}
+
+            where the value of the ``formSearch`` key is a dictionary
+            representation of the form search and the value of the ``data`` key
+            is a dictionary containing the data necessary to update a form
+            search.
+
+        """
         formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             data = {'searchParameters': h.getSearchParameters(self.queryBuilder)}
@@ -214,8 +291,11 @@ class FormsearchesController(BaseController):
 ################################################################################
 
 def createNewFormSearch(data):
-    """Create a new form search model object given a data dictionary
-    provided by the user (as a JSON object).
+    """Create a new form search.
+
+    :param dict data: the form search to be created.
+    :returns: an form search model object.
+
     """
 
     formSearch = FormSearch()
@@ -227,10 +307,15 @@ def createNewFormSearch(data):
     return formSearch
 
 def updateFormSearch(formSearch, data):
-    """Update the input form  search model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update a form search model.
+
+    :param form: the form search model to be updated.
+    :param dict data: representation of the updated form search.
+    :returns: the updated form search model or, if ``changed`` has not been set
+        to ``True``, then ``False``.
+
     """
+
     changed = False
 
     # Unicode Data

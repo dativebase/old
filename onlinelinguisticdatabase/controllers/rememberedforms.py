@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`RememberedformsController` and its auxiliary functions.
+
+.. module:: rememberedforms
+   :synopsis: Contains the remembered forms controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -34,26 +41,31 @@ from onlinelinguisticdatabase.model import Form, User
 log = logging.getLogger(__name__)
 
 class RememberedformsController(BaseController):
-    """A pseudo-REST-ful resource.  Remembered forms are stored in the userform
-    many-to-many table (cf. model/user.py) which defines the contents of
-    User(id).rememberedForms (and Form(id).memorizers).  A user's remembered
-    forms are not affected by requests to the user resource.  Instead, the
-    rememberedforms resource handles modification, retrieval and search of a
-    user's remembered forms.
+    """Generate responses to requests on remembered forms resources.
 
-    Here is the API:
+    REST Controller styled on the Atom Publishing Protocol.
 
-    GET /rememberedforms/id -- return all forms remembered by the user with
-    id=id.  Action: show(id).
+    .. note::
+    
+        Remembered forms is a pseudo-REST-ful resource.  Remembered forms are
+        stored in the ``userform`` many-to-many table (cf. ``model/user.py``)
+        which defines the contents of a user's ``rememberedForms`` attribute
+        (as well as the contents of a form's ``memorizers`` attribute). A user's
+        remembered forms are not affected by requests to the user resource.
+        Instead, the remembered forms resource handles modification, retrieval
+        and search of a user's remembered forms.
 
-    UPDATE /rememberedforms/id -- set the user with id=id's remembered forms to
-    the set of forms corresponding to the JSON array of form ids sent in the
-    request body; (accomplishes CUD; same as controllers/forms.remember).
-    Action: update(id).
+        Overview of the interface:
 
-    SEARCH /rememberedforms/id -- return all forms remembered by the user with
-    id=id and which match the JSON search filter passed in the request body.
-    Action: search(id)
+        * ``GET /rememberedforms/id``
+        * ``UPDATE /rememberedforms/id``
+        * ``SEARCH /rememberedforms/id``
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
     """
 
     queryBuilder = SQLAQueryBuilder(config=config)
@@ -62,9 +74,23 @@ class RememberedformsController(BaseController):
     @h.authenticate
     @h.restrict('GET')
     def show(self, id):
-        """Return a JSON array of the forms remembered by the user with id=id.
-        Note that any authenticated user is authorized to access this array.
-        Restricted forms are filtered from the array on a per-user basis.
+        """Return a user's remembered forms.
+        
+        :URL: ``GET /rememberedforms/id`` with optional query string parameters
+            for ordering and pagination.
+        :param str id: the ``id`` value of a user model.
+        :returns: a list form models.
+
+        .. note::
+
+            Any authenticated user is authorized to access this resource.
+            Restricted forms are filtered from the array on a per-user basis.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
         """
         user = Session.query(User).get(id)
         if user:
@@ -86,14 +112,21 @@ class RememberedformsController(BaseController):
     @h.restrict('PUT')
     @h.authorize(['administrator', 'contributor', 'viewer'], None, True)
     def update(self, id):
-        """Set the user with id=id's rememberedForms to the forms referenced by
-        the array of form ids passed in the request body.  This action is very
-        similar to the remember action in the forms controller, the difference
-        being that remember only appends forms to the logged in user's remembered
-        forms list while the present action can modify an arbitrary user's
-        remembered forms without restriction (i.e., clear, append, remove).
-        Admins can update any user's remembered forms; non-admins can only
-        update their own.
+        """Update a user's remembered forms and return them.
+
+        :URL: ``PUT /rememberedforms/id``
+        :Request body: JSON object of the form ``{"forms": [...]}`` where the
+            array contains the form ``id`` values that will constitute the
+            user's ``rememberedForms`` collection after update.
+        :param str id: the ``id`` value of the user model whose
+            ``rememberedForms`` attribute is to be updated.
+        :returns: the list of remembered forms of the user.
+
+        .. note::
+
+            Administrators can update any user's remembered forms;
+            non-administrators can only update their own.
+
         """
         user = Session.query(User).options(subqueryload(User.rememberedForms)).get(id)
         if user:
@@ -129,15 +162,17 @@ class RememberedformsController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self, id):
-        """SEARCH /forms: Return all forms in the user with id=id's remembered
-        forms that match the filter passed as JSON in the request body.  Note:
-        POST /rememberedForms/id/search also routes to this action.
+        """Return the remembered forms of a user that match the input JSON query.
 
-        The request body must be a JSON object with a 'query' attribute; a
-        'paginator' attribute is optional.  The 'query' object is passed to the
-        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
-        is returned or an error is raised.  The 'query' object requires a
-        'filter' attribute; an 'orderBy' attribute is optional.
+        :URL: ``SEARCH /rememberedforms/id`` (or ``POST /rememberedforms/id/search``).
+        :param str id: the ``id`` value of the user whose remembered forms are searched.
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
         user = Session.query(User).get(id)
         if user:

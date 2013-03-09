@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`TagsController` and its auxiliary functions.
+
+.. module:: tags
+   :synopsis: Contains the tags controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import Tag
 log = logging.getLogger(__name__)
 
 class TagsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on tag resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('Tag', config=config)
 
@@ -41,7 +57,18 @@ class TagsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /tags: Return all tags."""
+        """Get all tag resources.
+
+        :URL: ``GET /tags`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all tag resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(Tag)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,13 @@ class TagsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /tags: Create a new tag."""
+        """Create a new tag resource and return it.
+
+        :URL: ``POST /tags``
+        :request body: JSON object representing the tag to create.
+        :returns: the newly created tag.
+
+        """
         try:
             schema = TagSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,8 +109,11 @@ class TagsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /tags/new: Return the data necessary to create a new OLD
-        tag.  NOTHING TO RETURN HERE ...
+        """Return the data necessary to create a new tag.
+
+        :URL: ``GET /tags/new``.
+        :returns: an empty dictionary.
+
         """
         return {}
 
@@ -86,7 +122,14 @@ class TagsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /tags/id: Update an existing tag."""
+        """Update a tag and return it.
+        
+        :URL: ``PUT /tags/id``
+        :Request body: JSON object representing the tag with updated attribute values.
+        :param str id: the ``id`` value of the tag to be updated.
+        :returns: the updated tag model.
+
+        """
         tag = Session.query(Tag).get(int(id))
         if tag:
             try:
@@ -120,7 +163,13 @@ class TagsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /tags/id: Delete an existing tag."""
+        """Delete an existing tag and return it.
+
+        :URL: ``DELETE /tags/id``
+        :param str id: the ``id`` value of the tag to be deleted.
+        :returns: the deleted tag model.
+
+        """
         tag = Session.query(Tag).get(id)
         if tag:
             if tag.name not in (u'restricted', u'foreign word'):
@@ -138,12 +187,12 @@ class TagsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /tags/id: Return a JSON object representation of the tag with id=id.
+        """Return a tag.
+        
+        :URL: ``GET /tags/id``
+        :param str id: the ``id`` value of the tag to be returned.
+        :returns: a tag model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         tag = Session.query(Tag).get(id)
         if tag:
@@ -157,9 +206,17 @@ class TagsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /tags/id/edit: Return the data necessary to update an existing
-        OLD tag; here we return only the tag and
-        an empty JSON object.
+        """Return a tag resource and the data needed to update it.
+
+        :URL: ``GET /tags/edit``
+        :param str id: the ``id`` value of the tag that will be updated.
+        :returns: a dictionary of the form::
+
+                {"tag": {...}, "data": {...}}
+
+            where the value of the ``tag`` key is a dictionary representation of
+            the tag and the value of the ``data`` key is an empty dictionary.
+
         """
         tag = Session.query(Tag).get(id)
         if tag:
@@ -174,8 +231,11 @@ class TagsController(BaseController):
 ################################################################################
 
 def createNewTag(data):
-    """Create a new tag model object given a data dictionary provided by the
-    user (as a JSON object).
+    """Create a new tag.
+
+    :param dict data: the data for the tag to be created.
+    :returns: an SQLAlchemy model object representing the tag.
+
     """
     tag = Tag()
     tag.name = h.normalize(data['name'])
@@ -184,9 +244,13 @@ def createNewTag(data):
     return tag
 
 def updateTag(tag, data):
-    """Update the input tag model object given a data dictionary provided by the
-    user (as a JSON object).  If changed is not set to true in the course of
-    attribute setting, then False is returned and no update occurs.
+    """Update a tag.
+
+    :param tag: the tag model to be updated.
+    :param dict data: representation of the updated tag.
+    :returns: the updated tag model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
     """
     changed = False
     changed = h.setAttr(tag, 'name', h.normalize(data['name']), changed)

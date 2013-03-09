@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Installation &amp; Configuration &mdash; OLD 1.0a documentation</title>
+    <title>Installation &amp; Configuration &mdash; OLD 1.0a1 documentation</title>
     
     <link rel="stylesheet" href="_static/werkzeug.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.0a',
+        VERSION:     '1.0a1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,8 +25,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="OLD 1.0a documentation" href="index.html" />
-    <link rel="next" title="Architecture Overview" href="architecture.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="index.html" />
+    <link rel="next" title="Introduction" href="architecture.html" />
     <link rel="prev" title="About" href="about.html" /> 
   </head>
   <body>
@@ -37,12 +37,15 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="architecture.html" title="Architecture Overview"
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="architecture.html" title="Introduction"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="about.html" title="About"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">OLD 1.0a documentation</a> &raquo;</li> 
+        <li><a href="index.html">OLD 1.0a1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -53,13 +56,12 @@
             
   <div class="section" id="installation-configuration">
 <span id="installation-section"></span><h1>Installation &amp; Configuration<a class="headerlink" href="#installation-configuration" title="Permalink to this headline">¶</a></h1>
-<p>This section explains how to get, install and configure an OLD application.  The
-bird&#8217;s-eye view of the process is as follows:</p>
+<p>This section explains how to get, install and configure an OLD application.  An
+overview of the process:</p>
 <ol class="arabic simple">
 <li>Download and install the OLD.</li>
 <li>Generate an OLD config file and edit it.</li>
-<li>Run the <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">setup-app</span></tt> script to create the database tables and
-directory structure.</li>
+<li>Run the setup command to create the database tables and directory structure.</li>
 <li>Serve the application and test that it is working properly.</li>
 </ol>
 <p>Note that these installation instructions assume a Unix-like system, e.g.,
@@ -69,7 +71,7 @@ a Python virtual environment and install and download a Pylons application.</p>
 <div class="section" id="quickstart">
 <h2>QuickStart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
 <p>For the impatient, here is the quickest way to install, configure and serve an
-OLD application.  Before blindly the following commands, however, it is
+OLD application.  Before blindly issuing the following commands, however, it is
 recommended that you read the detailed instructions in the following sections</p>
 <div class="highlight-python"><pre>virtualenv --no-site-packages env
 source env/bin/activate
@@ -89,7 +91,7 @@ application is being served and is operating correctly:</p>
 <div class="section" id="download">
 <h2>Download<a class="headerlink" href="#download" title="Permalink to this headline">¶</a></h2>
 <p>Pre-packaged eggs of stable OLD releases can be downloaded from the
-<a class="reference external" href="http://pypi.python.org/pypi/onlinelinguisticdatabase.">Python Package Index</a></p>
+<a class="reference external" href="http://pypi.python.org/pypi/onlinelinguisticdatabase">Python Package Index</a>.</p>
 <p>The easiest way to get and install the OLD is via the Python command-line
 program Easy Install.  Before issuing the following command, read the
 <a class="reference internal" href="#virtual-env"><em>Create a virtual Python environment</em></a> and consider installing the OLD in a virtual environment.
@@ -107,7 +109,7 @@ first install <a class="reference external" href="http://git-scm.com/">Git</a> a
 <h2>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="create-a-virtual-python-environment">
 <span id="virtual-env"></span><h3>Create a virtual Python environment<a class="headerlink" href="#create-a-virtual-python-environment" title="Permalink to this headline">¶</a></h3>
-<p>It is recommended that one install the OLD in a virtual Python environment.  A
+<p>It is recommended that the OLD be installed in a virtual Python environment.  A
 virtual environment is an isolated Python environment within which you can
 install the OLD and its dependencies without inadvertently rendering other
 programs unworkable by, say, upgrading <em>their</em> dependencies in incompatible
@@ -170,6 +172,11 @@ elected not to use a virtual environment.)</p>
 <span class="pre">dependencies</span> <span class="pre">for</span> <span class="pre">onlinelinguisticdatabase</span></tt>.  (If you used <tt class="docutils literal"><span class="pre">pip</span></tt>, you will see
 something like <tt class="docutils literal"><span class="pre">Successfully</span> <span class="pre">installed</span> <span class="pre">onlinelinguisticdatabase</span></tt>.)  This means
 that the OLD and all of its dependencies have been successfully installed.</p>
+<p>If you have downloaded the OLD source code and need to install the dependencies,
+then move to the root directory of the source, i.e., the one containing the
+<tt class="docutils literal"><span class="pre">setup.py</span></tt> file, and run:</p>
+<div class="highlight-python"><pre>python setup.py develop</pre>
+</div>
 </div>
 </div>
 <div class="section" id="configure">
@@ -203,6 +210,9 @@ everything is working ok.  On a production system you will need to change the
 <a class="reference external" href="http://www.mysql.com/">MySQL</a>. If you want to get up and running with MySQL
 right away, see the <a class="reference internal" href="#mysql-config"><em>Set up MySQL/MySQLdb</em></a> section; otherwise, continue on to
 <a class="reference internal" href="#edit-config"><em>Edit the config file</em></a>.</p>
+<p>Developers will not need to generate a config file.  The <tt class="docutils literal"><span class="pre">test.ini</span></tt> and
+<tt class="docutils literal"><span class="pre">development.ini</span></tt> config file should already be present in the root directory
+of the source.  See the <a class="reference internal" href="#developers"><em>Developers</em></a> section for details.</p>
 </div>
 <div class="section" id="set-up-mysql-mysqldb">
 <span id="mysql-config"></span><h3>Set up MySQL/MySQLdb<a class="headerlink" href="#set-up-mysql-mysqldb" title="Permalink to this headline">¶</a></h3>
@@ -346,7 +356,7 @@ application log file <tt class="docutils literal"><span class="pre">application.
 <tt class="docutils literal"><span class="pre">_requests_tests.py</span></tt>.</p>
 </div>
 <div class="section" id="serve">
-<h2>Serve<a class="headerlink" href="#serve" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h2>Serve<a class="headerlink" href="#serve" title="Permalink to this headline">¶</a></h2>
 <p>To begin serving an OLD application, use Paster&#8217;s <tt class="docutils literal"><span class="pre">serve</span></tt> command:</p>
 <div class="highlight-python"><pre>paster serve production.ini</pre>
 </div>
@@ -403,8 +413,8 @@ created a smaller version of each image:</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id2">
-<h3>FFmpeg<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id3">
+<h3>FFmpeg<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
 <p>FFmpeg is a command-line tool that can convert .wav files to the lossy formats
 .ogg and .mp3.  It can be somewhat tricky to install FFmpeg properly and some
 installs will not support .mp3 creation by default.  For Debian 6.0 (Squeeze), I
@@ -427,7 +437,7 @@ application on the world wide web and setting up some admin scripts.  There are
 many possible ways to achieve this.  In my production systems I have followed
 the approach of using Apache to proxy requests to Pylons as described in
 <a class="reference external" href="http://pylonsbook.com/en/1.1/deployment.html">Chapter 21: Deployment</a> of
-<a class="reference external" href="http://pylonsbook.com/">The Pylons Book</a> and have had success with that.  I
+<a class="reference external" href="&lt;http://pylonsbook.com/&gt;">The Pylons Book</a> and have had success with that.  I
 review that approach here.</p>
 <p>Assuming Apache 2, <tt class="docutils literal"><span class="pre">mod_proxy</span></tt> and <tt class="docutils literal"><span class="pre">mod_proxy_http</span></tt> are installed, you
 first enable the latter two:</p>
@@ -502,19 +512,180 @@ of the relevant databases.  I will further document my backup setup at a later
 date.</p>
 </div>
 <div class="section" id="developers">
-<h2>Developers<a class="headerlink" href="#developers" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
-<li>Precis of the directory structure and where things are in a Pylons app</li>
-<li>install developer tools: sphinx</li>
-<li>run setup.py develop ...</li>
-<li>how to run tests</li>
-<li>development cycle ...</li>
-</ul>
+<span id="id4"></span><h2>Developers<a class="headerlink" href="#developers" title="Permalink to this headline">¶</a></h2>
+<p>This section provides an overview of the OLD for developers.  It covers (1) how
+to download the source and install the dependencies, (2) the structure of the
+source, (3) how to write and compile the documentation to HTML and PDF, (4) the
+creation of Python version-specific virtual environments and (5) the building of
+OLD releases as eggs or archives.</p>
+<p>For detailed documentation on developing a Pylons application, consult the
+excellent documentation for the Pylons framework, i.e., <a class="reference external" href="&lt;http://pylonsbook.com/&gt;">The Pylons Book</a>.</p>
+<div class="section" id="download-depencency-installation">
+<h3>Download &amp; depencency installation<a class="headerlink" href="#download-depencency-installation" title="Permalink to this headline">¶</a></h3>
+<p>This subsection details how to get the OLD source and install its dependencies.
+To download the most up-to-date source code, make sure you have
+<a class="reference external" href="http://git-scm.com/">Git</a> installed and run:</p>
+<div class="highlight-python"><pre>git clone git://github.com/jrwdunham/old.git</pre>
+</div>
+<p>To install the dependencies, move to the newly created <tt class="docutils literal"><span class="pre">old</span></tt> directory and
+run:</p>
+<div class="highlight-python"><pre>python setup.py develop</pre>
+</div>
+</div>
+<div class="section" id="directory-structure">
+<h3>Directory structure<a class="headerlink" href="#directory-structure" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">onlinelinguisticdatabase</span></tt> directory contains all of the files and
+directories that will be packaged into the final distribution.  Its
+subdirectories are <tt class="docutils literal"><span class="pre">config</span></tt>, <tt class="docutils literal"><span class="pre">controllers</span></tt>, <tt class="docutils literal"><span class="pre">lib</span></tt>, <tt class="docutils literal"><span class="pre">model</span></tt>, <tt class="docutils literal"><span class="pre">public</span></tt>,
+and <tt class="docutils literal"><span class="pre">tests</span></tt>.  This section gives an overview of the contents of these
+directories and the <tt class="docutils literal"><span class="pre">websetup.py</span></tt> file.</p>
+<p>The <tt class="docutils literal"><span class="pre">websetup.py</span></tt> file controls how an OLD application is set up.  That is,
+when <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">setup-app</span> <span class="pre">config_file.ini</span></tt> is run (or when <tt class="docutils literal"><span class="pre">nosetests</span></tt> is run),
+the contents of <tt class="docutils literal"><span class="pre">websetup.py</span></tt> determine what database tables are created, what
+defaults are entered into them and what directories are created.</p>
+<p>The <tt class="docutils literal"><span class="pre">config</span></tt> directory houses the <tt class="docutils literal"><span class="pre">deployment.ini_tmpl</span></tt> and <tt class="docutils literal"><span class="pre">routing.py</span></tt>
+files.  The former is the template used to generate the config file when
+something like <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">make-config</span> <span class="pre">production.ini</span></tt> is run.  The <tt class="docutils literal"><span class="pre">routing.py</span></tt>
+module is where the mappings from URL paths to OLD controller actions are
+specified.  When a new controller is created or the interface to an existing
+controller needs to be changed, the <tt class="docutils literal"><span class="pre">routing.py</span></tt> file must be edited.</p>
+<p>The <tt class="docutils literal"><span class="pre">controllers</span></tt> directory holds a module for each OLD controller.  For
+example, the <tt class="docutils literal"><span class="pre">controllers/forms.py</span></tt> module defines a <tt class="docutils literal"><span class="pre">FormsController</span></tt>
+class; the methods of this class (the controller&#8217;s <em>actions</em>) return values
+which determine the content of particular responses.  The <tt class="docutils literal"><span class="pre">index</span></tt> method
+(action) of the <tt class="docutils literal"><span class="pre">FormsController</span></tt> class, for example, returns a list of all
+form models in the database; since <tt class="docutils literal"><span class="pre">config/routing.py</span></tt> maps <tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms</span></tt> to
+<tt class="docutils literal"><span class="pre">FormsController.index</span></tt>, it is this list of forms that is returned when
+<tt class="docutils literal"><span class="pre">GET</span> <span class="pre">/forms</span></tt> is requested.</p>
+<p>The <tt class="docutils literal"><span class="pre">lib</span></tt> directory holds modules that define functionality used by multiple
+controllers.  The <tt class="docutils literal"><span class="pre">utils.py</span></tt> module defines a large number of widely-used
+functions, classes and data structures; these are made available in controllers
+under the <tt class="docutils literal"><span class="pre">h</span></tt> namespace, e.g., the value of <tt class="docutils literal"><span class="pre">h.markupLanguages</span></tt> is the list
+of valid markup language string values, as defined in <tt class="docutils literal"><span class="pre">utils.py</span></tt>.  The
+<tt class="docutils literal"><span class="pre">auth.py</span></tt> script holds the decorators that control authentication and
+authorization.  The <tt class="docutils literal"><span class="pre">schemata.py</span></tt> module contains the validators that are
+applied against user input.  The other modules in the <tt class="docutils literal"><span class="pre">lib</span></tt> directory are
+mentioned in this document where appropriate; consult the docstrings for more
+information.</p>
+<p>The <tt class="docutils literal"><span class="pre">model</span></tt> directory contains a module for each SQLAlchemy model used by the
+OLD.  For example, <tt class="docutils literal"><span class="pre">model/file.py</span></tt> houses the <tt class="docutils literal"><span class="pre">File</span></tt> class which defines the
+attributes of the file model and their implementation as columns and relations
+in a relational database.  The <tt class="docutils literal"><span class="pre">model/model.py</span></tt> is special; it defines the
+<tt class="docutils literal"><span class="pre">Model</span></tt> class from which all of the other models inherit a number of methods.
+Note that in order to make a model available in the
+<tt class="docutils literal"><span class="pre">onlinelinguisticdatabase.model</span></tt> namespace, it must be imported in
+<tt class="docutils literal"><span class="pre">model/__init__.py</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">public</span></tt> directory may contain static files, HTML, CSS and JavaScript.
+Since the client-side OLD application has not yet been implemented, the
+<tt class="docutils literal"><span class="pre">public</span></tt> directory contains, at present, only the <tt class="docutils literal"><span class="pre">iso_639_3_languages_data</span></tt>
+which stores the tab-delimited files containing the ISO-639-3 dataset.</p>
+<p>The <tt class="docutils literal"><span class="pre">tests</span></tt> directory contains all of the test modules.  When the
+<tt class="docutils literal"><span class="pre">nosetests</span></tt> command is run, it is the modules here that define the tests.  For
+example, <tt class="docutils literal"><span class="pre">tests/functional/test_forms.py</span></tt> defines a <tt class="docutils literal"><span class="pre">TestFormsController</span></tt>
+class whose methods test the various actions (or functionalities) of the forms
+controller.  For example, the <tt class="docutils literal"><span class="pre">test_create</span></tt> method of the
+<tt class="docutils literal"><span class="pre">TestFormsController</span></tt> class simulates <tt class="docutils literal"><span class="pre">POST</span> <span class="pre">/forms</span></tt> requests and confirms
+that the system behaves as expected.  When testing new funcionality, new tests
+should be defined in <tt class="docutils literal"><span class="pre">tests/functional</span></tt> or existing tests should be
+supplemented.  Note the <tt class="docutils literal"><span class="pre">_toggle_tests.py</span></tt> script which does not define tests
+but provides an easy way to turn large numbers of them on or off.  For example,
+<tt class="docutils literal"><span class="pre">./onlinelinguisticdatabase/tests/functional/_toggle_tests.py</span> <span class="pre">on</span></tt> will turn
+all tests on and
+<tt class="docutils literal"><span class="pre">./onlinelinguisticdatabase/tests/functional/_toggle_tests.py</span> <span class="pre">off</span></tt> will turn
+them all off.  See its docstrings for further usage instructions.  Finally, the
+<tt class="docutils literal"><span class="pre">tests</span></tt> directory also contains the <tt class="docutils literal"><span class="pre">_requests_tests.py</span></tt> script which
+defines some simple tests (using the Requests module) which (as described in the
+<a class="reference internal" href="#serve"><em>Serve</em></a> section) can be run on a live OLD application to ensure that it is
+working correctly.</p>
+<p>The <tt class="docutils literal"><span class="pre">websetup.py</span></tt> module defines the <tt class="docutils literal"><span class="pre">setup_app</span></tt> function that is called
+when the OLD is set up, i.e., when <tt class="docutils literal"><span class="pre">paster</span> <span class="pre">setup-app</span> <span class="pre">config_file.ini</span></tt> is
+issued.  The behaviour of the setup process is determined by the name of the
+config file.  If <tt class="docutils literal"><span class="pre">test.ini</span></tt> is the config file (as is the case when
+<tt class="docutils literal"><span class="pre">nosetests</span></tt> is run), then test-specific setup will be performed, i.e., all
+database tables will be dropped and then re-created.  Otherwise, only the tables
+that do not already exist will be created.</p>
+</div>
+<div class="section" id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h3>
+<p>This section reviews the OLD documentation creation process.  The OLD
+documentation (i.e., this document) is written using
+<a class="reference external" href="http://sphinx-doc.org/">Sphinx</a> and the reStructuredText lightweight markup
+language.  In order to edit and build the documentation, Sphinx must be
+installed:</p>
+<div class="highlight-python"><pre>easy_install sphinx</pre>
+</div>
+<p>The reStructuredText source files for the OLD documentation are the
+<tt class="docutils literal"><span class="pre">.rst</span></tt>-suffixed files in the <tt class="docutils literal"><span class="pre">docs</span></tt> directory.  The
+<a class="reference external" href="http://sphinx-doc.org/contents.html">Sphinx documentation</a> has a good
+overview of the reStructuredText syntax.  Once the source files have been
+edited, build the documentation HTML (in <tt class="docutils literal"><span class="pre">docs/_build/html</span></tt>) by moving to the
+<tt class="docutils literal"><span class="pre">docs</span></tt> directory and running:</p>
+<div class="highlight-python"><pre>sphinx-build -b html . ./_build/html</pre>
+</div>
+<p>To generate a LaTeX version of the documentation in <tt class="docutils literal"><span class="pre">docs/_build/latex</span></tt>, run
+(from the <tt class="docutils literal"><span class="pre">docs</span></tt> directory):</p>
+<div class="highlight-python"><pre>sphinx-build -b latex . ./_build/latex</pre>
+</div>
+<p>If <tt class="docutils literal"><span class="pre">pdflatex</span></tt> is installed <a class="footnote-reference" href="#f2" id="id6">[2]</a>, generate a PDF of the documentation by moving to
+<tt class="docutils literal"><span class="pre">docs/_build/latex</span></tt> and running:</p>
+<div class="highlight-python"><pre>pdflatex -interaction=nonstopmode OLD.tex</pre>
+</div>
+</div>
+<div class="section" id="virtualenv-python-distros">
+<h3>Virtualenv &amp; Python distros<a class="headerlink" href="#virtualenv-python-distros" title="Permalink to this headline">¶</a></h3>
+<p>In order to test whether the OLD works on different Python versions or to build
+distributions for those versions, it is necessary to create virtual environments
+for each such Python distribution.</p>
+<p>The <a class="reference external" href="https://pypi.python.org/pypi/pythonbrew/">pythonbrew</a> utility facilitates
+the building and installation of different Pythons in a user&#8217;s home directory.
+Install <tt class="docutils literal"><span class="pre">pythonbrew</span></tt> using the instructions on its web site.</p>
+<p>Now run <tt class="docutils literal"><span class="pre">pythonbrew</span> <span class="pre">install</span></tt> to install the desired Pythons.  For example, to
+install Python 2.4.6, 2.5.6 and 2.7.3, run:</p>
+<div class="highlight-python"><pre>pythonbrew install 2.4.6
+pythonbrew install 2.5.6
+pythonbrew install 2.7.3</pre>
+</div>
+<p>Once complete, new Python executables should be installed in
+<tt class="docutils literal"><span class="pre">~/.pythonbrew/pythons/Python-2.4.6</span></tt>, <tt class="docutils literal"><span class="pre">~/.pythonbrew/pythons/Python-2.5.6</span></tt>,
+etc.  For example, to launch the Python 2.5.6 interactive console, run:</p>
+<div class="highlight-python"><pre>~/.pythonbrew/pythons/Python-2.5.6/bin/python</pre>
+</div>
+<p>To create a virtual environment using one of these Pythons, run <tt class="docutils literal"><span class="pre">virtualenv</span></tt>
+with the <tt class="docutils literal"><span class="pre">-p</span></tt> option followed by the path to the desired Python executable.
+It is also a good idea to choose a name for the virtual environment that makes
+it easy to tell what version of Python it uses.  For example:</p>
+<div class="highlight-python"><pre>virtualenv -p ~/.pythonbrew/pythons/Python-2.5.6/bin/python env-2.5.6</pre>
+</div>
+<p>Make sure that the new virtual environment has the correct python:</p>
+<div class="highlight-python"><pre>~/env-2.5.6/bin/python --version</pre>
+</div>
+<p>Note that the OLD works with Python 2.6 and 2.7 but not with 2.4 or 2.5.  It has
+not been tested with Python 3.</p>
+</div>
+<div class="section" id="releases">
+<h3>Releases<a class="headerlink" href="#releases" title="Permalink to this headline">¶</a></h3>
+<p>This section explains how to build stable OLD releases and how to upload them to
+PyPI.</p>
+<p>To build an egg or a source distribution of a stable release, run the following
+two commands, respectively:</p>
+<div class="highlight-python"><pre>python setup.py bdist_egg
+python setup.py sdist</pre>
+</div>
+<p>Each of these commands will create a new archive in the <tt class="docutils literal"><span class="pre">dist</span></tt> directory.</p>
+<p>In order to build an OLD egg distribution and upload it to PyPI in one command,
+run the following command.  (Note that you will need the OLD&#8217;s PyPI password in
+order to be permitted to do this.)</p>
+<div class="highlight-python"><pre>python setup.py bdist_egg register upload</pre>
+</div>
+<p>To create and upload the source distribution to PyPI (so that, e.g., Pip can be
+used to install the OLD), run:</p>
+<div class="highlight-python"><pre>python setup.py sdist register upload</pre>
+</div>
 <table class="docutils footnote" frame="void" id="f1" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
 <tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>The OLD has not been tested on Windows.  Some alterations to the source
-may be required in order to get it running on a Windows OS.  to be clear,
+may be required in order to get it running on a Windows OS.  To be clear,
 this does <em>not</em> mean that users running a Windows OS will not be able to use
 a production OLD web application.  A live OLD application is a web service
 and users with any operating system should be able to interact with it,
@@ -522,6 +693,14 @@ assuming an internet connection is available.  What this does mean is that
 the OLD, as is, may not run on a Windows <em>server</em>.</td></tr>
 </tbody>
 </table>
+<table class="docutils footnote" frame="void" id="f2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id6">[2]</a></td><td>See <a class="reference external" href="http://www.charlietanksley.net/philtex/basics-of-latex-from-the-command-line/">this page</a>
+for an overview of how to use the TeX command-line utilities.</td></tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 
@@ -551,11 +730,18 @@ the OLD, as is, may not run on a Windows <em>server</em>.</td></tr>
 <li><a class="reference internal" href="#serve">Serve</a></li>
 <li><a class="reference internal" href="#soft-dependencies">Soft dependencies</a><ul>
 <li><a class="reference internal" href="#pil">PIL</a></li>
-<li><a class="reference internal" href="#id2">FFmpeg</a></li>
+<li><a class="reference internal" href="#id3">FFmpeg</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#deploy">Deploy</a></li>
-<li><a class="reference internal" href="#developers">Developers</a></li>
+<li><a class="reference internal" href="#developers">Developers</a><ul>
+<li><a class="reference internal" href="#download-depencency-installation">Download &amp; depencency installation</a></li>
+<li><a class="reference internal" href="#directory-structure">Directory structure</a></li>
+<li><a class="reference internal" href="#documentation">Documentation</a></li>
+<li><a class="reference internal" href="#virtualenv-python-distros">Virtualenv &amp; Python distros</a></li>
+<li><a class="reference internal" href="#releases">Releases</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -563,7 +749,7 @@ the OLD, as is, may not run on a Windows <em>server</em>.</td></tr>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="about.html" title="previous chapter">About</a></li>
-      <li>Next: <a href="architecture.html" title="next chapter">Architecture Overview</a></li>
+      <li>Next: <a href="architecture.html" title="next chapter">Introduction</a></li>
   </ul></li>
 </ul>
   <h3>This Page</h3>

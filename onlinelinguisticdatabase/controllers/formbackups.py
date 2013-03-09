@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`FormbackupsController`.
+
+.. module:: formbackups
+   :synopsis: Contains the form backups controller.
+
+"""
+
 import logging
 import datetime
 import re
@@ -32,11 +39,21 @@ from onlinelinguisticdatabase.model import FormBackup
 log = logging.getLogger(__name__)
 
 class FormbackupsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol
+    """Generate responses to requests on form backup resources.
 
-    Form backups are created when updating and deleting forms; they
-    cannot be created directly and they should never be deleted.  This
-    controller facilitates searching and getting of form backups only.
+    REST Controller styled on the Atom Publishing Protocol.
+    
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    .. note::
+    
+        Form backups are created when updating and deleting forms; they cannot
+        be created directly and they should never be deleted.  This controller
+        facilitates searching and getting of form backups only.
+
     """
 
     queryBuilder = SQLAQueryBuilder('FormBackup', config=config)
@@ -45,13 +62,17 @@ class FormbackupsController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /formbackups: Return all form backups matching the filter passed as JSON in the request body.
-        Note: POST /formbackups/search also routes to this action. The request body must be
-        a JSON object with a 'query' attribute; a 'paginator' attribute is
-        optional.  The 'query' object is passed to the getSQLAQuery() method of
-        an SQLAQueryBuilder instance and an SQLA query is returned or an error
-        is raised.  The 'query' object requires a 'filter' attribute; an
-        'orderBy' attribute is optional.
+        """Return the list of form backup resources matching the input
+        JSON query.
+
+        :URL: ``SEARCH /formbackups`` (or ``POST /formbackups/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
         try:
             jsonSearchParams = unicode(request.body, request.charset)
@@ -76,8 +97,11 @@ class FormbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /formbackups/new_search: Return the data necessary to inform a search
-        on the form backups resource.
+        """Return the data necessary to search the form backup resources.
+
+        :URL: ``GET /formbackups/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
@@ -85,7 +109,12 @@ class FormbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /formbackups: Return all form backups."""
+        """Get all form backup resources.
+
+        :URL: ``GET /formbackups`` 
+        :returns: a list of all form backup resources.
+
+        """
         try:
             query = Session.query(FormBackup)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -121,13 +150,12 @@ class FormbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /formbackups/id: Return a JSON object representation of the
-        form backup with id=id.
+        """Return a form backup.
+        
+        :URL: ``GET /formbackups/id``
+        :param str id: the ``id`` value of the form backup to be returned.
+        :returns: a form backup model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         formBackup = Session.query(FormBackup).get(id)
         if formBackup:

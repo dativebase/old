@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`CollectionbackupsController`.
+
+.. module:: collectionbackups
+   :synopsis: Contains the collection backups controller.
+
+"""
+
 import logging
 import datetime
 import re
@@ -32,11 +39,21 @@ from onlinelinguisticdatabase.model import CollectionBackup
 log = logging.getLogger(__name__)
 
 class CollectionbackupsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol
+    """Generate responses to requests on collection backup resources.
 
-    Collection backups are created when updating and deleting collections; they
-    cannot be created directly and they should never be deleted.  This
-    controller facilitates searching and getting of collection backups only.
+    REST Controller styled on the Atom Publishing Protocol.
+    
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    .. note::
+    
+        Collection backups are created when updating and deleting collections;
+        they cannot be created directly and they should never be deleted.  This
+        controller facilitates searching and getting of collection backups only.
+
     """
 
     queryBuilder = SQLAQueryBuilder('CollectionBackup', config=config)
@@ -45,14 +62,19 @@ class CollectionbackupsController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /collectionbackups: Return all collection backups matching the filter passed as JSON in the request body.
-        Note: POST /collectionbackups/search also routes to this action. The request body must be
-        a JSON object with a 'query' attribute; a 'paginator' attribute is
-        optional.  The 'query' object is passed to the getSQLAQuery() method of
-        an SQLAQueryBuilder instance and an SQLA query is returned or an error
-        is raised.  The 'query' object requires a 'filter' attribute; an
-        'orderBy' attribute is optional.
+        """Return the list of collection backup resources matching the input
+        JSON query.
+
+        :URL: ``SEARCH /collectionbackups`` (or ``POST /collectionbackups/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
+
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
@@ -76,8 +98,11 @@ class CollectionbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /collectionbackups/new_search: Return the data necessary to inform a search
-        on the collection backups resource.
+        """Return the data necessary to search the collection backup resources.
+
+        :URL: ``GET /collectionbackups/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
@@ -85,7 +110,12 @@ class CollectionbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /collectionbackups: Return all collection backups."""
+        """Get all collection backup resources.
+
+        :URL: ``GET /collectionbackups`` 
+        :returns: a list of all collection backup resources.
+
+        """
         try:
             query = Session.query(CollectionBackup)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -119,13 +149,12 @@ class CollectionbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /collectionbackups/id: Return a JSON object representation of the
-        collection backup with id=id.
+        """Return a collection backup.
+        
+        :URL: ``GET /collectionbackups/id``
+        :param str id: the ``id`` value of the collection backup to be returned.
+        :returns: a collection backup model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         collectionBackup = Session.query(CollectionBackup).get(id)
         if collectionBackup:

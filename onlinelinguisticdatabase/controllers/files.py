@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`FilesController` and its auxiliary functions.
+
+.. module:: files
+   :synopsis: Contains the files controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -42,7 +49,16 @@ from onlinelinguisticdatabase.lib.resize import saveReducedCopy
 log = logging.getLogger(__name__)
 
 class FilesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on file resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('File', config=config)
 
@@ -50,13 +66,16 @@ class FilesController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /files: Return all files matching the filter passed as JSON in
-        the request body.  Note: POST /files/search also routes to this action.
-        The request body must be a JSON object with a 'query' attribute; a
-        'paginator' attribute is optional.  The 'query' object is passed to the
-        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
-        is returned or an error is raised.  The 'query' object requires a
-        'filter' attribute; an 'orderBy' attribute is optional.
+        """Return the list of file resources matching the input JSON query.
+
+        :URL: ``SEARCH /files`` (or ``POST /files/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
         try:
             jsonSearchParams = unicode(request.body, request.charset)
@@ -79,8 +98,11 @@ class FilesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /files/new_search: Return the data necessary to inform a search
-        on the files resource.
+        """Return the data necessary to search the file resources.
+
+        :URL: ``GET /files/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
@@ -88,7 +110,18 @@ class FilesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /files: Return all files."""
+        """Get all file resources.
+
+        :URL: ``GET /files`` with optional query string parameters for ordering
+            and pagination.
+        :returns: a list of all file resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = h.eagerloadFile(Session.query(File))
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -103,32 +136,38 @@ class FilesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /files: Create a new file.  There are four ways to create a new
-        file:
+        """Create a new file resource and return it.
 
-        1. Plain File:
+        :URL: ``POST /files``
+        :request body: JSON object *or* conventional POST parameters containing
+            the attribute values of the new file.
+        :content type: ``application/json`` *or* ``multipart/form-data``.
+        :returns: the newly created file.
 
-           - Upload filedata via a POST request with Content-Type set to
-             'multipart/form-data'.  A filename POST param should also be present.
+        .. note::
+        
+            There are three types of file and four types of file creation
+            request.
 
-        2. Base64-encoded File with JSON Metadata:
+            1. **Local file with** ``multipart/form-data`` **content type.**
+               File data are in the request body and the file metadata are
+               structured as conventional POST parameters.
 
-           - Upload the filedata (base64 encoded) and metadata all within a JSON
-             POST request, i.e., Content-Type='application/json'.  This permits
-             the uploading of everything in one go (all via JSON), the downside
-             being the processing time required to encode to and decode from base64.
+            2. **Local file with** ``application/json`` **content type.**
+               File data are Base64-encoded and are contained in the same JSON
+               object as the metadata, in the request body.
 
-        3. Audio/Video Subinterval-Referencing File:
+            3. **Subinterval-referencing file with** ``application/json`` **content type.**
+               All parameters provided in a JSON object.  No file data are
+               present; the ``id`` value of an existing *audio/video* parent
+               file must be provided in the ``parentFile`` attribute; values for
+               ``start`` and ``end`` attributes are also required.
 
-           - Upload file metadata in a JSON POST request and specify the id of an
-             existing *audio/video* 'parentFile' as well as 'start' and 'end'
-             attributes (in seconds as ints/floats) in the JSON request params.
-             Here the name attribute is user-specifiable.
+            4. **Externally hosted file with** ``application/json`` **content-type.**
+               All parameters provided in a JSON object.  No file data are
+               present; the value of the ``url`` attribute is a valid URL where
+               the file data are being served.
 
-        4. Externally Hosted File:
-
-           - JSON POST body of request must contain a url attribute; name,
-             MIMEtype and password attributes are optional.
         """
         try:
             if request.content_type == 'application/json':
@@ -164,14 +203,17 @@ class FilesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /new_file: Return the data necessary to create a new OLD file.
+        """Return the data necessary to create a new file.
 
-        Return a JSON object with the following properties: 'tags',
-        'utteranceTypes', 'speakers' and 'users', the value of each of which is
-        an array that is either empty or contains the appropriate objects.
+        :URL: ``GET /files/new`` with optional query string parameters 
+        :returns: a dictionary of lists of resources.
 
-        See the getNewEditFileData function to understand how the GET params can
-        affect the contents of the arrays.
+        .. note::
+        
+           See :func:`getNewEditFileData` to understand how the query string
+           parameters can affect the contents of the lists in the returned
+           dictionary.
+
         """
         return getNewEditFileData(request.GET)
 
@@ -180,7 +222,14 @@ class FilesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /files/id: Update an existing file."""
+        """Update a file and return it.
+        
+        :URL: ``PUT /files/id``
+        :Request body: JSON object representing the file with updated attribute values.
+        :param str id: the ``id`` value of the file to be updated.
+        :returns: the updated file model.
+
+        """
         file = h.eagerloadFile(Session.query(File)).get(int(id))
         if file:
             unrestrictedUsers = h.getUnrestrictedUsers()
@@ -193,7 +242,7 @@ class FilesController(BaseController):
                         file = updateExternallyHostedFile(file)
                     else:
                         file = updateFile(file)
-                    # file will be False if there are no changes (cf. update(SubintervalReferencing)File).
+                    # file will be False if there are no changes
                     if file:
                         Session.add(file)
                         Session.commit()
@@ -220,8 +269,16 @@ class FilesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /files/id: Delete an existing file.  Only the enterer and
-        administrators can delete a file.
+        """Delete an existing file and return it.
+
+        :URL: ``DELETE /files/id``
+        :param str id: the ``id`` value of the file to be deleted.
+        :returns: the deleted file model.
+
+        .. note::
+
+           Only administrators and a file's enterer can delete it.
+
         """
         file = h.eagerloadFile(Session.query(File)).get(id)
         if file:
@@ -240,13 +297,12 @@ class FilesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /files/id: Return a JSON object representation of the file with
-        id=id.
+        """Return a file.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
+        :URL: ``GET /files/id``
+        :param str id: the ``id`` value of the file to be returned.
+        :returns: a file model object.
+
         """
         file = h.eagerloadFile(Session.query(File)).get(id)
         if file:
@@ -266,23 +322,27 @@ class FilesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /files/id/edit: Return the data necessary to update an existing
-        OLD file, i.e., the file's properties and the necessary additional data,
-        i.e., users, speakers, etc.
+        """Return a file and the data needed to update it.
 
-        This action can be thought of as a combination of the 'show' and 'new'
-        actions.  The output will be a JSON object of the form
+        :URL: ``GET /files/edit`` with optional query string parameters 
+        :param str id: the ``id`` value of the file that will be updated.
+        :returns: a dictionary of the form::
 
-            {file: {...}, data: {...}},
+                {"file": {...}, "data": {...}}
 
-        where output.file is an object containing the file's properties (cf. the
-        output of show) and output.data is an object containing the data
-        required to add a new file (cf. the output of new).
+            where the value of the ``file`` key is a dictionary representation
+            of the file and the value of the ``data`` key is a dictionary
+            containing the objects necessary to update a file, viz. the return
+            value of :func:`FilesController.new`
 
-        GET parameters will affect the value of output.data in the same way as
-        for the new action, i.e., no params will result in all the necessary
-        output.data being retrieved from the db while specified params will
-        result in selective retrieval (see getNewEditFileData for details).
+        .. note::
+        
+           This action can be thought of as a combination of
+           :func:`FilesController.show` and :func:`FilesController.new`.  See
+           :func:`getNewEditFileData` to understand how the query string
+           parameters can affect the contents of the lists in the ``data``
+           dictionary.
+
         """
         response.content_type = 'application/json'
         file = h.eagerloadFile(Session.query(File)).get(id)
@@ -300,26 +360,31 @@ class FilesController(BaseController):
     @h.restrict('GET')
     @h.authenticateWithJSON
     def serve(self, id):
-        """Return the file data (binary stream) for the file in files/ with
-        id=id or an error message if the file does not exist or the user is
-        not authorized to access it.
+        """Return the file data (binary stream) of the file.
+        
+        :param str id: the ``id`` value of the file whose file data are requested.
+
         """
         return serveFile(id)
 
     @h.restrict('GET')
     @h.authenticateWithJSON
     def serve_reduced(self, id):
-        """Return the reduced-size file data (i.e., resized image or ogg/mp3-
-        converted wav) for the file in files/ with id=id or an error message if
-        the file does not exist or the user is not authorized to access it.
+        """Return the reduced-size file data (binary stream) of the file.
+        
+        :param str id: the ``id`` value of the file whose reduced-size file data
+            are requested.
+
         """
         return serveFile(id, True)
 
 
 def serveFile(id, reduced=False):
-    """Use FileApp to serve the content (binary data) of the file with id=id.  If
-    reduced is True, then try to serve /files/reduced_files/<filename> where
-    filename is file.lossyFilename.
+    """Serve the content (binary data) of a file.
+    
+    :param str id: the ``id`` value of the file whose file data will be served.
+    :param bool reduced: toggles serving of file data or reduced-size file data.
+
     """
     file = Session.query(File).options(subqueryload(File.parentFile)).get(id)
     if getattr(file, 'parentFile', None):
@@ -352,11 +417,12 @@ def serveFile(id, reduced=False):
 ################################################################################
 
 def getUniqueFilePath(filePath):
-    """This function ensures a unique file path (without race conditions) by
-    attempting to create the file using os.open.  If the file exists, an OS
-    error is raised (or if the file is too long, an IO error is raised), and
-    a new file path/name is generated until a unique one is found.  Returns
-    an ordered pair: (<file object>, <unique file path>).
+    """Get a unique file path.
+    
+    :param str filePath: an absolute file path.
+    :returns: a tuple whose first element is the open file object and whose
+        second is the unique file path as a unicode string.
+
     """
     filePathParts = os.path.splitext(filePath) # returns ('/path/file', '.ext')
     while 1:
@@ -369,7 +435,13 @@ def getUniqueFilePath(filePath):
                     ''.join(sample(digits + letters, 8)), filePathParts[1])
 
 def addStandardMetadata(file, data):
-    """Add the metadata that all JSON-created file creation requests can add."""
+    """Add the standard metadata to the file model using the data dictionary.
+    
+    :param file: file model object
+    :param dict data: dictionary containing file attribute values.
+    :returns: the updated file model object.
+    
+    """
     file.description = h.normalize(data['description'])
     file.utteranceType = data['utteranceType']
     file.dateElicited = data['dateElicited']
@@ -386,7 +458,12 @@ def addStandardMetadata(file, data):
     return file
 
 def restrictFileByForms(file):
-    """Restrict the entire file if it is associated to restricted forms."""
+    """Restrict the entire file if it is associated to restricted forms.
+    
+    :param file: a file model object.
+    :returns: the file model object potentially tagged as "restricted".
+
+    """
     tags = [f.tags for f in file.forms]
     tags = [tag for tagList in tags for tag in tagList]
     restrictedTags = [tag for tag in tags if tag.name == u'restricted']
@@ -400,10 +477,14 @@ class InvalidFieldStorageObjectError(Exception):
     pass
 
 def createBase64File(data):
-    """Create and return an OLD file model generated from a data dict that
-    contains a 'base64EncodedFile' key whose value should be a base64 encoded
-    file.
+    """Create a local file using data from a ``Content-Type: application/json`` request.
+
+    :param dict data: the data to create the file model.
+    :param str data['base64EncodedFile']: Base64-encoded file data.
+    :returns: an SQLAlchemy model object representing the file.
+
     """
+
     data['MIMEtype'] = u''  # during validation, the schema will set a proper value based on the base64EncodedFile or filename attribute
     schema = FileCreateWithBase64EncodedFiledataSchema()
     state = h.State()
@@ -434,9 +515,15 @@ def createBase64File(data):
     return file
 
 def createExternallyHostedFile(data):
-    """Create and return an OLD file model generated from a data dict that
-    contains a 'url' key whose value should be a valid url where the file is
-    served.  Optional attributes: name, password, MIMEtype.
+    """Create an externally hosted file.
+
+    :param dict data: the data to create the file model.
+    :param str data['url']: a valid URL where the file data are served.
+    :returns: an SQLAlchemy model object representing the file.
+
+    Optional keys of the data dictionary, not including the standard metadata
+    ones, are ``name``, ``password`` and ``MIMEtype``.
+    
     """
     data['password'] = data.get('password') or u''
     schema = FileExternallyHostedSchema()
@@ -454,21 +541,16 @@ def createExternallyHostedFile(data):
     return file
 
 def createSubintervalReferencingFile(data):
-    """Create and return an OLD file model generated from a data dict that
-    contains a 'parentFile' key whose value must be a foreign key id that
-    references another file, which file must be an audio or video file.  The
-    data dict should also contain a 'name' key whose value can be a name that is
-    distinct from the filename value of the parent file (the child/referencing
-    file has no value for filename.)  The referencing subinterval file must also
-    contain float values for the 'start' and 'end' attributes which indicate the
-    subinterval of the parent file that constitute the content of the
-    referencing file.
+    """Create a subinterval-referencing file.
 
-    As with files created from base64-encoded file data (cf. createBase64File
-    above), creation requests for referencing subinterval files may contain
-    metadata such as a description, an utterance type, etc.
+    :param dict data: the data to create the file model.
+    :param int data['parentFile']: the ``id`` value of an audio/video file model.
+    :param float/int data['start']: the start of the interval in seconds.
+    :param float/int data['end']: the end of the interval in seconds.
+    :returns: an SQLAlchemy model object representing the file.
 
-    Note that referencing files have no filename or size attributes.
+    A value for ``data['name']`` may also be supplied.
+
     """
     data['name'] = data.get('name') or u''
     schema = FileSubintervalReferencingSchema()
@@ -492,18 +574,21 @@ def createSubintervalReferencingFile(data):
     return file
 
 def createPlainFile():
-    """Return an OLD file model generated from POST params (not JSON formatted).
-    The usual file metadata can be submitted.  Unique to this method is the
-    filedata key and the treatment of the filename value.
+    """Create a local file using data from a ``Content-Type: multipart/form-data`` request.
+
+    :param request.POST['filedata']: a ``cgi.FieldStorage`` object containing
+        the file data.
+    :param str request.POST['filename']: the name of the binary file.
+    :returns: an SQLAlchemy model object representing the file.
+
+    .. note::
     
-    1. 'filedata', a  cgi.FieldStorage object containing the file data.
-    2. 'filename', a string (optional but encouraged, i.e., if not provided, the
-       system will attempt to create one from the file path)
+        The validator expects ``request.POST`` to encode list input via the
+        ``formencode.variabledecode.NestedVariables`` format.  E.g., a list of
+        form ``id`` values would be provided as values to keys with names like
+        ``'forms-0'``, ``'forms-1'``, ``'forms-2'``, etc.
 
-    Note that the schema expects not 'forms' and 'files' keys but 'forms-0',
-    'forms-1', etc., as per the formencode.variabledecode.NestedVariables format.
     """
-
     values = dict(request.params)
     filedata = request.POST.get('filedata')
     if not hasattr(filedata, 'file'):
@@ -537,7 +622,15 @@ def createPlainFile():
 ################################################################################
 
 def updateStandardMetadata(file, data, changed):
+    """Update the standard metadata attributes of the input file.
+    
+    :param file: a file model object to be updated.
+    :param dict data: the data used to update the file model.
+    :param bool changed: indicates whether the file has been changed.
+    :returns: a tuple whose first element is the file model and whose second is
+        the boolean ``changed``.
 
+    """
     changed = h.setAttr(file, 'description', h.normalize(data['description']), changed)
     changed = h.setAttr(file, 'utteranceType', h.normalize(data['utteranceType']), changed)
     changed = h.setAttr(file, 'dateElicited', data['dateElicited'], changed)
@@ -570,9 +663,12 @@ def updateStandardMetadata(file, data, changed):
     return file, changed
 
 def updateFile(file):
-    """Update the input File model object using the JSON object of the request
-    body.  If changed is not set to true in the course of attribute setting,
-    then False is returned and no update occurs.
+    """Update a local file model.
+    
+    :param file: a file model object to update.
+    :param request.body: a JSON object containing the data for updating the file.
+    :returns: the file model or, if the file has not been updated, ``False``.
+
     """
     changed = False
     schema = FileUpdateSchema()
@@ -588,9 +684,12 @@ def updateFile(file):
     return changed
 
 def updateSubintervalReferencingFile(file):
-    """Update the subinterval-referencing file model using the JSON object in
-    the request body.  If changed is not set to true in the course of attribute
-    setting, then False is returned and no update occurs.
+    """Update a subinterval-referencing file model.
+
+    :param file: a file model object to update.
+    :param request.body: a JSON object containing the data for updating the file.
+    :returns: the file model or, if the file has not been updated, ``False``.
+
     """
     changed = False
     schema = FileSubintervalReferencingSchema()
@@ -615,9 +714,12 @@ def updateSubintervalReferencingFile(file):
     return changed
 
 def updateExternallyHostedFile(file):
-    """Update the externally hosted file model using the JSON object in
-    the request body.  If changed is not set to true in the course of attribute
-    setting, then False is returned and no update occurs.
+    """Update an externally hosted file model.
+
+    :param file: a file model object to update.
+    :param request.body: a JSON object containing the data for updating the file.
+    :returns: the file model or, if the file has not been updated, ``False``.
+
     """
     changed = False
     data = json.loads(unicode(request.body, request.charset))
@@ -643,9 +745,14 @@ def updateExternallyHostedFile(file):
 ################################################################################
 
 def deleteFile(file):
-    """Delete the file object from the database and the file from the filesystem.
-    If the file has a lossyFilename attribute, then files/reduced_files/<lossyFilename>
-    is deleted from the filesystem also
+    """Delete a file model.
+
+    :param file: a file model object to delete.
+    :returns: ``None``.
+
+    This deletes the file model object from the database as well as any binary
+    files associated with it that are stored on the filesystem.
+
     """
     if getattr(file, 'filename', None):
         filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
@@ -663,24 +770,23 @@ def deleteFile(file):
 ################################################################################
 
 def getNewEditFileData(GET_params):
-    """Return the data necessary to create a new OLD file or update an existing
-    one.  The GET_params parameter is the request.GET dictionary-like object
-    generated by Pylons.
+    """Return the data necessary to create a new OLD file or update an existing one.
+    
+    :param GET_params: the ``request.GET`` dictionary-like object generated by
+        Pylons which contains the query string parameters of the request.
+    :returns: A dictionary whose values are lists of objects needed to create or
+        update files.
 
-    If no parameters are provided (i.e., GET_params is empty), then retrieve all
-    data (i.e., tags, speakers, etc.) from the db and return it.
+    If ``GET_params`` has no keys, then return all relevant data lists.  If
+    ``GET_params`` does have keys, then for each key whose value is a non-empty
+    string (and not a valid ISO 8601 datetime) add the appropriate list of
+    objects to the return dictionary.  If the value of a key is a valid ISO 8601
+    datetime string, add the corresponding list of objects *only* if the
+    datetime does *not* match the most recent ``datetimeModified`` value of the
+    resource.  That is, a non-matching datetime indicates that the requester has
+    out-of-date data.
 
-    If parameters are specified, then for each parameter whose value is a
-    non-empty string (and is not a valid ISO 8601 datetime), retrieve and
-    return the appropriate list of objects.
-
-    If the value of a parameter is a valid ISO 8601 datetime string,
-    retrieve and return the appropriate list of objects *only* if the
-    datetime param does *not* match the most recent datetimeModified value
-    of the relevant data store.  This makes sense because a non-match indicates
-    that the requester has out-of-date data.
     """
-
     # Map param names to the OLD model objects from which they are derived.
     paramName2ModelName = {
         'tags': 'Tag',

@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`OrthographiesController` and its auxiliary functions.
+
+.. module:: orthographies
+   :synopsis: Contains the orthographies controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import Orthography
 log = logging.getLogger(__name__)
 
 class OrthographiesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on orthography resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('Orthography', config=config)
 
@@ -41,7 +57,18 @@ class OrthographiesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /orthographies: Return all orthographies."""
+        """Get all orthography resources.
+
+        :URL: ``GET /orthographies`` with optional query string parameters
+            for ordering and pagination.
+        :returns: a list of all orthography resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(Orthography)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,13 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /orthographies: Create a new orthography."""
+        """Create a new orthography resource and return it.
+
+        :URL: ``POST /orthographies``
+        :request body: JSON object representing the orthography to create.
+        :returns: the newly created orthography.
+
+        """
         try:
             schema = OrthographySchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,8 +109,11 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /orthographies/new: Return the data necessary to create a new OLD
-        orthography.  NOTHING TO RETURN HERE ...
+        """Return the data necessary to create a new orthography.
+
+        :URL: ``GET /orthographies/new``
+        :returns: an empty dictionary
+
         """
         return {}
 
@@ -86,9 +122,18 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /orthographies/id: Update an existing orthography.  Note that
-        contributors can only update orthographies that are not used in the
-        active application settings.
+        """Update an orthography and return it.
+        
+        :URL: ``PUT /orthographies/id``
+        :Request body: JSON object representing the orthography with updated attribute values.
+        :param str id: the ``id`` value of the orthography to be updated.
+        :returns: the updated orthography model.
+
+        .. note::
+        
+            Contributors can only update orthographies that are not used in the
+            active application settings.
+
         """
         orthography = Session.query(Orthography).get(int(id))
         user = session['user']
@@ -130,9 +175,17 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /orthographies/id: Delete an existing orthography.  Note that
-        contributors can only update orthographies that are not used in the
-        active application settings.
+        """Delete an existing orthography and return it.
+
+        :URL: ``DELETE /orthographies/id``
+        :param str id: the ``id`` value of the orthography to be deleted.
+        :returns: the deleted orthography model.
+
+        .. note::
+        
+            Contributors can only delete orthographies that are not used in the
+            active application settings.
+
         """
         orthography = Session.query(Orthography).get(id)
         if orthography:
@@ -153,12 +206,12 @@ class OrthographiesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /orthographies/id: Return a JSON object representation of the orthography with id=id.
+        """Return an orthography.
+        
+        :URL: ``GET /orthographies/id``
+        :param str id: the ``id`` value of the orthography to be returned.
+        :returns: an orthography model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         orthography = Session.query(Orthography).get(id)
         if orthography:
@@ -172,9 +225,18 @@ class OrthographiesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /orthographies/id/edit: Return the data necessary to update an existing
-        OLD orthography; here we return only the orthography and
-        an empty JSON object.
+        """Return an orthography and the data needed to update it.
+
+        :URL: ``GET /orthographies/edit``
+        :param str id: the ``id`` value of the orthography that will be updated.
+        :returns: a dictionary of the form::
+
+                {"orthography": {...}, "data": {...}}
+
+            where the value of the ``orthography`` key is a dictionary
+            representation of the orthography and the value of the ``data`` key
+            is an empty dictionary.
+
         """
         orthography = Session.query(Orthography).get(id)
         if orthography:
@@ -189,10 +251,12 @@ class OrthographiesController(BaseController):
 ################################################################################
 
 def createNewOrthography(data):
-    """Create a new orthography model object given a data dictionary
-    provided by the user (as a JSON object).
-    """
+    """Create a new orthography.
 
+    :param dict data: the data for the orthography to be created.
+    :returns: an SQLAlchemy model object representing the orthography.
+
+    """
     orthography = Orthography()
     orthography.name = h.normalize(data['name'])
     orthography.orthography = h.normalize(data['orthography'])
@@ -202,9 +266,13 @@ def createNewOrthography(data):
     return orthography
 
 def updateOrthography(orthography, data):
-    """Update the input orthography model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update an orthography.
+
+    :param orthography: the orthography model to be updated.
+    :param dict data: representation of the updated orthography.
+    :returns: the updated orthography model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
     """
     changed = False
     changed = h.setAttr(orthography, 'name', h.normalize(data['name']), changed)

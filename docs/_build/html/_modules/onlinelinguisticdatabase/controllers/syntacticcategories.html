@@ -1,0 +1,375 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.syntacticcategories &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.syntacticcategories</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`SyntacticcategoriesController` and its auxiliary functions.</span>
+
+<span class="sd">.. module:: syntacticcategories</span>
+<span class="sd">   :synopsis: Contains the syntactic category controller and its auxiliary functions.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">asc</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.schemata</span> <span class="kn">import</span> <span class="n">SyntacticCategorySchema</span>
+<span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">import</span> <span class="n">SyntacticCategory</span>
+<span class="kn">from</span> <span class="nn">forms</span> <span class="kn">import</span> <span class="n">updateFormsContainingThisFormAsMorpheme</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SyntacticcategoriesController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController">[docs]</a><span class="k">class</span> <span class="nc">SyntacticcategoriesController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate responses to requests on syntactic category resources.</span>
+
+<span class="sd">    REST Controller styled on the Atom Publishing Protocol.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       The ``h.jsonify`` decorator converts the return value of the methods to</span>
+<span class="sd">       JSON.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="s">&#39;SyntacticCategory&#39;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.index"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all syntactic category resources.</span>
+
+<span class="sd">        :URL: ``GET /syntacticcategorys`` with optional query string parameters</span>
+<span class="sd">            for ordering and pagination.</span>
+<span class="sd">        :returns: a list of all syntactic category resources.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the</span>
+<span class="sd">           query string parameters that effect ordering and pagination.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">SyntacticCategory</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.create"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new syntactic category resource and return it.</span>
+
+<span class="sd">        :URL: ``POST /syntacticcategorys``</span>
+<span class="sd">        :request body: JSON object representing the syntactic category to create.</span>
+<span class="sd">        :returns: the newly created syntactic category.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">SyntacticCategorySchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">createNewSyntacticCategory</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">syntacticCategory</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.new"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new syntactic category.</span>
+
+<span class="sd">        :URL: ``GET /syntacticcategorys/new``.</span>
+<span class="sd">        :returns: a dictionary containing the valid syntactic category types as</span>
+<span class="sd">            defined in :mod:`onlinelinguisticdatabase.lib.utils`.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;syntacticCategoryTypes&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">syntacticCategoryTypes</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.update"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a syntactic category and return it.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``PUT /syntacticcategorys/id``</span>
+<span class="sd">        :Request body: JSON object representing the syntactic category with updated attribute values.</span>
+<span class="sd">        :param str id: the ``id`` value of the syntactic category to be updated.</span>
+<span class="sd">        :returns: the updated syntactic category model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">SyntacticCategory</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">syntacticCategory</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">oldName</span> <span class="o">=</span> <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span>
+                <span class="n">schema</span> <span class="o">=</span> <span class="n">SyntacticCategorySchema</span><span class="p">()</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">updateSyntacticCategory</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                <span class="c"># syntacticCategory will be False if there are no changes (cf. updateSyntacticCategory).</span>
+                <span class="k">if</span> <span class="n">syntacticCategory</span><span class="p">:</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">)</span>
+                    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">oldName</span><span class="p">:</span>
+                        <span class="n">updateFormsReferencingThisCategory</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">syntacticCategory</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                        <span class="s">u&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+            <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+            <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no syntactic category with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.delete"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete an existing syntactic category and return it.</span>
+
+<span class="sd">        :URL: ``DELETE /syntacticcategorys/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the syntactic category to be deleted.</span>
+<span class="sd">        :returns: the deleted syntactic category model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">SyntacticCategory</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">syntacticCategory</span><span class="p">:</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">updateFormsReferencingThisCategory</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">syntacticCategory</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no syntactic category with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.show"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a syntactic category.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``GET /syntacticcategorys/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the syntactic category to be returned.</span>
+<span class="sd">        :returns: a syntactic category model object.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">SyntacticCategory</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">syntacticCategory</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">syntacticCategory</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no syntactic category with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="SyntacticcategoriesController.edit"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.SyntacticcategoriesController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a syntactic category resource and the data needed to update it.</span>
+
+<span class="sd">        :URL: ``GET /syntacticcategorys/edit``</span>
+<span class="sd">        :param str id: the ``id`` value of the syntactic category that will be updated.</span>
+<span class="sd">        :returns: a dictionary of the form::</span>
+
+<span class="sd">                {&quot;syntacticCategory&quot;: {...}, &quot;data&quot;: {...}}</span>
+
+<span class="sd">            where the value of the ``syntacticCategory`` key is a dictionary</span>
+<span class="sd">            representation of the syntactic category and the value of the</span>
+<span class="sd">            ``data`` key is a dictionary of valid syntactic category types as</span>
+<span class="sd">            defined in :mod:`onlinelinguisticdatabase.lib.utils`.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">SyntacticCategory</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">syntacticCategory</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;syntacticCategoryTypes&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">syntacticCategoryTypes</span><span class="p">},</span>
+                <span class="s">&#39;syntacticCategory&#39;</span><span class="p">:</span> <span class="n">syntacticCategory</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no syntactic category with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># SyntacticCategory Create &amp; Update Functions</span>
+<span class="c">################################################################################</span>
+</div></div>
+<div class="viewcode-block" id="createNewSyntacticCategory"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.createNewSyntacticCategory">[docs]</a><span class="k">def</span> <span class="nf">createNewSyntacticCategory</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a new syntactic category.</span>
+
+<span class="sd">    :param dict data: the data for the syntactic category to be created.</span>
+<span class="sd">    :returns: an SQLAlchemy model object representing the syntactic category.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">syntacticCategory</span> <span class="o">=</span> <span class="n">SyntacticCategory</span><span class="p">()</span>
+    <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+    <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span>
+    <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">])</span>
+    <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">syntacticCategory</span>
+
+</div>
+<div class="viewcode-block" id="updateSyntacticCategory"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.updateSyntacticCategory">[docs]</a><span class="k">def</span> <span class="nf">updateSyntacticCategory</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update a syntactic category.</span>
+
+<span class="sd">    :param syntacticCategory: the syntactic category model to be updated.</span>
+<span class="sd">    :param dict data: representation of the updated syntactic category.</span>
+<span class="sd">    :returns: the updated syntactic category model or, if ``changed`` has not</span>
+<span class="sd">        been set to ``True``, ``False``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="c"># Unicode Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">,</span> <span class="s">&#39;description&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">syntacticCategory</span>
+    <span class="k">return</span> <span class="n">changed</span>
+
+</div>
+<div class="viewcode-block" id="updateFormsReferencingThisCategory"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.syntacticcategories.updateFormsReferencingThisCategory">[docs]</a><span class="k">def</span> <span class="nf">updateFormsReferencingThisCategory</span><span class="p">(</span><span class="n">syntacticCategory</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update all forms that reference a syntactic category.</span>
+
+<span class="sd">    :param syntacticCategory: a syntactic category model object.</span>
+<span class="sd">    :returns: ``None``</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">        This function is only called when a syntactic category is deleted or</span>
+<span class="sd">        when its name is changed.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">formsOfThisCategory</span> <span class="o">=</span> <span class="n">syntacticCategory</span><span class="o">.</span><span class="n">forms</span>
+    <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">formsOfThisCategory</span><span class="p">:</span>
+        <span class="n">updateFormsContainingThisFormAsMorpheme</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

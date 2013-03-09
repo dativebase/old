@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`SourcesController` and its auxiliary functions.
+
+.. module:: sources
+   :synopsis: Contains the sources controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -32,7 +39,16 @@ from onlinelinguisticdatabase.lib.bibtex import entryTypes
 log = logging.getLogger(__name__)
 
 class SourcesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on source resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('Source', config=config)
 
@@ -40,13 +56,16 @@ class SourcesController(BaseController):
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """SEARCH /sources: Return all sources matching the filter passed as JSON in
-        the request body.  Note: POST /sources/search also routes to this action.
-        The request body must be a JSON object with a 'query' attribute; a
-        'paginator' attribute is optional.  The 'query' object is passed to the
-        getSQLAQuery() method of an SQLAQueryBuilder instance and an SQLA query
-        is returned or an error is raised.  The 'query' object requires a
-        'filter' attribute; an 'orderBy' attribute is optional.
+        """Return the list of source resources matching the input JSON query.
+
+        :URL: ``SEARCH /sources`` (or ``POST /sources/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``orderBy`` and ``paginator`` attributes are optional.
+
         """
         try:
             jsonSearchParams = unicode(request.body, request.charset)
@@ -67,8 +86,11 @@ class SourcesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """GET /sources/new_search: Return the data necessary to inform a search
-        on the sources resource.
+        """Return the data necessary to search the source resources.
+
+        :URL: ``GET /sources/new_search``
+        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+
         """
         return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
 
@@ -76,7 +98,18 @@ class SourcesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /sources: Return all sources."""
+        """Get all source resources.
+
+        :URL: ``GET /sources`` with optional query string parameters for
+            ordering and pagination.
+        :returns: a list of all source resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(Source)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -90,7 +123,13 @@ class SourcesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /sources: Create a new source."""
+        """Create a new source resource and return it.
+
+        :URL: ``POST /sources``
+        :request body: JSON object representing the source to create.
+        :returns: the newly created source.
+
+        """
         try:
             schema = SourceSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -112,9 +151,11 @@ class SourcesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /sources/new: Return the data necessary to create a new OLD source.
-        All that is returned here is the list of valid BibTeX entry types.  GET
-        params are ignored.
+        """Return the data necessary to create a new source.
+
+        :URL: ``GET /sources/new``.
+        :returns: a dictionary containing the valid BibTeX entry types.
+
         """
         return {'types': sorted(entryTypes.keys())}
 
@@ -123,7 +164,14 @@ class SourcesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /sources/id: Update an existing source."""
+        """Update a source and return it.
+        
+        :URL: ``PUT /sources/id``
+        :Request body: JSON object representing the source with updated attribute values.
+        :param str id: the ``id`` value of the source to be updated.
+        :returns: the updated source model.
+
+        """
         source = Session.query(Source).get(int(id))
         if source:
             try:
@@ -157,7 +205,13 @@ class SourcesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /sources/id: Delete an existing source."""
+        """Delete an existing source and return it.
+
+        :URL: ``DELETE /sources/id``
+        :param str id: the ``id`` value of the source to be deleted.
+        :returns: the deleted source model.
+
+        """
         source = Session.query(Source).get(id)
         if source:
             Session.delete(source)
@@ -171,18 +225,19 @@ class SourcesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /sources/id: Return a JSON object representation of the source with
-        id=id.
+        """Return a source.
+        
+        :URL: ``GET /sources/id``
+        :param str id: the ``id`` value of the source to be returned.
+        :returns: a source model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
+        .. note::
 
-        A source associated to a restricted file will still return a subset of the
-        restricted file's metadata.  However, restricted users will be unable to
-        retrieve the binary content of the file because of the authorization logic
-        the retrieve action of the files controller.
+            A source associated to a restricted file will still return a subset
+            of the restricted file's metadata.  However, restricted users will
+            be unable to retrieve the file data of the file because of the
+            authorization logic in the retrieve action of the files controller.
+
         """
         source = Session.query(Source).get(id)
         if source:
@@ -196,8 +251,18 @@ class SourcesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /sources/id/edit: Return the data necessary to update an existing
-        OLD source, i.e., the source's properties and the list of entry types.
+        """Return a source and the data needed to update it.
+
+        :URL: ``GET /sources/edit``
+        :param str id: the ``id`` value of the source that will be updated.
+        :returns: a dictionary of the form::
+
+                {"source": {...}, "data": {...}}
+
+            where the value of the ``source`` key is a dictionary
+            representation of the source and the value of the ``data`` key
+            is the list of BibTeX entry types.
+
         """
         source = Session.query(Source).get(id)
         if source:
@@ -212,10 +277,12 @@ class SourcesController(BaseController):
 ################################################################################
 
 def createNewSource(data):
-    """Create a new source model object given a data dictionary provided by the
-    user (as a JSON object).
-    """
+    """Create a new source.
 
+    :param dict data: the data for the source to be created.
+    :returns: an SQLAlchemy model object representing the source.
+
+    """
     source = Source()
     source.type = h.normalize(data['type'])
     source.key = h.normalize(data['key'])
@@ -269,9 +336,13 @@ def createNewSource(data):
 
 
 def updateSource(source, data):
-    """Update the input Source model object given a data dictionary provided by
-    the user (as a JSON object).  If changed is not set to true in the course
-    of attribute setting, then None is returned and no update occurs.
+    """Update a source.
+
+    :param source: the source model to be updated.
+    :param dict data: representation of the updated source.
+    :returns: the updated source model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
     """
     changed = False
 

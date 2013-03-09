@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`PagesController` and its auxiliary functions.
+
+.. module:: pages
+   :synopsis: Contains the pages controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import Page
 log = logging.getLogger(__name__)
 
 class PagesController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on page resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('Page', config=config)
 
@@ -41,7 +57,18 @@ class PagesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /pages: Return all pages."""
+        """Get all page resources.
+
+        :URL: ``GET /pages`` with optional query string parameters for ordering
+            and pagination.
+        :returns: a list of all page resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(Page)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,13 @@ class PagesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /pages: Create a new page."""
+        """Create a new page resource and return it.
+
+        :URL: ``POST /pages``
+        :request body: JSON object representing the page to create.
+        :returns: the newly created page.
+
+        """
         try:
             schema = PageSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,8 +109,11 @@ class PagesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /pages/new: Return the data necessary to create a new OLD
-        page.
+        """Return the data necessary to create a new page.
+
+        :URL: ``GET /pages/new``.
+        :returns: a dictionary containing the names of valid OLD markup languages.
+
         """
         return {'markupLanguages': h.markupLanguages}
 
@@ -86,7 +122,14 @@ class PagesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /pages/id: Update an existing page."""
+        """Update a page and return it.
+        
+        :URL: ``PUT /pages/id``
+        :Request body: JSON object representing the page with updated attribute values.
+        :param str id: the ``id`` value of the page to be updated.
+        :returns: the updated page model.
+
+        """
         page = Session.query(Page).get(int(id))
         if page:
             try:
@@ -118,7 +161,13 @@ class PagesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /pages/id: Delete an existing page."""
+        """Delete an existing page and return it.
+
+        :URL: ``DELETE /pages/id``
+        :param str id: the ``id`` value of the page to be deleted.
+        :returns: the deleted page model.
+
+        """
         page = Session.query(Page).get(id)
         if page:
             Session.delete(page)
@@ -132,12 +181,12 @@ class PagesController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /pages/id: Return a JSON object representation of the page with id=id.
+        """Return a page.
+        
+        :URL: ``GET /pages/id``
+        :param str id: the ``id`` value of the page to be returned.
+        :returns: a page model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         page = Session.query(Page).get(id)
         if page:
@@ -151,9 +200,18 @@ class PagesController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /pages/id/edit: Return the data necessary to update an existing
-        OLD page; here we return only the page and
-        an empty JSON object.
+        """Return a page and the data needed to update it.
+
+        :URL: ``GET /pages/edit``
+        :param str id: the ``id`` value of the page that will be updated.
+        :returns: a dictionary of the form::
+
+                {"page": {...}, "data": {...}}
+
+            where the value of the ``page`` key is a dictionary
+            representation of the page and the value of the ``data`` key
+            is the list of valid markup language names.
+
         """
         page = Session.query(Page).get(id)
         if page:
@@ -168,10 +226,12 @@ class PagesController(BaseController):
 ################################################################################
 
 def createNewPage(data):
-    """Create a new page model object given a data dictionary
-    provided by the user (as a JSON object).
-    """
+    """Create a new page.
 
+    :param dict data: the data for the page to be created.
+    :returns: an SQLAlchemy model object representing the page.
+
+    """
     page = Page()
     page.name = h.normalize(data['name'])
     page.heading = h.normalize(data['heading'])
@@ -182,9 +242,13 @@ def createNewPage(data):
     return page
 
 def updatePage(page, data):
-    """Update the input page model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update a page.
+
+    :param page: the page model to be updated.
+    :param dict data: representation of the updated page.
+    :returns: the updated page model or, if ``changed`` has not been set
+        to ``True``, ``False``.
+
     """
     changed = False
     # Unicode Data

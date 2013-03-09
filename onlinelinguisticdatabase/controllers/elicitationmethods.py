@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""Contains the :class:`ElicitationmethodsController` and its auxiliary functions.
+
+.. module:: elicitationmethods
+   :synopsis: Contains the elicitation methods controller and its auxiliary functions.
+
+"""
+
 import logging
 import datetime
 import re
@@ -33,7 +40,16 @@ from onlinelinguisticdatabase.model import ElicitationMethod
 log = logging.getLogger(__name__)
 
 class ElicitationmethodsController(BaseController):
-    """REST Controller styled on the Atom Publishing Protocol"""
+    """Generate responses to requests on elicitation method resources.
+
+    REST Controller styled on the Atom Publishing Protocol.
+
+    .. note::
+    
+       The ``h.jsonify`` decorator converts the return value of the methods to
+       JSON.
+
+    """
 
     queryBuilder = SQLAQueryBuilder('ElicitationMethod', config=config)
 
@@ -41,7 +57,18 @@ class ElicitationmethodsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /elicitationmethods: Return all elicitation methods."""
+        """Get all elicitation method resources.
+
+        :URL: ``GET /elicitationmethods`` with optional query string parameters
+            for ordering and pagination.
+        :returns: a list of all elicitation method resources.
+
+        .. note::
+
+           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           query string parameters that effect ordering and pagination.
+
+        """
         try:
             query = Session.query(ElicitationMethod)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
@@ -55,7 +82,13 @@ class ElicitationmethodsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def create(self):
-        """POST /elicitationmethods: Create a new elicitation method."""
+        """Create a new elicitation method resource and return it.
+
+        :URL: ``POST /elicitationmethods``
+        :request body: JSON object representing the elicitation method to create.
+        :returns: the newly created elicitation method.
+
+        """
         try:
             schema = ElicitationMethodSchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -76,8 +109,11 @@ class ElicitationmethodsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def new(self):
-        """GET /elicitationmethods/new: Return the data necessary to create a new OLD
-        elicitation method.  NOTHING TO RETURN HERE ...
+        """Return the data necessary to create a new elicitation method.
+
+        :URL: ``GET /elicitationmethods/new``
+        :returns: an empty dictionary
+
         """
         return {}
 
@@ -86,7 +122,14 @@ class ElicitationmethodsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def update(self, id):
-        """PUT /elicitationmethods/id: Update an existing elicitation method."""
+        """Update an elicitation method and return it.
+        
+        :URL: ``PUT /elicitationmethods/id``
+        :Request body: JSON object representing the elicitation method with updated attribute values.
+        :param str id: the ``id`` value of the elicitation method to be updated.
+        :returns: the updated elicitation method model.
+
+        """
         elicitationMethod = Session.query(ElicitationMethod).get(int(id))
         if elicitationMethod:
             try:
@@ -120,7 +163,13 @@ class ElicitationmethodsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def delete(self, id):
-        """DELETE /elicitationmethods/id: Delete an existing elicitation method."""
+        """Delete an existing elicitation method and return it.
+
+        :URL: ``DELETE /elicitationmethods/id``
+        :param str id: the ``id`` value of the elicitation method to be deleted.
+        :returns: the deleted elicitation method model.
+
+        """
         elicitationMethod = Session.query(ElicitationMethod).get(id)
         if elicitationMethod:
             Session.delete(elicitationMethod)
@@ -134,13 +183,12 @@ class ElicitationmethodsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """GET /elicitationmethods/id: Return a JSON object representation of the elicitation
-        method with id=id.
+        """Return an elicitation method.
+        
+        :URL: ``GET /elicitationmethods/id``
+        :param str id: the ``id`` value of the elicitation method to be returned.
+        :returns: an elicitation method model object.
 
-        If the id is invalid, the header will contain a 404 status int and a
-        JSON object will be returned.  If the id is unspecified, then Routes
-        will put a 404 status int into the header and the default 404 JSON
-        object defined in controllers/error.py will be returned.
         """
         elicitationMethod = Session.query(ElicitationMethod).get(id)
         if elicitationMethod:
@@ -154,9 +202,19 @@ class ElicitationmethodsController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def edit(self, id):
-        """GET /elicitationmethods/id/edit: Return the data necessary to update an existing
-        OLD elicitation method; here we return only the elicitation method and
-        an empty JSON object.
+        """Return an elicitation method and the data needed to update it.
+
+        :URL: ``GET /elicitationmethods/edit`` with optional query string parameters 
+        :param str id: the ``id`` value of the elicitation method that will be updated.
+        :returns: a dictionary of the form::
+
+                {"elicitationMethod": {...}, "data": {...}}
+
+            where the value of the ``elicitationMethod`` key is a dictionary
+            representation of the elicitation method and the value of the
+            ``data`` key is a dictionary containing the objects necessary to
+            update an elicitation method, viz. ``{}``.
+
         """
         elicitationMethod = Session.query(ElicitationMethod).get(id)
         if elicitationMethod:
@@ -171,10 +229,12 @@ class ElicitationmethodsController(BaseController):
 ################################################################################
 
 def createNewElicitationMethod(data):
-    """Create a new elicitation method model object given a data dictionary
-    provided by the user (as a JSON object).
-    """
+    """Create a new elicitation method.
 
+    :param dict data: the elicitation method to be created.
+    :returns: an SQLAlchemy model object representing the elicitation method.
+
+    """
     elicitationMethod = ElicitationMethod()
     elicitationMethod.name = h.normalize(data['name'])
     elicitationMethod.description = h.normalize(data['description'])
@@ -182,9 +242,13 @@ def createNewElicitationMethod(data):
     return elicitationMethod
 
 def updateElicitationMethod(elicitationMethod, data):
-    """Update the input elicitation method model object given a data dictionary
-    provided by the user (as a JSON object).  If changed is not set to true in
-    the course of attribute setting, then None is returned and no update occurs.
+    """Update an elicitation method.
+
+    :param elicitationMethod: the elicitation method model to be updated.
+    :param dict data: representation of the updated elicitation method.
+    :returns: the updated elicitation method model or, if ``changed`` has not
+        been set to ``True``, ``False``.
+
     """
     changed = False
     changed = h.setAttr(elicitationMethod, 'name', h.normalize(data['name']), changed)

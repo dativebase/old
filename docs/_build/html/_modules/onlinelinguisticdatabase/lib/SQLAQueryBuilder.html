@@ -1,0 +1,1059 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.lib.SQLAQueryBuilder &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.lib.SQLAQueryBuilder</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;This module defines :class:`SQLAQueryBuilder`.  An ``SQLAQueryBuilder``</span>
+<span class="sd">instance is used to build an SQLAlchemy query object from a Python data</span>
+<span class="sd">structure (nested lists).</span>
+
+<span class="sd">The two public methods are getSQLAQuery and getSQLAFilter.  Both take a list</span>
+<span class="sd">representing a filter expression as input.  getSQLAQuery returns an SQLAlchemy</span>
+<span class="sd">query object, including joins and filters.  getSQLAFilter returns an SQLAlchemy</span>
+<span class="sd">filter expression and is called by getSQLAQuery.  Errors in the Python filter</span>
+<span class="sd">expression will cause custom OLDSearchParseErrors to be raised.</span>
+
+<span class="sd">The searchable models and their attributes (scalars &amp; collections) are defined</span>
+<span class="sd">in SQLAQueryBuilder.schema.</span>
+
+<span class="sd">Simple filter expressions are lists with four or five items.  Complex filter</span>
+<span class="sd">expressions are constructed via lists whose first element is one of the boolean</span>
+<span class="sd">keywords &#39;and&#39;, &#39;or&#39;, &#39;not&#39; and whose second element is a filter expression or</span>
+<span class="sd">a list thereof (in the case of &#39;and&#39; and &#39;or&#39;).  The examples below show a</span>
+<span class="sd">filter expression accepted by SQLAQueryBuilder(&#39;Form&#39;).getSQLAQuery on the</span>
+<span class="sd">second line followed by the equivalent SQLAlchemy ORM expression.  Note that the</span>
+<span class="sd">target model of the SQLAQueryBuilder is set to &#39;Form&#39; so all queries will be</span>
+<span class="sd">against the Form model.</span>
+
+<span class="sd">1. Simple scalar queries::</span>
+
+<span class="sd">        [&#39;Form&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;%a%&#39;]</span>
+<span class="sd">        Session.query(Form).filter(Form.transcription.like(u&#39;%a%&#39;))</span>
+
+<span class="sd">2. Scalar relations::</span>
+
+<span class="sd">        [&#39;Form&#39;, &#39;enterer&#39;, &#39;firstName&#39;, &#39;regex&#39;, &#39;^[JS]&#39;]</span>
+<span class="sd">        Session.query(Form).filter(Form.enterer.has(User.firstName.op(&#39;regexp&#39;)(u&#39;^[JS]&#39;)))</span>
+
+<span class="sd">3. Scalar relations presence/absence::</span>
+
+<span class="sd">        [&#39;Form&#39;, &#39;enterer&#39;, &#39;=&#39;, &#39;None&#39;]</span>
+<span class="sd">        Session.query(Form).filter(Form.enterer==None)</span>
+
+<span class="sd">4. Collection relations (w/ SQLA&#39;s collection.any() method)::</span>
+
+<span class="sd">        [&#39;Form&#39;, &#39;files&#39;, &#39;id&#39;, &#39;in&#39;, [1, 2, 33, 5]]</span>
+<span class="sd">        Session.query(Form).filter(Form.files.any(File.id.in_([1, 2, 33, 5])))</span>
+
+<span class="sd">5. Collection relations (w/ joins; should return the same results as (4)):</span>
+
+<span class="sd">        [&#39;File&#39;, &#39;id&#39;, &#39;in&#39;, [1, 2, 33, 5]]</span>
+<span class="sd">        fileAlias = aliased(File)</span>
+<span class="sd">        Session.query(Form).filter(fileAlias.id.in_([1, 2, 33, 5])).outerjoin(fileAlias, Form.files)</span>
+
+<span class="sd">6. Collection relations presence/absence::</span>
+
+<span class="sd">        [&#39;Form&#39;, &#39;files&#39;, &#39;=&#39;, None]</span>
+<span class="sd">        Session.query(Form).filter(Form.files == None)</span>
+
+<span class="sd">7. Negation::</span>
+
+<span class="sd">        [&#39;not&#39;, [&#39;Form&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;%a%&#39;]]</span>
+<span class="sd">        Session.query(Form).filter(not_(Form.transcription.like(u&#39;%a%&#39;)))</span>
+
+<span class="sd">8. Conjunction::</span>
+
+<span class="sd">        [&#39;and&#39;, [[&#39;Form&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;%a%&#39;],</span>
+<span class="sd">                 [&#39;Form&#39;, &#39;elicitor&#39;, &#39;id&#39;, &#39;=&#39;, 13]]]</span>
+<span class="sd">        Session.query(Form).filter(and_(Form.transcription.like(u&#39;%a%&#39;),</span>
+<span class="sd">                                        Form.elicitor.has(User.id==13)))</span>
+
+<span class="sd">9. Disjunction::</span>
+
+<span class="sd">        [&#39;or&#39;, [[&#39;Form&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;%a%&#39;],</span>
+<span class="sd">                [&#39;Form&#39;, &#39;dateElicited&#39;, &#39;&lt;&#39;, &#39;2012-01-01&#39;]]]</span>
+<span class="sd">        Session.query(Form).filter(or_(Form.transcription.like(u&#39;%a%&#39;),</span>
+<span class="sd">                                       Form.dateElicited &lt; datetime.date(2012, 1, 1)))</span>
+
+<span class="sd">10. Complex::</span>
+
+<span class="sd">        [&#39;and&#39;, [[&#39;Translation&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;%1%&#39;],</span>
+<span class="sd">                 [&#39;not&#39;, [&#39;Form&#39;, &#39;morphemeBreak&#39;, &#39;regex&#39;, &#39;[28][5-7]&#39;]],</span>
+<span class="sd">                 [&#39;or&#39;, [[&#39;Form&#39;, &#39;datetimeModified&#39;, &#39;&lt;&#39;, &#39;2012-03-01T00:00:00&#39;],</span>
+<span class="sd">                         [&#39;Form&#39;, &#39;datetimeModified&#39;, &#39;&gt;&#39;, &#39;2012-01-01T00:00:00&#39;]]]]]</span>
+<span class="sd">        translationAlias = aliased(Translation)</span>
+<span class="sd">        Session.query(Form).filter(and_(</span>
+<span class="sd">            translationAlias.transcription.like(u&#39;%1%&#39;),</span>
+<span class="sd">            not_(Form.morphemeBreak.op(&#39;regexp&#39;)(u&#39;[28][5-7]&#39;)),</span>
+<span class="sd">            or_(</span>
+<span class="sd">                Form.datetimeModified &lt; ...,</span>
+<span class="sd">                Form.datetimeModified &gt; ...</span>
+<span class="sd">            )</span>
+<span class="sd">        )).outerjoin(translationAlias, Form.translations)</span>
+
+<span class="sd">Note also that SQLAQueryBuilder detects the RDBMS and issues collate commands</span>
+<span class="sd">where necessary to ensure that pattern matches are case-sensitive while ordering</span>
+<span class="sd">is not.</span>
+
+<span class="sd">A further potential enhancement would be to allow doubly relational searches, e.g.,</span>
+<span class="sd">return all forms whose enterer has remembered a form with a transcription like &#39;a&#39;:</span>
+
+<span class="sd">11. Scalar&#39;s collection relations::</span>
+
+<span class="sd">        [&#39;Form&#39;, &#39;enterer&#39;, &#39;rememberedForms&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;%a%&#39;]</span>
+<span class="sd">        Session.query(Form).filter(Form.enterer.has(User.rememberedForms.any(</span>
+<span class="sd">            Form.transcription.like(&#39;%1%&#39;))))</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">or_</span><span class="p">,</span> <span class="n">and_</span><span class="p">,</span> <span class="n">not_</span><span class="p">,</span> <span class="n">asc</span><span class="p">,</span> <span class="n">desc</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql.expression</span> <span class="kn">import</span> <span class="n">collate</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">aliased</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="kn">import</span> <span class="n">Unicode</span><span class="p">,</span> <span class="n">UnicodeText</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.utils</span> <span class="kn">import</span> <span class="n">normalize</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">json</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">as</span> <span class="nn">old_model</span>
+    <span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.utils</span> <span class="kn">import</span> <span class="n">getRDBMSName</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">getRDBMSName</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s">&#39;sqlite&#39;</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">datetimeString2datetime</span><span class="p">,</span> <span class="n">dateString2date</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="c"># ImportError will be raised in utils if the Pylons environment is not</span>
+    <span class="c"># running, e.g., if we are debugging.  In this case, we need to define our</span>
+    <span class="c"># own date/datetime parseing functions.</span>
+    <span class="k">def</span> <span class="nf">datetimeString2datetime</span><span class="p">(</span><span class="n">datetimeString</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">datetimeString</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+            <span class="n">yearsToSecondsString</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">datetimeObject</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">yearsToSecondsString</span><span class="p">,</span>
+                                                        <span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s">T%H:%M:%S&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">microseconds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">datetimeObject</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="n">microseconds</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OverflowError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">datetimeObject</span>
+
+    <span class="k">def</span> <span class="nf">dateString2date</span><span class="p">(</span><span class="n">dateString</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">dateString</span><span class="p">,</span> <span class="s">&quot;%Y-%m-</span><span class="si">%d</span><span class="s">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+<span class="k">class</span> <span class="nc">OLDSearchParseError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">errors</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="n">errors</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__repr__</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">unpack_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span>
+
+
+<div class="viewcode-block" id="SQLAQueryBuilder"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.lib.SQLAQueryBuilder.SQLAQueryBuilder">[docs]</a><span class="k">class</span> <span class="nc">SQLAQueryBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate an SQLAlchemy query object from a Python dictionary.</span>
+<span class="sd">    </span>
+<span class="sd">    Builds SQLAlchemy queries from Python data structures representing</span>
+<span class="sd">    arbitrarily complex filter expressions.  Joins are inferred from the filter</span>
+<span class="sd">    expression.  The public method most likely to be used is</span>
+<span class="sd">    :func:`getSQLAQuery`.  Example usage::</span>
+
+<span class="sd">        queryBuilder = SQLAlchemyQueryBuilder()</span>
+<span class="sd">        pythonQuery = {&#39;filter&#39;: [</span>
+<span class="sd">            &#39;and&#39;, [</span>
+<span class="sd">                [&#39;Translation&#39;, &#39;transcription&#39;, &#39;like&#39;, &#39;1&#39;],</span>
+<span class="sd">                [&#39;not&#39;, [&#39;Form&#39;, &#39;morphemeBreak&#39;, &#39;regex&#39;, &#39;[28][5-7]&#39;]],</span>
+<span class="sd">                [&#39;or&#39;, [</span>
+<span class="sd">                    [&#39;Form&#39;, &#39;datetimeModified&#39;, &#39;&lt;&#39;, &#39;2012-03-01T00:00:00&#39;],</span>
+<span class="sd">                    [&#39;Form&#39;, &#39;datetimeModified&#39;, &#39;&gt;&#39;, &#39;2012-01-01T00:00:00&#39;]]]]]}</span>
+<span class="sd">        query = queryBuilder.getSQLAQuery(pythonQuery)</span>
+<span class="sd">        forms = query.all()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="o">=</span><span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="n">primaryKey</span><span class="o">=</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span> <span class="o">=</span> <span class="n">modelName</span>  <span class="c"># The name of the target model, i.e., the one we are querying, e.g., &#39;Form&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">primaryKey</span> <span class="o">=</span> <span class="n">primaryKey</span>    <span class="c"># Some models have a primary key other than &#39;id&#39; ...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RDBMSName</span> <span class="o">=</span> <span class="n">getRDBMSName</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c"># i.e., mysql or sqlite</span>
+
+    <span class="k">def</span> <span class="nf">getSQLAQuery</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">python</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clearErrors</span><span class="p">()</span>
+        <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSQLAFilter</span><span class="p">(</span><span class="n">python</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;filter&#39;</span><span class="p">))</span>
+        <span class="n">orderByExpression</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getSQLAOrderBy</span><span class="p">(</span><span class="n">python</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;orderBy&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">primaryKey</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raiseSearchParseErrorIfNecessary</span><span class="p">()</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getBaseQuery</span><span class="p">()</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filterExpression</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">orderByExpression</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_addJoinsToQuery</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">query</span>
+
+<div class="viewcode-block" id="SQLAQueryBuilder.getSQLAFilter"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.lib.SQLAQueryBuilder.SQLAQueryBuilder.getSQLAFilter">[docs]</a>    <span class="k">def</span> <span class="nf">getSQLAFilter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">python</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the SQLAlchemy filter expression generable by the input Python</span>
+<span class="sd">        data structure or raise an OLDSearchParseError if the data structure is</span>
+<span class="sd">        invalid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_python2sqla</span><span class="p">(</span><span class="n">python</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLAQueryBuilder.getSQLAOrderBy"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.lib.SQLAQueryBuilder.SQLAQueryBuilder.getSQLAOrderBy">[docs]</a>    <span class="k">def</span> <span class="nf">getSQLAOrderBy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orderBy</span><span class="p">,</span> <span class="n">primaryKey</span><span class="o">=</span><span class="s">&#39;id&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The public method clears the errors and then calls the private method.</span>
+<span class="sd">        This prevents interference from errors generated by previous orderBy calls.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clearErrors</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getSQLAOrderBy</span><span class="p">(</span><span class="n">orderBy</span><span class="p">,</span> <span class="n">primaryKey</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_getSQLAOrderBy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orderBy</span><span class="p">,</span> <span class="n">primaryKey</span><span class="o">=</span><span class="s">&#39;id&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Input is an array of the form [&lt;model&gt;, &lt;attribute&gt;, &lt;direction&gt;];</span>
+<span class="sd">        output is an SQLA order_by expression.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">defaultOrderBy</span> <span class="o">=</span> <span class="n">asc</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">old_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">),</span> <span class="n">primaryKey</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">orderBy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">defaultOrderBy</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">modelName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getModelName</span><span class="p">(</span><span class="n">orderBy</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">attributeName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeName</span><span class="p">(</span><span class="n">orderBy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">modelName</span><span class="p">)</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getModel</span><span class="p">(</span><span class="n">modelName</span><span class="p">)</span>
+            <span class="n">attribute</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">RDBMSName</span> <span class="o">==</span> <span class="s">&#39;sqlite&#39;</span> <span class="ow">and</span> <span class="n">attribute</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">attribute</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SQLAlchemyStringTypes</span><span class="p">):</span>
+                <span class="n">attribute</span> <span class="o">=</span> <span class="n">collate</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="s">&#39;NOCASE&#39;</span><span class="p">)</span>    <span class="c"># Force SQLite to order case-insensitively</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;asc&#39;</span><span class="p">:</span> <span class="n">asc</span><span class="p">,</span> <span class="s">&#39;desc&#39;</span><span class="p">:</span> <span class="n">desc</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">orderBy</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">asc</span><span class="p">)(</span><span class="n">attribute</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">asc</span><span class="p">(</span><span class="n">attribute</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;OrderByError&#39;</span><span class="p">,</span> <span class="s">&#39;The provided order by expression was invalid.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">defaultOrderBy</span>
+
+    <span class="k">def</span> <span class="nf">clearErrors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">_raiseSearchParseErrorIfNecessary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+            <span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clearErrors</span><span class="p">()</span>    <span class="c"># Clear the errors so the instance can be reused to build further queries</span>
+            <span class="k">raise</span> <span class="n">OLDSearchParseError</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_getBaseQuery</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">queryModel</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">old_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">queryModel</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_addJoinsToQuery</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">join</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">outerjoin</span><span class="p">(</span><span class="n">join</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">join</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="n">query</span>
+
+    <span class="k">def</span> <span class="nf">_python2sqla</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">python</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This is the function that is called recursively (if necessary) to</span>
+<span class="sd">        build the SQLAlchemy filter expression.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">python</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;and&#39;</span><span class="p">,</span> <span class="s">&#39;or&#39;</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;and&#39;</span><span class="p">:</span> <span class="n">and_</span><span class="p">,</span> <span class="s">&#39;or&#39;</span><span class="p">:</span> <span class="n">or_</span><span class="p">}[</span><span class="n">python</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span>
+                    <span class="o">*</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_python2sqla</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">python</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="k">elif</span> <span class="n">python</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;not&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">not_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_python2sqla</span><span class="p">(</span><span class="n">python</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getSimpleFilterExpression</span><span class="p">(</span><span class="o">*</span><span class="n">python</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;Malformed OLD query error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">u&#39;The submitted query was malformed&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;TypeError&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">__unicode__</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;Malformed OLD query error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">u&#39;The submitted query was malformed&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;IndexError&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">__unicode__</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;Malformed OLD query error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">u&#39;The submitted query was malformed&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;Exception&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">__unicode__</span><span class="p">()</span>
+
+    <span class="n">SQLAlchemyStringTypes</span> <span class="o">=</span> <span class="p">(</span><span class="n">Unicode</span><span class="p">,</span> <span class="n">UnicodeText</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_addToErrors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="n">msg</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Value converters</span>
+    <span class="c">############################################################################</span>
+
+    <span class="k">def</span> <span class="nf">_getDateValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dateString</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Converts ISO 8601 date strings to Python datetime.date objects.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dateString</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dateString</span>   <span class="c"># None can be used on date comparisons so assume this is what was intended</span>
+        <span class="n">date</span> <span class="o">=</span> <span class="n">dateString2date</span><span class="p">(</span><span class="n">dateString</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">date</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;date </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">dateString</span><span class="p">),</span>
+                <span class="s">u&#39;Date search parameters must be valid ISO 8601 date strings.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">date</span>
+
+    <span class="k">def</span> <span class="nf">_getDatetimeValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datetimeString</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Converts ISO 8601 datetime strings to Python datetime.datetime objects.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">datetimeString</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">datetimeString</span>   <span class="c"># None can be used on datetime comparisons so assume this is what was intended</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">datetimeString2datetime</span><span class="p">(</span><span class="n">datetimeString</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">datetime</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;datetime </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetimeString</span><span class="p">),</span>
+                <span class="s">u&#39;Datetime search parameters must be valid ISO 8601 datetime strings.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">datetime</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Data structures</span>
+    <span class="c">############################################################################</span>
+    <span class="c"># Alter the relations, schema and models2joins dicts in order to</span>
+    <span class="c"># change what types of input the query builder accepts.</span>
+
+    <span class="c"># The default set of available relations.  Relations with aliases are</span>
+    <span class="c"># treated as their aliases.  E.g., a search like [&#39;Form&#39;, &#39;source_id&#39; &#39;=&#39;, ...]</span>
+    <span class="c"># will generate the filter model.Form.source_id.__eq__(...)</span>
+    <span class="n">relations</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;__eq__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;=&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__eq__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;__ne__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;!=&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__ne__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;like&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;regexp&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;regex&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;regexp&#39;</span><span class="p">},</span>
+        <span class="s">&#39;__lt__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;&lt;&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__lt__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;__gt__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;&gt;&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__gt__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;__le__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;&lt;=&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__le__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;__ge__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;&gt;=&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__ge__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;in_&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;in&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;in_&#39;</span><span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">equalityRelations</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;__eq__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;=&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__eq__&#39;</span><span class="p">},</span>
+        <span class="s">&#39;__ne__&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s">&#39;!=&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;alias&#39;</span><span class="p">:</span> <span class="s">&#39;__ne__&#39;</span><span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c"># The schema attribute describes the database structure in a way that allows</span>
+    <span class="c"># the query builder to properly interpret the list-based queries and generate</span>
+    <span class="c"># errors where necessary.  Maps model names to attribute names.  Attribute names whose values contain</span>
+    <span class="c"># an &#39;alias&#39; key are treated as the value of that key, e.g., [&#39;Form&#39;,</span>
+    <span class="c"># &#39;enterer&#39; ...] will be treated as Form.enterer_id...  The relations listed</span>
+    <span class="c"># in self.relations above are the default for all attributes.  This can be</span>
+    <span class="c"># overridden by specifying a &#39;relation&#39; key (cf.</span>
+    <span class="c"># schema[&#39;Form&#39;][&#39;translations&#39;] below).  Certain attributes require</span>
+    <span class="c"># value converters -- functions that change the value in some attribute-</span>
+    <span class="c"># specific way, e.g., conversion of ISO 8601 datetimes to Python datetime</span>
+    <span class="c"># objects.</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;Collection&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;UUID&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;title&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;markupLanguage&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;contents&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;html&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Speaker&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;source&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Source&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDateValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Tag&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;forms&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;files&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;CollectionBackup&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;UUID&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;collection_id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;title&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;markupLanguage&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;contents&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;html&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;source&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDateValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;forms&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;files&#39;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;ElicitationMethod&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Form&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;UUID&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;transcription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;phoneticTranscription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeBreak&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeGloss&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;comments&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;speakerComments&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;grammaticality&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDateValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;syntacticCategoryString&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeBreakIDs&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeGlossIDs&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;breakGlossCategory&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;syntax&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;semantics&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;verifier&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Speaker&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;elicitationMethod&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;ElicitationMethod&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;syntacticCategory&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;SyntacticCategory&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;source&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Source&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;translations&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Translation&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Tag&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;files&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;collections&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;memorizers&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;FormBackup&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;UUID&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;form_id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;transcription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;phoneticTranscription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;narrowPhoneticTranscription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeBreak&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeGloss&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;comments&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;speakerComments&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;grammaticality&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDateValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;syntacticCategoryString&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeBreakIDs&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;morphemeGlossIDs&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;breakGlossCategory&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;syntax&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;semantics&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;verifier&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;elicitationMethod&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;syntacticCategory&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;source&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;translations&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;files&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;collections&#39;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;FormSearch&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;search&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;File&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;filename&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;MIMEtype&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;size&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;enterer&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;dateElicited&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDateValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeEntered&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;elicitor&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;speaker&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Speaker&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;parentFile&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;utteranceType&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;start&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;end&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;password&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Tag&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;forms&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">},</span>
+            <span class="s">&#39;collections&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Translation&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;transcription&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;grammaticality&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Language&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;Id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Part2B&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Part2T&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Part1&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Scope&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Type&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Ref_Name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;Comment&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Memorizer&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;firstName&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;lastName&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Orthography&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;orthography&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;lowercase&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;initialGlottalStops&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Source&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;file_id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;file&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;File&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;key&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;address&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;annote&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;author&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;booktitle&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;chapter&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;crossref&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;edition&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;editor&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;howpublished&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;institution&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;journal&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;keyField&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;month&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;note&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;number&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;organization&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;pages&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;publisher&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;school&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;series&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;title&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;typeField&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;volume&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;year&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;affiliation&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;abstract&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;contents&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;copyright&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;ISBN&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;ISSN&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;keywords&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;language&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;location&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;LCCN&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;mrnumber&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;price&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;size&#39;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Speaker&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;firstName&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;lastName&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;dialect&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;pageContent&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;markupLanguage&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;html&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;SyntacticCategory&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;User&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;firstName&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;lastName&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;affiliation&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;markupLanguage&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;pageContent&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;html&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;inputOrthography&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Orthography&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;outputOrthography&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Orthography&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;scalar&#39;</span><span class="p">},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">},</span>
+            <span class="s">&#39;rememberedForms&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;foreignModel&#39;</span><span class="p">:</span> <span class="s">&#39;Form&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;collection&#39;</span><span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Tag&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s">&#39;datetimeModified&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;valueConverter&#39;</span><span class="p">:</span> <span class="s">&#39;_getDatetimeValue&#39;</span><span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">modelAliases</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;Memorizer&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span>
+    <span class="p">}</span>
+
+    <span class="c"># Maps model names to the names of other models they can be joined to for</span>
+    <span class="c"># queries.  The values of the join models are the attributes of the original</span>
+    <span class="c"># model that the joins are actually made on, e.g., outerjoin(model.Form.tags)</span>
+    <span class="n">models2joins</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;Form&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;File&#39;</span><span class="p">:</span> <span class="s">&#39;files&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Translation&#39;</span><span class="p">:</span> <span class="s">&#39;translations&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Tag&#39;</span><span class="p">:</span> <span class="s">&#39;tags&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Collection&#39;</span><span class="p">:</span> <span class="s">&#39;collections&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Memorizer&#39;</span><span class="p">:</span> <span class="s">&#39;memorizers&#39;</span>
+        <span class="p">},</span>
+        <span class="s">&#39;File&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;Tag&#39;</span><span class="p">:</span> <span class="s">&#39;tags&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Form&#39;</span><span class="p">:</span> <span class="s">&#39;forms&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Collection&#39;</span><span class="p">:</span> <span class="s">&#39;collections&#39;</span>
+        <span class="p">},</span>
+        <span class="s">&#39;Collection&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&#39;Form&#39;</span><span class="p">:</span> <span class="s">&#39;forms&#39;</span><span class="p">,</span>
+            <span class="s">&#39;File&#39;</span><span class="p">:</span> <span class="s">&#39;files&#39;</span><span class="p">,</span>
+            <span class="s">&#39;Tag&#39;</span><span class="p">:</span> <span class="s">&#39;tags&#39;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Model getters</span>
+    <span class="c">############################################################################</span>
+
+    <span class="k">def</span> <span class="nf">_getModelName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Always return modelName; store an error if modelName is invalid.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">modelName</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="s">u&#39;Searching on the </span><span class="si">%s</span><span class="s"> model is not permitted&#39;</span> <span class="o">%</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">modelName</span>
+
+    <span class="k">def</span> <span class="nf">_getModel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">addToJoins</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">old_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelAliases</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="s">u&quot;The OLD has no model </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">modelName</span><span class="p">)</span>
+
+        <span class="c"># Store any implicit joins in self.joins to await addition to the query</span>
+        <span class="c"># in self._addJoinsToQuery.  Using sqlalchemy.orm&#39;s aliased to alias</span>
+        <span class="c"># models/tables is what permits filters on multiple -to-many relations.</span>
+        <span class="c"># Aliasing File while searching Form.files, for example, permits us to</span>
+        <span class="c"># retrieve all forms that are associated to file 71 and file 74.</span>
+        <span class="k">if</span> <span class="n">addToJoins</span> <span class="ow">and</span> <span class="n">modelName</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">:</span>
+            <span class="n">joinModels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models2joins</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="k">if</span> <span class="n">modelName</span> <span class="ow">in</span> <span class="n">joinModels</span><span class="p">:</span>
+                <span class="n">joinCollectionName</span> <span class="o">=</span> <span class="n">joinModels</span><span class="p">[</span><span class="n">modelName</span><span class="p">]</span>
+                <span class="n">joinCollection</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">old_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">),</span>
+                                        <span class="n">joinCollectionName</span><span class="p">)</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="n">aliased</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">model</span><span class="p">,</span> <span class="n">joinCollection</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span>
+                    <span class="s">u&quot;Searching the </span><span class="si">%s</span><span class="s"> model by joining on the </span><span class="si">%s</span><span class="s"> model is not possible&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">modelName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">model</span>
+
+    <span class="k">def</span> <span class="nf">_getAttributeModelName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the name of the model X that stores the data for the attribute</span>
+<span class="sd">        A of model M, e.g., the attributeModelName for modelName=&#39;Form&#39; and</span>
+<span class="sd">        attributeName=&#39;enterer&#39; is &#39;User&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attributeDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeDict</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">attributeDict</span><span class="p">[</span><span class="s">&#39;foreignModel&#39;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">u&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">),</span>
+                <span class="s">u&#39;The </span><span class="si">%s</span><span class="s"> attribute of the </span><span class="si">%s</span><span class="s"> model does not represent a many-to-one relation.&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>    <span class="c"># probably a TypeError, meaning modelName.attributeName is invalid; would have already been caught</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Attribute getters</span>
+    <span class="c">############################################################################</span>
+
+    <span class="k">def</span> <span class="nf">_getAttributeName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return attributeName or cache an error if attributeName is not in</span>
+<span class="sd">        self.schema[modelName].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attributeDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeDict</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">attributeName</span>
+
+    <span class="k">def</span> <span class="nf">_getAttributeDict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">reportError</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the dict needed to validate a given attribute of a given model,</span>
+<span class="sd">        or return None.  Propagate an error (optionally) if the attributeName is</span>
+<span class="sd">        invalid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attributeDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">attributeName</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">attributeDict</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">reportError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">),</span>
+                <span class="s">u&#39;Searching on </span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s"> is not permitted&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">attributeDict</span>
+
+    <span class="k">def</span> <span class="nf">_getAttribute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">attribute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collateAttribute</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># model can be None</span>
+            <span class="n">attribute</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">),</span>
+                <span class="s">u&quot;There is no attribute </span><span class="si">%s</span><span class="s"> of </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">attribute</span>
+
+    <span class="k">def</span> <span class="nf">_collateAttribute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attribute</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Append a MySQL COLLATE utf8_bin expression after the column name, if</span>
+<span class="sd">        appropriate.  This allows regexp and like searches to be case-sensitive.</span>
+<span class="sd">        An example SQLA query would be Session.query(model.Form).filter(</span>
+<span class="sd">        collate(model.Form.transcription, &#39;utf8_bin&#39;).like(u&#39;a%&#39;))</span>
+<span class="sd">        </span>
+<span class="sd">        Previously there was a condition on collation that the relationName be in</span>
+<span class="sd">        (&#39;like&#39;, &#39;regexp&#39;).  This condition was removed because MySQL does case-</span>
+<span class="sd">        insensitive equality searches too!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">RDBMSName</span> <span class="o">==</span> <span class="s">&#39;mysql&#39;</span> <span class="ow">and</span> <span class="n">attribute</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">attributeType</span> <span class="o">=</span> <span class="n">attribute</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="n">attributeType</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attributeType</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SQLAlchemyStringTypes</span><span class="p">):</span>
+                <span class="n">attribute</span> <span class="o">=</span> <span class="n">collate</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="s">&#39;utf8_bin&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">attribute</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Relation getters</span>
+    <span class="c">############################################################################</span>
+
+    <span class="k">def</span> <span class="nf">_getRelationName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return relationName or its alias; propagate an error if relationName is invalid.&quot;&quot;&quot;</span>
+        <span class="n">relationDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getRelationDict</span><span class="p">(</span><span class="n">relationName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">relationDict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;alias&#39;</span><span class="p">,</span> <span class="n">relationName</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># relationDict can be None</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_getRelationDict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">reportError</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">attributeRelations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeRelations</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">relationDict</span> <span class="o">=</span> <span class="n">attributeRelations</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relationName</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">relationDict</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">relationDict</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">reportError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">),</span>
+                <span class="s">u&quot;The relation </span><span class="si">%s</span><span class="s"> is not permitted for </span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">relationName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">relationDict</span>
+
+    <span class="k">def</span> <span class="nf">_getAttributeRelations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data structure encoding what relations are valid for the</span>
+<span class="sd">        input attribute name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attributeDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeDict</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">attributeDict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;foreignModel&#39;</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">equalityRelations</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># attributeDict can be None</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_getRelation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">relationName</span> <span class="o">==</span> <span class="s">&#39;regexp&#39;</span><span class="p">:</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="s">&#39;op&#39;</span><span class="p">)</span>
+                <span class="n">relation</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="s">&#39;regexp&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">relation</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="n">relationName</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># attribute can be None</span>
+            <span class="n">relation</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">),</span>
+                <span class="s">u&quot;There is no relation &#39;</span><span class="si">%s</span><span class="s">&#39; of &#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">relationName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">relation</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Value getters</span>
+    <span class="c">############################################################################</span>
+
+    <span class="k">def</span> <span class="nf">_normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">normalizeIfString</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">normalizeIfString</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="p">[</span><span class="n">normalizeIfString</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_getValueConverter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
+        <span class="n">attributeDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeDict</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">valueConverterName</span> <span class="o">=</span> <span class="n">attributeDict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;valueConverter&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">valueConverterName</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># attributeDict can be None</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_getValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unicode normalize &amp; modify the value using a valueConverter (if necessary).&quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>    <span class="c"># unicode normalize (NFD) search patterns; we might want to parameterize this</span>
+        <span class="n">valueConverter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getValueConverter</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">valueConverter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">type</span><span class="p">([]):</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="p">[</span><span class="n">valueConverter</span><span class="p">(</span><span class="n">li</span><span class="p">)</span> <span class="k">for</span> <span class="n">li</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">valueConverter</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="c">############################################################################</span>
+    <span class="c"># Filter expression getters</span>
+    <span class="c">############################################################################</span>
+
+    <span class="k">def</span> <span class="nf">_getInvalidFilterExpressionMessage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span>
+                                          <span class="n">relationName</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">u&quot;Invalid filter expression: </span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">(</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span>
+                                            <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_getInvalidModelAttributeErrors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relation</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span>
+            <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Avoid catching a (costly) RuntimeError by preventing _getFilterExpression</span>
+<span class="sd">        from attempting to build relation(value) or attribute.has(relation(value)).</span>
+<span class="sd">        We do this by returning a non-empty list of error tuples if Model.attribute</span>
+<span class="sd">        errors are present in self.errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">attributeModelName</span><span class="p">:</span>
+            <span class="n">errorKey</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">errorKey</span><span class="p">)</span> <span class="o">==</span> <span class="s">u&#39;Searching on the </span><span class="si">%s</span><span class="s"> is not permitted&#39;</span> <span class="o">%</span> <span class="n">errorKey</span><span class="p">:</span>
+                <span class="n">e</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_getInvalidFilterExpressionMessage</span><span class="p">(</span><span class="n">attributeModelName</span><span class="p">,</span>
+                            <span class="n">attributeModelAttributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">value</span><span class="p">)))</span>
+        <span class="n">errorKey</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">errorKey</span><span class="p">)</span> <span class="o">==</span> <span class="s">u&#39;Searching on </span><span class="si">%s</span><span class="s"> is not permitted&#39;</span> <span class="o">%</span> <span class="n">errorKey</span><span class="p">:</span>
+            <span class="n">e</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_getInvalidFilterExpressionMessage</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span>
+                                                        <span class="n">relationName</span><span class="p">,</span> <span class="n">value</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">e</span>
+
+    <span class="k">def</span> <span class="nf">_getMetaRelation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the has() or the any() method of the input attribute, depending</span>
+<span class="sd">        on the value of schema[modelName][attributeName][&#39;type&#39;].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;scalar&#39;</span><span class="p">:</span> <span class="s">&#39;has&#39;</span><span class="p">,</span> <span class="s">&#39;collection&#39;</span><span class="p">:</span> <span class="s">&#39;any&#39;</span><span class="p">}[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">[</span><span class="n">modelName</span><span class="p">][</span><span class="n">attributeName</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">]])</span>
+
+    <span class="k">def</span> <span class="nf">_getFilterExpression</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relation</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span>
+                             <span class="n">relationName</span><span class="p">,</span> <span class="n">attribute</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">attributeModelName</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">attributeModelAttributeName</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Attempt to return relation(value), catching and storing errors as</span>
+<span class="sd">        needed.  If 5 args are provided, we are doing a [mod, attr, rel, val]</span>
+<span class="sd">        search; if all 8 are provided, it&#39;s a [mod, attr, attrModAttr, rel, val]</span>
+<span class="sd">        one.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">invalidModelAttributeErrors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getInvalidModelAttributeErrors</span><span class="p">(</span>
+            <span class="n">relation</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span>
+            <span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">invalidModelAttributeErrors</span><span class="p">:</span>
+            <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">invalidModelAttributeErrors</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">attributeModelName</span><span class="p">:</span>
+                    <span class="n">metaRelation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getMetaRelation</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">)</span>
+                    <span class="n">filterExpression</span> <span class="o">=</span> <span class="n">metaRelation</span><span class="p">(</span><span class="n">relation</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">filterExpression</span> <span class="o">=</span> <span class="n">relation</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">),</span>
+                    <span class="s">u&#39;The </span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s"> attribute does not represent a many-to-one relation.&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_addToErrors</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_getInvalidFilterExpressionMessage</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span>
+                                            <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+            <span class="k">except</span> <span class="n">InvalidRequestError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;InvalidRequestError&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">__unicode__</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;OperationalError&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">__unicode__</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">filterExpression</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="s">&#39;RuntimeError&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">__unicode__</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">filterExpression</span>
+
+    <span class="k">def</span> <span class="nf">_getSimpleFilterExpression</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build an SQLAlchemy filter expression.  Examples:</span>
+
+<span class="sd">        1. [&#39;Form&#39;, &#39;transcription&#39;, &#39;=&#39;, &#39;abc&#39;] =&gt;</span>
+<span class="sd">           model.Form.transcription.__eq__(&#39;abc&#39;)</span>
+
+<span class="sd">        2. [&#39;Form&#39;, &#39;enterer&#39;, &#39;firstName&#39;, &#39;like&#39;, &#39;J%&#39;] =&gt;</span>
+<span class="sd">           Session.query(model.Form)\</span>
+<span class="sd">                .filter(model.Form.enterer.has(model.User.firstName.like(u&#39;J%&#39;)))</span>
+
+<span class="sd">        3. [&#39;Tag&#39;, &#39;name&#39;, &#39;like&#39;, &#39;%abc%&#39;] (when searching the Form model) =&gt;</span>
+<span class="sd">           aliasedTag = aliased(model.Tag)</span>
+<span class="sd">           Session.query(model.Form)\</span>
+<span class="sd">                .filter(aliasedTag.name.like(u&#39;%abc%&#39;))\</span>
+<span class="sd">                .outerjoin(aliasedTag, model.Form.tags)</span>
+
+<span class="sd">        4. [&#39;Form&#39;, &#39;tags&#39;, &#39;name&#39;, &#39;like&#39;, &#39;%abc%&#39;] =&gt;</span>
+<span class="sd">           Session.query(model.Form)\</span>
+<span class="sd">                .filter(model.Form.tags.any(model.Tag.name.like(u&#39;%abc%&#39;)))</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">modelName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getModelName</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">attributeName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeName</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">modelName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getModel</span><span class="p">(</span><span class="n">modelName</span><span class="p">)</span>
+            <span class="n">relationName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getRelationName</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getValue</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">)</span>
+            <span class="n">attribute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttribute</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+            <span class="n">relation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getRelation</span><span class="p">(</span><span class="n">relationName</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getFilterExpression</span><span class="p">(</span><span class="n">relation</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">attributeModelName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeModelName</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+            <span class="n">attributeModelAttributeName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttributeName</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">attributeModelName</span><span class="p">)</span>
+            <span class="n">relationName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getRelationName</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getValue</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">)</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getModel</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="n">attribute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttribute</span><span class="p">(</span><span class="n">attributeName</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">modelName</span><span class="p">)</span>
+            <span class="n">attributeModel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getModel</span><span class="p">(</span><span class="n">attributeModelName</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="n">attributeModelAttribute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getAttribute</span><span class="p">(</span><span class="n">attributeModelAttributeName</span><span class="p">,</span> <span class="n">attributeModel</span><span class="p">,</span> <span class="n">attributeModelName</span><span class="p">)</span>
+            <span class="n">relation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getRelation</span><span class="p">(</span><span class="n">relationName</span><span class="p">,</span> <span class="n">attributeModelAttribute</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">,</span> <span class="n">attributeModelName</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getFilterExpression</span><span class="p">(</span><span class="n">relation</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">attributeName</span><span class="p">,</span> <span class="n">relationName</span><span class="p">,</span>
+                                             <span class="n">attribute</span><span class="p">,</span> <span class="n">attributeModelName</span><span class="p">,</span> <span class="n">attributeModelAttributeName</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>

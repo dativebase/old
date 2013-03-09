@@ -12,8 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""This module defines the SQLAQueryBuilder class.  An SQLAQueryBuilder instance
-is used to build an SQLAlchemy query from a Python data structure (nested lists).
+"""This module defines :class:`SQLAQueryBuilder`.  An ``SQLAQueryBuilder``
+instance is used to build an SQLAlchemy query object from a Python data
+structure (nested lists).
 
 The two public methods are getSQLAQuery and getSQLAFilter.  Both take a list
 representing a filter expression as input.  getSQLAQuery returns an SQLAlchemy
@@ -33,61 +34,71 @@ second line followed by the equivalent SQLAlchemy ORM expression.  Note that the
 target model of the SQLAQueryBuilder is set to 'Form' so all queries will be
 against the Form model.
 
-1. Simple scalar queries.
-   ['Form', 'transcription', 'like', '%a%']
-   Session.query(Form).filter(Form.transcription.like(u'%a%'))
+1. Simple scalar queries::
 
-2. Scalar relations.
-   ['Form', 'enterer', 'firstName', 'regex', '^[JS]']
-   Session.query(Form).filter(Form.enterer.has(User.firstName.op('regexp')(u'^[JS]')))
+        ['Form', 'transcription', 'like', '%a%']
+        Session.query(Form).filter(Form.transcription.like(u'%a%'))
 
-3. Scalar relations presence/absence.
-   ['Form', 'enterer', '=', 'None']
-   Session.query(Form).filter(Form.enterer==None)
+2. Scalar relations::
 
-4. Collection relations (w/ SQLA's collection.any() method).
-   ['Form', 'files', 'id', 'in', [1, 2, 33, 5]]
-   Session.query(Form).filter(Form.files.any(File.id.in_([1, 2, 33, 5])))
+        ['Form', 'enterer', 'firstName', 'regex', '^[JS]']
+        Session.query(Form).filter(Form.enterer.has(User.firstName.op('regexp')(u'^[JS]')))
 
-5. Collection relations (w/ joins; should return the same results as (4)).
-   ['File', 'id', 'in', [1, 2, 33, 5]]
-   fileAlias = aliased(File)
-   Session.query(Form).filter(fileAlias.id.in_([1, 2, 33, 5])).outerjoin(fileAlias, Form.files)
+3. Scalar relations presence/absence::
 
-6. Collection relations presence/absence.
-   ['Form', 'files', '=', None]
-   Session.query(Form).filter(Form.files == None)
+        ['Form', 'enterer', '=', 'None']
+        Session.query(Form).filter(Form.enterer==None)
 
-7. Negation.
-   ['not', ['Form', 'transcription', 'like', '%a%']]
-   Session.query(Form).filter(not_(Form.transcription.like(u'%a%')))
+4. Collection relations (w/ SQLA's collection.any() method)::
 
-8. Conjunction.
-   ['and', [['Form', 'transcription', 'like', '%a%'],
-            ['Form', 'elicitor', 'id', '=', 13]]]
-   Session.query(Form).filter(and_(Form.transcription.like(u'%a%'),
-                                   Form.elicitor.has(User.id==13)))
+        ['Form', 'files', 'id', 'in', [1, 2, 33, 5]]
+        Session.query(Form).filter(Form.files.any(File.id.in_([1, 2, 33, 5])))
 
-9. Disjunction.
-   ['or', [['Form', 'transcription', 'like', '%a%'],
-            ['Form', 'dateElicited', '<', '2012-01-01']]]
-   Session.query(Form).filter(or_(Form.transcription.like(u'%a%'),
-                                  Form.dateElicited < datetime.date(2012, 1, 1)))
+5. Collection relations (w/ joins; should return the same results as (4)):
 
-10. Complex.
-    ['and', [['Translation', 'transcription', 'like', '%1%'],
-            ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
-            ['or', [['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
-                    ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]
-    translationAlias = aliased(Translation)
-    Session.query(Form).filter(and_(
-        translationAlias.transcription.like(u'%1%'),
-        not_(Form.morphemeBreak.op('regexp')(u'[28][5-7]')),
-        or_(
-            Form.datetimeModified < ...,
-            Form.datetimeModified > ...
-        )
-    )).outerjoin(translationAlias, Form.translations)
+        ['File', 'id', 'in', [1, 2, 33, 5]]
+        fileAlias = aliased(File)
+        Session.query(Form).filter(fileAlias.id.in_([1, 2, 33, 5])).outerjoin(fileAlias, Form.files)
+
+6. Collection relations presence/absence::
+
+        ['Form', 'files', '=', None]
+        Session.query(Form).filter(Form.files == None)
+
+7. Negation::
+
+        ['not', ['Form', 'transcription', 'like', '%a%']]
+        Session.query(Form).filter(not_(Form.transcription.like(u'%a%')))
+
+8. Conjunction::
+
+        ['and', [['Form', 'transcription', 'like', '%a%'],
+                 ['Form', 'elicitor', 'id', '=', 13]]]
+        Session.query(Form).filter(and_(Form.transcription.like(u'%a%'),
+                                        Form.elicitor.has(User.id==13)))
+
+9. Disjunction::
+
+        ['or', [['Form', 'transcription', 'like', '%a%'],
+                ['Form', 'dateElicited', '<', '2012-01-01']]]
+        Session.query(Form).filter(or_(Form.transcription.like(u'%a%'),
+                                       Form.dateElicited < datetime.date(2012, 1, 1)))
+
+10. Complex::
+
+        ['and', [['Translation', 'transcription', 'like', '%1%'],
+                 ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
+                 ['or', [['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
+                         ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]
+        translationAlias = aliased(Translation)
+        Session.query(Form).filter(and_(
+            translationAlias.transcription.like(u'%1%'),
+            not_(Form.morphemeBreak.op('regexp')(u'[28][5-7]')),
+            or_(
+                Form.datetimeModified < ...,
+                Form.datetimeModified > ...
+            )
+        )).outerjoin(translationAlias, Form.translations)
 
 Note also that SQLAQueryBuilder detects the RDBMS and issues collate commands
 where necessary to ensure that pattern matches are case-sensitive while ordering
@@ -96,9 +107,11 @@ is not.
 A further potential enhancement would be to allow doubly relational searches, e.g.,
 return all forms whose enterer has remembered a form with a transcription like 'a':
 
-xx. ['Form', 'enterer', 'rememberedForms', 'transcription', 'like', '%a%']
-    Session.query(Form).filter(Form.enterer.has(User.rememberedForms.any(
-        Form.transcription.like('%1%'))))
+11. Scalar's collection relations::
+
+        ['Form', 'enterer', 'rememberedForms', 'transcription', 'like', '%a%']
+        Session.query(Form).filter(Form.enterer.has(User.rememberedForms.any(
+            Form.transcription.like('%1%'))))
 
 """
 
@@ -169,21 +182,24 @@ class OLDSearchParseError(Exception):
 
 
 class SQLAQueryBuilder(object):
-    """SQLAQueryBuilder builds SQLAlchemy queries from Python data structures
-    representing arbitrarily complex filter expressions.  Joins are inferred
-    from the filter expression.  The public method most likely to be used is
-    getSQLAQuery.  Example usage:
+    """Generate an SQLAlchemy query object from a Python dictionary.
     
-        > queryBuilder = SQLAlchemyQueryBuilder()
-        > pythonQuery = {'filter': [
+    Builds SQLAlchemy queries from Python data structures representing
+    arbitrarily complex filter expressions.  Joins are inferred from the filter
+    expression.  The public method most likely to be used is
+    :func:`getSQLAQuery`.  Example usage::
+
+        queryBuilder = SQLAlchemyQueryBuilder()
+        pythonQuery = {'filter': [
             'and', [
                 ['Translation', 'transcription', 'like', '1'],
                 ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
                 ['or', [
                     ['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
                     ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]}
-        > query = queryBuilder.getSQLAQuery(pythonQuery)
-        > forms = query.all()
+        query = queryBuilder.getSQLAQuery(pythonQuery)
+        forms = query.all()
+
     """
 
     def __init__(self, modelName='Form', primaryKey='id', **kwargs):

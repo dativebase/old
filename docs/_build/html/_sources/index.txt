@@ -4,9 +4,10 @@
    contain the root `toctree` directive.
 
 ================================================================================
-Documentation Overview
+Online Linguistic Database (OLD) Documentation
 ================================================================================
 
-Welcome to the Online Linguistic Database |version| documentation.
+Welcome to the documentation for the Online Linguistic Database version
+|version|.
 
 .. include:: contents.rst.inc

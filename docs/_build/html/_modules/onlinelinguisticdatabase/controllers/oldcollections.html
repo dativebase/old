@@ -1,0 +1,1045 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>onlinelinguisticdatabase.controllers.oldcollections &mdash; OLD 1.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/werkzeug.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="top" title="OLD 1.0a1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">OLD 1.0a1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for onlinelinguisticdatabase.controllers.oldcollections</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Joel Dunham</span>
+<span class="c">#</span>
+<span class="c">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c">#  you may not use this file except in compliance with the License.</span>
+<span class="c">#  You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c">#  See the License for the specific language governing permissions and</span>
+<span class="c">#  limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Contains the :class:`OldcollectionsController` and its auxiliary functions.</span>
+
+<span class="sd">.. module:: collections</span>
+<span class="sd">   :synopsis: Contains the collections controller and its auxiliary functions.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">uuid</span> <span class="kn">import</span> <span class="n">uuid4</span>
+<span class="kn">import</span> <span class="nn">simplejson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">letters</span><span class="p">,</span> <span class="n">digits</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">sample</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">app_globals</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">pylons.decorators.rest</span> <span class="kn">import</span> <span class="n">restrict</span>
+<span class="kn">from</span> <span class="nn">pylons.controllers.util</span> <span class="kn">import</span> <span class="n">forward</span>
+<span class="kn">from</span> <span class="nn">formencode.validators</span> <span class="kn">import</span> <span class="n">Invalid</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">asc</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.base</span> <span class="kn">import</span> <span class="n">BaseController</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.schemata</span> <span class="kn">import</span> <span class="n">CollectionSchema</span>
+<span class="kn">import</span> <span class="nn">onlinelinguisticdatabase.lib.helpers</span> <span class="kn">as</span> <span class="nn">h</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.lib.SQLAQueryBuilder</span> <span class="kn">import</span> <span class="n">SQLAQueryBuilder</span><span class="p">,</span> <span class="n">OLDSearchParseError</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model.meta</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">onlinelinguisticdatabase.model</span> <span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">CollectionBackup</span><span class="p">,</span> <span class="n">User</span><span class="p">,</span> <span class="n">Form</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OldcollectionsController"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController">[docs]</a><span class="k">class</span> <span class="nc">OldcollectionsController</span><span class="p">(</span><span class="n">BaseController</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate responses to requests on collection resources.</span>
+
+<span class="sd">    REST Controller styled on the Atom Publishing Protocol.</span>
+
+<span class="sd">    The collections controller is one of the more complex ones.  A great deal of</span>
+<span class="sd">    this complexity arised from the fact that collections can reference forms</span>
+<span class="sd">    and other collections in the value of their ``contents`` attribute.  The</span>
+<span class="sd">    propagation of restricted tags and associated forms and the generation of</span>
+<span class="sd">    the html from these contents-with-references, necessitates some complex</span>
+<span class="sd">    logic for updates and deletions.</span>
+
+<span class="sd">    .. warning::</span>
+
+<span class="sd">        There is a potential issue with collection-collection reference.  A</span>
+<span class="sd">        restricted user can restrict their own collection *A* and that</span>
+<span class="sd">        restriction would be propagated up the reference chain, possibly causing</span>
+<span class="sd">        another collection *B* (that was not created by the updater) to become</span>
+<span class="sd">        restricted. That is, collection-collection reference permits restricted</span>
+<span class="sd">        users to indirectly restrict collections they would otherwise not be</span>
+<span class="sd">        permitted to restrict. This will be bothersome to other restricted users</span>
+<span class="sd">        since they will no longer be able to access the newly restricted</span>
+<span class="sd">        collection *B*.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">       The ``h.jsonify`` decorator converts the return value of the methods to</span>
+<span class="sd">       JSON.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">queryBuilder</span> <span class="o">=</span> <span class="n">SQLAQueryBuilder</span><span class="p">(</span><span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;SEARCH&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OldcollectionsController.search"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.search">[docs]</a>    <span class="k">def</span> <span class="nf">search</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of collection resources matching the input JSON query.</span>
+
+<span class="sd">        :URL: ``SEARCH /collections`` (or ``POST /collections/search``)</span>
+<span class="sd">        :request body: A JSON object of the form::</span>
+
+<span class="sd">                {&quot;query&quot;: {&quot;filter&quot;: [ ... ], &quot;orderBy&quot;: [ ... ]},</span>
+<span class="sd">                 &quot;paginator&quot;: { ... }}</span>
+
+<span class="sd">            where the ``orderBy`` and ``paginator`` attributes are optional.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">jsonSearchParams</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">)</span>
+            <span class="n">pythonSearchParams</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">jsonSearchParams</span><span class="p">)</span>
+            <span class="n">SQLAQuery</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="o">.</span><span class="n">getSQLAQuery</span><span class="p">(</span><span class="n">pythonSearchParams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;query&#39;</span><span class="p">)))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">filterRestrictedModels</span><span class="p">(</span><span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="n">SQLAQuery</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">pythonSearchParams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;paginator&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">OLDSearchParseError</span><span class="p">,</span> <span class="n">Invalid</span><span class="p">),</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;The specified search parameters generated an invalid database query&#39;</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OldcollectionsController.new_search"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.new_search">[docs]</a>    <span class="k">def</span> <span class="nf">new_search</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to search the collection resources.</span>
+
+<span class="sd">        :URL: ``GET /collections/new_search``</span>
+<span class="sd">        :returns: ``{&quot;searchParameters&quot;: {&quot;attributes&quot;: { ... }, &quot;relations&quot;: { ... }}``</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;searchParameters&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getSearchParameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OldcollectionsController.index"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;GET /collections: Return all collections.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get all collection resources.</span>
+
+<span class="sd">        :URL: ``GET /collections`` with optional query string parameters for</span>
+<span class="sd">            ordering and pagination.</span>
+<span class="sd">        :returns: a list of all collection resources.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the</span>
+<span class="sd">           query string parameters that effect ordering and pagination.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">))</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">addOrderBy</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">filterRestrictedModels</span><span class="p">(</span><span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">addPagination</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OldcollectionsController.create"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new collection resource and return it.</span>
+
+<span class="sd">        :URL: ``POST /collections``</span>
+<span class="sd">        :request body: JSON object representing the collection to create.</span>
+<span class="sd">        :returns: the newly created collection.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">CollectionSchema</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+            <span class="n">collectionsReferenced</span> <span class="o">=</span> <span class="n">getCollectionsReferenced</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="s">&#39;contents&#39;</span><span class="p">],</span>
+                                                        <span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">addContentsUnpackedToValues</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">addFormIdsListToValues</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+            <span class="n">collection</span> <span class="o">=</span> <span class="n">createNewCollection</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+            <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">collection</span>
+        <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+        <span class="k">except</span> <span class="n">InvalidCollectionReferenceError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Invalid collection reference error: there is no collection with id </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+        <span class="k">except</span> <span class="n">UnauthorizedCollectionReferenceError</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Unauthorized collection reference error: you are not authorized to access collection </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+        <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OldcollectionsController.new"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new collection.</span>
+
+<span class="sd">        :URL: ``GET /collections/new`` with optional query string parameters </span>
+<span class="sd">        :returns: a dictionary of lists of resources.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">        </span>
+<span class="sd">           See :func:`getNewEditCollectionData` to understand how the query</span>
+<span class="sd">           string parameters can affect the contents of the lists in the</span>
+<span class="sd">           returned dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">getNewEditCollectionData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;PUT&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OldcollectionsController.update"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a collection and return it.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``PUT /collections/id``</span>
+<span class="sd">        :Request body: JSON object representing the collection with updated attribute values.</span>
+<span class="sd">        :param str id: the ``id`` value of the collection to be updated.</span>
+<span class="sd">        :returns: the updated collection model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">collection</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">schema</span> <span class="o">=</span> <span class="n">CollectionSchema</span><span class="p">()</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+                    <span class="n">collectionsReferenced</span> <span class="o">=</span> <span class="n">getCollectionsReferenced</span><span class="p">(</span>
+                                <span class="n">values</span><span class="p">[</span><span class="s">&#39;contents&#39;</span><span class="p">],</span> <span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">addContentsUnpackedToValues</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">addFormIdsListToValues</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getStateObject</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">to_python</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+                    <span class="n">collectionDict</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+                    <span class="n">collection</span><span class="p">,</span> <span class="n">restricted</span><span class="p">,</span> <span class="n">contents_changed</span> <span class="o">=</span> <span class="n">updateCollection</span><span class="p">(</span>
+                        <span class="n">collection</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+                    <span class="c"># collection will be False if there are no changes (cf. updateCollection).</span>
+                    <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+                        <span class="n">backupCollection</span><span class="p">(</span><span class="n">collectionDict</span><span class="p">,</span> <span class="n">collection</span><span class="o">.</span><span class="n">datetimeModified</span><span class="p">)</span>
+                        <span class="n">updateCollectionsThatReferenceThisCollection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">,</span>
+                                            <span class="n">restricted</span><span class="o">=</span><span class="n">restricted</span><span class="p">,</span> <span class="n">contents_changed</span><span class="o">=</span><span class="n">contents_changed</span><span class="p">)</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+                        <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                        <span class="k">return</span> <span class="n">collection</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                            <span class="s">u&#39;The update request failed because the submitted data were not new.&#39;</span><span class="p">}</span>
+                <span class="k">except</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">JSONDecodeErrorResponse</span>
+                <span class="k">except</span> <span class="n">CircularCollectionReferenceError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span>
+                        <span class="s">u&#39;Circular collection reference error: collection </span><span class="si">%d</span><span class="s"> references collection </span><span class="si">%d</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])}</span>
+                <span class="k">except</span> <span class="n">InvalidCollectionReferenceError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Invalid collection reference error: there is no collection with id </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+                <span class="k">except</span> <span class="n">UnauthorizedCollectionReferenceError</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">u&#39;Unauthorized collection reference error: you are not authorized to access collection </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+                <span class="k">except</span> <span class="n">Invalid</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">400</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;errors&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">unpack_errors</span><span class="p">()}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no collection with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OldcollectionsController.delete"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete an existing collection and return it.</span>
+
+<span class="sd">        :URL: ``DELETE /collections/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the collection to be deleted.</span>
+<span class="sd">        :returns: the deleted collection model.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Only administrators and a collection&#39;s enterer can delete it.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s">u&#39;administrator&#39;</span> <span class="ow">or</span> \
+            <span class="n">collection</span><span class="o">.</span><span class="n">enterer</span> <span class="ow">is</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]:</span>
+                <span class="n">collectionDict</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+                <span class="n">backupCollection</span><span class="p">(</span><span class="n">collectionDict</span><span class="p">)</span>
+                <span class="n">updateCollectionsThatReferenceThisCollection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">,</span> <span class="n">deleted</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                <span class="n">Session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+                <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">collection</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no collection with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OldcollectionsController.show"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a collection.</span>
+<span class="sd">        </span>
+<span class="sd">        :URL: ``GET /collections/id``</span>
+<span class="sd">        :param str id: the ``id`` value of the collection to be returned.</span>
+<span class="sd">        :returns: a collection model object.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">collection</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">collection</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no collection with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+    <span class="nd">@h.authorize</span><span class="p">([</span><span class="s">&#39;administrator&#39;</span><span class="p">,</span> <span class="s">&#39;contributor&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="OldcollectionsController.edit"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.edit">[docs]</a>    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a collection and the data needed to update it.</span>
+
+<span class="sd">        :URL: ``GET /collections/edit`` with optional query string parameters </span>
+<span class="sd">        :param str id: the ``id`` value of the collection that will be updated.</span>
+<span class="sd">        :returns: a dictionary of the form::</span>
+
+<span class="sd">                {&quot;collection&quot;: {...}, &quot;data&quot;: {...}}</span>
+
+<span class="sd">            where the value of the ``collection`` key is a dictionary</span>
+<span class="sd">            representation of the collection and the value of the ``data`` key</span>
+<span class="sd">            is a dictionary containing the objects necessary to update a</span>
+<span class="sd">            collection, viz. the return value of</span>
+<span class="sd">            :func:`CollectionsController.new`</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">        </span>
+<span class="sd">           This action can be thought of as a combination of</span>
+<span class="sd">           :func:`CollectionsController.show` and</span>
+<span class="sd">           :func:`CollectionsController.new`.  See</span>
+<span class="sd">           :func:`getNewEditCollectionData` to understand how the query string</span>
+<span class="sd">           parameters can affect the contents of the lists in the ``data``</span>
+<span class="sd">           dictionary.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span>
+                                <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">],</span> <span class="n">collection</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">getNewEditCollectionData</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;data&#39;</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span> <span class="s">&#39;collection&#39;</span><span class="p">:</span> <span class="n">collection</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;There is no collection with id </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+</div>
+    <span class="nd">@h.jsonify</span>
+    <span class="nd">@h.restrict</span><span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">)</span>
+    <span class="nd">@h.authenticate</span>
+<div class="viewcode-block" id="OldcollectionsController.history"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.OldcollectionsController.history">[docs]</a>    <span class="k">def</span> <span class="nf">history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a collection and its previous versions.</span>
+
+<span class="sd">        :URL: ``GET /collections/history/id``</span>
+<span class="sd">        :param str id: a string matching the ``id`` or ``UUID`` value of the</span>
+<span class="sd">            collection whose history is requested.</span>
+<span class="sd">        :returns: a dictionary of the form::</span>
+
+<span class="sd">                {&quot;collection&quot;: { ... }, &quot;previousVersions&quot;: [ ... ]}</span>
+
+<span class="sd">            where the value of the ``collection`` key is the collection whose</span>
+<span class="sd">            history is requested and the value of the ``previousVersions`` key</span>
+<span class="sd">            is a list of dictionaries representing previous versions of the</span>
+<span class="sd">            collection.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collection</span><span class="p">,</span> <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">getCollectionAndPreviousVersions</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">collection</span> <span class="ow">or</span> <span class="n">previousVersions</span><span class="p">:</span>
+            <span class="n">unrestrictedUsers</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getUnrestrictedUsers</span><span class="p">()</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span>
+            <span class="n">accessible</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span>
+            <span class="n">unrestrictedPreviousVersions</span> <span class="o">=</span> <span class="p">[</span><span class="n">cb</span> <span class="k">for</span> <span class="n">cb</span> <span class="ow">in</span> <span class="n">previousVersions</span>
+                                    <span class="k">if</span> <span class="n">accessible</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">cb</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)]</span>
+            <span class="n">collectionIsRestricted</span> <span class="o">=</span> <span class="n">collection</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">accessible</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">collection</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">)</span>
+            <span class="n">previousVersionsAreRestricted</span> <span class="o">=</span> <span class="n">previousVersions</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">unrestrictedPreviousVersions</span>
+            <span class="k">if</span> <span class="n">collectionIsRestricted</span> <span class="ow">or</span> <span class="n">previousVersionsAreRestricted</span> <span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">403</span>
+                <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">unauthorizedMsg</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s">&#39;collection&#39;</span><span class="p">:</span> <span class="n">collection</span><span class="p">,</span>
+                        <span class="s">&#39;previousVersions&#39;</span><span class="p">:</span> <span class="n">unrestrictedPreviousVersions</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">404</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;error&#39;</span><span class="p">:</span> <span class="s">&#39;No collections or collection backups match </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">}</span>
+
+</div></div>
+<div class="viewcode-block" id="getCollectionAndPreviousVersions"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getCollectionAndPreviousVersions">[docs]</a><span class="k">def</span> <span class="nf">getCollectionAndPreviousVersions</span><span class="p">(</span><span class="nb">id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return a collection and its previous versions.</span>
+
+<span class="sd">    :param str id: the ``id`` or ``UUID`` value of the collection whose history</span>
+<span class="sd">        is requested.</span>
+<span class="sd">    :returns: a tuple whose first element is the collection model and whose</span>
+<span class="sd">        second element is a list of collection backup models.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">previousVersions</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">eagerloadCollection</span><span class="p">(</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getCollectionBackupsByUUID</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">UUID</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getCollectionBackupsByCollectionId</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">UUID</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">UUID</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+            <span class="n">form</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getCollectionByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">)</span>
+            <span class="n">previousVersions</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getCollectionBackupsByUUID</span><span class="p">(</span><span class="n">UUID</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">pass</span>    <span class="c"># id is neither an integer nor a UUID</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">previousVersions</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Backup collection</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="backupCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.backupCollection">[docs]</a><span class="k">def</span> <span class="nf">backupCollection</span><span class="p">(</span><span class="n">collectionDict</span><span class="p">,</span> <span class="n">datetimeModified</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Backup a collection.</span>
+
+<span class="sd">    :param dict formDict: a representation of a collection model.</span>
+<span class="sd">    :param ``datetime.datetime`` datetimeModified: the time of the collection&#39;s</span>
+<span class="sd">        last update.</span>
+<span class="sd">    :returns: ``None``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collectionBackup</span> <span class="o">=</span> <span class="n">CollectionBackup</span><span class="p">()</span>
+    <span class="n">collectionBackup</span><span class="o">.</span><span class="n">vivify</span><span class="p">(</span><span class="n">collectionDict</span><span class="p">,</span> <span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">],</span> <span class="n">datetimeModified</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">collectionBackup</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Reference-extraction functions</span>
+<span class="c">################################################################################</span>
+
+<span class="c"># The following set of functions generate data from the references in the contents</span>
+<span class="c"># attribute of a collection.  The two primary tasks are to generate values for</span>
+<span class="c"># the &#39;forms&#39; and &#39;contentsUnpacked&#39; attributes of the collection.  The three</span>
+<span class="c"># &quot;public&quot; functions are getCollectionsReferenced, addFormIdsListToValues and</span>
+<span class="c"># addContentsUnpackedToValues.  getCollectionsReferenced raises errors if</span>
+<span class="c"># collection references are invalid and returns a dict from reference ids to</span>
+<span class="c"># collection objects, which dict is used by addContentsUnpackedToValues, the</span>
+<span class="c"># output of the latter being used to generate the list of referenced forms.</span>
+</div>
+<div class="viewcode-block" id="getCollectionsReferenced"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getCollectionsReferenced">[docs]</a><span class="k">def</span> <span class="nf">getCollectionsReferenced</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">collectionId</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">patt</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the collections (recursively) referenced by the input ``contents`` value.</span>
+<span class="sd">    </span>
+<span class="sd">    That is, return all of the collections referenced in the input ``contents``</span>
+<span class="sd">    value, plus all of the collections referenced in those collections, etc.</span>
+
+<span class="sd">    :param unicode contents: the value of the ``contents`` attribute of a collection.</span>
+<span class="sd">    :param user: the user model who made the request.</span>
+<span class="sd">    :param list unrestrictedUsers: the unrestricted user models of the application.</span>
+<span class="sd">    :param int collectionId: the ``id`` value of a collection.</span>
+<span class="sd">    :param patt: a compiled regular expression object.</span>
+<span class="sd">    :returns: a dictionary whose keys are collection ``id`` values and whose</span>
+<span class="sd">        values are collection models.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">patt</span> <span class="o">=</span> <span class="n">patt</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">collectionReferencePattern</span><span class="p">)</span>
+    <span class="n">collectionsReferenced</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span> <span class="n">getCollection</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span> <span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">))</span>
+                                  <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">patt</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">contents</span><span class="p">)])</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">collectionsReferenced</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">collectionId</span> <span class="ow">in</span> <span class="n">collectionsReferenced</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CircularCollectionReferenceError</span><span class="p">(</span><span class="n">collectionId</span><span class="p">)</span>
+    <span class="p">[</span><span class="n">collectionsReferenced</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">getCollectionsReferenced</span><span class="p">(</span>
+        <span class="n">collectionsReferenced</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">contents</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">,</span> <span class="n">collectionId</span><span class="p">,</span> <span class="n">patt</span><span class="p">))</span>
+     <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">temp</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">collectionsReferenced</span>
+</div>
+<div class="viewcode-block" id="addFormIdsListToValues"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.addFormIdsListToValues">[docs]</a><span class="k">def</span> <span class="nf">addFormIdsListToValues</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add a list of referenced form ids to values.</span>
+<span class="sd">    </span>
+<span class="sd">    :param dict values: data for creating or updating a collection</span>
+<span class="sd">    :returns: ``values`` with a ``&#39;forms&#39;`` key whose value is a list of id integers.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contentsUnpacked</span> <span class="o">=</span> <span class="n">getUnicode</span><span class="p">(</span><span class="s">&#39;contentsUnpacked&#39;</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+    <span class="n">values</span><span class="p">[</span><span class="s">&#39;forms&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">formReferencePattern</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">contentsUnpacked</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">values</span>
+</div>
+<div class="viewcode-block" id="addContentsUnpackedToValues"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.addContentsUnpackedToValues">[docs]</a><span class="k">def</span> <span class="nf">addContentsUnpackedToValues</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add a ``&#39;contentsUnpacked&#39;`` value to values and return values.</span>
+<span class="sd">    </span>
+<span class="sd">    :param dict values: data for creating a collection.</span>
+<span class="sd">    :param dict collectionsReferenced: keys are collection ``id`` values and </span>
+<span class="sd">        values are collection models.</span>
+<span class="sd">    :returns: ``values`` updated.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contents</span> <span class="o">=</span> <span class="n">getUnicode</span><span class="p">(</span><span class="s">&#39;contents&#39;</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+    <span class="n">values</span><span class="p">[</span><span class="s">&#39;contentsUnpacked&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">generateContentsUnpacked</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">values</span>
+</div>
+<div class="viewcode-block" id="getCollectionsReferencedInContents"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getCollectionsReferencedInContents">[docs]</a><span class="k">def</span> <span class="nf">getCollectionsReferencedInContents</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the immediately referenced collections of a collection.</span>
+<span class="sd">    </span>
+<span class="sd">    :param collection: a collection model.</span>
+<span class="sd">    :param dict collectionsReferenced: keys are collection ``id`` values and </span>
+<span class="sd">        values are collection models.</span>
+<span class="sd">    :returns: a list of collection models; useful in determining whether</span>
+<span class="sd">        directly referenced collections are restricted.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">collectionsReferenced</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">collectionReferencePattern</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="updateCollectionsThatReferenceThisCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.updateCollectionsThatReferenceThisCollection">[docs]</a><span class="k">def</span> <span class="nf">updateCollectionsThatReferenceThisCollection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">queryBuilder</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update all collections that reference the input collection.</span>
+<span class="sd">    </span>
+<span class="sd">    :param collection: a collection model.</span>
+<span class="sd">    :param queryBuilder: an :class:`SQLAQueryBuilder` instance.</span>
+<span class="sd">    :param bool kwargs[&#39;contents_changed&#39;]: indicates whether the input</span>
+<span class="sd">        collection&#39;s ``contents`` value has changed.</span>
+<span class="sd">    :param bool kwargs[&#39;deleted&#39;]: indicates whether the input collection has</span>
+<span class="sd">        just been deleted.</span>
+<span class="sd">    :returns: ``None``</span>
+
+<span class="sd">    Update the ``contents``, ``contentsUnpacked``, ``html`` and/or ``form``</span>
+<span class="sd">    attributes of every collection that references the input collection plus all</span>
+<span class="sd">    of the collections that reference those collections, etc.  This function is</span>
+<span class="sd">    called upon successful update and delete requests.</span>
+
+<span class="sd">    If the contents of the ``collection`` have changed (i.e.,</span>
+<span class="sd">    ``kwargs[&#39;contents_changed&#39;]==True``) , then retrieve all collections</span>
+<span class="sd">    that reference ``collection`` and all collections that reference those</span>
+<span class="sd">    referers, etc., and update their ``contentsUnpacked``, ``html`` and</span>
+<span class="sd">    ``forms`` attributes.</span>
+
+<span class="sd">    If the ``collection`` has been deleted (i.e., ``kwargs[&#39;deleted&#39;]==True``),</span>
+<span class="sd">    then recursively retrieve all collections referencing ``collection`` and</span>
+<span class="sd">    update their ``contents``, ``contentsUnpacked``, ``html`` and ``forms``</span>
+<span class="sd">    attributes.</span>
+
+<span class="sd">    If ``collection`` has just been tagged as restricted (i.e.,</span>
+<span class="sd">    ``kwargs[&#39;restricted&#39;]==True``), then recursively restrict all collections</span>
+<span class="sd">    that reference it.</span>
+
+<span class="sd">    In all cases, update the ``datetimeModified`` value of every collection that</span>
+<span class="sd">    recursively references ``collection``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">updateContentsUnpackedEtc</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">deleted</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;deleted&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="n">collectionId</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;collectionId&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">deleted</span><span class="p">:</span>
+            <span class="n">collection</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">removeReferencesToThisCollection</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">,</span> <span class="n">collectionId</span><span class="p">)</span>
+        <span class="n">collectionsReferenced</span> <span class="o">=</span> <span class="n">getCollectionsReferenced</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">)</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span> <span class="o">=</span> <span class="n">generateContentsUnpacked</span><span class="p">(</span>
+                                    <span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">html</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getHTMLFromContents</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span><span class="p">,</span>
+                                                  <span class="n">collection</span><span class="o">.</span><span class="n">markupLanguage</span><span class="p">)</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="p">[</span><span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span>
+                    <span class="n">h</span><span class="o">.</span><span class="n">formReferencePattern</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span><span class="p">)]</span>
+
+    <span class="n">restricted</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;restricted&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">contents_changed</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;contents_changed&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">deleted</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;deleted&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">restricted</span> <span class="ow">or</span> <span class="n">contents_changed</span> <span class="ow">or</span> <span class="n">deleted</span><span class="p">:</span>
+        <span class="n">collectionsReferencingThisCollection</span> <span class="o">=</span> <span class="n">getCollectionsReferencingThisCollection</span><span class="p">(</span>
+            <span class="n">collection</span><span class="p">,</span> <span class="n">queryBuilder</span><span class="p">)</span>
+        <span class="n">collectionsReferencingThisCollectionDicts</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span>
+                                        <span class="n">collectionsReferencingThisCollection</span><span class="p">]</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">restricted</span><span class="p">:</span>
+            <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getRestrictedTag</span><span class="p">()</span>
+            <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">collectionsReferencingThisCollection</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">contents_changed</span><span class="p">:</span>
+            <span class="p">[</span><span class="n">updateContentsUnpackedEtc</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">collectionsReferencingThisCollection</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">deleted</span><span class="p">:</span>
+            <span class="p">[</span><span class="n">updateContentsUnpackedEtc</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">collectionId</span><span class="o">=</span><span class="n">collection</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">deleted</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+             <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">collectionsReferencingThisCollection</span><span class="p">]</span>
+        <span class="p">[</span><span class="nb">setattr</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s">&#39;datetimeModified&#39;</span><span class="p">,</span> <span class="n">now</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">collectionsReferencingThisCollection</span><span class="p">]</span>
+        <span class="p">[</span><span class="n">backupCollection</span><span class="p">(</span><span class="n">cd</span><span class="p">,</span> <span class="n">now</span><span class="p">)</span> <span class="k">for</span> <span class="n">cd</span> <span class="ow">in</span> <span class="n">collectionsReferencingThisCollectionDicts</span><span class="p">]</span>
+        <span class="n">Session</span><span class="o">.</span><span class="n">add_all</span><span class="p">(</span><span class="n">collectionsReferencingThisCollection</span><span class="p">)</span>
+        <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="getCollectionsReferencingThisCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getCollectionsReferencingThisCollection">[docs]</a><span class="k">def</span> <span class="nf">getCollectionsReferencingThisCollection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">queryBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return all collections that recursively reference ``collection``.</span>
+<span class="sd">    </span>
+<span class="sd">    That is, return all collections that reference ``collection`` plus all</span>
+<span class="sd">    collections that reference those referencing collections, etc.</span>
+<span class="sd">    </span>
+<span class="sd">    :param collection: a collection model object.</span>
+<span class="sd">    :param queryBuilder: an :class:`SQLAQueryBuilder` instance.</span>
+<span class="sd">    :returns: a list of collection models.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">patt</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">collectionReferencePattern</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+        <span class="s">&#39;\d+&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">id</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\\</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;filter&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;Collection&#39;</span><span class="p">,</span> <span class="s">&#39;contents&#39;</span><span class="p">,</span> <span class="s">&#39;regex&#39;</span><span class="p">,</span> <span class="n">patt</span><span class="p">]}</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">queryBuilder</span><span class="o">.</span><span class="n">getSQLAQuery</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[:]:</span>
+        <span class="n">result</span> <span class="o">+=</span> <span class="n">getCollectionsReferencingThisCollection</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">queryBuilder</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+</div>
+<div class="viewcode-block" id="updateCollectionByDeletionOfReferencedForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.updateCollectionByDeletionOfReferencedForm">[docs]</a><span class="k">def</span> <span class="nf">updateCollectionByDeletionOfReferencedForm</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">referencedForm</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update a collection based on the deletion of a form it references.</span>
+
+<span class="sd">    This function is called in the :class:`FormsController` when a form is</span>
+<span class="sd">    deleted.  It is called on each collection that references the deleted form</span>
+<span class="sd">    and the changes to each of those collections are propagated through all of</span>
+<span class="sd">    the collections that reference them, and so on.</span>
+<span class="sd">    </span>
+<span class="sd">    :param collection: a collection model object.</span>
+<span class="sd">    :param referencedForm: a form model object.</span>
+<span class="sd">    :returns: ``None``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collectionDict</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">getDict</span><span class="p">()</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">removeReferencesToThisForm</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">,</span> <span class="n">referencedForm</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="n">collectionsReferenced</span> <span class="o">=</span> <span class="n">getCollectionsReferenced</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">)</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span> <span class="o">=</span> <span class="n">generateContentsUnpacked</span><span class="p">(</span>
+                                <span class="n">collection</span><span class="o">.</span><span class="n">contents</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">html</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getHTMLFromContents</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span><span class="p">,</span>
+                                              <span class="n">collection</span><span class="o">.</span><span class="n">markupLanguage</span><span class="p">)</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="n">backupCollection</span><span class="p">(</span><span class="n">collectionDict</span><span class="p">,</span> <span class="n">collection</span><span class="o">.</span><span class="n">datetimeModified</span><span class="p">)</span>
+    <span class="n">updateCollectionsThatReferenceThisCollection</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">,</span> <span class="n">OldcollectionsController</span><span class="o">.</span><span class="n">queryBuilder</span><span class="p">,</span> <span class="n">contents_changed</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="removeReferencesToThisForm"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.removeReferencesToThisForm">[docs]</a><span class="k">def</span> <span class="nf">removeReferencesToThisForm</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">formId</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Remove references to a form from the ``contents`` value of another collection.</span>
+
+<span class="sd">    :param unicode contents: the value of the ``contents`` attribute of a collection.</span>
+<span class="sd">    :param int formId: an ``id`` value of a form.</span>
+<span class="sd">    :returns: the modified ``contents`` string.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">patt</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&#39;[Ff]orm\[(</span><span class="si">%d</span><span class="s">)\]&#39;</span> <span class="o">%</span> <span class="n">formId</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">patt</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">contents</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="removeReferencesToThisCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.removeReferencesToThisCollection">[docs]</a><span class="k">def</span> <span class="nf">removeReferencesToThisCollection</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">collectionId</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Remove references to a collection from the ``contents`` value of another collection.</span>
+<span class="sd">    </span>
+<span class="sd">    :param unicode contents: the value of the ``contents`` attribute of a collection.</span>
+<span class="sd">    :param int collectionId: an ``id`` value of a collection.</span>
+<span class="sd">    :returns: the modified ``contents`` string.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">patt</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&#39;[cC]ollection[\[\(](</span><span class="si">%d</span><span class="s">)[\]\)]&#39;</span> <span class="o">%</span> <span class="n">collectionId</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">patt</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">contents</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="getUnicode"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getUnicode">[docs]</a><span class="k">def</span> <span class="nf">getUnicode</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">dict_</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return ``dict_[key]``, making sure it defaults to a unicode object.&quot;&quot;&quot;</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">dict_</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s">u&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s">u&#39;&#39;</span>
+</div>
+<div class="viewcode-block" id="getContents"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getContents">[docs]</a><span class="k">def</span> <span class="nf">getContents</span><span class="p">(</span><span class="n">collectionId</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the ``contents`` value of the collection with ``collectionId`` as its ``id`` value.</span>
+
+<span class="sd">    :param int collectionId: the ``id`` value of a collection model.</span>
+<span class="sd">    :param dict collectionsReferenced: the collections (recursively) referenced by a collection.</span>
+<span class="sd">    :returns: the contents of a collection, or a warning message.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">collectionsReferenced</span><span class="p">[</span><span class="n">collectionId</span><span class="p">],</span>
+                   <span class="s">u&#39;contents&#39;</span><span class="p">,</span>
+                   <span class="s">u&#39;Collection </span><span class="si">%d</span><span class="s"> has no contents.&#39;</span> <span class="o">%</span> <span class="n">collectionId</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="generateContentsUnpacked"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.generateContentsUnpacked">[docs]</a><span class="k">def</span> <span class="nf">generateContentsUnpacked</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">,</span> <span class="n">patt</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate the ``contentsUnpacked`` value of a collection.</span>
+<span class="sd">    </span>
+<span class="sd">    :param unicode contents: the value of the ``contents`` attribute of a collection</span>
+<span class="sd">    :param dict collectionsReferenced: the collection models referenced by a</span>
+<span class="sd">        collection; keys are collection ``id`` values.</span>
+<span class="sd">    :param patt: a compiled regexp pattern object that matches collection references.</span>
+<span class="sd">    :returns: a unicode object as a value for the ``contentsUnpacked`` attribute</span>
+<span class="sd">        of a collection model.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">        Circular, invalid and unauthorized reference chains are caught in the</span>
+<span class="sd">        generation of ``collectionsReferenced``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">patt</span> <span class="o">=</span> <span class="n">patt</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">collectionReferencePattern</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">patt</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">generateContentsUnpacked</span><span class="p">(</span>
+            <span class="n">getContents</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="n">collectionsReferenced</span><span class="p">),</span>
+            <span class="n">collectionsReferenced</span><span class="p">,</span> <span class="n">patt</span><span class="p">),</span>
+        <span class="n">contents</span>
+    <span class="p">)</span>
+
+<span class="c"># Three custom error classes to raise when collection.contents are invalid</span></div>
+<span class="k">class</span> <span class="nc">CircularCollectionReferenceError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">InvalidCollectionReferenceError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">UnauthorizedCollectionReferenceError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="getCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getCollection">[docs]</a><span class="k">def</span> <span class="nf">getCollection</span><span class="p">(</span><span class="n">collectionId</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the collection such that ``collection.id==collectionId``.</span>
+
+<span class="sd">    If the collection does not exist or if ``user`` is not authorized to access</span>
+<span class="sd">    it, raise an appropriate error.</span>
+
+<span class="sd">    :param int collectionId: the ``id`` value of a collection.</span>
+<span class="sd">    :param user: a user model of the logged in user.</span>
+<span class="sd">    :param list unrestrictedUsers: the unrestricted users of the system.</span>
+<span class="sd">    :return: a collection model object.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Collection</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">collectionId</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">collection</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">user</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">unrestrictedUsers</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> \
+        <span class="n">h</span><span class="o">.</span><span class="n">userIsAuthorizedToAccessModel</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">collection</span><span class="p">,</span> <span class="n">unrestrictedUsers</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">collection</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnauthorizedCollectionReferenceError</span><span class="p">(</span><span class="n">collectionId</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">InvalidCollectionReferenceError</span><span class="p">(</span><span class="n">collectionId</span><span class="p">)</span>
+
+
+<span class="c">################################################################################</span>
+<span class="c"># Get data for requests to /collections/new and /collections/{id}/edit requests</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="getNewEditCollectionData"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.getNewEditCollectionData">[docs]</a><span class="k">def</span> <span class="nf">getNewEditCollectionData</span><span class="p">(</span><span class="n">GET_params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the data necessary to create a new OLD collection or update an existing one.</span>
+<span class="sd">    </span>
+<span class="sd">    :param GET_params: the ``request.GET`` dictionary-like object generated by</span>
+<span class="sd">        Pylons which contains the query string parameters of the request.</span>
+<span class="sd">    :returns: A dictionary whose values are lists of objects needed to create or</span>
+<span class="sd">        update collections.</span>
+
+<span class="sd">    If ``GET_params`` has no keys, then return all data.  If ``GET_params`` does</span>
+<span class="sd">    have keys, then for each key whose value is a non-empty string (and not a</span>
+<span class="sd">    valid ISO 8601 datetime) add the appropriate list of objects to the return</span>
+<span class="sd">    dictionary.  If the value of a key is a valid ISO 8601 datetime string, add</span>
+<span class="sd">    the corresponding list of objects *only* if the datetime does *not* match</span>
+<span class="sd">    the most recent ``datetimeModified`` value of the resource.  That is, a</span>
+<span class="sd">    non-matching datetime indicates that the requester has out-of-date data.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Map param names to the OLD model objects from which they are derived.</span>
+    <span class="n">paramName2ModelName</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;speakers&#39;</span><span class="p">:</span> <span class="s">&#39;Speaker&#39;</span><span class="p">,</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="s">&#39;User&#39;</span><span class="p">,</span>
+        <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="s">&#39;Tag&#39;</span><span class="p">,</span>
+        <span class="s">&#39;sources&#39;</span><span class="p">:</span> <span class="s">&#39;Source&#39;</span>
+    <span class="p">}</span>
+
+    <span class="c"># map_ maps param names to functions that retrieve the appropriate data</span>
+    <span class="c"># from the db.</span>
+    <span class="n">map_</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;speakers&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Speaker&#39;</span><span class="p">),</span>
+        <span class="s">&#39;users&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;User&#39;</span><span class="p">),</span>
+        <span class="s">&#39;tags&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Tag&#39;</span><span class="p">),</span>
+        <span class="s">&#39;sources&#39;</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">getMiniDictsGetter</span><span class="p">(</span><span class="s">&#39;Source&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c"># result is initialized as a dict with empty list values.</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">])</span>
+    <span class="n">result</span><span class="p">[</span><span class="s">&#39;collectionTypes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">collectionTypes</span>
+    <span class="n">result</span><span class="p">[</span><span class="s">&#39;markupLanguages&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">markupLanguages</span>
+
+    <span class="c"># There are GET params, so we are selective in what we return.</span>
+    <span class="k">if</span> <span class="n">GET_params</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">GET_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="c"># Proceed so long as val is not an empty string.</span>
+            <span class="k">if</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">valAsDatetimeObj</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">datetimeString2datetime</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">valAsDatetimeObj</span><span class="p">:</span>
+                    <span class="c"># Value of param is an ISO 8601 datetime string that</span>
+                    <span class="c"># does not match the most recent datetimeModified of the</span>
+                    <span class="c"># relevant model in the db: therefore we return a list</span>
+                    <span class="c"># of objects/dicts.  If the datetimes do match, this</span>
+                    <span class="c"># indicates that the requester&#39;s own stores are</span>
+                    <span class="c"># up-to-date so we return nothing.</span>
+                    <span class="k">if</span> <span class="n">valAsDatetimeObj</span> <span class="o">!=</span> <span class="n">h</span><span class="o">.</span><span class="n">getMostRecentModificationDatetime</span><span class="p">(</span>
+                    <span class="n">paramName2ModelName</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+
+    <span class="c"># There are no GET params, so we get everything from the db and return it.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">map_</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_</span><span class="p">[</span><span class="n">key</span><span class="p">]()</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># Collection Create &amp; Update Functions</span>
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="createNewCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.createNewCollection">[docs]</a><span class="k">def</span> <span class="nf">createNewCollection</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a new collection.</span>
+
+<span class="sd">    :param dict data: the collection to be created.</span>
+<span class="sd">    :param dict collectionsReferenced: the collection models recursively referenced in ``data[&#39;contents&#39;]``.</span>
+<span class="sd">    :returns: an SQLAlchemy model object representing the collection.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">()</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
+
+    <span class="c"># User-inputted string data</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;title&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">markupLanguage</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;markupLanguage&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;contents&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;contentsUnpacked&#39;</span><span class="p">])</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">html</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">getHTMLFromContents</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span><span class="p">,</span>
+                                            <span class="n">collection</span><span class="o">.</span><span class="n">markupLanguage</span><span class="p">)</span>
+
+    <span class="c"># User-inputted date: dateElicited</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">dateElicited</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">]</span>
+
+    <span class="c"># Many-to-One</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">]:</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">elicitor</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">]:</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">]:</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">]</span>
+
+    <span class="c"># Many-to-Many: tags, files &amp; forms</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;files&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;forms&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+
+    <span class="c"># Restrict the entire collection if it is associated to restricted forms or</span>
+    <span class="c"># files or if it references a restricted collection in its contents field.</span>
+    <span class="n">immediatelyReferencedCollections</span> <span class="o">=</span> <span class="n">getCollectionsReferencedInContents</span><span class="p">(</span>
+                                            <span class="n">collection</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">tags</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">files</span> <span class="o">+</span> <span class="n">collection</span><span class="o">.</span><span class="n">forms</span> <span class="o">+</span> <span class="n">immediatelyReferencedCollections</span><span class="p">]</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tagList</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tagList</span><span class="p">]</span>
+    <span class="n">restrictedTags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">restrictedTags</span><span class="p">:</span>
+        <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">restrictedTags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">restrictedTag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+            <span class="n">collection</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span>
+
+    <span class="c"># OLD-generated Data</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">datetimeEntered</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="n">collection</span><span class="o">.</span><span class="n">enterer</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+
+    <span class="k">return</span> <span class="n">collection</span>
+
+</div>
+<div class="viewcode-block" id="updateCollection"><a class="viewcode-back" href="../../../api.html#onlinelinguisticdatabase.controllers.oldcollections.updateCollection">[docs]</a><span class="k">def</span> <span class="nf">updateCollection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">collectionsReferenced</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update a collection model.</span>
+
+<span class="sd">    :param collection: the collection model to be updated.</span>
+<span class="sd">    :param dict data: representation of the updated collection.</span>
+<span class="sd">    :param dict collectionsReferenced: the collection models recursively referenced in ``data[&#39;contents&#39;]``.</span>
+<span class="sd">    :returns: a 3-tuple where the second and third elements are invariable</span>
+<span class="sd">        booleans indicating whether the collection has become restricted or has</span>
+<span class="sd">        had its ``contents`` value changed as a result of the update,</span>
+<span class="sd">        respectively.  The first element is the updated collection or ``False``</span>
+<span class="sd">        of the no update has occurred.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">restricted</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">contents_changed</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="c"># Unicode Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;title&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;description&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;markupLanguage&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;markupLanguage&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">submittedContents</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;contents&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">collection</span><span class="o">.</span><span class="n">contents</span> <span class="o">!=</span> <span class="n">submittedContents</span><span class="p">:</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">submittedContents</span>
+        <span class="n">contents_changed</span> <span class="o">=</span> <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;contentsUnpacked&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;contentsUnpacked&#39;</span><span class="p">]),</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;html&#39;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">getHTMLFromContents</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">contentsUnpacked</span><span class="p">,</span>
+                                                      <span class="n">collection</span><span class="o">.</span><span class="n">markupLanguage</span><span class="p">),</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># User-entered date: dateElicited</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;dateElicited&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;dateElicited&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># Many-to-One Data</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;elicitor&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;elicitor&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;speaker&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;speaker&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">setAttr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;source&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">],</span> <span class="n">changed</span><span class="p">)</span>
+
+    <span class="c"># Many-to-Many Data: files, forms &amp; tags</span>
+    <span class="c"># Update only if the user has made changes.</span>
+    <span class="n">filesToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;files&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">formsToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;forms&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">tagsToAdd</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;tags&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">filesToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">files</span><span class="p">):</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="n">filesToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">formsToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">forms</span><span class="p">):</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="n">formsToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c"># Restrict the entire collection if it is associated to restricted forms or</span>
+    <span class="c"># files or if it references a restricted collection.</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">tags</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">files</span> <span class="o">+</span> <span class="n">collection</span><span class="o">.</span><span class="n">forms</span> <span class="o">+</span> <span class="n">collectionsReferenced</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tagList</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tagList</span><span class="p">]</span>
+    <span class="n">restrictedTags</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span> <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">u&#39;restricted&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">restrictedTags</span><span class="p">:</span>
+        <span class="n">restrictedTag</span> <span class="o">=</span> <span class="n">restrictedTags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">restrictedTag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tagsToAdd</span><span class="p">:</span>
+            <span class="n">tagsToAdd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restrictedTag</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">tagsToAdd</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">tags</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s">u&#39;restricted&#39;</span> <span class="ow">in</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tagsToAdd</span><span class="p">]</span> <span class="ow">and</span> \
+        <span class="s">u&#39;restricted&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">tags</span><span class="p">]:</span>
+            <span class="n">restricted</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">tagsToAdd</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+        <span class="n">collection</span><span class="o">.</span><span class="n">datetimeModified</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">collection</span><span class="p">,</span> <span class="n">restricted</span><span class="p">,</span> <span class="n">contents_changed</span>
+    <span class="k">return</span> <span class="n">changed</span><span class="p">,</span> <span class="n">restricted</span><span class="p">,</span> <span class="n">contents_changed</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2013, Joel Dunham.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+    </div>
+  </body>
+</html>
