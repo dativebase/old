@@ -12,3 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""The config module contains configuration functionality.
+
+Notable are :mod:`routing`, which defines the HTTP interface to the controllers,
+and ``deployment.ini_tmpl``, which is a template used to generate the config
+file when ``paster make-config`` is run.
+
+.. module:: config
+   :synopsis: Contains configuration functionality.
+
+"""

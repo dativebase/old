@@ -12,7 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Routes configuration
+"""Routes configuration.
+
+.. module:: routing
+   :synopsis: Routes configuration.
 
 The more specific and detailed routes should be defined first so they
 may take precedent over the more generic routes. For more information
@@ -22,6 +25,12 @@ refer to the routes manual at http://routes.groovie.org/docs/
 from routes import Mapper
 
 def searchConnect(map, name, controller=None):
+    """Create a SEARCH mapping for the input ``name``/``controller``.
+    
+    E.g., ``map = searchConnect(map, 'forms')`` causes ``SEARCH /forms`` to
+    route to :func:`FormsController.search`, etc.
+
+    """
     controller = controller or name
     map.connect(name, '/%s' % name, controller=controller,
                 action='search', conditions=dict(method='SEARCH'))
@@ -32,7 +41,12 @@ def searchConnect(map, name, controller=None):
     return map
 
 def make_map(config):
-    """Create, configure and return the routes Mapper"""
+    """Create, configure and return the routes Mapper.
+
+    Define the RESTful interface, the SEARCH interface on select resources and
+    the non-RESTful interfaces, e.g., ``GET /forms/history/id``.
+
+    """
     map = Mapper(directory=config['pylons.paths']['controllers'],
                  always_scan=config['debug'])
     map.minimization = False

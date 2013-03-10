@@ -12,21 +12,22 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""The application's Globals object"""
+"""The application's Globals object.
+
+"""
 
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 
 class Globals(object):
-    """Globals acts as a container for objects available throughout the
-    life of the application
+    """Globals acts as a container for objects available throughout the life of the application.
 
     """
 
     def __init__(self, config):
         """One instance of Globals is created during application
         initialization and is available during requests via the
-        'app_globals' variable
+        'app_globals' variable.
 
         """
         self.cache = CacheManager(**parse_cache_config_options(config))

@@ -4,6 +4,34 @@
 .. module:: onlinelinguisticdatabase
 
 
+:mod:`config`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. module:: onlinelinguisticdatabase.config
+
+
+:mod:`environment`
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. automodule:: onlinelinguisticdatabase.controllers.environment
+   :members:
+
+
+:mod:`middleware`
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. automodule:: onlinelinguisticdatabase.controllers.middleware
+   :members:
+
+
+:mod:`routing`
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. automodule:: onlinelinguisticdatabase.controllers.routing
+   :members:
+
+
+
 :mod:`controllers`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

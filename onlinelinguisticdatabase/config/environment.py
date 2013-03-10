@@ -12,7 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Pylons environment configuration"""
+"""Pylons environment configuration.
+
+.. module:: environment
+   :synopsis: Pylons environment configuration.
+
+"""
+
 import os, re
 
 from mako.lookup import TemplateLookup
@@ -26,8 +32,14 @@ from onlinelinguisticdatabase.config.routing import make_map
 from onlinelinguisticdatabase.model import init_model
 
 def load_environment(global_conf, app_conf):
-    """Configure the Pylons environment via the ``pylons.config``
-    object
+    """Configure the Pylons environment via the ``pylons.config`` object.
+    
+    .. note::
+    
+        This is where the ``regexp`` operator for SQLite is defined and where
+        the ``PRAGMA`` command is issued to make SQLite LIKE queries
+        case-sensitive.
+
     """
     config = PylonsConfig()
     

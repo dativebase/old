@@ -12,7 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Pylons middleware initialization"""
+"""Pylons middleware initialization.
+
+.. module:: middleware
+   :synopsis: middleware initialization.
+
+"""
 from beaker.middleware import SessionMiddleware
 from paste.cascade import Cascade
 from paste.registry import RegistryManager
@@ -27,8 +32,8 @@ import logging
 log = logging.getLogger(__name__)
 
 class HTML2JSONContentType(object):
-    """Brute force text/html Content-Type in response to application/json.
-    Take that Pylons!
+    """Middleware transforms ``Content-Type: text/html`` headers to ``Content-Type: application/json``.
+
     """
     def __init__(self, app):
         self.app = app
@@ -79,7 +84,7 @@ def make_app(global_conf, full_stack=False, static_files=True, **app_conf):
 
     # At some point it seems that Pylons converts the Content-Type of any
     # response without a 200 OK status to 'text/html; charset=utf-8'.  Well
-    # no more motherfucker!  The HTML2JSONContentType middleware zaps those
+    # no more Pylons!  The HTML2JSONContentType middleware zaps those
     # nasty text/html content types and converts them to application/json!
     app = HTML2JSONContentType(app)
 
