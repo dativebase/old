@@ -68,6 +68,10 @@ def make_map(config):
     map.connect('/login/authenticate', controller='login', action='authenticate')
     map.connect('/login/logout', controller='login', action='logout')
     map.connect('/login/email_reset_password', controller='login', action='email_reset_password')
+    map.connect('/phonologies/compile/{id}', controller='phonologies',
+                action='compile', conditions=dict(method='PUT'))
+    map.connect('/phonologies/applydown/{id}', controller='phonologies',
+                action='applydown', conditions=dict(method='PUT'))
 
     # SEARCH routes
     map = searchConnect(map, 'collectionbackups')

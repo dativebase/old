@@ -37,15 +37,21 @@ class Phonology(Base):
     modifier = relation('User', primaryjoin='Phonology.modifier_id==User.id')
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
+    datetimeCompiled = Column(DateTime)
+    compileSucceeded = Column(Boolean, default=False)
+    compileMessage = Column(Unicode(255))
 
     def getDict(self):
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'script': self.getMiniUserDict(self.script),
+            'script': self.script,
             'enterer': self.getMiniUserDict(self.enterer),
-            'modifier': self.modifier,
+            'modifier': self.getMiniUserDict(self.modifier),
             'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified
+            'datetimeModified': self.datetimeModified,
+            'datetimeCompiled': self.datetimeCompiled,
+            'compileSucceeded': self.compileSucceeded,
+            'compileMessage': self.compileMessage
         }

@@ -64,7 +64,7 @@ from markdown import Markdown
 from docutils.core import publish_parts
 from decorator import decorator
 from pylons.decorators.util import get_pylons
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, call
 
 import logging
 
@@ -206,6 +206,17 @@ def restrict(*methods):
 # File system functions
 ################################################################################
 
+def getModificationTime(path):
+    """Return the modification time of the file or directory with ``path``.
+
+    Return None if path doesn't exist.
+
+    """
+    try:
+        return os.path.getmtime(path)
+    except Exception:
+        return None
+
 def getConfig(**kwargs):
     """Try desperately to get a Pylons config object.  The best thing is if a
     config object is passed in kwargs['config'].
@@ -270,6 +281,18 @@ def renameResearcherDirectory(oldName, newName, **kwargs):
             os.rename(oldPath, newPath)
         except OSError:
             makeDirectorySafely(newPath)
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
+
+def destroyAllPhonologyDirectories(**kwargs):
+    """Remove all directories from analysis/phonology/."""
+    config = getConfig(**kwargs)
+    try:
+        phonologyPath = os.path.join(config['analysis_data'], 'phonology')
+        for name in os.listdir(phonologyPath):
+            path = os.path.join(phonologyPath, name)
+            if os.path.isdir(path):
+                rmtree(path)
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
@@ -1489,8 +1512,10 @@ def commandLineProgramInstalled(command):
         return False
 
 def ffmpegInstalled():
-    """Check if the ffmpeg command-line utility is installed on the host.  Check
-    first if the answer to this question is cached in app_globals.
+    """Check if the ffmpeg command-line utility is installed on the host.
+
+    Check first if the answer to this question is cached in app_globals.
+
     """
     try:
         return app_globals.ffmpegInstalled
@@ -1498,6 +1523,20 @@ def ffmpegInstalled():
         ffmpegInstalled = commandLineProgramInstalled(['ffmpeg'])
         app_globals.ffmpegInstalled = ffmpegInstalled
         return ffmpegInstalled
+
+def fomaInstalled():
+    """Check if the foma and flookup command-line utilities are installed on the host.
+
+    Check first if the answer to this question is cached in app_globals.
+
+    """
+    try:
+        return app_globals.fomaInstalled
+    except AttributeError:
+        fomaInstalled = commandLineProgramInstalled(['foma']) and \
+                        commandLineProgramInstalled(['flookup'])
+        app_globals.fomaInstalled = fomaInstalled
+        return fomaInstalled
 
 def ffmpegEncodes(format_):
     """Check if ffmpeg encodes the input format.  First check if it's installed."""
@@ -1593,3 +1632,7 @@ def setAttr(obj, name, value, changed):
 
 
 validationValues = (u'None', u'Warning', u'Error')
+
+# How long to wait (in seconds) before terminating a process that is trying to
+# compile a foma script.
+phonologyCompileTimeout = 30

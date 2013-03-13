@@ -16,6 +16,7 @@ import re
 import datetime
 import logging
 import os
+import codecs
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
@@ -35,6 +36,31 @@ class TestPhonologiesController(TestController):
 
     here = appconfig('config:test.ini', relative_to='.')['here']
     researchersPath = os.path.join(here, 'files', 'researchers')
+    phonologyPath = os.path.join(here, 'analysis', 'phonology')
+    testPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
+                                    'tests', 'data', 'test_phonology.script')
+    testPhonologyScript = h.normalize(
+        codecs.open(testPhonologyScriptPath, 'r', 'utf8').read())
+
+    testMalformedPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
+                                    'tests', 'data', 'test_phonology_malformed.script')
+    testMalformedPhonologyScript = h.normalize(
+        codecs.open(testMalformedPhonologyScriptPath, 'r', 'utf8').read())
+
+    testPhonologyNoPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
+                                    'tests', 'data', 'test_phonology_malformed.script')
+    testPhonologyNoPhonologyScript = h.normalize(
+        codecs.open(testPhonologyNoPhonologyScriptPath, 'r', 'utf8').read())
+
+    testMediumPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
+                                    'tests', 'data', 'test_phonology_medium.script')
+    testMediumPhonologyScript = h.normalize(
+        codecs.open(testMediumPhonologyScriptPath, 'r', 'utf8').read())
+
+    testLargePhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
+                                    'tests', 'data', 'test_phonology_large.script')
+    testLargePhonologyScript = h.normalize(
+        codecs.open(testLargePhonologyScriptPath, 'r', 'utf8').read())
 
     createParams = {
         'name': u'',
@@ -51,6 +77,7 @@ class TestPhonologiesController(TestController):
     def tearDown(self):
         h.clearAllModels()
         h.destroyAllResearcherDirectories()
+        h.destroyAllPhonologyDirectories()
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()
         viewer = h.generateDefaultViewer()
@@ -157,7 +184,7 @@ class TestPhonologiesController(TestController):
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
-            'script': u'# The rules will begin after this comment.\n\n'
+            'script': self.testPhonologyScript
         })
         params = json.dumps(params)
         response = self.app.post(url('phonologies'), params, self.json_headers,
@@ -171,10 +198,14 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         newPhonologyCount = Session.query(Phonology).count()
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
         assert newPhonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
+        assert 'phonology_%d.script' % resp['id'] in phonologyDirContents
         assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyScript
 
         # Invalid because name is not unique
         params = self.createParams.copy()
@@ -317,7 +348,7 @@ class TestPhonologiesController(TestController):
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
-            'script': u'# The rules will begin after this comment.\n\n'
+            'script': self.testPhonologyScript
         })
         params = json.dumps(params)
         response = self.app.post(url('phonologies'), params, self.json_headers, self.extra_environ_admin)
@@ -325,9 +356,14 @@ class TestPhonologiesController(TestController):
         phonologyCount = Session.query(Phonology).count()
         phonologyId = resp['id']
         originalDatetimeModified = resp['datetimeModified']
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
         assert phonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
+        assert 'phonology_%d.script' % resp['id'] in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyScript
 
         # Now delete the phonology
         response = self.app.delete(url('phonology', id=phonologyId), headers=self.json_headers,
@@ -337,6 +373,8 @@ class TestPhonologiesController(TestController):
         assert newPhonologyCount == phonologyCount - 1
         assert resp['id'] == phonologyId
         assert response.content_type == 'application/json'
+        assert not os.path.exists(phonologyDir)
+        assert resp['script'] == self.testPhonologyScript
 
         # Trying to get the deleted phonology from the db should return None
         deletedPhonology = Session.query(Phonology).get(phonologyId)
@@ -456,3 +494,415 @@ class TestPhonologiesController(TestController):
         assert resp['phonology']['name'] == u'Phonology'
         assert resp['data'] == {}
         assert response.content_type == 'application/json'
+
+    #@nottest
+    def test_compile(self):
+        """Tests that PUT /phonologies/compile/id compiles the foma script of the phonology with id.
+
+        .. note::
+        
+            Phonology compilation is accomplished via a worker thread and
+            requests to /phonologies/compile/id return immediately.  When the
+            script compilation attempt has terminated, the values of the
+            ``datetimeCompiled``, ``datetimeModified``, ``compileSucceeded``,
+            ``compileMessage`` and ``modifier`` attributes of the phonology are
+            updated.  Therefore, the tests must poll ``GET /phonologies/id``
+            in order to know when the compilation-tasked worker has finished.
+
+        .. note::
+        
+            Depending on system resources, the following tests may fail.  A fast
+            system may compile the large FST in under 30 seconds; a slow one may
+            fail to compile the medium one in under 30.
+
+        Test for Modifier
+        Backups
+
+        """
+
+        # Create a phonology with the test phonology script
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonology1Id = resp['id']
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
+        assert resp['name'] == u'Blackfoot Phonology'
+        assert 'phonology_%d.script' % phonology1Id in phonologyDirContents
+        assert 'phonology_%d.sh' % phonology1Id in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyScript
+        assert resp['modifier']['role'] == u'administrator'
+
+        # Compile the phonology's script
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
+                                headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+
+        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonology1Id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonology1Id)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+        assert resp['modifier']['role'] == u'contributor'
+
+        ########################################################################
+        # Three types of scripts that won't compile
+        ########################################################################
+
+        # 1. Create a phonology whose script is malformed using
+        # ``tests/data/test_phonology_malformed.script``.
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 2',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testMalformedPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyId = resp['id']
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
+        assert resp['name'] == u'Blackfoot Phonology 2'
+        assert 'phonology_%d.script' % phonologyId in phonologyDirContents
+        assert 'phonology_%d.sh' % phonologyId in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testMalformedPhonologyScript
+
+        # Attempt to compile the malformed phonology's script and expect to fail
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
+                                headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+        assert resp['id'] == phonologyId
+
+        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonologyId),
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonologyId)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == False
+        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert phonologyBinaryFilename not in os.listdir(phonologyDir)
+
+        # 2. Create a phonology whose script does not define a regex called "phonology"
+        # using ``tests/data/test_phonology_no_phonology.script``.
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 3',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testPhonologyNoPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyId = resp['id']
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
+        assert resp['name'] == u'Blackfoot Phonology 3'
+        assert 'phonology_%d.script' % phonologyId in phonologyDirContents
+        assert 'phonology_%d.sh' % phonologyId in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyNoPhonologyScript
+
+        # Attempt to compile the malformed phonology's script and expect to fail
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
+                                headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+        assert resp['id'] == phonologyId
+
+        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonologyId),
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonologyId)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == False
+        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert phonologyBinaryFilename not in os.listdir(phonologyDir)
+
+        # 3. Create a phonology whose script is empty.
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 4',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': u''
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyId = resp['id']
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
+        assert resp['name'] == u'Blackfoot Phonology 4'
+        assert 'phonology_%d.script' % phonologyId in phonologyDirContents
+        assert 'phonology_%d.sh' % phonologyId in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == u''
+
+        # Attempt to compile the malformed phonology's script and expect to fail
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
+                                headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+        assert resp['id'] == phonologyId
+
+        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonologyId),
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonologyId)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == False
+        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert phonologyBinaryFilename not in os.listdir(phonologyDir)
+
+        ########################################################################
+        # Compile a medium phonology -- compilation should be long but not exceed the 30s limit.
+        ########################################################################
+        
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 5',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testMediumPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyId = resp['id']
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
+        assert resp['name'] == u'Blackfoot Phonology 5'
+        assert 'phonology_%d.script' % phonologyId in phonologyDirContents
+        assert 'phonology_%d.sh' % phonologyId in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testMediumPhonologyScript
+
+        # Compile the phonology's script
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
+                                headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+        assert resp['id'] == phonologyId
+
+        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonologyId),
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonologyId)
+            sleep(3)
+
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+
+        ########################################################################
+        # Compile a large phonology -- compilation should exceed the 30s limit.
+        ########################################################################
+        
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 6',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testLargePhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyId = resp['id']
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
+        assert resp['name'] == u'Blackfoot Phonology 6'
+        assert 'phonology_%d.script' % phonologyId in phonologyDirContents
+        assert 'phonology_%d.sh' % phonologyId in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testLargePhonologyScript
+
+        # Compile the phonology's script
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
+                                headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+        assert resp['id'] == phonologyId
+
+        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonologyId),
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonologyId)
+            sleep(3)
+
+        assert resp['compileSucceeded'] == False
+        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert phonologyBinaryFilename not in os.listdir(phonologyDir)
+
+
+        # Compile the first phonology's script again
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
+                                headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+
+        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonology1Id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonology1Id)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+
+    #@nottest
+    def test_applydown(self):
+
+        # Create a phonology with the test phonology script
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonology1Id = resp['id']
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
+        assert resp['name'] == u'Blackfoot Phonology'
+        assert 'phonology_%d.script' % phonology1Id in phonologyDirContents
+        assert 'phonology_%d.sh' % phonology1Id in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyScript
+        assert resp['modifier']['role'] == u'administrator'
+
+        # Compile the phonology's script
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
+                                headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+
+        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
+        # changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonology1Id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonology1Id)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+        assert resp['modifier']['role'] == u'contributor'
+
+
+        params = json.dumps([u'nit-wa', 'kit-ihpiyi'])
+        response = self.app.put(url(controller='phonologies', action='applydown', id=phonology1Id),
+                                params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        log.debug(resp)

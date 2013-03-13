@@ -23,19 +23,22 @@ import logging
 import datetime
 import re
 import simplejson as json
-
+import os
+import codecs
+from subprocess import call, PIPE, Popen
+from shutil import rmtree
 from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import PhonologySchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Phonology
+from onlinelinguisticdatabase.lib.worker import worker_q
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +99,7 @@ class PhonologiesController(BaseController):
             phonology = createNewPhonology(data)
             Session.add(phonology)
             Session.commit()
+            savePhonologyScript(phonology)
             return phonology
         except h.JSONDecodeError:
             response.status_int = 400
@@ -143,6 +147,7 @@ class PhonologiesController(BaseController):
                 if phonology:
                     Session.add(phonology)
                     Session.commit()
+                    savePhonologyScript(phonology)
                     return phonology
                 else:
                     response.status_int = 400
@@ -174,6 +179,7 @@ class PhonologiesController(BaseController):
         if phonology:
             Session.delete(phonology)
             Session.commit()
+            removePhonologyDirectory(phonology)
             return phonology
         else:
             response.status_int = 404
@@ -218,6 +224,83 @@ class PhonologiesController(BaseController):
         phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
             return {'data': {}, 'phonology': phonology}
+        else:
+            response.status_int = 404
+            return {'error': 'There is no phonology with id %s' % id}
+
+    @h.jsonify
+    @h.restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def compile(self, id):
+        """Compile the script of a phonology as a foma FST.
+
+        :URL: ``PUT /phonologies/compile/id``
+        :param str id: the ``id`` value of the phonology whose script will be compiled.
+        :returns: if the phonology exists and foma is installed, the phonology
+            model is returned;  ``GET /phonologies/id`` must be polled to
+            determine when and how the compilation task has terminated.
+
+        .. note::
+
+            The script is compiled asynchronously in a worker thread.  See 
+            :mod:`onlinelinguisticdatabase.lib.worker`.
+
+        """
+        phonology = Session.query(Phonology).get(id)
+        if phonology:
+            if h.fomaInstalled():
+                phonologyDirPath = getPhonologyDirPath(phonology)
+                worker_q.put({
+                    'id': h.generateSalt(),
+                    'func': 'compilePhonologyScript',
+                    'args': (phonology.id, phonologyDirPath, session['user'].id,
+                             h.phonologyCompileTimeout)
+                })
+                return phonology
+            else:
+                response.status_int = 400
+                return {'error': 'The command-line programs foma and flookup must be installed in order to compile phonologies.'}
+        else:
+            response.status_int = 404
+            return {'error': 'There is no phonology with id %s' % id}
+
+    @h.jsonify
+    @h.restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def applydown(self, id):
+        """Apply-down (i.e., phonologize) the input in the request body using a phonology.
+
+        :URL: ``PUT /phonologies/applydown/id`` (or ``PUT /phonologies/phonologize/id``)
+        :param str id: the ``id`` value of the phonology that will be used.
+        :returns: if the phonology exists and foma is installed, the phonology
+            model is returned;  ``GET /phonologies/id`` must be polled to
+            determine when and how the compilation task has terminated.
+
+        """
+        phonology = Session.query(Phonology).get(id)
+        if phonology:
+            if h.fomaInstalled():
+                phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
+                if os.path.isfile(phonologyBinaryPath):
+                    inputs = json.loads(unicode(request.body, request.charset))
+                    result = {}
+                    for segmentation in inputs:
+                        p = Popen(['flookup', '-x', '-i', phonologyBinaryPath],
+                                  shell=False,
+                                  stdin=PIPE,
+                                  stdout=PIPE)
+                        p.stdin.write(segmentation.encode('utf-8'))
+                        result[segmentation] = filter(
+                            None, unicode(p.communicate()[0], 'utf-8').split('\n'))
+                    return result
+                else:
+                    response.status_int = 400
+                    return {'error': 'Phonology %d has not been compiled yet.'}
+            else:
+                response.status_int = 400
+                return {'error': 'The command-line programs foma and flookup must be installed in order to compile phonologies.'}
         else:
             response.status_int = 404
             return {'error': 'There is no phonology with id %s' % id}
@@ -267,3 +350,76 @@ def updatePhonology(phonology, data):
         phonology.datetimeModified = datetime.datetime.utcnow()
         return phonology
     return changed
+
+def savePhonologyScript(phonology):
+    """Save the phonology's ``script`` value to disk as ``phonology_<id>.script``.
+    
+    Also create the phonology compiler shell script, i.e., ``phonology_<id>.sh``
+    which will be used to compile the phonology FST to a binary.
+
+    :param phonology: a phonology model.
+    :returns: the absolute path to the newly created phonology script file.
+
+    """
+    try:
+        phonologyDirPath = createPhonologyDir(phonology)
+        phonologyScriptPath = getPhonologyFilePath(phonology, 'script')
+        phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
+        phonologyCompilerPath = getPhonologyFilePath(phonology, 'compiler')
+        with codecs.open(phonologyScriptPath, 'w', 'utf8') as f:
+            f.write(phonology.script)
+        # The compiler shell script loads the foma script and compiles it to binary form.
+        with open(phonologyCompilerPath, 'w') as f:
+            f.write('#!/bin/sh\nfoma -e "source %s" -e "regex phonology;" -e "save stack %s" -e "quit"' % (
+                    phonologyScriptPath, phonologyBinaryPath))
+        os.chmod(phonologyCompilerPath, 0744)
+        return phonologyScriptPath
+    except Exception:
+        return None
+
+def createPhonologyDir(phonology):
+    """Create the directory to hold the phonology script and auxiliary files.
+    
+    :param phonology: a phonology model object.
+    :returns: an absolute path to the directory for the phonology.
+
+    """
+    phonologyDirPath = getPhonologyDirPath(phonology)
+    h.makeDirectorySafely(phonologyDirPath)
+    return phonologyDirPath
+
+def getPhonologyDirPath(phonology):
+    """Return the path to a phonology's directory.
+    
+    :param phonology: a phonology model object.
+    :returns: an absolute path to the directory for the phonology.
+
+    """
+    return os.path.join(config['analysis_data'],
+                                    'phonology', 'phonology_%d' % phonology.id)
+
+def getPhonologyFilePath(phonology, fileType='script'):
+    """Return the path to a phonology's file of the given type.
+    
+    :param phonology: a phonology model object.
+    :param str fileType: one of 'script', 'binary', 'compiler', or 'tester'.
+    :returns: an absolute path to the phonology's script file.
+
+    """
+    extMap = {'script': 'script', 'binary': 'foma', 'compiler': 'sh', 'tester': 'tester.sh'}
+    return os.path.join(getPhonologyDirPath(phonology),
+            'phonology_%d.%s' % (phonology.id, extMap.get(fileType, 'script')))
+
+def removePhonologyDirectory(phonology):
+    """Remove the directory of the phonology model and everything in it.
+    
+    :param phonology: a phonology model object.
+    :returns: an absolute path to the directory for the phonology.
+
+    """
+    try:
+        phonologyDirPath = getPhonologyDirPath(phonology)
+        rmtree(phonologyDirPath)
+        return phonologyDirPath
+    except Exception:
+        return None

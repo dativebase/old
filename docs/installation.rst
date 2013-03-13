@@ -421,6 +421,11 @@ like your OLD application to automatically create reduced-size images and lossy
 downloaded and installed using the instructions on the above-linked pages.  I
 provide brief instructions here.
 
+In order to allow the specification of phonologies as finite-state transducers,
+the OLD uses the command-line programs
+`foma and flookup <http://code.google.com/p/foma/>`_.  See the linked
+page for installation instructions.
+
 
 PIL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -43,7 +43,7 @@ def setup_app(command, conf, vars):
     # Create the analysis directories.
     h.makeDirectorySafely('analysis')
     h.makeDirectorySafely(os.path.join('analysis', 'phonology'))
-    h.makeDirectorySafely(os.path.join('analysis', 'morphotactics'))
+    h.makeDirectorySafely(os.path.join('analysis', 'morphology'))
     h.makeDirectorySafely(os.path.join('analysis', 'morphophonology'))
     h.makeDirectorySafely(os.path.join('analysis', 'probabilitycalculator'))
 

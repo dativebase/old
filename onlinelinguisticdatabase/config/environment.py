@@ -25,11 +25,14 @@ from mako.lookup import TemplateLookup
 from pylons.configuration import PylonsConfig
 from pylons.error import handle_mako_error
 from sqlalchemy import engine_from_config
-
 import onlinelinguisticdatabase.lib.app_globals as app_globals
 import onlinelinguisticdatabase.lib.helpers
+from onlinelinguisticdatabase.lib.worker import start_worker
 from onlinelinguisticdatabase.config.routing import make_map
 from onlinelinguisticdatabase.model import init_model
+import logging
+
+log = logging.getLogger(__name__)
 
 def load_environment(global_conf, app_conf):
     """Configure the Pylons environment via the ``pylons.config`` object.
@@ -42,7 +45,7 @@ def load_environment(global_conf, app_conf):
 
     """
     config = PylonsConfig()
-    
+
     # Pylons paths
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     paths = dict(root=root,
@@ -108,7 +111,7 @@ def load_environment(global_conf, app_conf):
             engine = engine_from_config(
                 config, 'sqlalchemy.', listeners=[SQLiteSetup()])
             # Make LIKE searches case sensitive in SQLite
-            engine.execute('PRAGMA case_sensitive_like=ON')        
+            engine.execute('PRAGMA case_sensitive_like=ON')
             class SQLiteSetup(PoolListener):
                 """A PoolListener used to provide the SQLite dbapi with a regexp function.
                 """
@@ -128,4 +131,8 @@ def load_environment(global_conf, app_conf):
                         return item and patt.search(str(item)) is not None
 
     init_model(engine)
+
+    # start worker -- used for long-running tasks like FST compilation
+    worker = start_worker()
+
     return config
