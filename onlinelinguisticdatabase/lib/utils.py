@@ -751,6 +751,18 @@ def getCollectionByUUID(UUID):
     """Return the first (and only, hopefully) Collection model with UUID."""
     return Session.query(Collection).filter(Collection.UUID==UUID).first()
 
+def getModelByUUID(modelName, UUID):
+    """Return the first (and only, hopefully) only model of type ``modelName`` with ``UUID``.
+    
+    .. note::
+    
+        GET EAGERLOADING!!!
+    
+    """
+    return Session.query(getattr(model, modelName))\
+        .filter(getattr(model, modelName).UUID==UUID).first()
+
+
 def getFormBackupsByUUID(UUID):
     """Return all FormBackup models with UUID = UUID."""
     return Session.query(FormBackup).filter(
@@ -762,6 +774,13 @@ def getCollectionBackupsByUUID(UUID):
     return Session.query(CollectionBackup).filter(
         CollectionBackup.UUID==UUID).order_by(desc(
         CollectionBackup.id)).all()
+
+def getBackupsByUUID(modelName, UUID):
+    """Return all backup models of the model with ``modelName`` using the ``UUID`` value."""
+    backupModel = getattr(model, modelName + 'Backup')
+    return Session.query(backupModel).\
+            filter(backupModel.UUID==UUID).\
+            order_by(desc(backupModel.id)).all()
 
 def getFormBackupsByFormId(formId):
     """Return all FormBackup models with form_id = formId.  WARNING: unexpected
@@ -780,6 +799,20 @@ def getCollectionBackupsByCollectionId(collectionId):
     return Session.query(CollectionBackup).filter(
         CollectionBackup.collection_id==collectionId).order_by(desc(
         CollectionBackup.id)).all()
+
+def getBackupsByModelId(modelName, modelId):
+    """Return all backup models of the model with ``modelName`` using the ``id`` value of the model.
+
+    .. warning::
+    
+        Unexpected data may be returned (on an SQLite backend) if primary
+        key ids of deleted models are recycled.
+
+    """
+    backupModel = getattr(model, modelName + 'Backup')
+    return Session.query(backupModel).\
+        filter(getattr(backupModel, modelName.lower() + '_id')==modelId).\
+        order_by(desc(backupModel.id)).all()
 
 def getCollections():
     return getModelsByName('Collection', True)
@@ -1524,12 +1557,15 @@ def ffmpegInstalled():
         app_globals.ffmpegInstalled = ffmpegInstalled
         return ffmpegInstalled
 
-def fomaInstalled():
+def fomaInstalled(forceCheck=False):
     """Check if the foma and flookup command-line utilities are installed on the host.
 
     Check first if the answer to this question is cached in app_globals.
 
     """
+    if forceCheck:
+        return commandLineProgramInstalled(['foma']) and \
+            commandLineProgramInstalled(['flookup'])
     try:
         return app_globals.fomaInstalled
     except AttributeError:

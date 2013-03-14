@@ -72,6 +72,11 @@ def make_map(config):
                 action='compile', conditions=dict(method='PUT'))
     map.connect('/phonologies/applydown/{id}', controller='phonologies',
                 action='applydown', conditions=dict(method='PUT'))
+    map.connect('/phonologies/phonologize/{id}', controller='phonologies',
+                action='applydown', conditions=dict(method='PUT'))
+    map.connect('/phonologies/runtests/{id}', controller='phonologies',
+                action='runtests', conditions=dict(method='GET'))
+    map.connect('/phonologies/history/{id}', controller='phonologies', action='history')
 
     # SEARCH routes
     map = searchConnect(map, 'collectionbackups')

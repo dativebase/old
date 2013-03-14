@@ -24,7 +24,6 @@ import datetime
 import re
 import simplejson as json
 from uuid import uuid4
-
 from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from formencode.validators import Invalid

@@ -191,6 +191,5 @@ def compilePhonologyScript(phonologyId, phonologyDirPath, userId, timeout=30):
     now = h.now()
     phonology.datetimeModified = now
     phonology.datetimeCompiled = now
-    #phonology.modifier = Session.query(User).get(userId)
     phonology.modifier_id = userId
     Session.commit()

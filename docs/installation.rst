@@ -430,12 +430,23 @@ page for installation instructions.
 PIL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To install PIL, download and decompress the source.  Then change to the root
-folder and run ``setup.py install`` (remembering to use your ``virtualenv``
+To install PIL, download and decompress the
+`source <http://www.pythonware.com/products/pil/#pil117>`_.  Then move into the
+root folder and run ``setup.py install`` (remembering to use your ``virtualenv``
 Python executable, if necessary)::
 
     cd Imaging-1.1.7
     python setup.py install
+
+.. note::
+
+    I experienced difficulties installing PIL in this way such that jpeg
+    functionality was not working.  To correctly install PIL, I did::
+    
+        cd Imaging-1.1.7
+        ~/env/bin/python setup.py build_ext -i
+        ~/env/bin/python selftests.py
+        ~/env/bin/python setup.py install
 
 The OLD accepts .jpg, .png and .gif image file uploads.  If you want to test
 whether the PIL install can resize all of these formats, create a test file of

@@ -18,6 +18,7 @@ import logging
 import os
 import codecs
 import simplejson as json
+from uuid import uuid4
 from time import sleep
 from nose.tools import nottest
 from paste.deploy import appconfig
@@ -26,7 +27,7 @@ from onlinelinguisticdatabase.tests import *
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.model import Phonology
+from onlinelinguisticdatabase.model import Phonology, PhonologyBackup
 from onlinelinguisticdatabase.lib.bibtex import entryTypes
 
 log = logging.getLogger(__name__)
@@ -61,6 +62,12 @@ class TestPhonologiesController(TestController):
                                     'tests', 'data', 'test_phonology_large.script')
     testLargePhonologyScript = h.normalize(
         codecs.open(testLargePhonologyScriptPath, 'r', 'utf8').read())
+
+    testPhonologyTestlessScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
+                                    'tests', 'data', 'test_phonology_no_tests.script')
+    testPhonologyTestlessScript = h.normalize(
+        codecs.open(testPhonologyTestlessScriptPath, 'r', 'utf8').read())
+
 
     createParams = {
         'name': u'',
@@ -291,10 +298,11 @@ class TestPhonologiesController(TestController):
         # Create a phonology to update.
         originalPhonologyCount = Session.query(Phonology).count()
         params = self.createParams.copy()
+        originalScript = u'# The rules will begin after this comment.\n\n'
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
-            'script': u'# The rules will begin after this comment.\n\n'
+            'script': originalScript
         })
         params = json.dumps(params)
         response = self.app.post(url('phonologies'), params, self.json_headers, self.extra_environ_admin)
@@ -308,21 +316,33 @@ class TestPhonologiesController(TestController):
 
         # Update the phonology
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
+        newScript = u'define phonology o -> 0 || t "-" _ k "-";'
+        origBackupCount = Session.query(PhonologyBackup).count()
         params = self.createParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.  Best yet!',
-            'script': u'# The rules will begin after this comment.\n\n'
+            'script': newScript
         })
         params = json.dumps(params)
         response = self.app.put(url('phonology', id=phonologyId), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
+        newBackupCount = Session.query(PhonologyBackup).count()
         datetimeModified = resp['datetimeModified']
         newPhonologyCount = Session.query(Phonology).count()
         assert phonologyCount == newPhonologyCount
         assert datetimeModified != originalDatetimeModified
         assert resp['description'] == u'Covers a lot of the data.  Best yet!'
+        assert resp['script'] == newScript
+        assert response.content_type == 'application/json'
+        assert origBackupCount + 1 == newBackupCount
+        backup = Session.query(PhonologyBackup).filter(
+            PhonologyBackup.UUID==unicode(
+            resp['UUID'])).order_by(
+            desc(PhonologyBackup.id)).first()
+        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.script == originalScript
         assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
@@ -342,8 +362,11 @@ class TestPhonologiesController(TestController):
     def test_delete(self):
         """Tests that DELETE /phonologies/id deletes the phonology with id=id."""
 
+        # Count the original number of phonologies and phonologyBackups.
+        phonologyCount = Session.query(Phonology).count()
+        phonologyBackupCount = Session.query(PhonologyBackup).count()
+
         # Create a phonology to delete.
-        originalPhonologyCount = Session.query(Phonology).count()
         params = self.createParams.copy()
         params.update({
             'name': u'Phonology',
@@ -353,24 +376,32 @@ class TestPhonologiesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('phonologies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyCount = Session.query(Phonology).count()
         phonologyId = resp['id']
         originalDatetimeModified = resp['datetimeModified']
         phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
-        assert phonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
         assert 'phonology_%d.script' % resp['id'] in phonologyDirContents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.testPhonologyScript
 
+        # Now count the phonologies and phonologyBackups.
+        newPhonologyCount = Session.query(Phonology).count()
+        newPhonologyBackupCount = Session.query(PhonologyBackup).count()
+        assert newPhonologyCount == phonologyCount + 1
+        assert newPhonologyBackupCount == phonologyBackupCount
+
         # Now delete the phonology
         response = self.app.delete(url('phonology', id=phonologyId), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
+        phonologyCount = newPhonologyCount
         newPhonologyCount = Session.query(Phonology).count()
+        phonologyBackupCount = newPhonologyBackupCount
+        newPhonologyBackupCount = Session.query(PhonologyBackup).count()
         assert newPhonologyCount == phonologyCount - 1
+        assert newPhonologyBackupCount == phonologyBackupCount + 1
         assert resp['id'] == phonologyId
         assert response.content_type == 'application/json'
         assert not os.path.exists(phonologyDir)
@@ -379,6 +410,15 @@ class TestPhonologiesController(TestController):
         # Trying to get the deleted phonology from the db should return None
         deletedPhonology = Session.query(Phonology).get(phonologyId)
         assert deletedPhonology == None
+
+        # The backed up phonology should have the deleted phonology's attributes
+        backedUpPhonology = Session.query(PhonologyBackup).filter(
+            PhonologyBackup.UUID==unicode(resp['UUID'])).first()
+        assert backedUpPhonology.name == resp['name']
+        modifier = json.loads(unicode(backedUpPhonology.modifier))
+        assert modifier['firstName'] == u'Admin'
+        assert backedUpPhonology.datetimeEntered.isoformat() == resp['datetimeEntered']
+        assert backedUpPhonology.UUID == resp['UUID']
 
         # Delete with an invalid id
         id = 9999999999999
@@ -515,11 +555,9 @@ class TestPhonologiesController(TestController):
             system may compile the large FST in under 30 seconds; a slow one may
             fail to compile the medium one in under 30.
 
-        Test for Modifier
         Backups
 
         """
-
         # Create a phonology with the test phonology script
         params = self.createParams.copy()
         params.update({
@@ -543,9 +581,20 @@ class TestPhonologiesController(TestController):
         assert resp['script'] == self.testPhonologyScript
         assert resp['modifier']['role'] == u'administrator'
 
+        # If foma is not installed, make sure the error message is being returned
+        # and exit the test.
+        if not h.fomaInstalled(forceCheck=True):
+            response = self.app.put(url(controller='phonologies', action='compile',
+                        id=phonology1Id), headers=self.json_headers,
+                        extra_environ=self.extra_environ_contrib, status=400)
+            resp = json.loads(response.body)
+            assert resp['error'] == u'Foma and flookup are not installed.'
+            return
+
         # Compile the phonology's script
-        response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
-                                headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        response = self.app.put(url(controller='phonologies', action='compile',
+                    id=phonology1Id), headers=self.json_headers,
+                    extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         datetimeCompiled = resp['datetimeCompiled']
         compileSucceeded = resp['compileSucceeded']
@@ -850,6 +899,215 @@ class TestPhonologiesController(TestController):
 
     #@nottest
     def test_applydown(self):
+        """Tests that ``GET /phonologies/applydown/id`` phonologizes input morpho-phonemic segmentations.
+        
+        """
+        # Create a phonology with the test phonology script
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonology1Id = resp['id']
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
+        assert resp['name'] == u'Blackfoot Phonology'
+        assert 'phonology_%d.script' % phonology1Id in phonologyDirContents
+        assert 'phonology_%d.sh' % phonology1Id in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyScript
+        assert resp['modifier']['role'] == u'administrator'
+
+        # If foma is not installed, make sure the error message is being returned
+        # and exit the test.
+        if not h.fomaInstalled(forceCheck=True):
+            params = json.dumps({'transcriptions': u'nit-wa'})
+            response = self.app.put(url(controller='phonologies',
+                        action='applydown', id=phonology1Id), params,
+                        self.json_headers, self.extra_environ_admin, status=400)
+            resp = json.loads(response.body)
+            assert resp['error'] == u'Foma and flookup are not installed.'
+            return
+
+        # Compile the phonology's script
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
+                                headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+
+        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonology1Id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonology1Id)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+        assert resp['modifier']['role'] == u'contributor'
+
+        # Phonologize one morpho-phonemic segmentation.  Note that the value of
+        # the ``transcriptions`` key can be a string (as here) or a list of strings.
+        params = json.dumps({'transcriptions': u'nit-wa'})
+        response = self.app.put(url(controller='phonologies', action='applydown',
+                    id=phonology1Id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        config = h.getConfig(configFilename='test.ini')
+        phonologyDirPath = os.path.join(config['analysis_data'], 'phonology',
+                     'phonology_%d' % phonology1Id)
+        phonologyDirContents = os.listdir(phonologyDirPath)
+        assert resp[u'nit-wa'] == [u'nita']
+        # Make sure the temporary phonologization files have been deleted.
+        assert not [fn for fn in phonologyDirContents if fn[:7] == 'inputs_']
+        assert not [fn for fn in phonologyDirContents if fn[:8] == 'outputs_']
+        assert not [fn for fn in phonologyDirContents if fn[:10] == 'applydown_']
+
+        # Repeat the above but use the synonym ``PUT /phonologies/phonologize/id``.
+        params = json.dumps({'transcriptions': u'nit-wa'})
+        response = self.app.put(url('/phonologies/phonologize/%d' % phonology1Id),
+                                params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp[u'nit-wa'] == [u'nita']
+
+        # Phonologize a large list of segmentations.  (These are the tests from
+        # ``tests/data/test_phonology.script``.)
+        tests = {
+            u"nit-waanIt-k-wa": [u"nitaanikka"],
+            u"nit-waanIt-aa-wa": [u"nitaanistaawa"],
+            u"nit-siksipawa": [u"nitssiksipawa"],
+            u"nit-ssiko\u0301pii": [u"nitsssiko\u0301pii"],
+            u"a\u0301-si\u0301naaki-wa": [u"a\u0301i\u0301si\u0301naakiwa"],
+            u"nika\u0301a\u0301-ssiko\u0301pii": [u"nika\u0301i\u0301ssiko\u0301pii"],
+            u"ka\u0301ta\'-simi-wa": [u"ka\u0301tai\'simiwa"],
+            u"a\u0301ak-oto-apinnii-wa": [u"a\u0301akotaapinniiwa",
+                                          u"a\u0301akotapinniiwa"],
+            u"w-i\u0301nni": [u"o\u0301nni"],
+            u"w-iihsi\u0301ssi": [u"ohsi\u0301ssi"],
+            u"a\u0301ak-Ipiima": [u"a\u0301aksipiima"],
+            u"kitsi\u0301'powata-oaawa": [u"kitsi\u0301'powatawaawa"],
+            u"a\u0301-Io'kaa-wa": [u"a\u0301yo'kaawa"],
+            u"yaato\u0301o\u0301-t": [u"aato\u0301o\u0301t"],
+            u"waani\u0301i\u0301-t": [u"aani\u0301i\u0301t"],
+            u"w-o\u0301ko'si": [u"o\u0301ko'si"],
+            u"a\u0301-yo'kaa-o'pa": [u"a\u0301yo'kao'pa"],
+            u"imita\u0301a\u0301-iksi": [u"imita\u0301i\u0301ksi"],
+            u"a\u0301-yo'kaa-yi-aawa": [u"a\u0301yo'kaayaawa"],
+            u"a\u0301-ihpiyi-o'pa": [u"a\u0301i\u0301hpiyo'pa"],
+            u"a\u0301-okstaki-yi-aawa": [u"a\u0301o\u0301kstakiiyaawa",
+                                         u"a\u0301o\u0301kstakiyaawa"],
+            u"a\u0301-okska'si-o'pa": [u"a\u0301o\u0301kska'so'pa"],
+            u"nit-Ioyi": [u"nitsoyi"],
+            u"otokska'si-hsi": [u"otokska'ssi"],
+            u"ota\u0301'po'taki-hsi": [u"ota\u0301'po'takssi"],
+            u"pii-hsini": [u"pissini"],
+            u"a\u0301ak-yaatoowa": [u"a\u0301akaatoowa"],
+            u"nit-waanii": [u"nitaanii"],
+            u"kika\u0301ta'-waaniihpa": [u"kika\u0301ta'waaniihpa"],
+            u"a\u0301i\u0301hpiyi-yina\u0301yi": [u"a\u0301i\u0301hpiiyina\u0301yi",
+                                                  u"a\u0301i\u0301hpiyiyina\u0301yi"],
+            u"a\u0301o\u0301kska'si-hpinnaan": [u"a\u0301o\u0301kska'sspinnaan"],
+            u"nit-it-itsiniki": [u"nitsitsitsiniki"],
+            u"a\u0301'-omai'taki-wa": [u"a\u0301o\u0301'mai'takiwa"],
+            u"ka\u0301ta'-ookaawaatsi": [u"ka\u0301taookaawaatsi"],
+            u"ka\u0301ta'-ottakiwaatsi": [u"ka\u0301taoottakiwaatsi"],
+            u"a\u0301'-isttohkohpiy'ssi": [u"a\u0301i\u0301isttohkohpiy'ssi"],
+            u"a\u0301'-o'tooyiniki": [u"a\u0301o\u0301'tooyiniki"],
+            u"ka\u0301ta'-ohto'toowa": [u"ka\u0301tao'ohto'toowa",
+                                        u"ka\u0301taohto'toowa"],
+            u"nit-ssksinoawa": [u"nitssksinoawa"],
+            u"a\u0301-okska'siwa": [u"a\u0301o\u0301kska'siwa"],
+            u"atsiki\u0301-istsi": [u"atsiki\u0301i\u0301stsi"],
+            u"kakko\u0301o\u0301-iksi": [u"kakko\u0301i\u0301ksi"],
+            u"nit-ihpiyi": [u"nitsspiyi"],
+            u"sa-oht-yi": [u"saohtsi"],
+            u"nit-yo'kaa": [u"nitso'kaa"],
+            u"nit-a\u0301ak-yo'kaa": [u"nita\u0301akso'kaa"],
+            u"nit-a\u0301ak-ooyi": [u"nita\u0301aksoyi"],
+            u"nit-ooyi": [u"nitsoyi"],
+            u"ooyi": [u"iiyi"],
+            u"nit-yooht-wa": [u"nitoohtowa"],
+            u"nit-yooht-o-aa": [u"nitsi\u0301i\u0301yoohtoaa"],
+            u"nit-ya\u0301api": [u"nitsaapi", u"nitsi\u0301aapi"]
+        }
+
+        params = json.dumps({'transcriptions': tests.keys()})
+        response = self.app.put(url(controller='phonologies', action='applydown',
+                                    id=phonology1Id),
+                                params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert set(resp.keys()) == set(tests.keys())
+        assert bool(set(resp[u'a\u0301ak-yaatoowa']) & set(tests[u'a\u0301ak-yaatoowa']))
+        #for key in resp:
+        #    wasAnticipated = bool(set(resp[key]) & set(tests[key]))
+        #    log.debug('%s => %s was anticipated: %s.' % (
+        #        key, u', '.join(resp[key]), wasAnticipated))
+        #    if not wasAnticipated:
+        #        log.debug('\t%s => %s was anticipated instead.' % (
+        #                  key, u', '.join(tests[key])))
+
+        # Attempt to phonologize an empty list; expect a 400 error
+        params = json.dumps({'transcriptions': []})
+        response = self.app.put(url(controller='phonologies', action='applydown',
+                                    id=phonology1Id),
+                    params, self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['transcriptions'] == u'Please enter a value'
+
+        # Attempt to phonologize an improperly formatted JSON string; expect a 400 error
+        params = json.dumps({'transcriptions': [u'nit-wa']})[:-2]
+        response = self.app.put(url(controller='phonologies', action='applydown',
+                                    id=phonology1Id),
+                    params, self.json_headers, self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp == h.JSONDecodeErrorResponse
+
+        # Attempt to phonologize with a non-existent phonology id; expect to fail
+        params = json.dumps({'transcriptions': u'nit-wa'})
+        response = self.app.put(url(controller='phonologies', action='applydown',
+                                    id=123456789), params, self.json_headers,
+                                self.extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'There is no phonology with id 123456789'
+
+        # Attempt to phonologize with a phonology whose script has not been compiled;
+        # expect to fail.
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 2',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testPhonologyScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonology2Id = resp['id']
+
+        params = json.dumps({'transcriptions': u'nit-wa'})
+        response = self.app.put(url(controller='phonologies', action='applydown',
+                                    id=phonology2Id), params, self.json_headers,
+                                self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'Phonology %d has not been compiled yet.' % phonology2Id
+
+    #@nottest
+    def test_runtests(self):
+        """Tests that ``GET /phonologies/runtests/id`` runs the tests in the phonology's script."""
 
         # Create a phonology with the test phonology script
         params = self.createParams.copy()
@@ -874,6 +1132,16 @@ class TestPhonologiesController(TestController):
         assert resp['script'] == self.testPhonologyScript
         assert resp['modifier']['role'] == u'administrator'
 
+        # If foma is not installed, make sure the error message is being returned
+        # and exit the test.
+        if not h.fomaInstalled(forceCheck=True):
+            response = self.app.get(url(controller='phonologies',
+                        action='runtests', id=phonology1Id), headers=self.json_headers,
+                        extra_environ=self.extra_environ_admin, status=400)
+            resp = json.loads(response.body)
+            assert resp['error'] == u'Foma and flookup are not installed.'
+            return
+
         # Compile the phonology's script
         response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
                                 headers=self.json_headers, extra_environ=self.extra_environ_contrib)
@@ -882,8 +1150,7 @@ class TestPhonologiesController(TestController):
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
 
-        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
-        # changed.
+        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
         while True:
             response = self.app.get(url('phonology', id=phonology1Id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib)
@@ -900,9 +1167,294 @@ class TestPhonologiesController(TestController):
         assert phonologyBinaryFilename in os.listdir(phonologyDir)
         assert resp['modifier']['role'] == u'contributor'
 
-
-        params = json.dumps([u'nit-wa', 'kit-ihpiyi'])
-        response = self.app.put(url(controller='phonologies', action='applydown', id=phonology1Id),
-                                params, self.json_headers, self.extra_environ_admin)
+        # Request the tests be run.
+        response = self.app.get(url(controller='phonologies', action='runtests',
+                    id=phonology1Id), headers=self.json_headers,
+                    extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        log.debug(resp)
+        assert resp.keys()
+        assert 'expected' in resp.values()[0] and 'actual' in resp.values()[0]
+        # Just for interest's sake, let's see how many tests were correct
+        correct = total = 0
+        incorrect = []
+        for t in resp:
+            for e in resp[t]['expected']:
+                if e in resp[t]['actual']:
+                    correct = correct + 1
+                else:
+                    incorrect.append((t, e))
+                total = total + 1
+        log.debug('%d/%d phonology tests passed (%0.2f%s)' % (
+            correct, total, 100 * (correct/float(total)), '%'))
+        for t, e in incorrect:
+            log.debug('%s expected to be %s but phonology returned %s' % (
+                t, e, ', '.join(resp[t]['actual'])))
+        
+        
+
+        # Try to request GET /phonologies/runtests/id on a phonology with no tests.
+        
+        # Create the test-less phonology.
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Blackfoot Phonology 2',
+            'description': u'The phonological rules of Frantz (1997) as FSTs',
+            'script': self.testPhonologyTestlessScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonology1Id = resp['id']
+        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDirContents = os.listdir(phonologyDir)
+        phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
+        assert resp['name'] == u'Blackfoot Phonology 2'
+        assert 'phonology_%d.script' % phonology1Id in phonologyDirContents
+        assert 'phonology_%d.sh' % phonology1Id in phonologyDirContents
+        assert phonologyBinaryFilename not in phonologyDirContents
+        assert response.content_type == 'application/json'
+        assert resp['script'] == self.testPhonologyTestlessScript
+        assert resp['modifier']['role'] == u'administrator'
+
+        # Compile the phonology's script
+        response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
+                                headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+        compileSucceeded = resp['compileSucceeded']
+        compileMessage = resp['compileMessage']
+
+        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
+        while True:
+            response = self.app.get(url('phonology', id=phonology1Id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
+                break
+            else:
+                log.debug('Waiting for phonology %d to compile ...' % phonology1Id)
+            sleep(1)
+
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+        assert resp['modifier']['role'] == u'contributor'
+
+        # Request the tests be run.
+        response = self.app.get(url(controller='phonologies', action='runtests',
+                    id=phonology1Id), headers=self.json_headers,
+                    extra_environ=self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'The script of phonology %d contains no tests.' % phonology1Id
+
+
+
+
+
+
+
+    #@nottest
+    def test_history(self):
+        """Tests that GET /phonologies/id/history returns the phonology with id=id and its previous incarnations.
+        
+        The JSON object returned is of the form
+        {'phonology': phonology, 'previousVersions': [...]}.
+
+        """
+
+        users = h.getUsers()
+        contributorId = [u for u in users if u.role==u'contributor'][0].id
+        administratorId = [u for u in users if u.role==u'administrator'][0].id
+
+        # Create a phonology.
+        originalPhonologyCount = Session.query(Phonology).count()
+        params = self.createParams.copy()
+        originalScript = u'# The rules will begin after this comment.\n\n'
+        params.update({
+            'name': u'Phonology',
+            'description': u'Covers a lot of the data.',
+            'script': originalScript
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('phonologies'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        phonologyCount = Session.query(Phonology).count()
+        phonologyId = resp['id']
+        originalDatetimeModified = resp['datetimeModified']
+        assert phonologyCount == originalPhonologyCount + 1
+        assert resp['name'] == u'Phonology'
+        assert resp['description'] == u'Covers a lot of the data.'
+
+        # Update the phonology as the admin.
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
+        newScript = u'define phonology o -> 0 || t "-" _ k "-";'
+        origBackupCount = Session.query(PhonologyBackup).count()
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Phonology',
+            'description': u'Covers a lot of the data.  Best yet!',
+            'script': newScript
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('phonology', id=phonologyId), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        newBackupCount = Session.query(PhonologyBackup).count()
+        datetimeModified = resp['datetimeModified']
+        newPhonologyCount = Session.query(Phonology).count()
+        assert phonologyCount == newPhonologyCount
+        assert datetimeModified != originalDatetimeModified
+        assert resp['description'] == u'Covers a lot of the data.  Best yet!'
+        assert resp['script'] == newScript
+        assert response.content_type == 'application/json'
+        assert origBackupCount + 1 == newBackupCount
+        backup = Session.query(PhonologyBackup).filter(
+            PhonologyBackup.UUID==unicode(
+            resp['UUID'])).order_by(
+            desc(PhonologyBackup.id)).first()
+        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.script == originalScript
+        assert json.loads(backup.modifier)['firstName'] == u'Admin'
+        assert response.content_type == 'application/json'
+
+        # Update the phonology as the contributor.
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
+        newestScript = u'define phonology o -> 0 || k "-" _ k "-";'
+        origBackupCount = Session.query(PhonologyBackup).count()
+        params = self.createParams.copy()
+        params.update({
+            'name': u'Phonology',
+            'description': u'Covers even more data.  Better than ever!',
+            'script': newestScript
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('phonology', id=phonologyId), params, self.json_headers,
+                                 self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        backupCount = newBackupCount
+        newBackupCount = Session.query(PhonologyBackup).count()
+        datetimeModified = resp['datetimeModified']
+        newPhonologyCount = Session.query(Phonology).count()
+        assert phonologyCount == newPhonologyCount == 1
+        assert datetimeModified != originalDatetimeModified
+        assert resp['description'] == u'Covers even more data.  Better than ever!'
+        assert resp['script'] == newestScript
+        assert resp['modifier']['id'] == contributorId
+        assert response.content_type == 'application/json'
+        assert backupCount + 1 == newBackupCount
+        backup = Session.query(PhonologyBackup).filter(
+            PhonologyBackup.UUID==unicode(
+            resp['UUID'])).order_by(
+            desc(PhonologyBackup.id)).first()
+        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.script == newScript
+        assert json.loads(backup.modifier)['firstName'] == u'Contributor'
+        assert response.content_type == 'application/json'
+
+        # Now get the history of this phonology.
+        extra_environ = {'test.authentication.role': u'contributor',
+                         'test.applicationSettings': True}
+        response = self.app.get(
+            url(controller='phonologies', action='history', id=phonologyId),
+            headers=self.json_headers, extra_environ=extra_environ)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert 'phonology' in resp
+        assert 'previousVersions' in resp
+        firstVersion = resp['previousVersions'][1]
+        secondVersion = resp['previousVersions'][0]
+        currentVersion = resp['phonology']
+
+        assert firstVersion['name'] == u'Phonology'
+        assert firstVersion['description'] == u'Covers a lot of the data.'
+        assert firstVersion['enterer']['id'] == administratorId
+        assert firstVersion['modifier']['id'] == administratorId
+        # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
+        # so the test will fail/be inconsistent with <
+        assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
+
+        assert secondVersion['name'] == u'Phonology'
+        assert secondVersion['description'] == u'Covers a lot of the data.  Best yet!'
+        assert secondVersion['script'] == newScript
+        assert secondVersion['enterer']['id'] == administratorId
+        assert secondVersion['modifier']['id'] == contributorId
+        assert secondVersion['datetimeModified'] == currentVersion['datetimeModified']
+
+        assert currentVersion['name'] == u'Phonology'
+        assert currentVersion['description'] == u'Covers even more data.  Better than ever!'
+        assert currentVersion['script'] == newestScript
+        assert currentVersion['enterer']['id'] == administratorId
+        assert currentVersion['modifier']['id'] == contributorId
+
+        # Get the history using the phonology's UUID and expect it to be the same
+        # as the one retrieved above
+        phonologyUUID = resp['phonology']['UUID']
+        response = self.app.get(
+            url(controller='phonologies', action='history', id=phonologyUUID),
+            headers=self.json_headers, extra_environ=extra_environ)
+        respUUID = json.loads(response.body)
+        assert resp == respUUID
+
+        # Attempt to call history with an invalid id and an invalid UUID and
+        # expect 404 errors in both cases.
+        badId = 103
+        badUUID = str(uuid4())
+        response = self.app.get(
+            url(controller='phonologies', action='history', id=badId),
+            headers=self.json_headers, extra_environ=extra_environ,
+            status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'No phonologies or phonology backups match %d' % badId
+        response = self.app.get(
+            url(controller='phonologies', action='history', id=badUUID),
+            headers=self.json_headers, extra_environ=extra_environ,
+            status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'No phonologies or phonology backups match %s' % badUUID
+
+        # Now delete the phonology ...
+        response = self.app.delete(url('phonology', id=phonologyId),
+                        headers=self.json_headers, extra_environ=extra_environ)
+
+        # ... and get its history again, this time using the phonology's UUID
+        response = self.app.get(
+            url(controller='phonologies', action='history', id=phonologyUUID),
+            headers=self.json_headers, extra_environ=extra_environ)
+        byUUIDResp = json.loads(response.body)
+        assert byUUIDResp['phonology'] == None
+        assert len(byUUIDResp['previousVersions']) == 3
+        firstVersion = byUUIDResp['previousVersions'][2]
+        secondVersion = byUUIDResp['previousVersions'][1]
+        thirdVersion = byUUIDResp['previousVersions'][0]
+
+        assert firstVersion['name'] == u'Phonology'
+        assert firstVersion['description'] == u'Covers a lot of the data.'
+        assert firstVersion['enterer']['id'] == administratorId
+        assert firstVersion['modifier']['id'] == administratorId
+        # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
+        # so the test will fail/be inconsistent with <
+        assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
+
+        assert secondVersion['name'] == u'Phonology'
+        assert secondVersion['description'] == u'Covers a lot of the data.  Best yet!'
+        assert secondVersion['script'] == newScript
+        assert secondVersion['enterer']['id'] == administratorId
+        assert secondVersion['modifier']['id'] == contributorId
+        assert secondVersion['datetimeModified'] <= thirdVersion['datetimeModified']
+
+        assert thirdVersion['name'] == u'Phonology'
+        assert thirdVersion['description'] == u'Covers even more data.  Better than ever!'
+        assert thirdVersion['script'] == newestScript
+        assert thirdVersion['enterer']['id'] == administratorId
+        assert thirdVersion['modifier']['id'] == contributorId
+
+        # Get the deleted phonology's history again, this time using its id.  The 
+        # response should be the same as the response received using the UUID.
+        response = self.app.get(
+            url(controller='phonologies', action='history', id=phonologyId),
+            headers=self.json_headers, extra_environ=extra_environ)
+        byPhonologyIdResp = json.loads(response.body)
+        assert byPhonologyIdResp == byUUIDResp

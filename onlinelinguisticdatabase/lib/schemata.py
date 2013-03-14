@@ -1047,3 +1047,9 @@ class PhonologySchema(Schema):
     name = name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Phonology', attributeName='name')
     description = UnicodeString()
     script = UnicodeString()
+
+class MorphophonemicTranscriptionsSchema(Schema):
+    """Validates input to ``phonologies/applydown/id``."""
+    allow_extra_fields = True
+    filter_extra_fields = True
+    transcriptions = ForEach(UnicodeString(), not_empty=True)

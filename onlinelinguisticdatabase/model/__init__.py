@@ -29,6 +29,7 @@ from onlinelinguisticdatabase.model.language import Language
 from onlinelinguisticdatabase.model.orthography import Orthography
 from onlinelinguisticdatabase.model.page import Page
 from onlinelinguisticdatabase.model.phonology import Phonology
+from onlinelinguisticdatabase.model.phonologybackup import PhonologyBackup
 from onlinelinguisticdatabase.model.source import Source
 from onlinelinguisticdatabase.model.speaker import Speaker
 from onlinelinguisticdatabase.model.syntacticcategory import SyntacticCategory

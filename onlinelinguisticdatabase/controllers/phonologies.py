@@ -24,6 +24,7 @@ import datetime
 import re
 import simplejson as json
 import os
+from uuid import uuid4
 import codecs
 from subprocess import call, PIPE, Popen
 from shutil import rmtree
@@ -33,11 +34,11 @@ from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
 from onlinelinguisticdatabase.lib.base import BaseController
-from onlinelinguisticdatabase.lib.schemata import PhonologySchema
+from onlinelinguisticdatabase.lib.schemata import PhonologySchema, MorphophonemicTranscriptionsSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Phonology
+from onlinelinguisticdatabase.model import Phonology, PhonologyBackup
 from onlinelinguisticdatabase.lib.worker import worker_q
 
 log = logging.getLogger(__name__)
@@ -142,9 +143,11 @@ class PhonologiesController(BaseController):
                 state = h.getStateObject(values)
                 state.id = id
                 data = schema.to_python(values, state)
+                phonologyDict = phonology.getDict()
                 phonology = updatePhonology(phonology, data)
                 # phonology will be False if there are no changes (cf. updatePhonology).
                 if phonology:
+                    backupPhonology(phonologyDict, phonology.datetimeModified)
                     Session.add(phonology)
                     Session.commit()
                     savePhonologyScript(phonology)
@@ -177,6 +180,8 @@ class PhonologiesController(BaseController):
         """
         phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
         if phonology:
+            phonologyDict = phonology.getDict()
+            backupPhonology(phonologyDict)
             Session.delete(phonology)
             Session.commit()
             removePhonologyDirectory(phonology)
@@ -229,6 +234,33 @@ class PhonologiesController(BaseController):
             return {'error': 'There is no phonology with id %s' % id}
 
     @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    def history(self, id):
+        """Return the phonology with ``phonology.id==id`` and its previous versions.
+
+        :URL: ``GET /phonologies/history/id``
+        :param str id: a string matching the ``id`` or ``UUID`` value of the
+            phonology whose history is requested.
+        :returns: A dictionary of the form::
+
+                {"phonology": { ... }, "previousVersions": [ ... ]}
+
+            where the value of the ``phonology`` key is the phonology whose
+            history is requested and the value of the ``previousVersions`` key
+            is a list of dictionaries representing previous versions of the
+            phonology.
+
+        """
+        phonology, previousVersions = getPhonologyAndPreviousVersions(id)
+        if phonology or previousVersions:
+            return {'phonology': phonology,
+                    'previousVersions': previousVersions}
+        else:
+            response.status_int = 404
+            return {'error': 'No phonologies or phonology backups match %s' % id}
+
+    @h.jsonify
     @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
@@ -260,7 +292,7 @@ class PhonologiesController(BaseController):
                 return phonology
             else:
                 response.status_int = 400
-                return {'error': 'The command-line programs foma and flookup must be installed in order to compile phonologies.'}
+                return {'error': 'Foma and flookup are not installed.'}
         else:
             response.status_int = 404
             return {'error': 'There is no phonology with id %s' % id}
@@ -274,9 +306,11 @@ class PhonologiesController(BaseController):
 
         :URL: ``PUT /phonologies/applydown/id`` (or ``PUT /phonologies/phonologize/id``)
         :param str id: the ``id`` value of the phonology that will be used.
-        :returns: if the phonology exists and foma is installed, the phonology
-            model is returned;  ``GET /phonologies/id`` must be polled to
-            determine when and how the compilation task has terminated.
+        :Request body: JSON object of the form ``{'transcriptions': [t1, t2, ...]}``.
+        :returns: if the phonology exists and foma is installed, a JSON object
+            of the form ``{t1: [p1t1, p2t1, ...], ...}`` where ``t1`` is a
+            transcription from the request body and ``p1t1``, ``p2t1``, etc. are
+            phonologized outputs of ``t1``.
 
         """
         phonology = Session.query(Phonology).get(id)
@@ -284,26 +318,109 @@ class PhonologiesController(BaseController):
             if h.fomaInstalled():
                 phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
                 if os.path.isfile(phonologyBinaryPath):
-                    inputs = json.loads(unicode(request.body, request.charset))
-                    result = {}
-                    for segmentation in inputs:
-                        p = Popen(['flookup', '-x', '-i', phonologyBinaryPath],
-                                  shell=False,
-                                  stdin=PIPE,
-                                  stdout=PIPE)
-                        p.stdin.write(segmentation.encode('utf-8'))
-                        result[segmentation] = filter(
-                            None, unicode(p.communicate()[0], 'utf-8').split('\n'))
-                    return result
+                    try:
+                        inputs = json.loads(unicode(request.body, request.charset))
+                        inputs = MorphophonemicTranscriptionsSchema.to_python(inputs)
+                        return phonologize(inputs['transcriptions'], phonology,
+                                                 phonologyBinaryPath, session['user'])
+                    except h.JSONDecodeError:
+                        response.status_int = 400
+                        return h.JSONDecodeErrorResponse
+                    except Invalid, e:
+                        response.status_int = 400
+                        return {'errors': e.unpack_errors()}
                 else:
                     response.status_int = 400
-                    return {'error': 'Phonology %d has not been compiled yet.'}
+                    return {'error': 'Phonology %d has not been compiled yet.' % phonology.id}
             else:
                 response.status_int = 400
-                return {'error': 'The command-line programs foma and flookup must be installed in order to compile phonologies.'}
+                return {'error': 'Foma and flookup are not installed.'}
         else:
             response.status_int = 404
             return {'error': 'There is no phonology with id %s' % id}
+
+    @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def runtests(self, id):
+        """Run the tests defined in the phonology's script against the phonology.
+
+        A line in a phonology's script that begins with "#test" signifies a
+        test.  After "#test" there should be a string of characters followed by
+        "->" followed by another string of characters.  The first string is the
+        underlying representation and the second is the anticipated surface
+        representation.  Requests to ``GET /phonologies/runtests/id`` will cause
+        the OLD to run a phonology script against its tests and return a
+        dictionary detailing the expected and actual outputs of each input in
+        the transcription.
+
+        :URL: ``GET /phonologies/runtests/id``
+        :param str id: the ``id`` value of the phonology that will be tested.
+        :returns: if the phonology exists and foma is installed, a JSON object
+            representing the results of the test.
+
+        """
+        phonology = Session.query(Phonology).get(id)
+        if phonology:
+            if h.fomaInstalled():
+                phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
+                if os.path.isfile(phonologyBinaryPath):
+                    return runTests(phonology, phonologyBinaryPath, session['user'])
+                else:
+                    response.status_int = 400
+                    return {'error': 'Phonology %d has not been compiled yet.' % phonology.id}
+            else:
+                response.status_int = 400
+                return {'error': 'Foma and flookup are not installed.'}
+        else:
+            response.status_int = 404
+            return {'error': 'There is no phonology with id %s' % id}
+
+
+def getPhonologyAndPreviousVersions(id):
+    """Return a phonology and its previous versions.
+
+    :param str id: the ``id`` or ``UUID`` value of the phonology whose history
+        is requested.
+    :returns: a tuple whose first element is the phonology model and whose
+        second element is a list of phonology backup models.
+
+    """
+    phonology = None
+    previousVersions = []
+    try:
+        id = int(id)
+        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
+        if phonology:
+            previousVersions = h.getBackupsByUUID('Phonology', phonology.UUID)
+        else:
+            previousVersions = h.getBackupsByModelId('Phonology', id)
+    except ValueError:
+        try:
+            UUID = unicode(h.UUID(id))
+            phonology = h.getModelByUUID('Phonology', UUID)
+            previousVersions = h.getBackupsByUUID('Phonology', UUID)
+        except (AttributeError, ValueError):
+            pass    # id is neither an integer nor a UUID
+    return (phonology, previousVersions)
+
+
+################################################################################
+# Backup phonology
+################################################################################
+
+def backupPhonology(phonologyDict, datetimeModified=None):
+    """Backup a phonology.
+
+    :param dict phonologyDict: a representation of a phonology model.
+    :param ``datetime.datetime`` datetimeModified: the time of the phonology's last update.
+    :returns: ``None``
+
+    """
+    phonologyBackup = PhonologyBackup()
+    phonologyBackup.vivify(phonologyDict, session['user'], datetimeModified)
+    Session.add(phonologyBackup)
 
 
 ################################################################################
@@ -318,6 +435,8 @@ def createNewPhonology(data):
 
     """
     phonology = Phonology()
+    phonology.UUID = unicode(uuid4())
+
     phonology.name = h.normalize(data['name'])
     phonology.description = h.normalize(data['description'])
     phonology.script = h.normalize(data['script'])  # normalize or not?
@@ -423,3 +542,100 @@ def removePhonologyDirectory(phonology):
         return phonologyDirPath
     except Exception:
         return None
+
+
+def fomaOutputFile2Dict(file_):
+    """Return the content of the foma output file ``file_`` as a dict.
+
+    :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
+    :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
+
+    """
+    result = {}
+    for line in file_:
+        line = line.strip()
+        if line:
+            i, o = line.split('\t')[:2]
+            try:
+                result[i].append(o)
+            except (KeyError, ValueError):
+                result[i] = [o]
+    return result
+
+def phonologize(inputs, phonology, phonologyBinaryPath, user):
+    """Phonologize the inputs using the phonology's compiled script.
+    
+    :param list inputs: a list of morpho-phonemic transcriptions.
+    :param phonology: a phonology model.
+    :param str phonologyBinaryPath: an absolute path to a compiled phonology script.
+    :param user: a user model.
+    :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
+
+    """
+    randomString = h.generateSalt()
+    phonologyDirPath = getPhonologyDirPath(phonology)
+    inputsFilePath = os.path.join(phonologyDirPath,
+            'inputs_%s_%s.txt' % (user.username, randomString))
+    outputsFilePath = os.path.join(phonologyDirPath,
+            'outputs_%s_%s.txt' % (user.username, randomString))
+    applydownFilePath = os.path.join(phonologyDirPath,
+            'applydown_%s_%s.sh' % (user.username, randomString))
+    with codecs.open(inputsFilePath, 'w', 'utf8') as f:
+        f.write(u'\n'.join(inputs))
+    with codecs.open(applydownFilePath, 'w', 'utf8') as f:
+        f.write('#!/bin/sh\ncat %s | flookup -i %s' % (
+                inputsFilePath, phonologyBinaryPath))
+    os.chmod(applydownFilePath, 0744)
+    with open(os.devnull, 'w') as devnull:
+        with codecs.open(outputsFilePath, 'w', 'utf8') as outfile:
+            p = Popen(applydownFilePath, shell=False, stdout=outfile, stderr=devnull)
+    p.communicate()
+    with codecs.open(outputsFilePath, 'r', 'utf8') as f:
+        result = fomaOutputFile2Dict(f)
+    os.remove(inputsFilePath)
+    os.remove(outputsFilePath)
+    os.remove(applydownFilePath)
+    return result
+
+
+def getTests(phonology):
+    """Return any tests defined in a phonology's script as a dictionary."""
+    result = {}
+    testLines = [l[6:] for l in phonology.script.splitlines() if l[:6] == u'#test ']
+    for l in testLines:
+        try:
+            i, o = map(unicode.strip, l.split(u'->'))
+            try:
+                result[i].append(o)
+            except KeyError:
+                result[i] = [o]
+        except ValueError:
+            pass
+    return result
+
+
+def runTests(phonology, phonologyBinaryPath, user):
+    """Run the test defined in the phonology's script and return a report.
+    
+    :param phonology: a phonology model.
+    :param str phonologyBinaryPath: an absolute path to the phonology's compiled foma script.
+    :param user: a user model.
+    :returns: a dictionary representing the report on the tests.
+
+    A line in a phonology's script that begins with "#test " signifies a
+    test.  After "#test " there should be a string of characters followed by
+    "->" followed by another string of characters.  The first string is the
+    underlying representation and the second is the anticipated surface
+    representation.  Requests to ``GET /phonologies/runtests/id`` will cause
+    the OLD to run a phonology script against its tests and return a
+    dictionary detailing the expected and actual outputs of each input in the
+    transcription.  :func:`runTests` generates that dictionary.
+
+    """
+
+    tests = getTests(phonology)
+    if not tests:
+        response.status_int = 400
+        return {'error': 'The script of phonology %d contains no tests.' % phonology.id}
+    results = phonologize(tests.keys(), phonology, phonologyBinaryPath, user)
+    return dict([(t, {'expected': tests[t], 'actual': results[t]}) for t in tests])
