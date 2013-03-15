@@ -106,6 +106,8 @@ def make_map(config):
     map.resource('applicationsetting', 'applicationsettings')
     map.resource('collection', 'collections', controller='oldcollections')
     map.resource('collectionbackup', 'collectionbackups')       # read-only
+    map.resource('corpus', 'corpora')
+    map.resource('corpusbackup', 'corpusbackups')   # read-only
     map.resource('elicitationmethod', 'elicitationmethods')
     map.resource('file', 'files')
     map.resource('form', 'forms')
@@ -115,6 +117,7 @@ def make_map(config):
     map.resource('orthography', 'orthographies')
     map.resource('page', 'pages')
     map.resource('phonology', 'phonologies')
+    map.resource('phonologybackup', 'phonologybackups')       # read-only
     map.resource('source', 'sources')
     map.resource('speaker', 'speakers')
     map.resource('syntacticcategory', 'syntacticcategories')
