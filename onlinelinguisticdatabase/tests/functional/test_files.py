@@ -2135,7 +2135,6 @@ class TestFilesController(TestController):
             'base64EncodedFile': jpgFileBase64
         })
         params = json.dumps(params)
-        log.debug('about to create %s' % jpgFilename)
         response = self.app.post(url('files'), params, self.json_headers, extra_environ_admin)
         resp = json.loads(response.body)
         jpgFilename = resp['filename']
@@ -2148,8 +2147,6 @@ class TestFilesController(TestController):
         assert jpgFileBase64 == responseBase64
         assert guess_type(jpgFilename)[0] == response.headers['Content-Type']
         assert jpgFileSize == int(response.headers['Content-Length'])
-
-        log.debug('about to request the reduced-size copy of %s' % jpgFilename)
 
         # Get the reduced image file's contents
         if self.create_reduced_size_file_copies and Image:

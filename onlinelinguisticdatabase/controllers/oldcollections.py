@@ -389,7 +389,7 @@ class OldcollectionsController(BaseController):
             collection.
 
         """
-        collection, previousVersions = getCollectionAndPreviousVersions(id)
+        collection, previousVersions = h.getModelAndPreviousVersions('Collection', id)
         if collection or previousVersions:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -407,34 +407,6 @@ class OldcollectionsController(BaseController):
         else:
             response.status_int = 404
             return {'error': 'No collections or collection backups match %s' % id}
-
-
-def getCollectionAndPreviousVersions(id):
-    """Return a collection and its previous versions.
-
-    :param str id: the ``id`` or ``UUID`` value of the collection whose history
-        is requested.
-    :returns: a tuple whose first element is the collection model and whose
-        second element is a list of collection backup models.
-
-    """
-    collection = None
-    previousVersions = []
-    try:
-        id = int(id)
-        collection = h.eagerloadCollection(Session.query(Collection)).get(id)
-        if collection:
-            previousVersions = h.getCollectionBackupsByUUID(collection.UUID)
-        else:
-            previousVersions = h.getCollectionBackupsByCollectionId(id)
-    except ValueError:
-        try:
-            UUID = unicode(h.UUID(id))
-            form = h.getCollectionByUUID(UUID)
-            previousVersions = h.getCollectionBackupsByUUID(UUID)
-        except (AttributeError, ValueError):
-            pass    # id is neither an integer nor a UUID
-    return (collection, previousVersions)
 
 
 ################################################################################

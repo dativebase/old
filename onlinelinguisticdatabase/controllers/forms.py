@@ -341,7 +341,7 @@ class FormsController(BaseController):
             dictionaries representing previous versions of the form.
 
         """
-        form, previousVersions = getFormAndPreviousVersions(id)
+        form, previousVersions = h.getModelAndPreviousVersions('Form', id)
         if form or previousVersions:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -523,34 +523,6 @@ def getNewEditFormData(GET_params):
             result[key] = map_[key]()
 
     return result
-
-
-def getFormAndPreviousVersions(id):
-    """Return a form and its previous versions.
-
-    :param str id: the ``id`` or ``UUID`` value of the form whose history is
-        requested.
-    :returns: a tuple whose first element is the form model and whose second
-        element is a list of form backup models.
-
-    """
-    form = None
-    previousVersions = []
-    try:
-        id = int(id)
-        form = h.eagerloadForm(Session.query(Form)).get(id)
-        if form:
-            previousVersions = h.getFormBackupsByUUID(form.UUID)
-        else:
-            previousVersions = h.getFormBackupsByFormId(id)
-    except ValueError:
-        try:
-            UUID = unicode(h.UUID(id))
-            form = h.getFormByUUID(UUID)
-            previousVersions = h.getFormBackupsByUUID(UUID)
-        except (AttributeError, ValueError):
-            pass    # id is neither an integer nor a UUID
-    return (form, previousVersions)
 
 
 ################################################################################

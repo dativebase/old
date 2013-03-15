@@ -252,7 +252,7 @@ class PhonologiesController(BaseController):
             phonology.
 
         """
-        phonology, previousVersions = getPhonologyAndPreviousVersions(id)
+        phonology, previousVersions = h.getModelAndPreviousVersions('Phonology', id)
         if phonology or previousVersions:
             return {'phonology': phonology,
                     'previousVersions': previousVersions}
@@ -376,34 +376,6 @@ class PhonologiesController(BaseController):
         else:
             response.status_int = 404
             return {'error': 'There is no phonology with id %s' % id}
-
-
-def getPhonologyAndPreviousVersions(id):
-    """Return a phonology and its previous versions.
-
-    :param str id: the ``id`` or ``UUID`` value of the phonology whose history
-        is requested.
-    :returns: a tuple whose first element is the phonology model and whose
-        second element is a list of phonology backup models.
-
-    """
-    phonology = None
-    previousVersions = []
-    try:
-        id = int(id)
-        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
-        if phonology:
-            previousVersions = h.getBackupsByUUID('Phonology', phonology.UUID)
-        else:
-            previousVersions = h.getBackupsByModelId('Phonology', id)
-    except ValueError:
-        try:
-            UUID = unicode(h.UUID(id))
-            phonology = h.getModelByUUID('Phonology', UUID)
-            previousVersions = h.getBackupsByUUID('Phonology', UUID)
-        except (AttributeError, ValueError):
-            pass    # id is neither an integer nor a UUID
-    return (phonology, previousVersions)
 
 
 ################################################################################

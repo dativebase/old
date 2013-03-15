@@ -1249,12 +1249,6 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The script of phonology %d contains no tests.' % phonology1Id
 
-
-
-
-
-
-
     #@nottest
     def test_history(self):
         """Tests that GET /phonologies/id/history returns the phonology with id=id and its previous incarnations.

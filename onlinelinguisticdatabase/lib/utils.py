@@ -743,37 +743,10 @@ def getForms(paginator=None, eagerload=False):
         return formQuery.slice(start, end).all()
     return formQuery.all()
 
-def getFormByUUID(UUID):
-    """Return the first (and only, hopefully) Form model with UUID."""
-    return eagerloadForm(Session.query(Form)).filter(Form.UUID==UUID).first()
-
-def getCollectionByUUID(UUID):
-    """Return the first (and only, hopefully) Collection model with UUID."""
-    return Session.query(Collection).filter(Collection.UUID==UUID).first()
-
 def getModelByUUID(modelName, UUID):
-    """Return the first (and only, hopefully) only model of type ``modelName`` with ``UUID``.
-    
-    .. note::
-    
-        GET EAGERLOADING!!!
-    
-    """
-    return Session.query(getattr(model, modelName))\
+    """Return the first (and only, hopefully) only model of type ``modelName`` with ``UUID``."""
+    return getEagerloader(modelName)(Session.query(getattr(model, modelName)))\
         .filter(getattr(model, modelName).UUID==UUID).first()
-
-
-def getFormBackupsByUUID(UUID):
-    """Return all FormBackup models with UUID = UUID."""
-    return Session.query(FormBackup).filter(
-        FormBackup.UUID==UUID).order_by(desc(
-        FormBackup.id)).all()
-
-def getCollectionBackupsByUUID(UUID):
-    """Return all CollectionBackup models with UUID = UUID."""
-    return Session.query(CollectionBackup).filter(
-        CollectionBackup.UUID==UUID).order_by(desc(
-        CollectionBackup.id)).all()
 
 def getBackupsByUUID(modelName, UUID):
     """Return all backup models of the model with ``modelName`` using the ``UUID`` value."""
@@ -781,24 +754,6 @@ def getBackupsByUUID(modelName, UUID):
     return Session.query(backupModel).\
             filter(backupModel.UUID==UUID).\
             order_by(desc(backupModel.id)).all()
-
-def getFormBackupsByFormId(formId):
-    """Return all FormBackup models with form_id = formId.  WARNING: unexpected
-    data may be returned (on an SQLite backend) if primary key ids of deleted
-    forms are recycled.
-    """
-    return Session.query(FormBackup).filter(
-        FormBackup.form_id==formId).order_by(desc(
-        FormBackup.id)).all()
-
-def getCollectionBackupsByCollectionId(collectionId):
-    """Return all CollectionBackup models with collection_id = collectionId.
-    WARNING: unexpected data may be returned (on an SQLite backend) if primary
-    key ids of deleted collections are recycled.
-    """
-    return Session.query(CollectionBackup).filter(
-        CollectionBackup.collection_id==collectionId).order_by(desc(
-        CollectionBackup.id)).all()
 
 def getBackupsByModelId(modelName, modelId):
     """Return all backup models of the model with ``modelName`` using the ``id`` value of the model.
@@ -813,6 +768,37 @@ def getBackupsByModelId(modelName, modelId):
     return Session.query(backupModel).\
         filter(getattr(backupModel, modelName.lower() + '_id')==modelId).\
         order_by(desc(backupModel.id)).all()
+
+def getModelAndPreviousVersions(modelName, id):
+    """Return a model and its previous versions.
+
+    :param str modelName: a model name, e.g., 'Form'
+    :param str id: the ``id`` or ``UUID`` value of the model whose history
+        is requested.
+    :returns: a tuple whose first element is the model and whose second element
+        is a list of the model's backup models.
+
+    """
+    model_ = None
+    previousVersions = []
+    try:
+        id = int(id)
+        # add eagerload function ...
+        model_ = getEagerloader(modelName)(
+            Session.query(getattr(model, modelName))).get(id)
+        if model_:
+            previousVersions = getBackupsByUUID(modelName, model_.UUID)
+        else:
+            previousVersions = getBackupsByModelId(modelName, id)
+    except ValueError:
+        try:
+            modelUUID = unicode(UUID(id))
+            model_ = getModelByUUID(modelName, modelUUID)
+            previousVersions = getBackupsByUUID(modelName, modelUUID)
+        except (AttributeError, ValueError):
+            pass    # id is neither an integer nor a UUID
+    return model_, previousVersions
+
 
 def getCollections():
     return getModelsByName('Collection', True)
@@ -1599,6 +1585,9 @@ def ffmpegEncodes(format_):
 # when the foreign key id col value is NULL.  Therefore, eager loading on relational
 # scalars is pointless if not wasteful.  However, collections that will always be
 # accessed should always be eager loaded.
+
+def getEagerloader(modelName):
+    return globals().get('eagerload' + modelName, lambda x: x)
 
 def eagerloadForm(query):
     return query.options(

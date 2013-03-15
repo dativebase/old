@@ -41,14 +41,7 @@ def saveReducedCopy(file, config):
     the file is a .wav file or an image.  Returns None or the reduced file filename,
     depending on whether the reduction failed or succeeded, repectively.
     """
-    try:
-        log.warn('in saveReducedCopy with file %d' % file.id)
-    except Exception:
-        log.warn('in saveReducedCopy with uncommited file %s, %s' % (
-            getattr(file, 'filename', 'no filename'),
-            getattr(file, 'MIMEtype', 'no MIMEtype')))
     if getattr(file, 'filename') and asbool(config.get('create_reduced_size_file_copies', 1)):
-        log.warn('in saveReducedCopy and gonna try to reduce')
         filesPath = config['app_conf']['permanent_store']
         reducedFilesPath = os.path.join(filesPath, 'reduced_files')
         if u'image' in file.MIMEtype:
@@ -58,7 +51,6 @@ def saveReducedCopy(file, config):
             return saveWavAs(file, format_, filesPath, reducedFilesPath)
         else:
             return None
-    log.warn('in saveReducedCopy -- no reduction possible')
     return None
 
 ################################################################################
@@ -74,12 +66,6 @@ def saveReducedSizeImage(file, filesPath, reducedFilesPath):
     PIL is not installed.
     """
     try:
-        log.warn('in saveReducedSizeImage with file %d' % file.id)
-    except Exception:
-        log.warn('in saveReducedSizeImage with uncommited file %s, %s' % (
-            getattr(file, 'filename', 'no filename'),
-            getattr(file, 'MIMEtype', 'no MIMEtype')))
-    try:
         inPath = os.path.join(filesPath, file.filename)
         outPath = os.path.join(reducedFilesPath, file.filename)
         size = 500, 500
@@ -90,7 +76,6 @@ def saveReducedSizeImage(file, filesPath, reducedFilesPath):
         im.save(outPath)
         return file.filename
     except Exception, e:
-        log.warn(e)
         return None
 
 ################################################################################
