@@ -71,13 +71,14 @@ class FormBackup(Base):
     translations = Column(UnicodeText)
     tags = Column(UnicodeText)
     files = Column(UnicodeText) 
-    backuper = Column(UnicodeText)
+    modifier = Column(UnicodeText)
 
-    def vivify(self, formDict, backuper, datetimeModified=None):
+    def vivify(self, formDict):
         """The vivify method gives life to FormBackup by specifying its
-        attributes using the to-be-backed-up form (formDict) and the backuper
-        (current user).  The relational attributes of the to-be-backed-up form
-        are converted into (truncated) JSON objects.
+        attributes using the to-be-backed-up form as represented in
+        ``formDict``.  The relational attributes of the backup are converted to
+        (truncated) JSON objects.
+
         """
 
         self.UUID = formDict['UUID']
@@ -92,10 +93,7 @@ class FormBackup(Base):
         self.speakerComments = formDict['speakerComments']
         self.dateElicited = formDict['dateElicited']
         self.datetimeEntered = formDict['datetimeEntered']
-        if datetimeModified:
-            self.datetimeModified = datetimeModified
-        else:
-            self.datetimeModified = datetime.datetime.utcnow()
+        self.datetimeModified = formDict['datetimeModified']
         self.syntacticCategoryString = formDict['syntacticCategoryString']
         self.morphemeBreakIDs = unicode(json.dumps(formDict['morphemeBreakIDs']))
         self.morphemeGlossIDs = unicode(json.dumps(formDict['morphemeGlossIDs']))
@@ -107,7 +105,7 @@ class FormBackup(Base):
         self.elicitor = unicode(json.dumps(formDict['elicitor']))
         self.enterer = unicode(json.dumps(formDict['enterer']))
         self.verifier = unicode(json.dumps(formDict['verifier']))
-        self.backuper = unicode(json.dumps(self.getMiniUserDict(backuper)))
+        self.modifier = unicode(json.dumps(formDict['modifier']))
         self.translations = unicode(json.dumps(formDict['translations']))
         self.tags = unicode(json.dumps(formDict['tags']))
         self.files = unicode(json.dumps(formDict['files']))
@@ -139,7 +137,7 @@ class FormBackup(Base):
             'elicitor': self.jsonLoads(self.elicitor),
             'enterer': self.jsonLoads(self.enterer),
             'verifier': self.jsonLoads(self.verifier),
-            'backuper': self.jsonLoads(self.backuper),
+            'modifier': self.jsonLoads(self.modifier),
             'translations': self.jsonLoads(self.translations),
             'tags': self.jsonLoads(self.tags),
             'files': self.jsonLoads(self.files)
@@ -221,9 +219,9 @@ class FormBackup(Base):
                 file.embeddedFileMarkup = fileDict['embeddedFileMarkup']
                 file.embeddedFilePassword = fileDict['embeddedFilePassword']
                 self.files.append(file)
-        if self.backuper:
-            backuper = json.loads(self.backuper)
-            self.backuper = self.Column()
-            self.backuper.id = backuper['id']
-            self.backuper.firstName = backuper['firstName']
-            self.backuper.lastName = backuper['lastName']
+        if self.modifier:
+            modifier = json.loads(self.modifier)
+            self.modifier = self.Column()
+            self.modifier.id = modifier['id']
+            self.modifier.firstName = modifier['firstName']
+            self.modifier.lastName = modifier['lastName']

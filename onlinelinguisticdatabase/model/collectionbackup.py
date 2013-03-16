@@ -51,16 +51,17 @@ class CollectionBackup(Base):
     source = Column(UnicodeText)
     elicitor = Column(UnicodeText)
     enterer = Column(UnicodeText)
-    backuper = Column(UnicodeText)
+    modifier = Column(UnicodeText)
     tags = Column(UnicodeText)
     files = Column(UnicodeText)
     forms = Column(UnicodeText)
 
-    def vivify(self, collectionDict, backuper, datetimeModified=None):
+    def vivify(self, collectionDict):
         """The vivify method gives life to CollectionBackup by specifying its
-        attributes using the to-be-backed-up collection (collectionDict) and the
-        backuper (current user).  The relational attributes of the
-        to-be-backed-up collection are converted into (truncated) JSON objects.
+        attributes using the to-be-backed-up collection as represented in
+        ``collectionDict``.  The relational attributes of the backup are
+        converted to (truncated) JSON objects.
+
         """
 
         self.collection_id = collectionDict['id']
@@ -74,15 +75,12 @@ class CollectionBackup(Base):
         self.html = collectionDict['html']
         self.dateElicited = collectionDict['dateElicited']
         self.datetimeEntered = collectionDict['datetimeEntered']
-        if datetimeModified:
-            self.datetimeModified = datetimeModified
-        else:
-            self.datetimeModified = datetime.datetime.utcnow()
+        self.datetimeModified = collectionDict['datetimeModified']
         self.source = unicode(json.dumps(collectionDict['source']))
         self.speaker = unicode(json.dumps(collectionDict['speaker']))
         self.elicitor = unicode(json.dumps(collectionDict['elicitor']))
         self.enterer = unicode(json.dumps(collectionDict['enterer']))
-        self.backuper = unicode(json.dumps(self.getMiniUserDict(backuper)))
+        self.modifier = unicode(json.dumps(collectionDict['modifier']))
         self.tags = unicode(json.dumps(collectionDict['tags']))
         self.files = unicode(json.dumps(collectionDict['files']))
         self.forms = unicode(json.dumps([f['id'] for f in collectionDict['forms']]))
@@ -106,7 +104,7 @@ class CollectionBackup(Base):
             'source': self.jsonLoads(self.source),
             'elicitor': self.jsonLoads(self.elicitor),
             'enterer': self.jsonLoads(self.enterer),
-            'backuper': self.jsonLoads(self.backuper),
+            'modifier': self.jsonLoads(self.modifier),
             'tags': self.jsonLoads(self.tags),
             'files': self.jsonLoads(self.files),
             'forms': self.jsonLoads(self.forms)

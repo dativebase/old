@@ -51,6 +51,8 @@ class Corpus(Base):
     content = Column(UnicodeText)
     enterer_id = Column(Integer, ForeignKey('user.id'))
     enterer = relation('User', primaryjoin='Corpus.enterer_id==User.id')
+    modifier_id = Column(Integer, ForeignKey('user.id'))
+    modifier = relation('User', primaryjoin='Corpus.modifier_id==User.id')
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
     tags = relation('Tag', secondary=corpustag_table)
@@ -73,6 +75,7 @@ class Corpus(Base):
             'description': self.description,
             'content': self.content,
             'enterer': self.getMiniUserDict(self.enterer),
+            'modifier': self.getMiniUserDict(self.modifier),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
             'tags': self.getTagsList(self.tags)

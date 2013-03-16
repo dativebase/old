@@ -60,6 +60,8 @@ class Collection(Base):
     elicitor = relation('User', primaryjoin='Collection.elicitor_id==User.id')
     enterer_id = Column(Integer, ForeignKey('user.id'))
     enterer = relation('User', primaryjoin='Collection.enterer_id==User.id')
+    modifier_id = Column(Integer, ForeignKey('user.id'))
+    modifier = relation('User', primaryjoin='Collection.modifier_id==User.id')
     dateElicited = Column(Date)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
@@ -104,6 +106,7 @@ class Collection(Base):
             'source': self.getMiniSourceDict(self.source),
             'elicitor': self.getMiniUserDict(self.elicitor),
             'enterer': self.getMiniUserDict(self.enterer),
+            'modifier': self.getMiniUserDict(self.modifier),
             'tags': self.getTagsList(self.tags),
             'files': self.getFilesList(self.files)
         }

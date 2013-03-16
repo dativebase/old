@@ -341,7 +341,7 @@ class TestPhonologiesController(TestController):
             PhonologyBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(PhonologyBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.datetimeModified.isoformat() == originalDatetimeModified
         assert backup.script == originalScript
         assert response.content_type == 'application/json'
 
@@ -1297,7 +1297,7 @@ class TestPhonologiesController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         newBackupCount = Session.query(PhonologyBackup).count()
-        datetimeModified = resp['datetimeModified']
+        firstUpdateDatetimeModified = datetimeModified = resp['datetimeModified']
         newPhonologyCount = Session.query(Phonology).count()
         assert phonologyCount == newPhonologyCount
         assert datetimeModified != originalDatetimeModified
@@ -1309,7 +1309,7 @@ class TestPhonologiesController(TestController):
             PhonologyBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(PhonologyBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.datetimeModified.isoformat() == originalDatetimeModified
         assert backup.script == originalScript
         assert json.loads(backup.modifier)['firstName'] == u'Admin'
         assert response.content_type == 'application/json'
@@ -1343,9 +1343,9 @@ class TestPhonologiesController(TestController):
             PhonologyBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(PhonologyBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.datetimeModified.isoformat() == firstUpdateDatetimeModified
         assert backup.script == newScript
-        assert json.loads(backup.modifier)['firstName'] == u'Contributor'
+        assert json.loads(backup.modifier)['firstName'] == u'Admin'
         assert response.content_type == 'application/json'
 
         # Now get the history of this phonology.
@@ -1374,8 +1374,8 @@ class TestPhonologiesController(TestController):
         assert secondVersion['description'] == u'Covers a lot of the data.  Best yet!'
         assert secondVersion['script'] == newScript
         assert secondVersion['enterer']['id'] == administratorId
-        assert secondVersion['modifier']['id'] == contributorId
-        assert secondVersion['datetimeModified'] == currentVersion['datetimeModified']
+        assert secondVersion['modifier']['id'] == administratorId
+        assert secondVersion['datetimeModified'] <= currentVersion['datetimeModified']
 
         assert currentVersion['name'] == u'Phonology'
         assert currentVersion['description'] == u'Covers even more data.  Better than ever!'
@@ -1436,7 +1436,7 @@ class TestPhonologiesController(TestController):
         assert secondVersion['description'] == u'Covers a lot of the data.  Best yet!'
         assert secondVersion['script'] == newScript
         assert secondVersion['enterer']['id'] == administratorId
-        assert secondVersion['modifier']['id'] == contributorId
+        assert secondVersion['modifier']['id'] == administratorId
         assert secondVersion['datetimeModified'] <= thirdVersion['datetimeModified']
 
         assert thirdVersion['name'] == u'Phonology'

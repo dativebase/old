@@ -249,7 +249,7 @@ class OldcollectionsController(BaseController):
                         collection, data, collectionsReferenced)
                     # collection will be False if there are no changes (cf. updateCollection).
                     if collection:
-                        backupCollection(collectionDict, collection.datetimeModified)
+                        backupCollection(collectionDict)
                         updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder,
                                             restricted=restricted, contents_changed=contents_changed)
                         Session.add(collection)
@@ -433,17 +433,15 @@ class OldcollectionsController(BaseController):
 # Backup collection
 ################################################################################
 
-def backupCollection(collectionDict, datetimeModified=None):
+def backupCollection(collectionDict):
     """Backup a collection.
 
     :param dict formDict: a representation of a collection model.
-    :param ``datetime.datetime`` datetimeModified: the time of the collection's
-        last update.
     :returns: ``None``
 
     """
     collectionBackup = CollectionBackup()
-    collectionBackup.vivify(collectionDict, session['user'], datetimeModified)
+    collectionBackup.vivify(collectionDict)
     Session.add(collectionBackup)
 
 
@@ -571,7 +569,9 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwa
                                                   collection.markupLanguage)
         collection.forms = [Session.query(Form).get(int(id)) for id in
                     h.formReferencePattern.findall(collection.contentsUnpacked)]
-
+    def updateModificationValues(collection, now):
+        collection.datetimeModified = now
+        collection.modifier = session['user']
     restricted = kwargs.get('restricted', False)
     contents_changed = kwargs.get('contents_changed', False)
     deleted = kwargs.get('deleted', False)
@@ -589,8 +589,8 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwa
         if deleted:
             [updateContentsUnpackedEtc(c, collectionId=collection.id, deleted=True)
              for c in collectionsReferencingThisCollection]
-        [setattr(c, 'datetimeModified', now) for c in collectionsReferencingThisCollection]
-        [backupCollection(cd, now) for cd in collectionsReferencingThisCollectionDicts]
+        [updateModificationValues(c, now) for c in collectionsReferencingThisCollection]
+        [backupCollection(cd) for cd in collectionsReferencingThisCollectionDicts]
         Session.add_all(collectionsReferencingThisCollection)
         Session.commit()
 
@@ -635,7 +635,7 @@ def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
     collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
                                               collection.markupLanguage)
     collection.datetimeModified = datetime.datetime.utcnow()
-    backupCollection(collectionDict, collection.datetimeModified)
+    backupCollection(collectionDict)
     updateCollectionsThatReferenceThisCollection(
         collection, OldcollectionsController.queryBuilder, contents_changed=True)
     Session.add(collection)
@@ -649,7 +649,9 @@ def removeReferencesToThisForm(contents, formId):
     :returns: the modified ``contents`` string.
 
     """
-    patt = re.compile('[Ff]orm\[(%d)\]' % formId)
+    #patt = re.compile('[Ff]orm\[(%d)\]' % formId)
+    patt = re.compile(h.formReferencePattern.pattern.replace('\d+',
+                                                        str(formId)))
     return patt.sub('', contents)
 
 def removeReferencesToThisCollection(contents, collectionId):
@@ -660,7 +662,9 @@ def removeReferencesToThisCollection(contents, collectionId):
     :returns: the modified ``contents`` string.
 
     """
-    patt = re.compile('[cC]ollection[\[\(](%d)[\]\)]' % collectionId)
+    #patt = re.compile('[cC]ollection[\[\(](%d)[\]\)]' % collectionId)
+    patt = re.compile(h.collectionReferencePattern.pattern.replace('\d+',
+                                                        str(collectionId)))
     return patt.sub('', contents)
 
 def getUnicode(key, dict_):
@@ -868,8 +872,7 @@ def createNewCollection(data, collectionsReferenced):
     now = datetime.datetime.utcnow()
     collection.datetimeEntered = now
     collection.datetimeModified = now
-    collection.enterer = Session.query(User).get(session['user'].id)
-
+    collection.enterer = collection.modifier = session['user']
 
     return collection
 
@@ -946,5 +949,6 @@ def updateCollection(collection, data, collectionsReferenced):
 
     if changed:
         collection.datetimeModified = datetime.datetime.utcnow()
+        collection.modifier = session['user']
         return collection, restricted, contents_changed
     return changed, restricted, contents_changed

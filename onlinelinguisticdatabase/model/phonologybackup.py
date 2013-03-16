@@ -55,7 +55,7 @@ class PhonologyBackup(Base):
     compileSucceeded = Column(Boolean, default=False)
     compileMessage = Column(Unicode(255))
 
-    def vivify(self, phonologyDict, modifier, datetimeModified=None):
+    def vivify(self, phonologyDict):
         """The vivify method gives life to a phonologyBackup by specifying its
         attributes using the to-be-backed-up phonology (phonologyDict) and the
         modifier (current user).  The relational attributes of the
@@ -69,16 +69,12 @@ class PhonologyBackup(Base):
         self.description = phonologyDict['description']
         self.script = phonologyDict['script']
         self.enterer = unicode(json.dumps(phonologyDict['enterer']))
-        self.modifier = unicode(json.dumps(self.getMiniUserDict(modifier)))
+        self.modifier = unicode(json.dumps(phonologyDict['modifier']))
         self.datetimeEntered = phonologyDict['datetimeEntered']
         self.datetimeModified = phonologyDict['datetimeModified']
         self.datetimeCompiled = phonologyDict['datetimeCompiled']
         self.compileSucceeded = phonologyDict['compileSucceeded']
         self.compileMessage = phonologyDict['compileMessage']
-        if datetimeModified:
-            self.datetimeModified = datetimeModified
-        else:
-            self.datetimeModified = datetime.datetime.utcnow()
 
     def getDict(self):
         return {

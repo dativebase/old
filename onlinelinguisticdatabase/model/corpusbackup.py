@@ -35,16 +35,17 @@ class CorpusBackup(Base):
     description = Column(UnicodeText)
     content = Column(UnicodeText)
     enterer = Column(UnicodeText)
+    modifier = Column(UnicodeText)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
     tags = Column(UnicodeText)
     forms = Column(UnicodeText)
 
-    def vivify(self, corpusDict, modifier, datetimeModified=None):
+    def vivify(self, corpusDict):
         """The vivify method gives life to a corpusBackup by specifying its
-        attributes using the to-be-backed-up corpus (corpusDict) and the
-        modifier (current user).  The relational attributes of the
-        to-be-backed-up corpus are converted into (truncated) JSON objects.
+        attributes using the to-be-backed-up corpus as represented in
+        ``corpusDict``.  The relational attributes of the backup are converted
+        to (truncated) JSON objects.
 
         """
 
@@ -55,13 +56,11 @@ class CorpusBackup(Base):
         self.description = corpusDict['description']
         self.content = corpusDict['content']
         self.enterer = unicode(json.dumps(corpusDict['enterer']))
-        self.modifier = unicode(json.dumps(self.getMiniUserDict(modifier)))
+        self.modifier = unicode(json.dumps(corpusDict['modifier']))
         self.datetimeEntered = corpusDict['datetimeEntered']
         self.datetimeModified = corpusDict['datetimeModified']
-        if datetimeModified:
-            self.datetimeModified = datetimeModified
-        else:
-            self.datetimeModified = now()
+        self.forms = unicode(json.dumps([f['id'] for f in corpusDict['forms']]))
+        self.tags = unicode(json.dumps(corpusDict['tags']))
 
     def getDict(self):
         """Return a Python dictionary representation of the Corpus.  This
@@ -81,6 +80,7 @@ class CorpusBackup(Base):
             'description': self.description,
             'content': self.content,
             'enterer': self.jsonLoads(self.enterer),
+            'modifier': self.jsonLoads(self.modifier),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
             'tags': self.jsonLoads(self.tags),

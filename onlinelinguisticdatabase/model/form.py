@@ -76,6 +76,8 @@ class Form(Base):
     elicitor = relation('User', primaryjoin='Form.elicitor_id==User.id')
     enterer_id = Column(Integer, ForeignKey('user.id'))
     enterer = relation('User', primaryjoin='Form.enterer_id==User.id')
+    modifier_id = Column(Integer, ForeignKey('user.id'))
+    modifier = relation('User', primaryjoin='Form.modifier_id==User.id')
     verifier_id = Column(Integer, ForeignKey('user.id'))
     verifier = relation('User', primaryjoin='Form.verifier_id==User.id')
     speaker_id = Column(Integer, ForeignKey('speaker.id'))
@@ -120,6 +122,7 @@ class Form(Base):
             'status': self.status,
             'elicitor': self.getMiniUserDict(self.elicitor),
             'enterer': self.getMiniUserDict(self.enterer),
+            'modifier': self.getMiniUserDict(self.modifier),
             'verifier': self.getMiniUserDict(self.verifier),
             'speaker': self.getMiniSpeakerDict(self.speaker),
             'elicitationMethod': self.getMiniElicitationMethodDict(self.elicitationMethod),

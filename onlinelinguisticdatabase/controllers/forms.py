@@ -201,7 +201,7 @@ class FormsController(BaseController):
                     form = updateForm(form, data)
                     # form will be False if there are no changes (cf. updateForm).
                     if form:
-                        backupForm(formDict, form.datetimeModified)
+                        backupForm(formDict)
                         Session.add(form)
                         Session.commit()
                         updateApplicationSettingsIfFormIsForeignWord(form)
@@ -529,16 +529,15 @@ def getNewEditFormData(GET_params):
 # Backup form
 ################################################################################
 
-def backupForm(formDict, datetimeModified=None):
+def backupForm(formDict):
     """Backup a form.
 
     :param dict formDict: a representation of a form model.
-    :param ``datetime.datetime`` datetimeModified: the time of the form's last update.
     :returns: ``None``
 
     """
     formBackup = FormBackup()
-    formBackup.vivify(formDict, session['user'], datetimeModified)
+    formBackup.vivify(formDict)
     Session.add(formBackup)
 
 
@@ -597,10 +596,8 @@ def createNewForm(data):
             form.tags.append(restrictedTag)
 
     # OLD-generated Data
-    now = datetime.datetime.utcnow()
-    form.datetimeEntered = now
-    form.datetimeModified = now
-    form.enterer = session['user']
+    form.datetimeEntered = form.datetimeModified = h.now()
+    form.enterer = form.modifier = session['user']
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
     # We add the form first to get an ID so that monomorphemic Forms can be
@@ -692,7 +689,8 @@ def updateForm(form, data):
     changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
 
     if changed:
-        form.datetimeModified = datetime.datetime.utcnow()
+        form.datetimeModified = h.now()
+        form.modifier = session['user']
         return form
     return changed
 
@@ -720,7 +718,8 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
     changed = h.setAttr(form, 'syntacticCategoryString', syntacticCategoryString, changed)
     changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
     if changed:
-        form.datetimeModified = datetime.datetime.utcnow()
+        form.datetimeModified = h.now()
+        form.modifier = session['user']
         return form
     return changed
 
@@ -747,7 +746,7 @@ def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
         form = updateMorphemeReferencesOfForm(form, validDelimiters, **kwargs)
         # form will be False if there are no changes.
         if form:
-            backupForm(formDict, form.datetimeModified)
+            backupForm(formDict)
             Session.add(form)
             Session.commit()
             updatedFormIds.append(form.id)

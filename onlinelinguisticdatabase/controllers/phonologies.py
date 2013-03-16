@@ -147,7 +147,7 @@ class PhonologiesController(BaseController):
                 phonology = updatePhonology(phonology, data)
                 # phonology will be False if there are no changes (cf. updatePhonology).
                 if phonology:
-                    backupPhonology(phonologyDict, phonology.datetimeModified)
+                    backupPhonology(phonologyDict)
                     Session.add(phonology)
                     Session.commit()
                     savePhonologyScript(phonology)
@@ -382,16 +382,15 @@ class PhonologiesController(BaseController):
 # Backup phonology
 ################################################################################
 
-def backupPhonology(phonologyDict, datetimeModified=None):
+def backupPhonology(phonologyDict):
     """Backup a phonology.
 
     :param dict phonologyDict: a representation of a phonology model.
-    :param ``datetime.datetime`` datetimeModified: the time of the phonology's last update.
     :returns: ``None``
 
     """
     phonologyBackup = PhonologyBackup()
-    phonologyBackup.vivify(phonologyDict, session['user'], datetimeModified)
+    phonologyBackup.vivify(phonologyDict)
     Session.add(phonologyBackup)
 
 
@@ -413,12 +412,8 @@ def createNewPhonology(data):
     phonology.description = h.normalize(data['description'])
     phonology.script = h.normalize(data['script'])  # normalize or not?
 
-    phonology.enterer = session['user']
-    phonology.modifier = session['user']
-
-    now = datetime.datetime.utcnow()
-    phonology.datetimeModified = now
-    phonology.datetimeEntered = now
+    phonology.enterer = phonology.modifier = session['user']
+    phonology.datetimeModified = phonology.datetimeEntered = h.now()
     return phonology
 
 def updatePhonology(phonology, data):
@@ -438,7 +433,7 @@ def updatePhonology(phonology, data):
 
     if changed:
         phonology.modifier = session['user']
-        phonology.datetimeModified = datetime.datetime.utcnow()
+        phonology.datetimeModified = h.now()
         return phonology
     return changed
 

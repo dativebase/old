@@ -1509,6 +1509,7 @@ class TestOldcollectionsController(TestController):
         myContributor = Session.query(model.User).filter(
             model.User.username==u'uniqueusername').first()
         myContributorId = myContributor.id
+        myContributorFirstName = myContributor.firstName
         tagId = tag.id
         fileId = file.id
         speakerId = speaker.id
@@ -1557,7 +1558,8 @@ class TestOldcollectionsController(TestController):
             'contents': mdContents
         })
         params = json.dumps(params)
-        response = self.app.post(url('collections'), params, self.json_headers, extra_environ)
+        response = self.app.post(url('collections'), params, self.json_headers,
+                                 extra_environ)
         resp = json.loads(response.body)
         toDeleteId = resp['id']
         assert resp['title'] == u'Test Delete'
@@ -1618,8 +1620,8 @@ class TestOldcollectionsController(TestController):
         backedUpCollection = Session.query(model.CollectionBackup).filter(
             model.CollectionBackup.UUID==unicode(resp['UUID'])).first()
         assert backedUpCollection.title == resp['title']
-        backuper = json.loads(unicode(backedUpCollection.backuper))
-        assert backuper['firstName'] == u'test user first name'
+        modifier = json.loads(unicode(backedUpCollection.modifier))
+        assert modifier['firstName'] == myContributorFirstName
         backedUpSpeaker = json.loads(unicode(backedUpCollection.speaker))
         assert backedUpSpeaker['firstName'] == speakerFirstName
         assert backedUpCollection.datetimeEntered.isoformat() == resp['datetimeEntered']
@@ -1986,7 +1988,7 @@ class TestOldcollectionsController(TestController):
         assert firstVersion['title'] == u'Created by the Contributor'
         assert firstVersion['elicitor']['id'] == contributorId
         assert firstVersion['enterer']['id'] == contributorId
-        assert firstVersion['backuper']['id'] == administratorId
+        assert firstVersion['modifier']['id'] == contributorId
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
         assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
@@ -1998,7 +2000,7 @@ class TestOldcollectionsController(TestController):
         assert secondVersion['title'] == u'Updated by the Administrator'
         assert secondVersion['elicitor'] == None
         assert secondVersion['enterer']['id'] == contributorId
-        assert secondVersion['backuper']['id'] == contributorId
+        assert secondVersion['modifier']['id'] == administratorId
         assert secondVersion['datetimeModified'] == currentVersion['datetimeModified']
         assert secondVersion['speaker']['id'] == speakerId
         assert sorted([t['id'] for t in secondVersion['tags']]) == sorted(tagIds)
@@ -2007,8 +2009,8 @@ class TestOldcollectionsController(TestController):
         assert currentVersion['title'] == u'Updated by the Contributor'
         assert currentVersion['elicitor'] == None
         assert currentVersion['enterer']['id'] == contributorId
-        assert 'backuper' not in currentVersion
         assert currentVersion['speaker']['id'] == speakerId
+        assert currentVersion['modifier']['id'] == contributorId
         assert sorted([t['id'] for t in currentVersion['tags']]) == sorted(tagIds)
         assert sorted([f['id'] for f in currentVersion['files']]) == sorted(fileIds)
 
@@ -2057,7 +2059,7 @@ class TestOldcollectionsController(TestController):
         assert firstVersion['title'] == u'Created by the Contributor'
         assert firstVersion['elicitor']['id'] == contributorId
         assert firstVersion['enterer']['id'] == contributorId
-        assert firstVersion['backuper']['id'] == administratorId
+        assert firstVersion['modifier']['id'] == contributorId
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
         assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
@@ -2068,7 +2070,7 @@ class TestOldcollectionsController(TestController):
         assert secondVersion['title'] == u'Updated by the Administrator'
         assert secondVersion['elicitor'] == None
         assert secondVersion['enterer']['id'] == contributorId
-        assert secondVersion['backuper']['id'] == contributorId
+        assert secondVersion['modifier']['id'] == administratorId
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
         assert secondVersion['datetimeModified'] <= thirdVersion['datetimeModified']
@@ -2079,7 +2081,7 @@ class TestOldcollectionsController(TestController):
         assert thirdVersion['title'] == u'Updated by the Contributor'
         assert thirdVersion['elicitor'] == None
         assert thirdVersion['enterer']['id'] == contributorId
-        assert 'backuper' in thirdVersion
+        assert thirdVersion['modifier']['id'] == contributorId
         assert thirdVersion['speaker']['id'] == speakerId
         assert sorted([t['id'] for t in thirdVersion['tags']]) == sorted(tagIds)
         assert sorted([f['id'] for f in thirdVersion['files']]) == sorted(fileIds)

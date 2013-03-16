@@ -1256,6 +1256,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         id = int(resp['id'])
         newFormCount = Session.query(model.Form).count()
+        datetimeModified = resp['datetimeModified']
         assert resp['transcription'] == originalTranscription
         assert resp['translations'][0]['transcription'] == originalTranslation
         assert newFormCount == formCount + 1
@@ -1306,7 +1307,7 @@ class TestFormsController(TestController):
             model.FormBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(model.FormBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.datetimeModified.isoformat() == datetimeModified
         assert backup.transcription == originalTranscription
         assert response.content_type == 'application/json'
 
@@ -1457,6 +1458,7 @@ class TestFormsController(TestController):
         myContributor = Session.query(model.User).filter(
             model.User.username==u'uniqueusername').first()
         myContributorId = myContributor.id
+        myContributorFirstName = myContributor.firstName
         tagId = tag.id
         fileId = file.id
         speakerId = speaker.id
@@ -1546,8 +1548,8 @@ class TestFormsController(TestController):
         backedUpForm = Session.query(model.FormBackup).filter(
             model.FormBackup.UUID==unicode(resp['UUID'])).first()
         assert backedUpForm.transcription == resp['transcription']
-        backuper = json.loads(unicode(backedUpForm.backuper))
-        assert backuper['firstName'] == u'test user first name'
+        modifier = json.loads(backedUpForm.modifier)
+        assert modifier['firstName'] == myContributorFirstName
         backedUpSpeaker = json.loads(unicode(backedUpForm.speaker))
         assert backedUpSpeaker['firstName'] == speakerFirstName
         assert backedUpForm.datetimeEntered.isoformat() == resp['datetimeEntered']
@@ -2012,7 +2014,7 @@ class TestFormsController(TestController):
         assert firstVersion['morphemeBreak'] == u''
         assert firstVersion['elicitor']['id'] == contributorId
         assert firstVersion['enterer']['id'] == contributorId
-        assert firstVersion['backuper']['id'] == administratorId
+        assert firstVersion['modifier']['id'] == contributorId
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
         assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
@@ -2028,8 +2030,8 @@ class TestFormsController(TestController):
         assert secondVersion['morphemeBreak'] == u'up-dat-ed by the ad-ministr-ator'
         assert secondVersion['elicitor'] == None
         assert secondVersion['enterer']['id'] == contributorId
-        assert secondVersion['backuper']['id'] == contributorId
-        assert secondVersion['datetimeModified'] == currentVersion['datetimeModified']
+        assert secondVersion['modifier']['id'] == administratorId
+        assert secondVersion['datetimeModified'] <= currentVersion['datetimeModified']
         assert secondVersion['speaker']['id'] == speakerId
         assert secondVersion['elicitationMethod']['id'] == elicitationMethodId
         assert secondVersion['syntacticCategory']['id'] == firstSyntacticCategoryId
@@ -2042,7 +2044,7 @@ class TestFormsController(TestController):
         assert currentVersion['morphemeBreak'] == u'up-dat-ed by the ad-ministr-ator'
         assert currentVersion['elicitor'] == None
         assert currentVersion['enterer']['id'] == contributorId
-        assert 'backuper' not in currentVersion
+        assert currentVersion['modifier']['id'] == contributorId
         assert currentVersion['speaker']['id'] == speakerId
         assert currentVersion['elicitationMethod']['id'] == elicitationMethodId
         assert currentVersion['syntacticCategory']['id'] == lastSyntacticCategoryId
@@ -2098,7 +2100,7 @@ class TestFormsController(TestController):
         assert firstVersion['morphemeBreak'] == u''
         assert firstVersion['elicitor']['id'] == contributorId
         assert firstVersion['enterer']['id'] == contributorId
-        assert firstVersion['backuper']['id'] == administratorId
+        assert firstVersion['modifier']['id'] == contributorId
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
         assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
@@ -2114,7 +2116,7 @@ class TestFormsController(TestController):
         assert secondVersion['morphemeBreak'] == u'up-dat-ed by the ad-ministr-ator'
         assert secondVersion['elicitor'] == None
         assert secondVersion['enterer']['id'] == contributorId
-        assert secondVersion['backuper']['id'] == contributorId
+        assert secondVersion['modifier']['id'] == administratorId
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
         assert secondVersion['datetimeModified'] <= thirdVersion['datetimeModified']
@@ -2130,7 +2132,7 @@ class TestFormsController(TestController):
         assert thirdVersion['morphemeBreak'] == u'up-dat-ed by the ad-ministr-ator'
         assert thirdVersion['elicitor'] == None
         assert thirdVersion['enterer']['id'] == contributorId
-        assert 'backuper' in thirdVersion
+        assert thirdVersion['modifier']['id'] == contributorId
         assert thirdVersion['speaker']['id'] == speakerId
         assert thirdVersion['elicitationMethod']['id'] == elicitationMethodId
         assert thirdVersion['syntacticCategory']['id'] == lastSyntacticCategoryId
@@ -2528,7 +2530,7 @@ class TestFormsController(TestController):
         assert len(formBackups) == 2
         assert [json.loads(f.morphemeBreakIDs) for f in formBackups] == \
             [[[[], [], []]], [[[], [], []]]]
-        assert [json.loads(f.backuper)['role'] for f in formBackups] == [
+        assert [json.loads(f.modifier)['role'] for f in formBackups] == [
             u'administrator', u'administrator']
 
     #@nottest
