@@ -35,36 +35,39 @@ log = logging.getLogger(__name__)
 
 class TestPhonologiesController(TestController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    researchersPath = os.path.join(here, 'files', 'researchers')
-    phonologyPath = os.path.join(here, 'analysis', 'phonology')
-    testPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology.script')
+    config = appconfig('config:test.ini', relative_to='.')
+    here = config['here']
+    researchersPath = h.getOLDDirectoryPath('users', config=config)
+    phonologyPath = h.getOLDDirectoryPath('phonologies', config=config)
+    testPhonologiesPath = os.path.join(here, 'onlinelinguisticdatabase',
+                        'tests', 'data', 'phonologies')
+    testPhonologyScriptPath = os.path.join(testPhonologiesPath,
+                                           'test_phonology.script')
     testPhonologyScript = h.normalize(
         codecs.open(testPhonologyScriptPath, 'r', 'utf8').read())
 
-    testMalformedPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology_malformed.script')
+    testMalformedPhonologyScriptPath = os.path.join(testPhonologiesPath,
+                                                    'test_phonology_malformed.script')
     testMalformedPhonologyScript = h.normalize(
         codecs.open(testMalformedPhonologyScriptPath, 'r', 'utf8').read())
 
-    testPhonologyNoPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology_malformed.script')
+    testPhonologyNoPhonologyScriptPath = os.path.join(testPhonologiesPath,
+                                                      'test_phonology_malformed.script')
     testPhonologyNoPhonologyScript = h.normalize(
         codecs.open(testPhonologyNoPhonologyScriptPath, 'r', 'utf8').read())
 
-    testMediumPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology_medium.script')
+    testMediumPhonologyScriptPath = os.path.join(testPhonologiesPath,
+                                                 'test_phonology_medium.script')
     testMediumPhonologyScript = h.normalize(
         codecs.open(testMediumPhonologyScriptPath, 'r', 'utf8').read())
 
-    testLargePhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology_large.script')
+    testLargePhonologyScriptPath = os.path.join(testPhonologiesPath,
+                                                'test_phonology_large.script')
     testLargePhonologyScript = h.normalize(
         codecs.open(testLargePhonologyScriptPath, 'r', 'utf8').read())
 
-    testPhonologyTestlessScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology_no_tests.script')
+    testPhonologyTestlessScriptPath = os.path.join(testPhonologiesPath,
+                                                   'test_phonology_no_tests.script')
     testPhonologyTestlessScript = h.normalize(
         codecs.open(testPhonologyTestlessScriptPath, 'r', 'utf8').read())
 
@@ -83,7 +86,7 @@ class TestPhonologiesController(TestController):
     # Clear all models in the database except Language; recreate the phonologies.
     def tearDown(self):
         h.clearAllModels()
-        h.destroyAllResearcherDirectories()
+        h.destroyAllUserDirectories()
         h.destroyAllPhonologyDirectories()
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()
@@ -968,8 +971,8 @@ class TestPhonologiesController(TestController):
                     id=phonology1Id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         config = h.getConfig(configFilename='test.ini')
-        phonologyDirPath = os.path.join(config['analysis_data'], 'phonology',
-                     'phonology_%d' % phonology1Id)
+        phonologyDirPath = os.path.join(self.phonologyPath,
+                                        'phonology_%d' % phonology1Id)
         phonologyDirContents = os.listdir(phonologyDirPath)
         assert resp[u'nit-wa'] == [u'nita']
         # Make sure the temporary phonologization files have been deleted.

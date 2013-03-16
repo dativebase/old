@@ -29,6 +29,7 @@ class Model(object):
     tableName2coreAttributes = {
         'elicitationmethod': ['id', 'name'],
         'file': ['id', 'name', 'filename', 'MIMEtype', 'size', 'url', 'lossyFilename'],
+        'formsearch': ['id', 'name'],
         'translation': ['id', 'transcription', 'grammaticality'],
         'orthography': ['id', 'name', 'orthography', 'lowercase', 'initialGlottalStops'],
         'source': ['id', 'type', 'key', 'journal', 'editor', 'chapter', 'pages',
@@ -88,6 +89,9 @@ class Model(object):
 
     def getMiniFileDict(self, file):
         return self.getMiniDictFor(file)
+
+    def getMiniFormSearchDict(self, formSearch):
+        return self.getMiniDictFor(formSearch)
 
     def getMiniOrthographyDict(self, orthography):
         return self.getMiniDictFor(orthography)

@@ -68,9 +68,12 @@ def addSEARCHToWebTestValidMethods():
 
 class TestFormsSearchController(TestController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    filesPath = os.path.join(here, 'files')
-    testFilesPath = os.path.join(here, 'test_files')
+    config = appconfig('config:test.ini', relative_to='.')
+    here = config['here']
+    filesPath = h.getOLDDirectoryPath('files', config=config)
+    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
+    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
+                                 'data', 'files')
 
     createParams = {
         'name': u'',

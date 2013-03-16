@@ -184,7 +184,7 @@ class UsersController(BaseController):
         """
         user = Session.query(User).get(id)
         if user:
-            h.destroyResearcherDirectory(user)
+            h.destroyUserDirectory(user)
             Session.delete(user)
             Session.commit()
             return user.getFullDict()
@@ -333,8 +333,8 @@ def createNewUser(data):
     # OLD-generated Data
     user.datetimeModified = datetime.datetime.utcnow()
 
-    # Create the user's directory in /files/researchers/
-    h.createResearcherDirectory(user)
+    # Create the user's directory
+    h.createUserDirectory(user)
 
     return user
 
@@ -368,7 +368,7 @@ def updateUser(user, data):
     if data['username'] is not None:
         username = h.normalize(data['username'])
         if username != user.username:
-            h.renameResearcherDirectory(user.username, username)
+            h.renameUserDirectory(user.username, username)
         changed = h.setAttr(user, 'username', username, changed)
 
     # Many-to-One Data

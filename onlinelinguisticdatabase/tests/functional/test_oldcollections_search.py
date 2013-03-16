@@ -68,8 +68,10 @@ def addSEARCHToWebTestValidMethods():
 
 class TestFormsSearchController(TestController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    filesPath = os.path.join(here, 'files')
+    config = appconfig('config:test.ini', relative_to='.')
+    here = config['here']
+    filesPath = h.getOLDDirectoryPath('files', config=config)
+    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
     testFilesPath = os.path.join(here, 'test_files')
 
     createParams = {
@@ -1643,9 +1645,9 @@ class TestFormsSearchController(TestController):
         """Tests POST /collections/search: clean up the database."""
 
         h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
+        administrator = h.generateDefaultAdministrator(config=self.config)
+        contributor = h.generateDefaultContributor(config=self.config)
+        viewer = h.generateDefaultViewer(config=self.config)
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 

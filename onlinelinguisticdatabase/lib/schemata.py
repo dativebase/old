@@ -1044,7 +1044,7 @@ class PhonologySchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Phonology', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Phonology', attributeName='name')
     description = UnicodeString()
     script = UnicodeString()
 
@@ -1058,6 +1058,29 @@ class MorphophonemicTranscriptionsSchema(Schema):
 class CorpusSchema(Schema):
     """CorpusSchema is a Schema for validating the data submitted to
     CorporaController (controllers/corpora.py).
+
+    .. note::
+    
+        Corpora can caontain **extremely** large collections of forms.  Therefore
+        there needs to be some efficiency measures built in around this collection
+        as pertains to validation ...  E.g., validation of forms should be avoided
+        on updates if it can first be shown that the set of forms referenced has
+        not changed ...
+
     """
     allow_extra_fields = True
     filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Corpus', attributeName='name')
+    type = OneOf(h.corpusTypes)
+    description = UnicodeString()
+    content = UnicodeString()
+    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
+    formSearch = ValidOLDModelObject(modelName='FormSearch')
+    #forms = ForEach(ValidOLDModelObject(modelName='Form'))
+
+"""
+
+A corpus is an ordered list of forms ...
+
+
+"""

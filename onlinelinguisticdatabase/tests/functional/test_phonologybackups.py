@@ -41,11 +41,14 @@ class TestPhonologybackupsController(TestController):
         'script': u''
     }
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    researchersPath = os.path.join(here, 'files', 'researchers')
-    phonologyPath = os.path.join(here, 'analysis', 'phonology')
-    testPhonologyScriptPath = os.path.join(here, 'onlinelinguisticdatabase',
-                                    'tests', 'data', 'test_phonology.script')
+    config = appconfig('config:test.ini', relative_to='.')
+    here = config['here']
+    researchersPath = h.getOLDDirectoryPath('users', config=config)
+    phonologyPath = h.getOLDDirectoryPath('phonologies', config=config)
+    testPhonologiesPath = os.path.join(here, 'onlinelinguisticdatabase',
+                        'tests', 'data', 'phonologies')
+    testPhonologyScriptPath = os.path.join(testPhonologiesPath,
+                                           'test_phonology.script')
     testPhonologyScript = h.normalize(
         codecs.open(testPhonologyScriptPath, 'r', 'utf8').read())
 

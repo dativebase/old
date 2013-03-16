@@ -33,10 +33,12 @@ log = logging.getLogger(__name__)
 
 class TestOldcollectionsController(TestController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    filesPath = os.path.join(here, 'files')
-    testFilesPath = os.path.join(here, 'test_files')
-    reducedFilesPath = os.path.join(filesPath, u'reduced_files')
+    config = appconfig('config:test.ini', relative_to='.')
+    here = config['here']
+    filesPath = h.getOLDDirectoryPath('files', config=config)
+    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
+    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
+                                 'data', 'files')
 
     createParams = {
         'title': u'',
@@ -101,9 +103,9 @@ class TestOldcollectionsController(TestController):
     def tearDown(self):
         # Clear all models in the database except Language; recreate the users.
         h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
+        administrator = h.generateDefaultAdministrator(config=self.config)
+        contributor = h.generateDefaultContributor(config=self.config)
+        viewer = h.generateDefaultViewer(config=self.config)
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 

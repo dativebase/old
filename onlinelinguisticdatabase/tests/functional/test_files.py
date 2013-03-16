@@ -38,12 +38,14 @@ log = logging.getLogger(__name__)
 class TestFilesController(TestController):
 
     config = appconfig('config:test.ini', relative_to='.')
-    create_reduced_size_file_copies = asbool(config.get('create_reduced_size_file_copies', False))
+    create_reduced_size_file_copies = asbool(config.get(
+        'create_reduced_size_file_copies', False))
     preferred_lossy_audio_format = config.get('preferred_lossy_audio_format', 'ogg')
     here = config['here']
-    filesPath = os.path.join(here, u'files')
-    reducedFilesPath = os.path.join(filesPath, u'reduced_files')
-    testFilesPath = os.path.join(here, 'test_files')
+    filesPath = h.getOLDDirectoryPath('files', config=config)
+    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
+    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
+                                 'data', 'files')
 
     createParams = {
         'filename': u'',        # Will be filtered out on update requests
@@ -132,9 +134,9 @@ class TestFilesController(TestController):
     # users and clear the files directory.
     def tearDown(self):
         h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
+        administrator = h.generateDefaultAdministrator(config=self.config)
+        contributor = h.generateDefaultContributor(config=self.config)
+        viewer = h.generateDefaultViewer(config=self.config)
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
         h.clearDirectoryOfFiles(self.filesPath)
@@ -1066,16 +1068,16 @@ class TestFilesController(TestController):
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create_large(self):
         """Tests that POST /files correctly creates a large file.
 
         WARNING 1: long-running test.
 
         WARNING: 2: if a large file named old_test_long.wav does not exist in
-        test_files, this test will pass vacuously.  I don't want to include such
-        a large file in the code base so this file needs to be created if one
-        wants this test to run.
+        ``tests/data/files``, this test will pass vacuously.  I don't want to
+        include such a large file in the code base so this file needs to be
+        created if one wants this test to run.
         """
 
         fileCount = newFileCount = Session.query(model.File).count()
@@ -2009,7 +2011,7 @@ class TestFilesController(TestController):
         Session.commit()
         restrictedTagId = restrictedTag.id
         here = self.here
-        testFilesPath = os.path.join(here, 'test_files')
+        testFilesPath = self.testFilesPath
         wavFilename = u'old_test.wav'
         wavFilePath = os.path.join(testFilesPath, wavFilename)
         wavFileSize = os.path.getsize(wavFilePath)

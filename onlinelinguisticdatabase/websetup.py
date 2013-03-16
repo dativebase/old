@@ -34,18 +34,9 @@ def setup_app(command, conf, vars):
     Base.metadata.create_all(bind=Session.bind)
     filename = os.path.split(conf.filename)[-1] # e.g., production.ini, development.ini, test.ini, ...
 
-    # Create the files directories.
-    h.makeDirectorySafely('files')
-    h.makeDirectorySafely(os.path.join('files', 'archived_files'))
-    h.makeDirectorySafely(os.path.join('files', 'researchers'))
-    h.makeDirectorySafely(os.path.join('files', 'reduced_files'))
-
-    # Create the analysis directories.
-    h.makeDirectorySafely('analysis')
-    h.makeDirectorySafely(os.path.join('analysis', 'phonology'))
-    h.makeDirectorySafely(os.path.join('analysis', 'morphology'))
-    h.makeDirectorySafely(os.path.join('analysis', 'morphophonology'))
-    h.makeDirectorySafely(os.path.join('analysis', 'probabilitycalculator'))
+    # Create the ``store`` directory and those for file, analysis and corpora
+    # objects and their subdirectories.  See ``lib.utils.py`` for details.
+    h.createOLDDirectories(config=config)
 
     # ISO-639-3 Language data for the languages table
     log.info("Retrieving ISO-639-3 languages data.")
@@ -75,7 +66,7 @@ def setup_app(command, conf, vars):
 
         # Create the _requests_tests.py script
         requestsTestsPath = os.path.join(config['pylons.paths']['root'], 'tests',
-                                         '_requests_tests.py')
+                                         'scripts', '_requests_tests.py')
         copyfile(requestsTestsPath, '_requests_tests.py')
 
         # Create the tables if they don't already exist

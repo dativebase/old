@@ -426,6 +426,9 @@ the OLD uses the command-line programs
 `foma and flookup <http://code.google.com/p/foma/>`_.  See the linked
 page for installation instructions.
 
+In order to search OLD treebank corpora,
+`Tgrep2 <http://tedlab.mit.edu/~dr/Tgrep2/>`_ must be installed. 
+
 
 PIL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -10,17 +10,16 @@
 TODO.txt
 
 # Some Pylons-generated directories that should be ignored
-dist/
-data/
-build/
+/dist/
+/data/
+/build/
 
 # Some OLD-specific directories that should be ignored
-files/
-analysis/
+/store/
 
 # Ignore a large file in test_files
-test_files/old_test_long.wav
-test_files/old_test_medium.wav
+onlinelinguisticdatabase/tests/data/files/old_test_long.wav
+onlinelinguisticdatabase/tests/data/files/old_test_medium.wav
 
 # The client-side JavaScript application should be kept separate, at least for now
 onlinelinguisticdatabase/public/coffee/
@@ -31,6 +30,7 @@ onlinelinguisticdatabase/public/js/
 onlinelinguisticdatabase/public/js_/
 onlinelinguisticdatabase/public/lib/
 onlinelinguisticdatabase/public/templates/
+onlinelinguisticdatabase/public/OLD-Model.txt
 
 # Ignore the GMail .ini file
 gmail.ini

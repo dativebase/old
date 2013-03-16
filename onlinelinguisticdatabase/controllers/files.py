@@ -393,7 +393,7 @@ def serveFile(id, reduced=False):
         response.status_int = 400
         return json.dumps({'error': u'The content of file %s is stored elsewhere at %s' % (id, file.url)})
     if file:
-        filesDir = config['app_conf']['permanent_store']
+        filesDir = h.getOLDDirectoryPath('files', config=config)
         if reduced:
             filename = getattr(file, 'lossyFilename', None)
             if not filename:
@@ -501,7 +501,7 @@ def createBase64File(data):
     # Write the file to disk (making sure it's unique and thereby potentially)
     # modifying file.filename; and calculate file.size.
     fileData = data['base64EncodedFile']     # base64-decoded during validation
-    filesPath = config['app_conf']['permanent_store']
+    filesPath = h.getOLDDirectoryPath('files', config=config)
     filePath = os.path.join(filesPath, file.filename)
     fileObject, filePath = getUniqueFilePath(filePath)
     file.filename = os.path.split(filePath)[-1]
@@ -603,7 +603,7 @@ def createPlainFile():
     file.filename = h.normalize(data['filename'])
     file.MIMEtype = data['MIMEtype']
 
-    filesPath = config['app_conf']['permanent_store']
+    filesPath = h.getOLDDirectoryPath('files', config=config)
     filePath = os.path.join(filesPath, file.filename)
     fileObject, filePath = getUniqueFilePath(filePath)
     file.filename = os.path.split(filePath)[-1]
@@ -755,11 +755,12 @@ def deleteFile(file):
 
     """
     if getattr(file, 'filename', None):
-        filePath = os.path.join(config['app_conf']['permanent_store'], file.filename)
+        filePath = os.path.join(h.getOLDDirectoryPath('files', config=config),
+                                file.filename)
         os.remove(filePath)
     if getattr(file, 'lossyFilename', None):
-        filePath = os.path.join(config['app_conf']['permanent_store'],
-                                'reduced_files', file.lossyFilename)
+        filePath = os.path.join(h.getOLDDirectoryPath('reduced_files', config=config),
+                                file.lossyFilename)
         os.remove(filePath)
     Session.delete(file)
     Session.commit()

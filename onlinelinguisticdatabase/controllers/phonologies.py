@@ -481,8 +481,8 @@ def getPhonologyDirPath(phonology):
     :returns: an absolute path to the directory for the phonology.
 
     """
-    return os.path.join(config['analysis_data'],
-                                    'phonology', 'phonology_%d' % phonology.id)
+    return os.path.join(h.getOLDDirectoryPath('phonologies', config=config),
+                        'phonology_%d' % phonology.id)
 
 def getPhonologyFilePath(phonology, fileType='script'):
     """Return the path to a phonology's file of the given type.

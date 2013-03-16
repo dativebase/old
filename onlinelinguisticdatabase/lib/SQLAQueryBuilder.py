@@ -418,6 +418,34 @@ class SQLAQueryBuilder(object):
             'forms': {},
             'files': {}
         },
+        'Corpus': {
+            'id': {},
+            'UUID': {},
+            'name': {},
+            'type': {},
+            'description': {},
+            'content': {},
+            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
+            'modifier': {'foreignModel': 'User', 'type': 'scalar'},
+            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
+            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'tags': {'foreignModel': 'Tag', 'type': 'collection'},
+            'forms': {'foreignModel': 'Form', 'type': 'collection'}
+        },
+        'CorpusBackup': {
+            'id': {},
+            'UUID': {},
+            'name': {},
+            'type': {},
+            'description': {},
+            'content': {},
+            'enterer': {},
+            'modifier': {},
+            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
+            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'tags': {},
+            'forms': {}
+        },
         'ElicitationMethod': {
             'id': {},
             'name': {},
@@ -455,7 +483,8 @@ class SQLAQueryBuilder(object):
             'tags': {'foreignModel': 'Tag', 'type': 'collection'},
             'files': {'foreignModel': 'File', 'type': 'collection'},
             'collections': {'foreignModel': 'Collection', 'type': 'collection'},
-            'memorizers': {'foreignModel': 'User', 'type': 'collection'}
+            'memorizers': {'foreignModel': 'User', 'type': 'collection'},
+            'corpora': {'foreignModel': 'Corpus', 'type': 'collection'}
         },
         'FormBackup': {
             'id': {},

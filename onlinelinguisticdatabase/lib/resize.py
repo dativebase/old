@@ -25,7 +25,7 @@ image files appropriately and returns None for other file types.
 
 from paste.deploy.converters import asbool
 from subprocess import call
-from onlinelinguisticdatabase.lib.utils import ffmpegEncodes, getSubprocess
+from onlinelinguisticdatabase.lib.utils import ffmpegEncodes, getSubprocess, getOLDDirectoryPath
 import os
 try:
     import Image
@@ -42,7 +42,7 @@ def saveReducedCopy(file, config):
     depending on whether the reduction failed or succeeded, repectively.
     """
     if getattr(file, 'filename') and asbool(config.get('create_reduced_size_file_copies', 1)):
-        filesPath = config['app_conf']['permanent_store']
+        filesPath = getOLDDirectoryPath('files', config=config['app_conf'])
         reducedFilesPath = os.path.join(filesPath, 'reduced_files')
         if u'image' in file.MIMEtype:
             return saveReducedSizeImage(file, filesPath, reducedFilesPath)

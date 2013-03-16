@@ -20,7 +20,17 @@ from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class CorpusBackup(Base):
+    """Define the corpus backup model.
+    
+    .. note::
+    
+        Unlike with the collection backup model, the corpus backup model does
+        not backup references to forms.  This is because corpora will generally
+        reference many, many forms and it would be inefficient to store all of
+        these references as massive (mostly redundant) JSON arrays...
 
+    """
+    
     __tablename__ = 'corpusbackup'
     __table_args__ = {'mysql_charset': 'utf8'}
 
@@ -36,10 +46,10 @@ class CorpusBackup(Base):
     content = Column(UnicodeText)
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
+    formSearch = Column(UnicodeText)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
     tags = Column(UnicodeText)
-    forms = Column(UnicodeText)
 
     def vivify(self, corpusDict):
         """The vivify method gives life to a corpusBackup by specifying its
@@ -57,9 +67,9 @@ class CorpusBackup(Base):
         self.content = corpusDict['content']
         self.enterer = unicode(json.dumps(corpusDict['enterer']))
         self.modifier = unicode(json.dumps(corpusDict['modifier']))
+        self.formSearch = unicode(json.dumps(corpusDict['formSearch']))
         self.datetimeEntered = corpusDict['datetimeEntered']
         self.datetimeModified = corpusDict['datetimeModified']
-        self.forms = unicode(json.dumps([f['id'] for f in corpusDict['forms']]))
         self.tags = unicode(json.dumps(corpusDict['tags']))
 
     def getDict(self):
@@ -69,6 +79,7 @@ class CorpusBackup(Base):
         for 'id', 'firstName' and 'lastName' (cf. getMiniUserDict) and
         lacks keys for other attributes such as 'username',
         'personalPageContent', etc.
+
         """
 
         return {
@@ -81,8 +92,8 @@ class CorpusBackup(Base):
             'content': self.content,
             'enterer': self.jsonLoads(self.enterer),
             'modifier': self.jsonLoads(self.modifier),
+            'formSearch': self.jsonLoads(self.formSearch),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
-            'tags': self.jsonLoads(self.tags),
-            'forms': self.jsonLoads(self.forms)
+            'tags': self.jsonLoads(self.tags)
         }

@@ -72,15 +72,9 @@ emptyDatabase = 0
 # If value is 0, ISO 639-3 language data will not be entered.  Default is 1.
 addLanguageData = 1
 
-# Permanent Store.  Where we store user-uploaded files.
-permanent_store = %(here)s/files
-
-# Temporary Store.  For storing archived sets of files.
-temporary_store = %(here)s/files/archived_files
-
-# Analysis Data.  For storing files associated with the analysis functionality,
-# phonology, morphotactics, parser, corpora, etc.
-analysis_data = %(here)s/analysis
+# Permanent Store: for storing binary files for corpora, files, users,
+# phonologies, ...
+permanent_store = %(here)s/store
 
 # When sending "password reset" emails, the system will, by default, use localhost
 # to attempt to send the email.  If password_reset_smtp_server is smtp.gmail.com,

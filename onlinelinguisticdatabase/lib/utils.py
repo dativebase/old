@@ -74,16 +74,20 @@ log = logging.getLogger(__name__)
 # Get data for 'new' action
 ################################################################################
 
-def getDataForNewAction(GET_params, getterMap, modelNameMap):
-    """Return a dictionary whose values are lists of OLD model objects.
-    GET_params is the dict-like object created by Pylons that is created on a
-    GET request.  The getterMap param is a dict from key names (e.g., 'users')
-    to a getter function that retrieves that resource (e.g., getUsers).  The
-    modelNameMap is a dict from key names (e.g., 'users') to the relevant model
-    (e.g., 'User').
+def getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes=[]):
+    """Return the data needed to create a new model or edit an existing one.
+    
+    :param GET_params: the Pylons dict-like object containing the query string
+        parameters of the request.
+    :param dict getterMap: maps attribute names to functions that get the
+        relevant resources.
+    :param dict modelNameMap: maps attribute names to the relevant model name.
+    :param list mandatoryAttributes: names of attributes whose values are always
+        included in the result
+    :returns: a dictionary from plural resource names to lists of resources.
 
     If no GET parameters are provided (i.e., GET_params is empty), then retrieve
-    all data (using getterMap) from the db and return them.
+    all data (using getterMap) return them.
 
     If GET parameters are specified, then for each parameter whose value is a
     non-empty string (and is not a valid ISO 8601 datetime), retrieve and
@@ -94,6 +98,7 @@ def getDataForNewAction(GET_params, getterMap, modelNameMap):
     datetime param does *not* match the most recent datetimeModified value
     of the relevant data store (i.e., model object).  This makes sense because a
     non-match indicates that the requester has out-of-date data.
+
     """
 
     # result is initialized as a dict with empty list values.
@@ -102,6 +107,9 @@ def getDataForNewAction(GET_params, getterMap, modelNameMap):
     # There are GET params, so we are selective in what we return.
     if GET_params:
         for key in getterMap:
+            if key in mandatoryAttributes:
+                result[key] = getterMap[key]()
+                break
             val = GET_params.get(key)
             # Proceed so long as val is not an empty string.
             if val:
@@ -206,6 +214,32 @@ def restrict(*methods):
 # File system functions
 ################################################################################
 
+def getOLDDirectoryPath(directoryName, **kwargs):
+    """Return the absolute path to an OLD directory."""
+    try:
+        config = getConfig(**kwargs)
+        store = config['permanent_store']
+        map_ = {
+            u'files': u'files',
+            u'reduced_files': os.path.join(u'files', u'reduced_files'),
+            u'users': u'users',
+            u'corpora': u'corpora',
+            u'phonologies': u'phonologies'
+        }
+        return os.path.join(store, map_[directoryName])
+    except Exception:
+        return None
+
+def createOLDDirectories(**kwargs):
+    """Make all of the required OLD directories.
+    
+    :param kwargs['config']: a Pylons config object.
+    :param kwargs['configFilename']: the name of a config file, e.g., "test.ini"
+
+    """
+    [makeDirectorySafely(getOLDDirectoryPath(dn, **kwargs)) for dn in
+     ('files', 'reduced_files', 'users', 'corpora', 'phonologies')]
+
 def getModificationTime(path):
     """Return the modification time of the file or directory with ``path``.
 
@@ -240,43 +274,37 @@ def getConfig(**kwargs):
                     from pylons import config
                     return config
 
-def createResearcherDirectory(researcher, **kwargs):
-    """Creates a directory named researcher.username in files/researchers/."""
-    config = getConfig(**kwargs)
+def createUserDirectory(user, **kwargs):
+    """Create a directory named ``user.username`` in ``<permanent_store>/users/``."""
     try:
-        permanent_store = config['permanent_store']
-        directoryPath = os.path.join(permanent_store, 'researchers', researcher.username)
-        makeDirectorySafely(directoryPath)
+        makeDirectorySafely(os.path.join(getOLDDirectoryPath('users', **kwargs),
+                            user.username))
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def destroyResearcherDirectory(researcher, **kwargs):
-    """Destroys a directory named researcher.username in files/researchers/."""
-    config = getConfig(**kwargs)
+def destroyUserDirectory(user, **kwargs):
+    """Destroys a directory named ``user.username`` in ``<permanent_store>/users/``."""
     try:
-        permanent_store = config['permanent_store']
-        directoryPath = os.path.join(permanent_store, 'researchers', researcher.username)
-        rmtree(directoryPath)
+        rmtree(os.path.join(getOLDDirectoryPath('users', **kwargs),
+                            user.username))
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def destroyAllResearcherDirectories(**kwargs):
+def destroyAllUserDirectories(**kwargs):
     """Removes all directories from files/researchers/."""
-    config = getConfig(**kwargs)
     try:
-        researchersPath = os.path.join(config['permanent_store'], 'researchers')
-        for name in os.listdir(researchersPath):
-            path = os.path.join(researchersPath, name)
+        usersPath = getOLDDirectoryPath('users', **kwargs)
+        for name in os.listdir(usersPath):
+            path = os.path.join(usersPath, name)
             if os.path.isdir(path):
                 rmtree(path)
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def renameResearcherDirectory(oldName, newName, **kwargs):
-    config = getConfig(**kwargs)
+def renameUserDirectory(oldName, newName, **kwargs):
     try:
-        oldPath = os.path.join(config['permanent_store'], 'researchers', oldName)
-        newPath = os.path.join(config['permanent_store'], 'researchers', newName)
+        oldPath = os.path.join(getOLDDirectoryPath('users', **kwargs), oldName)
+        newPath = os.path.join(getOLDDirectoryPath('users', **kwargs), newName)
         try:
             os.rename(oldPath, newPath)
         except OSError:
@@ -285,10 +313,9 @@ def renameResearcherDirectory(oldName, newName, **kwargs):
         raise Exception('The config object was inadequate.')
 
 def destroyAllPhonologyDirectories(**kwargs):
-    """Remove all directories from analysis/phonology/."""
-    config = getConfig(**kwargs)
+    """Remove all directories from ``<permanent_store>/phonologies``."""
     try:
-        phonologyPath = os.path.join(config['analysis_data'], 'phonology')
+        phonologyPath = getOLDDirectoryPath('phonologies', **kwargs)
         for name in os.listdir(phonologyPath):
             path = os.path.join(phonologyPath, name)
             if os.path.isdir(path):
@@ -297,11 +324,12 @@ def destroyAllPhonologyDirectories(**kwargs):
         raise Exception('The config object was inadequate.')
 
 def makeDirectorySafely(path):
-    """Create a directory and avoid race conditions.  Taken from 
+    """Create a directory and avoid race conditions.
+    
+    Taken from 
     http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write.
-    Listed as make_sure_path_exists.
+    Listed as ``make_sure_path_exists``.
     """
-
     try:
         os.makedirs(path)
     except OSError, exception:
@@ -912,7 +940,7 @@ def generateDefaultAdministrator(**kwargs):
     admin.inputOrthography = None
     admin.outputOrthography = None
     admin.pageContent = u''
-    createResearcherDirectory(admin, **kwargs)
+    createUserDirectory(admin, **kwargs)
     return admin
 
 def generateDefaultContributor(**kwargs):
@@ -927,7 +955,7 @@ def generateDefaultContributor(**kwargs):
     contributor.inputOrthography = None
     contributor.outputOrthography = None
     contributor.pageContent = u''
-    createResearcherDirectory(contributor, **kwargs)
+    createUserDirectory(contributor, **kwargs)
     return contributor
 
 def generateDefaultViewer(**kwargs):
@@ -942,7 +970,7 @@ def generateDefaultViewer(**kwargs):
     viewer.inputOrthography = None
     viewer.outputOrthography = None
     viewer.pageContent = u''
-    createResearcherDirectory(viewer, **kwargs)
+    createUserDirectory(viewer, **kwargs)
     return viewer
 
 def generateDefaultHomePage():
@@ -1258,9 +1286,11 @@ def getRDBMSName(**kwargs):
         SQLAlchemyURL = config['sqlalchemy.url']
         return SQLAlchemyURL.split(':')[0]
     except (TypeError, KeyError):
-        # WARNING The exception below should be raised -- I've replaced it with this log just to allow Sphinx to import my controllers ...
-        log.warn('The config object was inadequate.')
-        #raise Exception('The config object was inadequate.')
+        # WARNING The exception below should be raised during production, development
+        # and testing -- however, it must be replaced with the log to allow Sphinx to
+        # import the controllers and build the API docs
+        #log.warn('The config object was inadequate.')
+        raise Exception('The config object was inadequate.')
 
 
 ################################################################################
@@ -1336,12 +1366,26 @@ collectionTypes = (
     u'other'
 )
 
+# Corpus types -- these types are really just for testing and will probably be
+# changed at some future point.  The idea is that the type will determine how
+# the corpus is rendered as a file, e.g., a treebank will output a file
+# containing representations of phrase structure for each form in the corpus.
+corpusTypes = (
+    u'treebank',
+    u'transcription',
+    u'morphemic'
+)
+
 # This is the regex for finding form references in the contents of collections.
 formReferencePattern = re.compile('[Ff]orm\[([0-9]+)\]')
 
 # This is the regex for finding collection references in the contents of collections.
 #collectionReferencePattern = re.compile('[cC]ollection[\(\[](\d+)[\)\]]')
 collectionReferencePattern = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
+
+def getIdsOfFormsReferenced(referencingString):
+    """Return a list of form ids corresponding to the form references in ``referencingString``."""
+    return [int(id) for id in formReferencePattern.findall(referencingString)]
 
 def rst2html(string):
     try:
@@ -1593,6 +1637,7 @@ def eagerloadForm(query):
     return query.options(
         #subqueryload(model.Form.elicitor),
         subqueryload(model.Form.enterer),   # All forms *should* have enterers
+        subqueryload(model.Form.modifier),
         #subqueryload(model.Form.verifier),
         #subqueryload(model.Form.speaker),
         #subqueryload(model.Form.elicitationMethod),
@@ -1620,14 +1665,30 @@ def eagerloadCollection(query, eagerloadForms=False):
     if eagerloadForms:
         return query.options(
             subqueryload(model.Collection.enterer),
+            subqueryload(model.Collection.modifier),
             subqueryload(model.Collection.forms),
             joinedload(model.Collection.tags),
             joinedload(model.Collection.files))
     else:
         return query.options(
             subqueryload(model.Collection.enterer),
+            subqueryload(model.Collection.modifier),
             joinedload(model.Collection.tags),
             joinedload(model.Collection.files))
+
+def eagerloadCorpus(query, eagerloadForms=False):
+    """Eagerload the relational attributes of corpora most likely to have values."""
+    if eagerloadForms:
+        return query.options(
+            subqueryload(model.Corpus.enterer),
+            subqueryload(model.Corpus.modifier),
+            subqueryload(model.Corpus.forms),
+            joinedload(model.Corpus.tags))
+    else:
+        return query.options(
+            subqueryload(model.Corpus.enterer),
+            subqueryload(model.Corpus.modifier),
+            joinedload(model.Corpus.tags))
 
 def eagerloadFile(query):
     return query.options(

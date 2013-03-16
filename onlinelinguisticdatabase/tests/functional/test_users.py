@@ -33,8 +33,9 @@ log = logging.getLogger(__name__)
 
 class TestUsersController(TestController):
 
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    researchersPath = os.path.join(here, 'files', 'researchers')
+    config = appconfig('config:test.ini', relative_to='.')
+    here = config['here']
+    researchersPath = h.getOLDDirectoryPath('users', config=config)
 
     createParams = {
         'username': u'',
@@ -59,7 +60,7 @@ class TestUsersController(TestController):
     # Clear all models in the database except Language; recreate the users.
     def tearDown(self):
         h.clearAllModels()
-        h.destroyAllResearcherDirectories()
+        h.destroyAllUserDirectories()
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()
         viewer = h.generateDefaultViewer()

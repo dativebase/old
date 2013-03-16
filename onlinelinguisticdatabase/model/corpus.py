@@ -53,6 +53,8 @@ class Corpus(Base):
     enterer = relation('User', primaryjoin='Corpus.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id'))
     modifier = relation('User', primaryjoin='Corpus.modifier_id==User.id')
+    formSearch_id = Column(Integer, ForeignKey('formsearch.id'))
+    formSearch = relation('FormSearch')
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
     tags = relation('Tag', secondary=corpustag_table)
@@ -76,7 +78,13 @@ class Corpus(Base):
             'content': self.content,
             'enterer': self.getMiniUserDict(self.enterer),
             'modifier': self.getMiniUserDict(self.modifier),
+            'formSearch': self.getMiniFormSearchDict(self.formSearch),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
             'tags': self.getTagsList(self.tags)
         }
+
+    def getFullDict(self):
+        result = self.getDict()
+        result['forms'] = self.getFormsList(self.forms)
+        return result
