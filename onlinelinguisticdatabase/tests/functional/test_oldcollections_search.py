@@ -243,7 +243,7 @@ class TestFormsSearchController(TestController):
     def test_search_d_like(self):
         """Tests POST /collections/search: like."""
 
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         jsonQuery = json.dumps(
             {'query': {'filter': ['Collection', 'title', 'like', u'%1%']}})
@@ -276,7 +276,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /collections: not like."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
         jsonQuery = json.dumps(
             {'query': {'filter': ['not', ['Collection', 'title', 'like', u'%1%']]}})
         response = self.app.request(url('collections'), method='SEARCH',
@@ -288,7 +288,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_f_regexp(self):
         """Tests POST /collections/search: regular expression."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         jsonQuery = json.dumps(
             {'query': {'filter': ['Collection', 'title', 'regex', u'[345]2']}})
@@ -355,7 +355,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_g_not_regexp(self):
         """Tests SEARCH /collections: not regular expression."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
         jsonQuery = json.dumps(
             {'query': {'filter': ['not', ['Collection', 'title', 'regexp', u'[345]2']]}})
         response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
@@ -367,7 +367,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_h_empty(self):
         """Tests POST /collections/search: is NULL."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         jsonQuery = json.dumps(
             {'query': {'filter': ['Collection', 'description', '=', None]}})
@@ -388,7 +388,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_i_not_empty(self):
         """Tests SEARCH /collections: is not NULL."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
         jsonQuery = json.dumps(
             {'query': {'filter': ['not', ['Collection', 'description', '=', None]]}})
         response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
@@ -421,7 +421,7 @@ class TestFormsSearchController(TestController):
     def test_search_k_malformed_query(self):
         """Tests SEARCH /collections: malformed query."""
 
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # TypeError - bad num args: 'NOT' will be treated as the first arg to
         # _getSimpleFilterExpression and ['Collection', 'title', '=', 10] will be passed
@@ -557,7 +557,7 @@ class TestFormsSearchController(TestController):
         users = h.getUsers()
         contributor = [u for u in users if u.role == u'contributor'][0]
         models = self._getTestModels()
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # 1 conjunct -- pointless, but it works...
         query = {'query': {'filter': [
@@ -628,7 +628,7 @@ class TestFormsSearchController(TestController):
         """Tests POST /collections/search: disjunction."""
         users = h.getUsers()
         contributor = [u for u in users if u.role == u'contributor'][0]
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # 1 disjunct -- pointless, but it works...
         query = {'query': {'filter': [
@@ -677,7 +677,7 @@ class TestFormsSearchController(TestController):
     def test_search_o_int(self):
         """Tests SEARCH /collections: integer searches."""
 
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
         collectionIds = [c['id'] for c in collections]
 
         # = int
@@ -754,7 +754,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_p_date(self):
         """Tests POST /collections/search: date searches."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # = date
         jsonQuery = json.dumps(
@@ -873,7 +873,7 @@ class TestFormsSearchController(TestController):
     def test_search_q_date_invalid(self):
         """Tests SEARCH /collections: invalid date searches."""
 
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # = invalid date
         jsonQuery = json.dumps(
@@ -942,7 +942,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_r_datetime(self):
         """Tests POST /collections/search: datetime searches."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # = datetime
         jsonQuery = json.dumps(
@@ -1073,7 +1073,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_s_datetime_invalid(self):
         """Tests SEARCH /collections: invalid datetime searches."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # = invalid datetime
         jsonQuery = json.dumps(
@@ -1156,7 +1156,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_t_many_to_one(self):
         """Tests POST /collections/search: searches on many-to-one attributes."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         testModels = self._getTestModels()
         users = h.getUsers()
@@ -1235,7 +1235,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_v_many_to_many(self):
         """Tests POST /collections/search: searches on many-to-many attributes, i.e., Tag, Form, File."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # tag.name =
         jsonQuery = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name 6']}})
@@ -1363,7 +1363,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_w_in(self):
         """Tests SEARCH /collections: searches using the in_ relation."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # Array value -- all good.
         jsonQuery = json.dumps({'query': {'filter':
@@ -1386,7 +1386,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_x_complex(self):
         """Tests POST /collections/search: complex searches."""
-        collections = [c.getDict() for c in h.getCollections()]
+        collections = [c.getFullDict() for c in h.getCollections()]
 
         # A fairly complex search
         jsonQuery = json.dumps({'query': {'filter': [

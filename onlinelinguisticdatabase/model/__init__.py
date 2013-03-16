@@ -19,6 +19,8 @@ from onlinelinguisticdatabase.model.meta import Session, Base
 from onlinelinguisticdatabase.model.applicationsettings import ApplicationSettings
 from onlinelinguisticdatabase.model.collection import Collection
 from onlinelinguisticdatabase.model.collectionbackup import CollectionBackup
+from onlinelinguisticdatabase.model.corpus import Corpus
+from onlinelinguisticdatabase.model.corpusbackup import CorpusBackup
 from onlinelinguisticdatabase.model.elicitationmethod import ElicitationMethod
 from onlinelinguisticdatabase.model.file import File
 from onlinelinguisticdatabase.model.form import Form, FormFile

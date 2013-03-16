@@ -1053,3 +1053,11 @@ class MorphophonemicTranscriptionsSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     transcriptions = ForEach(UnicodeString(), not_empty=True)
+
+
+class CorpusSchema(Schema):
+    """CorpusSchema is a Schema for validating the data submitted to
+    CorporaController (controllers/corpora.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True

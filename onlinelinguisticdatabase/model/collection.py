@@ -105,6 +105,10 @@ class Collection(Base):
             'elicitor': self.getMiniUserDict(self.elicitor),
             'enterer': self.getMiniUserDict(self.enterer),
             'tags': self.getTagsList(self.tags),
-            'files': self.getFilesList(self.files),
-            'forms': self.getFormsList(self.forms)
+            'files': self.getFilesList(self.files)
         }
+
+    def getFullDict(self):
+        result = self.getDict()
+        result['forms'] = self.getFormsList(self.forms)
+        return result

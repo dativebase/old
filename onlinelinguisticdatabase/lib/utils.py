@@ -1609,15 +1609,25 @@ def eagerloadApplicationSettings(query):
         #subqueryload(model.ApplicationSettings.storageOrthography)
     )
 
-def eagerloadCollection(query):
-    return query.options(
-        #subqueryload(model.Collection.speaker),
-        #subqueryload(model.Collection.elicitor),
-        subqueryload(model.Collection.enterer),
-        #subqueryload(model.Collection.source),
-        subqueryload(model.Collection.forms),
-        joinedload(model.Collection.tags),
-        joinedload(model.Collection.files))
+def eagerloadCollection(query, eagerloadForms=False):
+    """Eagerload the relational attributes of collections most likely to have values.
+
+    subqueryload(model.Collection.speaker),
+    subqueryload(model.Collection.elicitor),
+    subqueryload(model.Collection.source),
+
+    """
+    if eagerloadForms:
+        return query.options(
+            subqueryload(model.Collection.enterer),
+            subqueryload(model.Collection.forms),
+            joinedload(model.Collection.tags),
+            joinedload(model.Collection.files))
+    else:
+        return query.options(
+            subqueryload(model.Collection.enterer),
+            joinedload(model.Collection.tags),
+            joinedload(model.Collection.files))
 
 def eagerloadFile(query):
     return query.options(

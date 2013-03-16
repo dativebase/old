@@ -1,9 +1,44 @@
+# Copyright 2013 Joel Dunham
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+"""Contains the :class:`CorporaController` and its auxiliary functions.
+
+.. module:: corpora
+   :synopsis: Contains the corpora controller and its auxiliary functions.
+
+"""
+
 import logging
-
-from pylons import request, response, session, tmpl_context as c, url
-from pylons.controllers.util import abort, redirect
-
-from onlinelinguisticdatabase.lib.base import BaseController, render
+import datetime
+import re
+import os
+from uuid import uuid4
+import simplejson as json
+from string import letters, digits
+from random import sample
+from pylons import request, response, session, app_globals, config
+from pylons.decorators.rest import restrict
+from pylons.controllers.util import forward
+from formencode.validators import Invalid
+from sqlalchemy.exc import OperationalError, InvalidRequestError
+from sqlalchemy.sql import asc
+from onlinelinguisticdatabase.lib.base import BaseController
+from onlinelinguisticdatabase.lib.schemata import CorpusSchema
+import onlinelinguisticdatabase.lib.helpers as h
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.model.meta import Session
+from onlinelinguisticdatabase.model import Corpus, CorpusBackup
 
 log = logging.getLogger(__name__)
 

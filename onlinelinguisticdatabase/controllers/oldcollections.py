@@ -89,6 +89,12 @@ class OldcollectionsController(BaseController):
 
             where the ``orderBy`` and ``paginator`` attributes are optional.
 
+        .. note::
+        
+            Search does not return the forms of all collections that match the
+            search.  For that, a second request is required, i.e., to
+            ``GET /collections/id``.
+
         """
         try:
             jsonSearchParams = unicode(request.body, request.charset)
@@ -124,7 +130,6 @@ class OldcollectionsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """GET /collections: Return all collections."""
         """Get all collection resources.
 
         :URL: ``GET /collections`` with optional query string parameters for
@@ -135,6 +140,12 @@ class OldcollectionsController(BaseController):
 
            See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
            query string parameters that effect ordering and pagination.
+
+        .. note::
+        
+            ``GET /collections`` does not return the forms of the collections
+            returned.  For that, a second request is required, i.e., to
+            ``GET /collections/id`` with the relevant ``id`` value.
 
         """
         try:
@@ -172,7 +183,7 @@ class OldcollectionsController(BaseController):
             collection = createNewCollection(data, collectionsReferenced)
             Session.add(collection)
             Session.commit()
-            return collection
+            return collection.getFullDict()
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -218,7 +229,8 @@ class OldcollectionsController(BaseController):
         :returns: the updated collection model.
 
         """
-        collection = h.eagerloadCollection(Session.query(Collection)).get(int(id))
+        collection = h.eagerloadCollection(Session.query(Collection),
+                                           eagerloadForms=True).get(int(id))
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
@@ -232,7 +244,7 @@ class OldcollectionsController(BaseController):
                     values = addFormIdsListToValues(values)
                     state = h.getStateObject(values)
                     data = schema.to_python(values, state)
-                    collectionDict = collection.getDict()
+                    collectionDict = collection.getFullDict()
                     collection, restricted, contents_changed = updateCollection(
                         collection, data, collectionsReferenced)
                     # collection will be False if there are no changes (cf. updateCollection).
@@ -242,7 +254,7 @@ class OldcollectionsController(BaseController):
                                             restricted=restricted, contents_changed=contents_changed)
                         Session.add(collection)
                         Session.commit()
-                        return collection
+                        return collection.getFullDict()
                     else:
                         response.status_int = 400
                         return {'error':
@@ -286,16 +298,18 @@ class OldcollectionsController(BaseController):
            Only administrators and a collection's enterer can delete it.
 
         """
-        collection = h.eagerloadCollection(Session.query(Collection)).get(id)
+        collection = h.eagerloadCollection(Session.query(Collection),
+                                           eagerloadForms=True).get(id)
         if collection:
             if session['user'].role == u'administrator' or \
             collection.enterer is session['user']:
-                collectionDict = collection.getDict()
+                collectionDict = collection.getFullDict()
                 backupCollection(collectionDict)
-                updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder, deleted=True)
+                updateCollectionsThatReferenceThisCollection(collection,
+                                                self.queryBuilder, deleted=True)
                 Session.delete(collection)
                 Session.commit()
-                return collection
+                return collectionDict
             else:
                 response.status_int = 403
                 return h.unauthorizedMsg
@@ -313,13 +327,19 @@ class OldcollectionsController(BaseController):
         :param str id: the ``id`` value of the collection to be returned.
         :returns: a collection model object.
 
+        .. note::
+
+            Returns all of the forms of the collection, unlike the other
+            collections actions.
+
         """
-        collection = h.eagerloadCollection(Session.query(Collection)).get(id)
+        collection = h.eagerloadCollection(Session.query(Collection),
+                                           eagerloadForms=True).get(id)
         if collection:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
             if h.userIsAuthorizedToAccessModel(user, collection, unrestrictedUsers):
-                return collection
+                return collection.getFullDict()
             else:
                 response.status_int = 403
                 return h.unauthorizedMsg
@@ -558,7 +578,7 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwa
     if restricted or contents_changed or deleted:
         collectionsReferencingThisCollection = getCollectionsReferencingThisCollection(
             collection, queryBuilder)
-        collectionsReferencingThisCollectionDicts = [c.getDict() for c in
+        collectionsReferencingThisCollectionDicts = [c.getFullDict() for c in
                                         collectionsReferencingThisCollection]
         now = h.now()
         if restricted:
@@ -607,7 +627,7 @@ def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
     :returns: ``None``.
 
     """
-    collectionDict = collection.getDict()
+    collectionDict = collection.getFullDict()
     collection.contents = removeReferencesToThisForm(collection.contents, referencedForm.id)
     collectionsReferenced = getCollectionsReferenced(collection.contents)
     collection.contentsUnpacked = generateContentsUnpacked(
