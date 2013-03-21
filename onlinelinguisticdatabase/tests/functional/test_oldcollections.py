@@ -23,6 +23,7 @@ from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
+import onlinelinguisticdatabase.lib.testutils as testutils
 from onlinelinguisticdatabase.tests import *
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
@@ -56,27 +57,7 @@ class TestOldcollectionsController(TestController):
         'files': []
     }
 
-    createFormParams = {
-        'transcription': u'',
-        'phoneticTranscription': u'',
-        'narrowPhoneticTranscription': u'',
-        'morphemeBreak': u'',
-        'grammaticality': u'',
-        'morphemeGloss': u'',
-        'translations': [],
-        'comments': u'',
-        'speakerComments': u'',
-        'elicitationMethod': u'',
-        'tags': [],
-        'syntacticCategory': u'',
-        'speaker': u'',
-        'elicitor': u'',
-        'verifier': u'',
-        'source': u'',
-        'status': u'tested',
-        'dateElicited': u''     # mm/dd/yyyy
-    }
-
+    createFormParams = testutils.formCreateParams
     createFileParams = {
         'name': u'',
         'description': u'',

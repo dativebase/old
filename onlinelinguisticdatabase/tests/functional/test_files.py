@@ -24,6 +24,7 @@ from onlinelinguisticdatabase.tests import *
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
+import onlinelinguisticdatabase.lib.testutils as testutils
 from pylons import config
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from paste.deploy.converters import asbool
@@ -103,27 +104,7 @@ class TestFilesController(TestController):
         'forms': []
     }
 
-    createFormParams = {
-        'transcription': u'',
-        'phoneticTranscription': u'',
-        'narrowPhoneticTranscription': u'',
-        'morphemeBreak': u'',
-        'grammaticality': u'',
-        'morphemeGloss': u'',
-        'translations': [{'transcription': u'', 'grammaticality': u''}],
-        'comments': u'',
-        'speakerComments': u'',
-        'elicitationMethod': u'',
-        'tags': [],
-        'syntacticCategory': u'',
-        'speaker': u'',
-        'elicitor': u'',
-        'verifier': u'',
-        'source': u'',
-        'status': u'tested',
-        'dateElicited': u'',     # mm/dd/yyyy
-        'files': []
-    }
+    createFormParams = testutils.formCreateParams
 
     extra_environ_admin = {'test.authentication.role': u'administrator'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
@@ -1068,7 +1049,7 @@ class TestFilesController(TestController):
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create_large(self):
         """Tests that POST /files correctly creates a large file.
 

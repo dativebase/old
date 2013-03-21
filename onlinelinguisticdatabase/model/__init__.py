@@ -19,7 +19,7 @@ from onlinelinguisticdatabase.model.meta import Session, Base
 from onlinelinguisticdatabase.model.applicationsettings import ApplicationSettings
 from onlinelinguisticdatabase.model.collection import Collection
 from onlinelinguisticdatabase.model.collectionbackup import CollectionBackup
-from onlinelinguisticdatabase.model.corpus import Corpus
+from onlinelinguisticdatabase.model.corpus import Corpus, CorpusFile
 from onlinelinguisticdatabase.model.corpusbackup import CorpusBackup
 from onlinelinguisticdatabase.model.elicitationmethod import ElicitationMethod
 from onlinelinguisticdatabase.model.file import File
@@ -40,4 +40,5 @@ from onlinelinguisticdatabase.model.user import User, UserForm
 
 def init_model(engine):
     """Call me before using any of the tables or classes in the model"""
+    #Session.configure(autoflush=True, bind=engine)
     Session.configure(bind=engine)

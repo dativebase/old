@@ -119,6 +119,8 @@ class Form(Base):
             'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
             'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
             'breakGlossCategory': self.breakGlossCategory,
+            'syntax': self.syntax,
+            'semantics': self.semantics,
             'status': self.status,
             'elicitor': self.getMiniUserDict(self.elicitor),
             'enterer': self.getMiniUserDict(self.enterer),

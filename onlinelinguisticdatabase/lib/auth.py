@@ -29,10 +29,11 @@ log = logging.getLogger(__name__)
 
 
 def authenticate(target):
-    """Authentication decorator.  If user is not logged in and tries to call
-    a controller action with this decorator, then the response header status
-    will be '401 Unauthorized' and the response body will be
-    {error: '401 Unauthorized'}.
+    """Authentication decorator.
+    
+    If user is not logged in and tries to call a controller action with this
+    decorator, then the response header status will be ``401 Unauthorized`` and
+    the response body will be ``{error: "401 Unauthorized"}``.
     """
 
     def wrapper(target, *args, **kwargs):
@@ -44,9 +45,14 @@ def authenticate(target):
     return decorator(wrapper)(target)
 
 def authenticateWithJSON(target):
-    """Identical to the authenticate decorator except that the response body is
-    json.dumped beforehand.  This is decorator is only needed in the retrieve
-    action of controllers/files.py
+    """Authentication decorator that returns JSON error messages.
+    
+    Identical to the authenticate decorator except that the response body is
+    json.dumped beforehand.  This is decorator is only needed in those few
+    actions whose successful output is not JSON, e.g., the actions that serve
+    file data, cf. the ``serve`` and ``serveFile`` actions of the
+    ``FilesController`` and ``CorporaController``.
+    
     """
 
     def wrapper(target, *args, **kwargs):

@@ -27,6 +27,7 @@ class Model(object):
 
     # Maps names of tables to the sets of attributes required for mini-dict creation
     tableName2coreAttributes = {
+        'corpusfile': ['id', 'filename', 'datetimeModified', 'format', 'restricted'],
         'elicitationmethod': ['id', 'name'],
         'file': ['id', 'name', 'filename', 'MIMEtype', 'size', 'url', 'lossyFilename'],
         'formsearch': ['id', 'name'],
@@ -96,6 +97,9 @@ class Model(object):
     def getMiniOrthographyDict(self, orthography):
         return self.getMiniDictFor(orthography)
 
+    def getMiniCorpusFileDict(self, corpusFile):
+        return self.getMiniDictFor(corpusFile)
+
     def getMiniList(self, listOfModels):
         return [m.getMiniDict() for m in listOfModels]
 
@@ -115,7 +119,10 @@ class Model(object):
         return [self.getMiniUserDict(user) for user in users]
 
     def getOrthographiesList(self, orthographies):
-        return [self.getMiniOrthographyDict(orthography) for orthography in orthographies]
+        return [self.getMiniOrthographyDict(o) for o in orthographies]
+
+    def getCorpusFilesList(self, corpusFiles):
+        return [self.getMiniCorpusFileDict(cf) for cf in corpusFiles]
 
     class Column(object):
         """Empty class that can be used to convert JSON objects into Python

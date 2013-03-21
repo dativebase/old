@@ -33,6 +33,7 @@ from datetime import date, datetime, timedelta
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
+import onlinelinguisticdatabase.lib.testutils as testutils
 import webtest
 from sqlalchemy import func
 
@@ -1793,27 +1794,7 @@ class TestFormsSearchController(TestController):
         or "%" in LIKE queries (regexp will do the trick though...).
         """
 
-        createParams = {
-            'transcription': u'',
-            'phoneticTranscription': u'',
-            'narrowPhoneticTranscription': u'',
-            'morphemeBreak': u'',
-            'grammaticality': u'',
-            'morphemeGloss': u'',
-            'translations': [],
-            'comments': u'',
-            'speakerComments': u'',
-            'elicitationMethod': u'',
-            'tags': [],
-            'syntacticCategory': u'',
-            'speaker': u'',
-            'elicitor': u'',
-            'verifier': u'',
-            'source': u'',
-            'status': u'tested',
-            'dateElicited': u''     # mm/dd/yyyy
-        }
-
+        createParams = testutils.formCreateParams
         RDBMSName = h.getRDBMSName(configFilename='test.ini')
 
         # Create a form with an underscore and a percent sign in it.

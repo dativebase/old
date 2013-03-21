@@ -26,6 +26,7 @@ from onlinelinguisticdatabase.tests import *
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
+import onlinelinguisticdatabase.lib.testutils as testutils
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
@@ -38,28 +39,7 @@ def addSEARCHToWebTestValidMethods():
     webtest.lint.valid_methods = new_valid_methods
 
 class TestFormbackupsController(TestController):
-
-    createParams = {
-        'transcription': u'',
-        'phoneticTranscription': u'',
-        'narrowPhoneticTranscription': u'',
-        'morphemeBreak': u'',
-        'grammaticality': u'',
-        'morphemeGloss': u'',
-        'translations': [],
-        'comments': u'',
-        'speakerComments': u'',
-        'elicitationMethod': u'',
-        'tags': [],
-        'syntacticCategory': u'',
-        'speaker': u'',
-        'elicitor': u'',
-        'verifier': u'',
-        'source': u'',
-        'status': u'tested',
-        'dateElicited': u''     # mm/dd/yyyy
-    }
-
+    createParams = testutils.formCreateParams
     extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}

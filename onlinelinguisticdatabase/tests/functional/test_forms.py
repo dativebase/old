@@ -22,6 +22,7 @@ from base64 import encodestring
 from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
+import onlinelinguisticdatabase.lib.testutils as testutils
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.tests import *
 import onlinelinguisticdatabase.model as model
@@ -48,27 +49,7 @@ class TestFormsController(TestController):
     testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
                              'data', 'files')
 
-
-    createParams = {
-        'transcription': u'',
-        'phoneticTranscription': u'',
-        'narrowPhoneticTranscription': u'',
-        'morphemeBreak': u'',
-        'grammaticality': u'',
-        'morphemeGloss': u'',
-        'translations': [],
-        'comments': u'',
-        'speakerComments': u'',
-        'elicitationMethod': u'',
-        'tags': [],
-        'syntacticCategory': u'',
-        'speaker': u'',
-        'elicitor': u'',
-        'verifier': u'',
-        'source': u'',
-        'status': u'tested',
-        'dateElicited': u''     # mm/dd/yyyy
-    }
+    createParams = testutils.formCreateParams
 
     createFileParams = {
         'name': u'',

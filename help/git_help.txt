@@ -127,7 +127,7 @@ Basically, you tell git to ignore files in 3 ways:
 
 2. .gitignore_global file that you have tell git to acknowledge by running
 
-    $ git config --global core.excludesfile <path/to/globa/gitignore/file>
+    $ git config --global core.excludesfile <path/to/global/gitignore/file>
 
    This is useful for things that git should ignore for any repo.
 

@@ -429,6 +429,7 @@ page for installation instructions.
 In order to search OLD treebank corpora,
 `Tgrep2 <http://tedlab.mit.edu/~dr/Tgrep2/>`_ must be installed. 
 
+NLTK may be used for some OLD functionality.
 
 PIL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

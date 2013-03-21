@@ -28,6 +28,7 @@ from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import SyntacticCategory
 from onlinelinguisticdatabase.lib.bibtex import entryTypes
+import onlinelinguisticdatabase.lib.testutils as testutils
 
 log = logging.getLogger(__name__)
 
@@ -38,27 +39,7 @@ log = logging.getLogger(__name__)
 
 class TestSyntacticcategoriesController(TestController):
 
-    createFormParams = {
-        'transcription': u'',
-        'phoneticTranscription': u'',
-        'narrowPhoneticTranscription': u'',
-        'morphemeBreak': u'',
-        'grammaticality': u'',
-        'morphemeGloss': u'',
-        'translations': [],
-        'comments': u'',
-        'speakerComments': u'',
-        'elicitationMethod': u'',
-        'tags': [],
-        'syntacticCategory': u'',
-        'speaker': u'',
-        'elicitor': u'',
-        'verifier': u'',
-        'source': u'',
-        'status': u'tested',
-        'dateElicited': u''     # mm/dd/yyyy
-    }
-
+    createFormParams = testutils.formCreateParams
     extra_environ_view = {'test.authentication.role': u'viewer'}
     extra_environ_contrib = {'test.authentication.role': u'contributor'}
     extra_environ_admin = {'test.authentication.role': u'administrator'}

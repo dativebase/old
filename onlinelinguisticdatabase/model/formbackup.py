@@ -61,6 +61,8 @@ class FormBackup(Base):
     morphemeBreakIDs = Column(UnicodeText)
     morphemeGlossIDs = Column(UnicodeText)
     breakGlossCategory = Column(Unicode(1023))
+    syntax = Column(Unicode(1023))
+    semantics = Column(Unicode(1023))
     elicitor = Column(UnicodeText)
     enterer = Column(UnicodeText)
     verifier = Column(UnicodeText)
@@ -98,6 +100,8 @@ class FormBackup(Base):
         self.morphemeBreakIDs = unicode(json.dumps(formDict['morphemeBreakIDs']))
         self.morphemeGlossIDs = unicode(json.dumps(formDict['morphemeGlossIDs']))
         self.breakGlossCategory = formDict['breakGlossCategory']
+        self.syntax = formDict['syntax']
+        self.semantics = formDict['semantics']
         self.elicitationMethod = unicode(json.dumps(formDict['elicitationMethod']))
         self.syntacticCategory = unicode(json.dumps(formDict['syntacticCategory']))
         self.source = unicode(json.dumps(formDict['source']))
@@ -130,6 +134,8 @@ class FormBackup(Base):
             'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
             'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
             'breakGlossCategory': self.breakGlossCategory,
+            'syntax': self.syntax,
+            'semantics': self.semantics,
             'elicitationMethod': self.jsonLoads(self.elicitationMethod),
             'syntacticCategory': self.jsonLoads(self.syntacticCategory),
             'source': self.jsonLoads(self.source),

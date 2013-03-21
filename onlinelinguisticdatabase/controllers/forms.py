@@ -565,6 +565,8 @@ def createNewForm(data):
     form.morphemeGloss = h.toSingleSpace(h.normalize(data['morphemeGloss']))
     form.comments = h.normalize(data['comments'])
     form.speakerComments = h.normalize(data['speakerComments'])
+    form.syntax = h.normalize(data['syntax'])
+    form.semantics = h.normalize(data['semantics'])
     form.grammaticality = data['grammaticality']
     form.status = data['status']
 
@@ -630,6 +632,8 @@ def updateForm(form, data):
             h.toSingleSpace(h.normalize(data['morphemeGloss'])), changed)
     changed = h.setAttr(form, 'comments', h.normalize(data['comments']), changed)
     changed = h.setAttr(form, 'speakerComments', h.normalize(data['speakerComments']), changed)
+    changed = h.setAttr(form, 'syntax', h.normalize(data['syntax']), changed)
+    changed = h.setAttr(form, 'semantics', h.normalize(data['semantics']), changed)
     changed = h.setAttr(form, 'grammaticality', data['grammaticality'], changed)
     changed = h.setAttr(form, 'status', data['status'], changed)
 

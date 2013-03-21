@@ -304,6 +304,8 @@ class FormSchema(Schema):
     translations = ValidTranslations(not_empty=True)
     comments = UnicodeString()
     speakerComments = UnicodeString()
+    syntax = UnicodeString(max=1023)
+    semantics = UnicodeString(max=1023)
     status = OneOf(h.formStatuses)
     elicitationMethod = ValidOLDModelObject(modelName='ElicitationMethod')
     syntacticCategory = ValidOLDModelObject(modelName='SyntacticCategory')
@@ -1061,7 +1063,7 @@ class CorpusSchema(Schema):
 
     .. note::
     
-        Corpora can caontain **extremely** large collections of forms.  Therefore
+        Corpora can contain **extremely** large collections of forms.  Therefore
         there needs to be some efficiency measures built in around this collection
         as pertains to validation ...  E.g., validation of forms should be avoided
         on updates if it can first be shown that the set of forms referenced has
@@ -1071,16 +1073,17 @@ class CorpusSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Corpus', attributeName='name')
-    type = OneOf(h.corpusTypes)
     description = UnicodeString()
     content = UnicodeString()
     tags = ForEach(ValidOLDModelObject(modelName='Tag'))
     formSearch = ValidOLDModelObject(modelName='FormSearch')
-    #forms = ForEach(ValidOLDModelObject(modelName='Form'))
+    forms = ForEach(ValidOLDModelObject(modelName='Form'))
 
-"""
+class CorpusFormatSchema(Schema):
+    """Validates the data submitted to ``PUT /corpora/writetofile/id`` and
+    ``GET /corpora/servefile/id``.
 
-A corpus is an ordered list of forms ...
-
-
-"""
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    format = OneOf(h.corpusFormats.keys(), not_empty=True)

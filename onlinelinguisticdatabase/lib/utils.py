@@ -12,25 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""
-The utils module is really cool!
-------------------------------------
+"""Utility functions, classes and constants.
 
-A Sphinx/reST Python code block example:
+.. module:: utils
+   :synopsis: Utility functions, classes and constants.
 
-.. code-block:: python
-
-    class NewPageForm(formencode.Schema):
-        allow_extra_fields = True
-        filter_extra_fields = True
-        content = formencode.validators.String(
-            not_empty=True,
-            messages={
-                'empty':'Please enter some content for the page. '
-            }
-        )
-        heading = formencode.validators.String()
-        title = formencode.validators.String(not_empty=True)
+A number of functions, classes and constants used throughout the application.
 
 """
 
@@ -41,6 +28,8 @@ import datetime
 import unicodedata
 import string
 import smtplib
+import gzip
+import codecs
 import ConfigParser
 from random import choice, shuffle
 from shutil import rmtree
@@ -52,7 +41,7 @@ from sqlalchemy.sql import or_, not_, desc, asc
 from sqlalchemy.orm import subqueryload, joinedload
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model import Form, FormBackup, File, Collection, CollectionBackup
-from onlinelinguisticdatabase.model.meta import Session, Model
+from onlinelinguisticdatabase.model.meta import Session, Model, Base
 import orthography
 from simplejson.decoder import JSONDecodeError
 from paste.deploy import appconfig
@@ -100,39 +89,24 @@ def getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes
     non-match indicates that the requester has out-of-date data.
 
     """
-
-    # result is initialized as a dict with empty list values.
     result = dict([(key, []) for key in getterMap])
-
-    # There are GET params, so we are selective in what we return.
     if GET_params:
         for key in getterMap:
             if key in mandatoryAttributes:
                 result[key] = getterMap[key]()
-                break
-            val = GET_params.get(key)
-            # Proceed so long as val is not an empty string.
-            if val:
-                valAsDatetimeObj = datetimeString2datetime(val)
-                if valAsDatetimeObj:
-                    # Value of param is an ISO 8601 datetime string that
-                    # does not match the most recent datetimeModified of the
-                    # relevant model in the db: therefore we return a list
-                    # of objects/dicts.  If the datetimes do match, this
-                    # indicates that the requester's own stores are
-                    # up-to-date so we return nothing.
-                    if valAsDatetimeObj != \
-                    getMostRecentModificationDatetime(
+            else:
+                val = GET_params.get(key)
+                if val:
+                    valAsDatetimeObj = datetimeString2datetime(val)
+                    if valAsDatetimeObj:
+                        if valAsDatetimeObj != getMostRecentModificationDatetime(
                         modelNameMap[key]):
+                            result[key] = getterMap[key]()
+                    else:
                         result[key] = getterMap[key]()
-                else:
-                    result[key] = getterMap[key]()
-
-    # There are no GET params, so we get everything from the db and return it.
     else:
         for key in getterMap:
             result[key] = getterMap[key]()
-
     return result
 
 
@@ -318,6 +292,17 @@ def destroyAllPhonologyDirectories(**kwargs):
         phonologyPath = getOLDDirectoryPath('phonologies', **kwargs)
         for name in os.listdir(phonologyPath):
             path = os.path.join(phonologyPath, name)
+            if os.path.isdir(path):
+                rmtree(path)
+    except (TypeError, KeyError):
+        raise Exception('The config object was inadequate.')
+
+def destroyAllCorpusDirectories(**kwargs):
+    """Remove all directories from ``<permanent_store>/corpora``."""
+    try:
+        corporaPath = getOLDDirectoryPath('corpora', **kwargs)
+        for name in os.listdir(corporaPath):
+            path = os.path.join(corporaPath, name)
             if os.path.isdir(path):
                 rmtree(path)
     except (TypeError, KeyError):
@@ -724,6 +709,9 @@ def getPages(sortByIdAsc=False):
 def getPhonologies(sortByIdAsc=False):
     return getModelsByName('Phonology', sortByIdAsc)
 
+def getCorpora(sortByIdAsc=False):
+    return getModelsByName('Corpus', sortByIdAsc)
+
 def getLanguages(sortByIdAsc=False):
     return getModelsByName('Language', sortByIdAsc)
 
@@ -886,6 +874,12 @@ def clearAllModels(retain=['Language']):
             for model in models:
                 Session.delete(model)
     Session.commit()
+
+def clearAllTables():
+    """Like ``clearAllModels`` above, except **much** faster."""
+    for table in reversed(Base.metadata.sorted_tables):
+        Session.execute(table.delete())
+        Session.commit()
 
 def getAllModels():
     return dict([(mn, getModelsByName(mn)) for mn in getModelNames()])
@@ -1366,15 +1360,23 @@ collectionTypes = (
     u'other'
 )
 
-# Corpus types -- these types are really just for testing and will probably be
-# changed at some future point.  The idea is that the type will determine how
-# the corpus is rendered as a file, e.g., a treebank will output a file
-# containing representations of phrase structure for each form in the corpus.
-corpusTypes = (
-    u'treebank',
-    u'transcription',
-    u'morphemic'
-)
+# Corpus formats -- determine how a corpus is rendered as a file, e.g., a
+# treebank will output a file containing representations of phrase structure for
+# each form in the corpus and the file will be called ``corpus_1.tbk`` ...
+
+corpusFormats = {
+    'treebank': {
+        'extension': 'tbk',
+        'suffix': '',
+        'writer': lambda f: u'(TOP-%d %s)\n' % (f.id, f.syntax)
+    },
+    'transcriptions only': {
+        'extension': 'txt',
+        'sfx': '_transcriptions',
+        'writer': lambda f: u'%s\n' % f.transcription
+    }
+}
+
 
 # This is the regex for finding form references in the contents of collections.
 formReferencePattern = re.compile('[Ff]orm\[([0-9]+)\]')
@@ -1732,3 +1734,91 @@ validationValues = (u'None', u'Warning', u'Error')
 # How long to wait (in seconds) before terminating a process that is trying to
 # compile a foma script.
 phonologyCompileTimeout = 30
+
+def getFileLength(filePath):
+    """Return the number of lines in a file.
+    
+    cf. http://stackoverflow.com/questions/845058/how-to-get-line-count-cheaply-in-python
+
+    """
+    with open(filePath) as f:
+        i = -1
+        for i, l in enumerate(f):
+            pass
+    return i + 1
+
+def compressFile(filePath):
+    """Compress the file at ``filePath`` using ``gzip``.
+
+    Save it in the same directory with a ".gz" extension.
+
+    """
+    with open(filePath, 'rb') as fi:
+        fo = gzip.open('%s.gz' % filePath, 'wb')
+        fo.writelines(fi)
+        fo.close()
+
+def prettyPrintBytes(numBytes):
+    """Print an integer byte count to human-readable form.
+    """
+    if numBytes is None:
+        return 'File size unavailable.'
+    KiB = 1024
+    MiB = KiB * KiB
+    GiB = KiB * MiB
+    TiB = KiB * GiB
+    PiB = KiB * TiB
+    EiB = KiB * PiB
+    ZiB = KiB * EiB
+    YiB = KiB * ZiB
+    if numBytes > YiB:
+        return '%.3g YiB' % (numBytes / YiB)
+    elif numBytes > ZiB:
+        return '%.3g ZiB' % (numBytes / ZiB)
+    elif numBytes > EiB:
+        return '%.3g EiB' % (numBytes / EiB)
+    elif numBytes > PiB:
+        return '%.3g PiB' % (numBytes / PiB)
+    elif numBytes > TiB:
+        return '%.3g TiB' % (numBytes / TiB)
+    elif numBytes > GiB:
+        return '%.3g GiB' % (numBytes / GiB)
+    elif numBytes > MiB:
+        return '%.3g MiB' % (numBytes / MiB)
+    elif numBytes > KiB:
+        return '%.3g KiB' % (numBytes / KiB)
+
+
+def getLanguageObjects(filename, config):
+    """Return a list of language models generated from a text file in ``public/iso_639_3_languages_data``.
+    """
+    try:
+        here = config['pylons.paths']['root']
+    except Exception:
+        try:
+            here = os.path.join(config['here'], 'onlinelinguisticdatabase')
+        except Exception:
+            return []
+    languagesPath = os.path.join(here, 'public', 'iso_639_3_languages_data')
+    # Use the truncated languages file if we are running tests
+    if filename == 'test.ini':
+        iso_639_3FilePath = os.path.join(languagesPath, 'iso_639_3_trunc.tab')
+    else:
+        iso_639_3FilePath = os.path.join(languagesPath, 'iso_639_3.tab')
+    iso_639_3File = codecs.open(iso_639_3FilePath, 'r', 'utf-8')
+    languageList = [l.split('\t') for l in iso_639_3File]
+    return [getLanguageObject(language) for language in languageList
+            if len(languageList) == 8]
+
+def getLanguageObject(languageList):
+    """Given a list of ISO-639-3 language data, return an OLD language model."""
+    language = model.Language()
+    language.Id = languageList[0]
+    language.Part2B = languageList[1]
+    language.Part2T = languageList[2]
+    language.Part1 = languageList[3]
+    language.Scope = languageList[4]
+    language.Type = languageList[5]
+    language.Ref_Name = languageList[6]
+    language.Comment = languageList[7]
+    return language

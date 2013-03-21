@@ -15,9 +15,11 @@
 """Corpus backup model"""
 
 from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
 from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
+import simplejson as json
+import datetime
 
 class CorpusBackup(Base):
     """Define the corpus backup model.
@@ -58,11 +60,9 @@ class CorpusBackup(Base):
         to (truncated) JSON objects.
 
         """
-
         self.UUID = corpusDict['UUID']
         self.corpus_id = corpusDict['id']
         self.name = corpusDict['name']
-        self.type = corpusDict['type']
         self.description = corpusDict['description']
         self.content = corpusDict['content']
         self.enterer = unicode(json.dumps(corpusDict['enterer']))

@@ -23,22 +23,26 @@ import logging
 import datetime
 import re
 import os
+import codecs
 from uuid import uuid4
+from shutil import rmtree
 import simplejson as json
 from string import letters, digits
 from random import sample
+from paste.fileapp import FileApp
 from pylons import request, response, session, app_globals, config
 from pylons.decorators.rest import restrict
 from pylons.controllers.util import forward
 from formencode.validators import Invalid
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc
+from sqlalchemy.orm import joinedload
 from onlinelinguisticdatabase.lib.base import BaseController
-from onlinelinguisticdatabase.lib.schemata import CorpusSchema
+from onlinelinguisticdatabase.lib.schemata import CorpusSchema, CorpusFormatSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Corpus, CorpusBackup
+from onlinelinguisticdatabase.model import Corpus, CorpusBackup, CorpusFile, Form
 
 log = logging.getLogger(__name__)
 
@@ -94,8 +98,7 @@ class CorporaController(BaseController):
         try:
             schema = CorpusSchema()
             values = json.loads(unicode(request.body, request.charset))
-            values['forms'] = [int(id) for id in h.formReferencePattern.findall(
-                               values.get('content', u''))]
+            values['forms'] = getFormReferences(values.get('content', u''))
             state = h.getStateObject(values)
             data = schema.to_python(values, state)
             corpus = createNewCorpus(data)
@@ -127,7 +130,7 @@ class CorporaController(BaseController):
            returned dictionary.
 
         """
-        return getDataForNewEdit(request.GET)
+        return getDataForNewEdit(dict(request.GET))
 
     @h.jsonify
     @h.restrict('PUT')
@@ -247,7 +250,7 @@ class CorporaController(BaseController):
     def history(self, id):
         """Return the corpus with ``corpus.id==id`` and its previous versions.
 
-        :URL: ``GET /corpora/history/id``
+        :URL: ``GET /corpora/id/history``
         :param str id: a string matching the ``id`` or ``UUID`` value of the
             corpus whose history is requested.
         :returns: A dictionary of the form::
@@ -273,32 +276,181 @@ class CorporaController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def writetofile(self, id):
-        """Write the forms constituting the corpus to a file in a format corresponding to the corpus type.
+        """Write the corpus to a file in the format specified in the request body.
 
-        :URL: ``PUT /corpora/writetofile/id``
+        :URL: ``PUT /corpora/id/writetofile``
+        :Request body: JSON object of the form ``{"format": "..."}.``
         :param str id: the ``id`` value of the corpus.
-        :returns: I don't know ... maybe it will serve the written file ...  Does
-            this need to be done in a separate thread?
+        :returns: the modified corpus model (or a JSON error message).
 
-        NEEDS WORK ...
+        .. note::
         
-        IDEA: this could be a read/write action.  E.g., rename it to ``getasfile``
-        and it could write the file if it doesn't yet exist, re-write it if it's
-        out of date and return the file in any case ...  hmm, but maybe two
-        separate actions are better since it may be desirable to write to file
-        without retrieving a potentially large file ...
+            NEEDS WORK.  Might be a good idea to compare file creation times and
+            warn the user if they might be updating a file needlessly...
 
         """
-        corpus = Session.query(Corpus).get(id)
+        corpus = h.eagerloadCorpus(Session.query(Corpus), eagerloadForms=True).get(id)
         if corpus:
-            corpusDirPath = getCorpusDirPath(corpus)
-            # writeToFile(corpus, corpusDirPath)
-            return 'the output of corpus.writetofile, whatever that is'
+            try:
+                schema = CorpusFormatSchema
+                values = json.loads(unicode(request.body, request.charset))
+                format_ = schema.to_python(values)['format']
+                corpusDirPath = getCorpusDirPath(corpus)
+                return writeToFile(corpus, format_)
+            except Invalid, e:
+                response.status_int = 400
+                return {'errors': e.unpack_errors()}
+            except h.JSONDecodeError:
+                response.status_int = 400
+                return h.JSONDecodeErrorResponse
         else:
             response.status_int = 404
             return {'error': 'There is no corpus with id %s' % id}
 
+    @h.restrict('GET')
+    @h.authenticateWithJSON
+    def servefile(self, id, fileId):
+        """Return the corpus as a file in the format specified in the URL query string.
+
+        :URL: ``PUT /corpora/id/servefile/fileId``.
+        :param str id: the ``id`` value of the corpus.
+        :param str id: the ``id`` value of the corpus file.
+        :returns: the file data
+
+        """
+        corpus = Session.query(Corpus).get(id)
+        if corpus:
+            try:
+                corpusFile = filter(lambda cf: cf.id == int(fileId), corpus.files)[0]
+                corpusFilePath = os.path.join(getCorpusDirPath(corpus),
+                                              '%s.gz' % corpusFile.filename)
+                if authorizedToAccessCorpusFile(session['user'], corpusFile):
+                    return forward(FileApp(corpusFilePath))
+                else:
+                    response.status_int = 403
+                    return json.dumps(h.unauthorizedMsg)
+            except Exception:
+                response.status_int = 400
+                return json.dumps({'error': 'Unable to serve corpus file %d of corpus %d' % (
+                        fileId, id)})
+        else:
+            response.status_int = 404
+            return json.dumps({'error': 'There is no corpus with id %s' % id})
+
+
+def authorizedToAccessCorpusFile(user, corpusFile):
+    """Return True if user is authorized to access the corpus file."""
+    if corpusFile.restricted and user.role != u'administrator' and \
+    user not in h.getUnrestrictedUsers():
+        return False
+    return True
+
+
+def getFormReferences(corpusContent):
+    """Return the forms referenced in the input corpus content, in the order they were referenced."""
+    if corpusContent:
+        return [int(id) for id in h.formReferencePattern.findall(corpusContent)]
+    return []
+
+
+def writeToFile(corpus, format_):
+    """Write the corpus to file in the specified format.
+
+    Write the corpus to a binary file, create or update a corpus file model and
+    associate it to the corpus model (if necessary).
+
+    :param corpus: a corpus model.
+    :param str format_: the form of the file to be written.
+    :returns: the corpus modified appropriately (assuming success)
+    :side effects: may write a file to disk and update/create a corpus file model.
+
+    .. note::
     
+        It may be desirable/necessary to perform the corpus file writing
+        asynchronously using a dedicated corpus-file-worker.  
+
+    """
+
+    errorMsg = lambda msg: {'error': u'Unable to write corpus %d to file with format "%s". (%s)' % (
+                corpus.id, format_, msg)}
+
+    def updateCorpusFile(corpus, filename, modifier, datetimeModified, restricted):
+        """Update the corpus file model of ``corpus`` that matches ``filename``."""
+        corpusFile = [cf for cf in corpus.files if cf.filename == corpusFilename][0]
+        corpusFile.restricted = restricted
+        corpusFile.modifier = user
+        corpusFile.datetimeModified = corpus.datetimeModified = now
+
+    def generateNewCorpusFile(corpus, filename, format_, creator, datetimeCreated, restricted):
+        """Create a corpus file model with ``filename`` and append it to ``corpus.files``."""
+        corpusFile = CorpusFile()
+        corpusFile.restricted = restricted
+        corpus.files.append(corpusFile)
+        corpusFile.filename = filename
+        corpusFile.format = format_
+        corpusFile.creator = corpusFile.modifier = creator
+        corpusFile.datetimeCreated = corpusFile.datetimeModified = datetimeCreated
+        corpus.datetimeModified = datetimeCreated
+
+    def destroyFile(filePath):
+        try:
+            rmtree(filePath)
+        except Exception:
+            pass
+
+    corpusFilePath = getCorpusFilePath(corpus, format_)
+    update = os.path.exists(corpusFilePath) # If True, we are upating
+    restricted = False
+
+    # Create the corpus file on the filesystem
+    try:
+        writer = h.corpusFormats[format_]['writer']
+        if corpus.formSearch:   # ``formSearch`` value negates any content.
+            queryBuilder = SQLAQueryBuilder()
+            forms = queryBuilder.getSQLAQuery(json.loads(corpus.formSearch.search)).\
+                        options(joinedload(Form.tags)).all()
+            with codecs.open(corpusFilePath, 'w', 'utf8') as f:
+                for form in forms:
+                    if not restricted and "restricted" in [t.name for t in form.tags]:
+                        restricted = True
+                    f.write(writer(form))
+        else:
+            formReferences = getFormReferences(corpus.content)
+            forms = dict([(f.id, f) for f in corpus.forms])
+            with codecs.open(corpusFilePath, 'w', 'utf8') as f:
+                for id in formReferences:
+                    form = forms[id]
+                    if not restricted and "restricted" in [t.name for t in form.tags]:
+                        restricted = True
+                    f.write(writer(form))
+        h.compressFile(corpusFilePath)
+    except Exception, e:
+        destroyFile(corpusFilePath)
+        response.status_int = 400
+        return errorMsg(e)
+
+    # Update/create the corpusFile object
+    try:
+        now = h.now()
+        user = session['user']
+        corpusFilename = os.path.split(corpusFilePath)[1]
+        if update:
+            try:
+                updateCorpusFile(corpus, filename, modifier, datetimeModified,
+                                 restricted)
+            except Exception:
+                generateNewCorpusFile(corpus, corpusFilename, format_, user,
+                                      now, restricted)
+        else:
+            generateNewCorpusFile(corpus, corpusFilename, format_, user, now,
+                                  restricted)
+    except Exception, e:
+        destroyFile(corpusFilePath)
+        response.status_int = 400
+        return errorMsg(e)
+    Session.commit()
+    return corpus
+
 
 ################################################################################
 # Backup corpus
@@ -332,17 +484,14 @@ def createNewCorpus(data):
         "restricted" tag where they are concerned.  Given that a corpus' forms
         can be determined by a form search model and are therefore variable, it
         does not seem practical to toggle restricted status based on the status
-        of any number of forms.  Since the corpus resource returns its list of
-        forms only when its file is returned, this lack of restrictability
-        should not be an issue.  When a file is written to disk, the system
-        could determine restricted status for that file or even write a version
-        of it for restricted users ...
+        of any number of forms.  The corpus files that may be associated to a
+        corpus by requesting ``PUT /corpora/id/writetofile`` may, however, be
+        restricted if a restricted form is written to file.
 
     """
     corpus = Corpus()
     corpus.UUID = unicode(uuid4())
     corpus.name = h.normalize(data['name'])
-    corpus.type = data['type']
     corpus.description = h.normalize(data['description'])
     corpus.content = h.normalize(data['content'])
     corpus.formSearch = data['formSearch']
@@ -352,11 +501,10 @@ def createNewCorpus(data):
     corpus.datetimeModified = corpus.datetimeEntered = h.now()
     return corpus
 
-
 def updateCorpus(corpus, data):
     """Update a corpus.
 
-    :param page: the corpus model to be updated.
+    :param corpus: the corpus model to be updated.
     :param dict data: representation of the updated corpus.
     :returns: the updated corpus model or, if ``changed`` has not been set
         to ``True``, ``False``.
@@ -366,7 +514,22 @@ def updateCorpus(corpus, data):
     # Unicode Data
     changed = h.setAttr(corpus, 'name', h.normalize(data['name']), changed)
     changed = h.setAttr(corpus, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(corpus, 'script', h.normalize(data['script']), changed)
+    changed = h.setAttr(corpus, 'content', h.normalize(data['content']), changed)
+    changed = h.setAttr(corpus, 'formSearch', data['formSearch'], changed)
+
+    corpus.tags = data['tags']
+    corpus.forms = data['forms']
+
+    # Many-to-Many Data: tags & forms
+    # Update only if the user has made changes.
+    formsToAdd = [f for f in data['forms'] if f]
+    tagsToAdd = [t for t in data['tags'] if t]
+    if set(formsToAdd) != set(corpus.forms):
+        corpus.forms = formsToAdd
+        changed = True
+    if set(tagsToAdd) != set(corpus.tags):
+        corpus.tags = tagsToAdd
+        changed = True
 
     if changed:
         corpus.modifier = session['user']
@@ -374,34 +537,8 @@ def updateCorpus(corpus, data):
         return corpus
     return changed
 
-def saveCorpusScript(corpus):
-    """Save the corpus's ``script`` value to disk as ``corpus_<id>.script``.
-    
-    Also create the corpus compiler shell script, i.e., ``corpus_<id>.sh``
-    which will be used to compile the corpus FST to a binary.
-
-    :param corpus: a corpus model.
-    :returns: the absolute path to the newly created corpus script file.
-
-    """
-    try:
-        corpusDirPath = createCorpusDir(corpus)
-        corpusScriptPath = getCorpusFilePath(corpus, 'script')
-        corpusBinaryPath = getCorpusFilePath(corpus, 'binary')
-        corpusCompilerPath = getCorpusFilePath(corpus, 'compiler')
-        with codecs.open(corpusScriptPath, 'w', 'utf8') as f:
-            f.write(corpus.script)
-        # The compiler shell script loads the foma script and compiles it to binary form.
-        with open(corpusCompilerPath, 'w') as f:
-            f.write('#!/bin/sh\nfoma -e "source %s" -e "regex corpus;" -e "save stack %s" -e "quit"' % (
-                    corpusScriptPath, corpusBinaryPath))
-        os.chmod(corpusCompilerPath, 0744)
-        return corpusScriptPath
-    except Exception:
-        return None
-
 def createCorpusDir(corpus):
-    """Create the directory to hold the corpus-as-file-object.
+    """Create the directory to hold the various forms of the corpus written to disk.
     
     :param corpus: a corpus model object.
     :returns: an absolute path to the directory for the corpus.
@@ -411,27 +548,26 @@ def createCorpusDir(corpus):
     h.makeDirectorySafely(corpusDirPath)
     return corpusDirPath
 
-def getCorpusDirPath(corpus):
-    """Return the path to a corpus's directory.
+def getCorpusFilePath(corpus, format_):
+    """Return the path to a corpus's file of the given format.
     
     :param corpus: a corpus model object.
-    :returns: an absolute path to the directory for the corpus.
+    :param str format_: the format for writing the corpus file.
+    :returns: an absolute path to the corpus's file.
 
-    """
-    return os.path.join(config['analysis_data'],
-                                    'corpus', 'corpus_%d' % corpus.id)
-
-def getCorpusFilePath(corpus, fileType='script'):
-    """Return the path to a corpus's file of the given type.
+    .. note::
     
-    :param corpus: a corpus model object.
-    :param str fileType: one of 'script', 'binary', 'compiler', or 'tester'.
-    :returns: an absolute path to the corpus's script file.
+        It will be necessary to figure out other formats.
 
     """
-    extMap = {'script': 'script', 'binary': 'foma', 'compiler': 'sh', 'tester': 'tester.sh'}
+    ext = h.corpusFormats[format_]['extension']
+    sfx = h.corpusFormats[format_]['suffix']
     return os.path.join(getCorpusDirPath(corpus),
-            'corpus_%d.%s' % (corpus.id, extMap.get(fileType, 'script')))
+            'corpus_%d%s.%s' % (corpus.id, sfx, ext))
+
+def getCorpusDirPath(corpus):
+    return os.path.join(h.getOLDDirectoryPath('corpora', config=config),
+                        'corpus_%d' % corpus.id)
 
 def removeCorpusDirectory(corpus):
     """Remove the directory of the corpus model and everything in it.
@@ -448,106 +584,9 @@ def removeCorpusDirectory(corpus):
         return None
 
 
-def fomaOutputFile2Dict(file_):
-    """Return the content of the foma output file ``file_`` as a dict.
-
-    :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
-    :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
-
-    """
-    result = {}
-    for line in file_:
-        line = line.strip()
-        if line:
-            i, o = line.split('\t')[:2]
-            try:
-                result[i].append(o)
-            except (KeyError, ValueError):
-                result[i] = [o]
-    return result
-
-def phonologize(inputs, corpus, corpusBinaryPath, user):
-    """Phonologize the inputs using the corpus's compiled script.
-    
-    :param list inputs: a list of morpho-phonemic transcriptions.
-    :param corpus: a corpus model.
-    :param str corpusBinaryPath: an absolute path to a compiled corpus script.
-    :param user: a user model.
-    :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
-
-    """
-    randomString = h.generateSalt()
-    corpusDirPath = getCorpusDirPath(corpus)
-    inputsFilePath = os.path.join(corpusDirPath,
-            'inputs_%s_%s.txt' % (user.username, randomString))
-    outputsFilePath = os.path.join(corpusDirPath,
-            'outputs_%s_%s.txt' % (user.username, randomString))
-    applydownFilePath = os.path.join(corpusDirPath,
-            'applydown_%s_%s.sh' % (user.username, randomString))
-    with codecs.open(inputsFilePath, 'w', 'utf8') as f:
-        f.write(u'\n'.join(inputs))
-    with codecs.open(applydownFilePath, 'w', 'utf8') as f:
-        f.write('#!/bin/sh\ncat %s | flookup -i %s' % (
-                inputsFilePath, corpusBinaryPath))
-    os.chmod(applydownFilePath, 0744)
-    with open(os.devnull, 'w') as devnull:
-        with codecs.open(outputsFilePath, 'w', 'utf8') as outfile:
-            p = Popen(applydownFilePath, shell=False, stdout=outfile, stderr=devnull)
-    p.communicate()
-    with codecs.open(outputsFilePath, 'r', 'utf8') as f:
-        result = fomaOutputFile2Dict(f)
-    os.remove(inputsFilePath)
-    os.remove(outputsFilePath)
-    os.remove(applydownFilePath)
-    return result
-
-
-def getTests(corpus):
-    """Return any tests defined in a corpus's script as a dictionary."""
-    result = {}
-    testLines = [l[6:] for l in corpus.script.splitlines() if l[:6] == u'#test ']
-    for l in testLines:
-        try:
-            i, o = map(unicode.strip, l.split(u'->'))
-            try:
-                result[i].append(o)
-            except KeyError:
-                result[i] = [o]
-        except ValueError:
-            pass
-    return result
-
-
-def runTests(corpus, corpusBinaryPath, user):
-    """Run the test defined in the corpus's script and return a report.
-    
-    :param corpus: a corpus model.
-    :param str corpusBinaryPath: an absolute path to the corpus's compiled foma script.
-    :param user: a user model.
-    :returns: a dictionary representing the report on the tests.
-
-    A line in a corpus's script that begins with "#test " signifies a
-    test.  After "#test " there should be a string of characters followed by
-    "->" followed by another string of characters.  The first string is the
-    underlying representation and the second is the anticipated surface
-    representation.  Requests to ``GET /corpora/runtests/id`` will cause
-    the OLD to run a corpus script against its tests and return a
-    dictionary detailing the expected and actual outputs of each input in the
-    transcription.  :func:`runTests` generates that dictionary.
-
-    """
-
-    tests = getTests(corpus)
-    if not tests:
-        response.status_int = 400
-        return {'error': 'The script of corpus %d contains no tests.' % corpus.id}
-    results = phonologize(tests.keys(), corpus, corpusBinaryPath, user)
-    return dict([(t, {'expected': tests[t], 'actual': results[t]}) for t in tests])
-
-
 def getDataForNewEdit(GET_params):
     """Return the data needed to create a new corpus or edit one."""
-    mandatoryAttributes = ['corpusTypes']
+    mandatoryAttributes = ['corpusFormats']
     modelNameMap = {
         'formSearches': 'FormSearch',
         'users': 'User',
@@ -557,6 +596,6 @@ def getDataForNewEdit(GET_params):
         'formSearches': h.getMiniDictsGetter('FormSearch'),
         'users': h.getMiniDictsGetter('User'),
         'tags': h.getMiniDictsGetter('Tag'),
-        'corpusTypes': h.corpusTypes
+        'corpusFormats': lambda: h.corpusFormats.keys()
     }
-    return getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes)
+    return h.getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes)
