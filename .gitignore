@@ -7,6 +7,7 @@
 *.cache
 *.lock
 *.log
+*.swp
 TODO.txt
 
 # Some Pylons-generated directories that should be ignored
@@ -16,6 +17,7 @@ TODO.txt
 
 # Some OLD-specific directories that should be ignored
 /store/
+/old
 
 # Ignore a large file in test_files
 onlinelinguisticdatabase/tests/data/files/old_test_long.wav
