@@ -20,14 +20,11 @@
 """
 
 import logging
-import datetime
 import re
 import simplejson as json
 from uuid import uuid4
 from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql import asc, or_
 from sqlalchemy.orm import subqueryload
 from onlinelinguisticdatabase.lib.base import BaseController
