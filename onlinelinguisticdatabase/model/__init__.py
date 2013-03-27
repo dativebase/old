@@ -38,6 +38,12 @@ from onlinelinguisticdatabase.model.syntacticcategory import SyntacticCategory
 from onlinelinguisticdatabase.model.tag import Tag
 from onlinelinguisticdatabase.model.user import User, UserForm
 
+__all__ = ['Session', 'Base', 'ApplicationSettings', 'Collection', 'CollectionBackup', 
+        'Corpus', 'CorpusFile', 'CorpusBackup', 'ElicitationMethod', 'File', 'Form', 
+        'FormFile', 'FormBackup', 'FormSearch', 'Translation', 'Language', 'Orthography', 
+        'Page', 'Phonology', 'PhonologyBackup', 'Source', 'Speaker', 'SyntacticCategory', 
+        'Tag', 'User', 'UserForm']
+
 def init_model(engine):
     """Call me before using any of the tables or classes in the model"""
     #Session.configure(autoflush=True, bind=engine)
