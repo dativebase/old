@@ -240,16 +240,16 @@ class TestCollectionbackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'CollectionBackup', 'orderByAttribute': 'datetimeModified',
-                     'orderByDirection': 'desc'}
+        orderByParams = {'orderByModel': 'CollectionBackup',
+            'orderByAttribute': 'id', 'orderByDirection': 'desc'}
         response = self.app.get(url('collectionbackups'), orderByParams,
                         headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        resultSet = sorted(allCollectionBackups, key=lambda cb: cb['datetimeModified'], reverse=True)
-        assert [cb['id'] for cb in resp] == [cb['id'] for cb in resultSet]
+        resultSet = sorted(allCollectionBackups, key=lambda cb: cb['id'], reverse=True)
+        assert [cb['id'] for cb in resp] == [cb['id'] for cb in resultSet] 
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'CollectionBackup', 'orderByAttribute': 'datetimeModified',
+        # Test the orderBy *with* paginator.  
+        params = {'orderByModel': 'CollectionBackup', 'orderByAttribute': 'id',
                      'orderByDirection': 'desc', 'itemsPerPage': 1, 'page': 3}
         response = self.app.get(url('collectionbackups'), params,
                         headers=self.json_headers, extra_environ=admin)
