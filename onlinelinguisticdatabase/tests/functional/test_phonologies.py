@@ -493,12 +493,12 @@ class TestPhonologiesController(TestController):
 
     #@nottest
     def test_compile(self):
-        """Tests that PUT /phonologies/compile/id compiles the foma script of the phonology with id.
+        """Tests that PUT /phonologies/id/compile compiles the foma script of the phonology with id.
 
         .. note::
         
             Phonology compilation is accomplished via a worker thread and
-            requests to /phonologies/compile/id return immediately.  When the
+            requests to /phonologies/id/compile return immediately.  When the
             script compilation attempt has terminated, the values of the
             ``datetimeCompiled``, ``datetimeModified``, ``compileSucceeded``,
             ``compileMessage`` and ``modifier`` attributes of the phonology are
@@ -853,7 +853,7 @@ class TestPhonologiesController(TestController):
 
     #@nottest
     def test_applydown(self):
-        """Tests that ``GET /phonologies/applydown/id`` phonologizes input morpho-phonemic segmentations.
+        """Tests that ``GET /phonologies/id/applydown`` phonologizes input morpho-phonemic segmentations.
         
         """
         # Create a phonology with the test phonology script
@@ -928,9 +928,9 @@ class TestPhonologiesController(TestController):
         assert not [fn for fn in phonologyDirContents if fn[:8] == 'outputs_']
         assert not [fn for fn in phonologyDirContents if fn[:10] == 'applydown_']
 
-        # Repeat the above but use the synonym ``PUT /phonologies/phonologize/id``.
+        # Repeat the above but use the synonym ``PUT /phonologies/id/phonologize``.
         params = json.dumps({'transcriptions': u'nit-wa'})
-        response = self.app.put(url('/phonologies/phonologize/%d' % phonology1Id),
+        response = self.app.put(url('/phonologies/%d/phonologize' % phonology1Id),
                                 params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp[u'nit-wa'] == [u'nita']
@@ -1058,7 +1058,7 @@ class TestPhonologiesController(TestController):
 
     #@nottest
     def test_runtests(self):
-        """Tests that ``GET /phonologies/runtests/id`` runs the tests in the phonology's script."""
+        """Tests that ``GET /phonologies/id/runtests`` runs the tests in the phonology's script."""
 
         # Create a phonology with the test phonology script
         params = self.phonologyCreateParams.copy()
@@ -1141,7 +1141,7 @@ class TestPhonologiesController(TestController):
             log.debug('%s expected to be %s but phonology returned %s' % (
                 t, e, ', '.join(resp[t]['actual'])))
 
-        # Try to request GET /phonologies/runtests/id on a phonology with no tests.
+        # Try to request GET /phonologies/id/runtests on a phonology with no tests.
 
         # Create the test-less phonology.
         params = self.phonologyCreateParams.copy()

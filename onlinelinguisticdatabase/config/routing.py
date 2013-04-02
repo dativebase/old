@@ -55,28 +55,28 @@ def make_map(config):
     # The ErrorController route (handles 404/500 error pages); it should
     # likely stay at the top, ensuring it can always be resolved
     map.connect('/error/{action}', controller='error')
-    map.connect('/error/{action}/{id}', controller='error')
+    map.connect('/error/{id}/{action}', controller='error')
 
     # CUSTOM ROUTES HERE
-    map.connect('/collections/history/{id}', controller='oldcollections', action='history')
-    map.connect('/files/serve/{id}', controller='files', action='serve')
-    map.connect('/files/serve_reduced/{id}', controller='files', action='serve_reduced')
-    map.connect('/forms/history/{id}', controller='forms', action='history')
+    map.connect('/collections/{id}/history', controller='oldcollections', action='history')
+    map.connect('/files/{id}/serve', controller='files', action='serve')
+    map.connect('/files/{id}/serve_reduced', controller='files', action='serve_reduced')
+    map.connect('/forms/{id}/history', controller='forms', action='history')
     map.connect('/forms/remember', controller='forms', action='remember')
     map.connect('/forms/update_morpheme_references', controller='forms',
                 action='update_morpheme_references', conditions=dict(method='PUT'))
     map.connect('/login/authenticate', controller='login', action='authenticate')
     map.connect('/login/logout', controller='login', action='logout')
     map.connect('/login/email_reset_password', controller='login', action='email_reset_password')
-    map.connect('/phonologies/compile/{id}', controller='phonologies',
+    map.connect('/phonologies/{id}/compile', controller='phonologies',
                 action='compile', conditions=dict(method='PUT'))
-    map.connect('/phonologies/applydown/{id}', controller='phonologies',
+    map.connect('/phonologies/{id}/applydown', controller='phonologies',
                 action='applydown', conditions=dict(method='PUT'))
-    map.connect('/phonologies/phonologize/{id}', controller='phonologies',
+    map.connect('/phonologies/{id}/phonologize', controller='phonologies',
                 action='applydown', conditions=dict(method='PUT'))
-    map.connect('/phonologies/runtests/{id}', controller='phonologies',
+    map.connect('/phonologies/{id}/runtests', controller='phonologies',
                 action='runtests', conditions=dict(method='GET'))
-    map.connect('/phonologies/history/{id}', controller='phonologies', action='history')
+    map.connect('/phonologies/{id}/history', controller='phonologies', action='history')
     map.connect('/corpora/{id}/writetofile', controller='corpora',
                 action='writetofile', conditions=dict(method='PUT'))
     map.connect('/corpora/{id}/history', controller='corpora', action='history')

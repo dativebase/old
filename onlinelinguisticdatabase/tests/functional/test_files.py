@@ -1875,7 +1875,7 @@ class TestFilesController(TestController):
 
     #@nottest
     def test_serve(self):
-        """Tests that GET /files/serve/id returns the file with name id from
+        """Tests that GET /files/id/serve returns the file with name id from
         the permanent store, i.e., from onlinelinguisticdatabase/files/.
         """
 
