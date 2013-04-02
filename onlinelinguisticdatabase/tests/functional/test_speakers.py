@@ -12,53 +12,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
-import datetime
 import logging
-import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-import webtest
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import Speaker
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
 
 log = logging.getLogger(__name__)
-
 
 ################################################################################
 # Functions for creating & retrieving test data
 ################################################################################
 
 class TestSpeakersController(TestController):
-
-    createParams = {
-        'firstName': u'',
-        'lastName': u'',
-        'pageContent': u'',
-        'dialect': u'dialect',
-        'markupLanguage': u'reStructuredText'
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language; recreate the users.
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -157,7 +127,7 @@ class TestSpeakersController(TestController):
         originalSpeakerCount = Session.query(Speaker).count()
 
         # Create a valid one
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'John',
             'lastName': u'Doe',
@@ -174,7 +144,7 @@ class TestSpeakersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because firstName is too long
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'John' * 400,
             'lastName': u'Doe',
@@ -201,7 +171,7 @@ class TestSpeakersController(TestController):
         """Tests that PUT /speakers/id updates the speaker with id=id."""
 
         # Create a speaker to update.
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'firstName',
             'lastName': u'lastName',
@@ -218,7 +188,7 @@ class TestSpeakersController(TestController):
 
         # Update the speaker
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'firstName',
             'lastName': u'lastName',
@@ -253,7 +223,7 @@ class TestSpeakersController(TestController):
         """Tests that DELETE /speakers/id deletes the speaker with id=id."""
 
         # Create a speaker to delete.
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'firstName',
             'lastName': u'lastName',
@@ -266,7 +236,6 @@ class TestSpeakersController(TestController):
         resp = json.loads(response.body)
         speakerCount = Session.query(Speaker).count()
         speakerId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Now delete the speaker
         response = self.app.delete(url('speaker', id=speakerId), headers=self.json_headers,
@@ -301,7 +270,7 @@ class TestSpeakersController(TestController):
         """Tests that GET /speakers/id returns the speaker with id=id or an appropriate error."""
 
         # Create a speaker to show.
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'firstName',
             'lastName': u'lastName',
@@ -312,9 +281,7 @@ class TestSpeakersController(TestController):
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        speakerCount = Session.query(Speaker).count()
         speakerId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Try to get a speaker using an invalid id
         id = 100000000000
@@ -349,7 +316,7 @@ class TestSpeakersController(TestController):
         """
 
         # Create a speaker to edit.
-        params = self.createParams.copy()
+        params = self.speakerCreateParams.copy()
         params.update({
             'firstName': u'firstName',
             'lastName': u'lastName',
@@ -360,9 +327,7 @@ class TestSpeakersController(TestController):
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        speakerCount = Session.query(Speaker).count()
         speakerId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_speaker', id=speakerId), status=401)

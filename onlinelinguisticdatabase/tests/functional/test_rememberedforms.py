@@ -14,7 +14,7 @@
 
 import re
 from time import sleep
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 from nose.tools import nottest
 import simplejson as json
 import logging
@@ -22,10 +22,8 @@ from datetime import date, datetime, timedelta
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import webtest
 
 log = logging.getLogger(__name__)
-
 
 # Global temporal objects -- useful for creating the data upon which to search
 # and for formulating assertions about the results of those searches.
@@ -149,28 +147,16 @@ def createTestData(n=100):
     createTestModels(n)
     createTestForms(n)
 
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestRememberedformsController(TestController):
     """This test suite is modelled on the test_forms_search and test_oldcollections_search
     pattern, i.e., an initialize "test" runs first and a clean up one runs at the
     end.  Also, the update test should run before the show and search tests because
     the former creates the remembered forms for the latter two to retrieve.
     """
-
-    extra_environ_view = {'test.authentication.role': u'viewer',
-                          'test.applicationSettings': True}
-    extra_environ_contrib = {'test.authentication.role': u'contributor',
-                             'test.applicationSettings': True}
-    extra_environ_admin = {'test.authentication.role': u'administrator',
-                           'test.applicationSettings': True}
-    json_headers = {'Content-Type': 'application/json'}
     n = 100
+
+    def tearDown(self):
+        pass
 
     # The initialize "test" needs to run before all others
     #@nottest
@@ -184,7 +170,7 @@ class TestRememberedformsController(TestController):
         Session.commit()
 
         createTestData(self.n)
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
         # Create an application settings where the contributor is unrestricted
         viewer, contributor, administrator = getUsers()
@@ -214,7 +200,7 @@ class TestRememberedformsController(TestController):
         sleep(1)
         params = json.dumps({'forms': [f['id'] for f in forms]})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                                params, self.json_headers, self.extra_environ_view)
+                                params, self.json_headers, self.extra_environ_view_appset)
         resp = json.loads(response.body)
         viewerRememberedForms = sorted(resp, key=lambda f: f['id'])
         resultSet = [f for f in forms if u'restricted' not in [t['name'] for t in f['tags']]]
@@ -229,7 +215,7 @@ class TestRememberedformsController(TestController):
         # expect the request to be denied.
         params = json.dumps({'forms': []})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                params, self.json_headers, self.extra_environ_contrib, status=403)
+                params, self.json_headers, self.extra_environ_contrib_appset, status=403)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
@@ -238,14 +224,13 @@ class TestRememberedformsController(TestController):
         # to show that resetting a user's rememberedForms attribute via SQLAlchemy
         # does not wastefully recreate all relations.  See below
         userForms = Session.query(model.UserForm).filter(model.UserForm.user_id==viewerId).all()
-        originalUserFormIds = sorted([uf.id for uf in userForms])
         expectedNewUserFormIds = [uf.id for uf in userForms
                                   if uf.form_id != viewerRememberedForms[-1]['id']]
 
         # Remove the last of the viewer's remembered forms as the administrator.
         params = json.dumps({'forms': [f['id'] for f in viewerRememberedForms][:-1]})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                                params, self.json_headers, self.extra_environ_admin)
+                                params, self.json_headers, self.extra_environ_admin_appset)
         resp = json.loads(response.body)
         resultSet = resultSet[:-1]
         assert set([f['id'] for f in resultSet]) == set([f['id'] for f in resp])
@@ -261,7 +246,7 @@ class TestRememberedformsController(TestController):
         # Attempted update fails: bad user id
         params = json.dumps({'forms': []})
         response = self.app.put(url(controller='rememberedforms', action='update', id=100896),
-                params, self.json_headers, self.extra_environ_admin, status=404)
+                params, self.json_headers, self.extra_environ_admin_appset, status=404)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'There is no user with id 100896'
@@ -269,7 +254,7 @@ class TestRememberedformsController(TestController):
         # Attempted update fails: invalid array of form ids
         params = json.dumps({'forms': ['a', 1000000087654]})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                params, self.json_headers, self.extra_environ_admin, status=400)
+                params, self.json_headers, self.extra_environ_admin_appset, status=400)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['errors']['forms'] == [u'Please enter an integer value',
@@ -278,7 +263,7 @@ class TestRememberedformsController(TestController):
         # Attempted update fails: array of form ids is bad JSON
         params = json.dumps({'forms': []})[:-1]
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                params, self.json_headers, self.extra_environ_admin, status=400)
+                params, self.json_headers, self.extra_environ_admin_appset, status=400)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'JSON decode error: the parameters provided were not valid JSON.'
@@ -286,7 +271,7 @@ class TestRememberedformsController(TestController):
         # Clear the forms
         params = json.dumps({'forms': []})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                params, self.json_headers, self.extra_environ_admin)
+                params, self.json_headers, self.extra_environ_admin_appset)
         resp = json.loads(response.body)
         viewer = Session.query(model.User).filter(model.User.role==u'viewer').first()
         assert response.content_type == 'application/json'
@@ -296,7 +281,7 @@ class TestRememberedformsController(TestController):
         # Attempt to clear the forms again and fail because the submitted data are not new.
         params = json.dumps({'forms': []})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                params, self.json_headers, self.extra_environ_view, status=400)
+                params, self.json_headers, self.extra_environ_view_appset, status=400)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
@@ -314,7 +299,7 @@ class TestRememberedformsController(TestController):
         # remembered forms for subsequent searches and GETs.
         params = json.dumps({'forms': [f['id'] for f in forms]})
         response = self.app.put(url(controller='rememberedforms', action='update', id=viewerId),
-                            params, self.json_headers, self.extra_environ_view)
+                            params, self.json_headers, self.extra_environ_view_appset)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         resultSet = [f for f in forms if u'restricted' not in [t['name'] for t in f['tags']]]
@@ -328,7 +313,7 @@ class TestRememberedformsController(TestController):
         # remembered forms.
         params = json.dumps({'forms': [f['id'] for f in forms]})
         response = self.app.put(url(controller='rememberedforms', action='update', id=contributorId),
-                            params, self.json_headers, self.extra_environ_contrib)
+                            params, self.json_headers, self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert set([f['id'] for f in forms]) == set([f['id'] for f in resp])
@@ -338,7 +323,7 @@ class TestRememberedformsController(TestController):
         oddNumberedFormIds = [f['id'] for f in forms if f['id'] % 2 != 0]
         params = json.dumps({'forms': oddNumberedFormIds})
         response = self.app.put(url(controller='rememberedforms', action='update', id=contributorId),
-                            params, self.json_headers, self.extra_environ_contrib)
+                            params, self.json_headers, self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert set(oddNumberedFormIds) == set([f['id'] for f in resp])
@@ -352,7 +337,7 @@ class TestRememberedformsController(TestController):
         formIdsForAdmin = [f['id'] for f in forms if f['id'] % 2 != 0 and f['id'] > 25]
         params = json.dumps({'forms': formIdsForAdmin})
         response = self.app.put(url(controller='rememberedforms', action='update', id=administratorId),
-                            params, self.json_headers, self.extra_environ_contrib, status=403)
+                            params, self.json_headers, self.extra_environ_contrib_appset, status=403)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
@@ -362,7 +347,7 @@ class TestRememberedformsController(TestController):
         formIdsForAdmin = [f['id'] for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
         params = json.dumps({'forms': formIdsForAdmin})
         response = self.app.put(url(controller='rememberedforms', action='update', id=administratorId),
-                            params, self.json_headers, self.extra_environ_admin)
+                            params, self.json_headers, self.extra_environ_admin_appset)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert set(formIdsForAdmin) == set([f['id'] for f in resp])
@@ -382,7 +367,7 @@ class TestRememberedformsController(TestController):
 
         # Get the viewer's remembered forms (show that a contributor can do this)
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         resultSet = [f for f in forms if u'restricted' not in [t['name'] for t in f['tags']]]
         assert response.content_type == 'application/json'
@@ -392,7 +377,7 @@ class TestRememberedformsController(TestController):
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 7, 'page': 3}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-                        paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+                        paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert len(resp['items']) == 7
@@ -402,7 +387,7 @@ class TestRememberedformsController(TestController):
         orderByParams = {'orderByModel': 'Form', 'orderByAttribute': 'transcription',
                      'orderByDirection': 'desc'}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-                        orderByParams, headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+                        orderByParams, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         resultSetOrdered = sorted(resultSet, key=lambda f: f['transcription'], reverse=True)
         assert response.content_type == 'application/json'
@@ -412,7 +397,7 @@ class TestRememberedformsController(TestController):
         params = {'orderByModel': 'Form', 'orderByAttribute': 'transcription',
                      'orderByDirection': 'desc', 'itemsPerPage': 7, 'page': 3}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-                        params, headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+                        params, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         assert len(resp['items']) == 7
         assert resultSetOrdered[14]['transcription'] == resp['items'][0]['transcription']
@@ -421,7 +406,7 @@ class TestRememberedformsController(TestController):
         orderByParams = {'orderByModel': 'Form', 'orderByAttribute': 'transcription',
                      'orderByDirection': 'descending'}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-            orderByParams, headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=400)
+            orderByParams, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=400)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
@@ -431,7 +416,7 @@ class TestRememberedformsController(TestController):
         orderByParams = {'orderByModel': 'Formosa', 'orderByAttribute': 'transcrumption',
                      'orderByDirection': 'desc'}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-            orderByParams, headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            orderByParams, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         assert resp[0]['id'] == forms[0]['id']
 
@@ -439,14 +424,14 @@ class TestRememberedformsController(TestController):
         # or integers that are less than 1
         paginator = {'itemsPerPage': u'a', 'page': u''}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-            paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=400)
+            paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
 
         paginator = {'itemsPerPage': 0, 'page': -1}
         response = self.app.get(url(controller='rememberedforms', action='show', id=viewerId),
-            paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=400)
+            paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
@@ -457,7 +442,7 @@ class TestRememberedformsController(TestController):
 
         # Get the contributor's remembered forms
         response = self.app.get(url(controller='rememberedforms', action='show', id=contributorId),
-                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         resultSet = [f for f in forms if f['id'] % 2 != 0]
         assert response.content_type == 'application/json'
@@ -465,7 +450,7 @@ class TestRememberedformsController(TestController):
 
         # Invalid user id returns a 404 error
         response = self.app.get(url(controller='rememberedforms', action='show', id=200987654),
-                headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=404)
+                headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=404)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'There is no user with id 200987654'
@@ -476,7 +461,7 @@ class TestRememberedformsController(TestController):
 
         # Get the administrator's remembered forms
         response = self.app.get(url(controller='rememberedforms', action='show', id=administratorId),
-                        headers=self.json_headers, extra_environ=self.extra_environ_admin)
+                        headers=self.json_headers, extra_environ=self.extra_environ_admin_appset)
         resp = json.loads(response.body)
         resultSet = [f for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
         assert response.content_type == 'application/json'
@@ -541,7 +526,7 @@ class TestRememberedformsController(TestController):
 
         # Search the viewer's remembered forms as the viewer
         response = self.app.post(url('/rememberedforms/%d/search' % viewerId),
-                        jsonQuery, self.json_headers, self.extra_environ_admin)
+                        jsonQuery, self.json_headers, self.extra_environ_admin_appset)
         resp = json.loads(response.body)
         assert [f['id'] for f in resultSetViewer] == [f['id'] for f in resp]
         assert response.content_type == 'application/json'
@@ -551,7 +536,7 @@ class TestRememberedformsController(TestController):
         # as the contributor.
         response = self.app.request(url('/rememberedforms/%d' % contributorId),
                         method='SEARCH', body=jsonQuery, headers=self.json_headers,
-                        environ=self.extra_environ_contrib)
+                        environ=self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         assert [f['id'] for f in resultSetContributor] == [f['id'] for f in resp]
         assert response.content_type == 'application/json'
@@ -561,7 +546,7 @@ class TestRememberedformsController(TestController):
         # but search as the viewer and expect not to see the restricted forms,
         # i.e., those with ids > 50.
         response = self.app.post(url('/rememberedforms/%d/search' % contributorId),
-                        jsonQuery, self.json_headers, self.extra_environ_view)
+                        jsonQuery, self.json_headers, self.extra_environ_view_appset)
         resp = json.loads(response.body)
         resultSet = [f for f in resultSetContributor if
                      u'restricted' not in [t['name'] for t in f['tags']]]
@@ -572,7 +557,7 @@ class TestRememberedformsController(TestController):
         # Perform the search on the administrator's remembered forms as the viewer.
         response = self.app.request(url('/rememberedforms/%d' % administratorId),
                         method='SEARCH', body=jsonQueryAdmin, headers=self.json_headers,
-                        environ=self.extra_environ_view)
+                        environ=self.extra_environ_view_appset)
         resp = json.loads(response.body)
         resultSet = [f for f in resultSetAdministrator if
                      u'restricted' not in [t['name'] for t in f['tags']]]
@@ -581,7 +566,7 @@ class TestRememberedformsController(TestController):
 
         # Perform the search on the administrator's remembered forms as the contributor.
         response = self.app.post(url('/rememberedforms/%d/search' % administratorId),
-                        jsonQueryAdmin, self.json_headers, self.extra_environ_contrib)
+                        jsonQueryAdmin, self.json_headers, self.extra_environ_contrib_appset)
         resp = json.loads(response.body)
         resultSet = resultSetAdministrator
         assert [f['id'] for f in resultSet] == [f['id'] for f in resp]
@@ -591,7 +576,7 @@ class TestRememberedformsController(TestController):
         # Perform the search on the administrator's remembered forms as the administrator.
         response = self.app.request(url('/rememberedforms/%d' % administratorId),
                         method='SEARCH', body=jsonQueryAdmin, headers=self.json_headers,
-                        environ=self.extra_environ_admin)
+                        environ=self.extra_environ_admin_appset)
         resp = json.loads(response.body)
         resultSet = resultSetAdministrator
         assert [f['id'] for f in resultSet] == [f['id'] for f in resp]
@@ -613,4 +598,4 @@ class TestRememberedformsController(TestController):
         # to clean up for subsequent tests.
         extra_environ = {'test.authentication.role': u'administrator',
                          'test.applicationSettings': True}
-        response = self.app.get(url('forms'), extra_environ=extra_environ)
+        self.app.get(url('forms'), extra_environ=extra_environ)

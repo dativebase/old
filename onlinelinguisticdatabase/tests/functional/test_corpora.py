@@ -12,58 +12,27 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
 import datetime
 import logging
 import os
-import codecs
 import simplejson as json
 from uuid import uuid4
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
 from sqlalchemy.sql import desc
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import onlinelinguisticdatabase.lib.testutils as testutils
-from onlinelinguisticdatabase.model import Corpus, CorpusBackup, CorpusFile
-from subprocess import Popen, PIPE, call
+from onlinelinguisticdatabase.model import Corpus, CorpusBackup
 
 log = logging.getLogger(__name__)
 
 class TestCorporaController(TestController):
 
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    corpusPath = h.getOLDDirectoryPath('corpora', config=config)
-    testCorporaPath = os.path.join(here, 'onlinelinguisticdatabase',
-                        'tests', 'data', 'corpora')
-    testScriptsPath = os.path.join(here, 'onlinelinguisticdatabase',
-                        'tests', 'scripts')
-    loremipsum100Path = os.path.join(testCorporaPath, 'loremipsum_100.txt')
-    loremipsum1000Path = os.path.join(testCorporaPath, 'loremipsum_1000.txt')
-    loremipsum10000Path = os.path.join(testCorporaPath, 'loremipsum_10000.txt')
-
-    createParams = testutils.corpusCreateParams
-    formCreateParams = testutils.formCreateParams
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
     # Clear all models in the database except Language; recreate the corpora.
     def tearDown(self):
-        h.clearAllModels()
-        h.destroyAllUserDirectories()
-        h.destroyAllCorpusDirectories()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
+        TestController.tearDown(self, dirsToDestroy=['user', 'corpus'])
 
     #@nottest
     def test_index(self):
@@ -173,7 +142,6 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        formCount = len(forms)
         testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
         formIds = [form.id for form in forms]
 
@@ -190,7 +158,7 @@ class TestCorporaController(TestController):
         formSearchId = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
@@ -207,7 +175,7 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corpusPath) == []
+        assert os.listdir(self.corporaPath) == []
         originalCorpusCount = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
@@ -215,7 +183,7 @@ class TestCorporaController(TestController):
         corpusId = resp['id']
         newCorpusCount = Session.query(Corpus).count()
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert newCorpusCount == originalCorpusCount + 1
         assert resp['name'] == u'Corpus'
@@ -228,7 +196,7 @@ class TestCorporaController(TestController):
 
         # Invalid because ``content`` refers to non-existent forms and ``formSearch``
         # a non-existent form search.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus Chi',
             'description': u'Covers a lot of the data, padre.',
@@ -247,7 +215,7 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data, dude.',
@@ -264,7 +232,7 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'',
             'description': u'Covers a lot of the data, sista.',
@@ -281,7 +249,7 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': None,
             'description': u'Covers a lot of the data, young\'un.',
@@ -298,7 +266,7 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is too long.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': 'Corpus' * 200,
             'description': u'Covers a lot of the data, squirrel salad.',
@@ -322,7 +290,6 @@ class TestCorporaController(TestController):
         t = h.generateRestrictedTag()
         Session.add(t)
         Session.commit()
-        tagId = t.id
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
@@ -334,7 +301,6 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
@@ -411,7 +377,6 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        formCount = len(forms)
         testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
         newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
         formIds = [form.id for form in forms]
@@ -429,7 +394,7 @@ class TestCorporaController(TestController):
         formSearchId = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
@@ -439,7 +404,7 @@ class TestCorporaController(TestController):
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corpusPath) == []
+        assert os.listdir(self.corporaPath) == []
         originalCorpusCount = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
@@ -447,7 +412,7 @@ class TestCorporaController(TestController):
         corpusId = resp['id']
         newCorpusCount = Session.query(Corpus).count()
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         originalDatetimeModified = resp['datetimeModified']
         assert newCorpusCount == originalCorpusCount + 1
@@ -462,7 +427,7 @@ class TestCorporaController(TestController):
         # Update the corpus
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
         origBackupCount = Session.query(CorpusBackup).count()
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.  Best yet!',
@@ -524,9 +489,7 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        formCount = len(forms)
         testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
-        newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
         formIds = [form.id for form in forms]
 
         # Create a form search model
@@ -542,7 +505,7 @@ class TestCorporaController(TestController):
         formSearchId = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
@@ -552,15 +515,14 @@ class TestCorporaController(TestController):
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corpusPath) == []
+        assert os.listdir(self.corporaPath) == []
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
-        originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
         assert corpusDirContents == []
@@ -633,9 +595,7 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        formCount = len(forms)
         testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
-        newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
         formIds = [form.id for form in forms]
 
         # Create a form search model
@@ -651,7 +611,7 @@ class TestCorporaController(TestController):
         formSearchId = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
@@ -661,7 +621,7 @@ class TestCorporaController(TestController):
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corpusPath) == []
+        assert os.listdir(self.corporaPath) == []
         originalCorpusCount = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
@@ -669,9 +629,8 @@ class TestCorporaController(TestController):
         corpusCount = Session.query(Corpus).count()
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
-        originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
         assert corpusDirContents == []
@@ -726,9 +685,7 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        formCount = len(forms)
         testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
-        newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
         formIds = [form.id for form in forms]
 
         # Create a form search model
@@ -744,7 +701,7 @@ class TestCorporaController(TestController):
         formSearchId = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
@@ -754,7 +711,7 @@ class TestCorporaController(TestController):
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corpusPath) == []
+        assert os.listdir(self.corporaPath) == []
         originalCorpusCount = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
@@ -762,9 +719,8 @@ class TestCorporaController(TestController):
         corpusCount = Session.query(Corpus).count()
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
-        originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
         assert corpusDirContents == []
@@ -838,7 +794,6 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        formCount = len(forms)
         testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
         newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
         newestTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:4]])
@@ -857,7 +812,7 @@ class TestCorporaController(TestController):
         formSearchId = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
@@ -867,7 +822,7 @@ class TestCorporaController(TestController):
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corpusPath) == []
+        assert os.listdir(self.corporaPath) == []
         originalCorpusCount = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
@@ -875,7 +830,7 @@ class TestCorporaController(TestController):
         corpusCount = Session.query(Corpus).count()
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'Corpus'
@@ -890,7 +845,7 @@ class TestCorporaController(TestController):
         # Update the corpus as the admin.
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
         origBackupCount = Session.query(CorpusBackup).count()
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.  Best yet!',
@@ -922,7 +877,7 @@ class TestCorporaController(TestController):
         # Update the corpus as the contributor.
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
         origBackupCount = Session.query(CorpusBackup).count()
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers even more data.  Better than ever!',

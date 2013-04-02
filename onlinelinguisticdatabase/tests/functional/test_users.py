@@ -12,60 +12,25 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
 import datetime
 import logging
 import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import User
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
 
 log = logging.getLogger(__name__)
 
-
 class TestUsersController(TestController):
-
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    researchersPath = h.getOLDDirectoryPath('users', config=config)
-
-    createParams = {
-        'username': u'',
-        'password': u'',
-        'password_confirm': u'',
-        'firstName': u'',
-        'lastName': u'',
-        'email': u'',
-        'affiliation': u'',
-        'role': u'',
-        'markupLanguage': u'',
-        'pageContent': u'',
-        'inputOrthography': None,
-        'outputOrthography': None
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
 
     # Clear all models in the database except Language; recreate the users.
     def tearDown(self):
-        h.clearAllModels()
-        h.destroyAllUserDirectories()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
+        TestController.tearDown(self, dirsToDestroy=['user'])
 
     #@nottest
     def test_index(self):
@@ -168,7 +133,7 @@ class TestUsersController(TestController):
         """
 
         # Attempt to create a user as a contributor and expect to fail
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -186,9 +151,9 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Create a valid one
-        originalResearchersDirectory = os.listdir(self.researchersPath)
+        originalResearchersDirectory = os.listdir(self.usersPath)
         originalUserCount = Session.query(User).count()
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -202,8 +167,8 @@ class TestUsersController(TestController):
         response = self.app.post(url('users'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
+        researchersDirectoryMTime = os.stat(self.usersPath).st_mtime
         assert newUserCount == originalUserCount + 1
         assert resp['username'] == u'johndoe'
         assert resp['email'] == u'john.doe@gmail.com'
@@ -213,7 +178,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because username is not unique
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Zzzzzz_1',
@@ -230,8 +195,8 @@ class TestUsersController(TestController):
         userCount = newUserCount
         newUserCount = Session.query(User).count()
         researchersDirectory = newResearchersDirectory
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        newResearchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
+        newResearchersDirectoryMTime = os.stat(self.usersPath).st_mtime
         assert researchersDirectory == newResearchersDirectory
         assert researchersDirectoryMTime == newResearchersDirectoryMTime
         assert newUserCount == userCount
@@ -239,7 +204,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because username contains illicit characters
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johannes dough',
             'password': u'Zzzzzz_1',
@@ -260,7 +225,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because username must be a non-empty string
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'',
             'password': u'Zzzzzz_1',
@@ -280,7 +245,7 @@ class TestUsersController(TestController):
         assert resp['errors'] == u'A username is required when creating a new user.'
         assert response.content_type == 'application/json'
 
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': None,
             'password': u'Zzzzzz_1',
@@ -303,7 +268,7 @@ class TestUsersController(TestController):
         # Invalid because username and password are both too long.  Notice how the space in the
         # username does not raise an error because the chained validators are not
         # called
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johannes dough' * 200,
             'password': u'Zzzzzz_1' * 200,
@@ -325,7 +290,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because password and password_confirm do not match.
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Zzzzzz_1',
@@ -346,7 +311,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because no password was provided.
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'',
@@ -367,7 +332,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because no password was provided.
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': [],
@@ -388,7 +353,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because the password is too short
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'aA_9',
@@ -412,7 +377,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because the password does not contain an uppercase printable ASCII character
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'abcdefg_9',
@@ -435,7 +400,7 @@ class TestUsersController(TestController):
             u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
 
         # Invalid because the password does not contain a lowercase printable ASCII character
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'ABCDEFG_9',
@@ -458,7 +423,7 @@ class TestUsersController(TestController):
             u'or else contain at least one symbol, one digit, one uppercase letter and one lowercase letter.'])
 
         # Invalid because the password does not contain a symbol from the printable ASCII character range
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'abcdefgH9',
@@ -482,7 +447,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because the password does not contain a digit
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'abcdefgH.',
@@ -506,10 +471,10 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid user: the password contains a unicode character
-        researchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        researchersDirectory = os.listdir(self.usersPath)
+        researchersDirectoryMTime = os.stat(self.usersPath).st_mtime
         sleep(1)
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'aadams',
             'password': u'abcde\u0301fgh',
@@ -525,8 +490,8 @@ class TestUsersController(TestController):
         resp = json.loads(response.body)
         userCount = newUserCount
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        newResearchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
+        newResearchersDirectoryMTime = os.stat(self.usersPath).st_mtime
         assert u'aadams' not in researchersDirectory
         assert u'aadams' in newResearchersDirectory
         assert researchersDirectoryMTime != newResearchersDirectoryMTime
@@ -537,7 +502,7 @@ class TestUsersController(TestController):
 
         # Invalid user: firstName is empty, email is invalid, affilication is too
         # long, role is unrecognized, inputOrthography is nonexistent, markupLanguage is unrecognized.
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'xyh',
             'password': u'abcde\u0301fgh',
@@ -573,7 +538,7 @@ class TestUsersController(TestController):
         Session.commit()
         orthography1Id = orthography1.id
         orthography2Id = orthography2.id
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'alyoshas',
             'password': u'xY9.Bfx_J Jre\u0301',
@@ -707,9 +672,9 @@ class TestUsersController(TestController):
         def_contrib_environ = {'test.authentication.id': defaultContributorId}
 
         # Create a user to update.
-        originalResearchersDirectory = os.listdir(self.researchersPath)
+        originalResearchersDirectory = os.listdir(self.usersPath)
         originalUserCount = Session.query(User).count()
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -725,8 +690,7 @@ class TestUsersController(TestController):
         userId = resp['id']
         datetimeModified = resp['datetimeModified']
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
         assert newUserCount == originalUserCount + 1
         assert resp['username'] == u'johndoe'
         assert resp['email'] == u'john.doe@gmail.com'
@@ -737,7 +701,7 @@ class TestUsersController(TestController):
 
         # Update the user
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johnbuck',    # Admins CAN change usernames
             'password': u'Aaaaaa_1',
@@ -755,7 +719,7 @@ class TestUsersController(TestController):
         userCount = newUserCount
         newUserCount = Session.query(User).count()
         researchersDirectory = newResearchersDirectory
-        newResearchersDirectory = os.listdir(self.researchersPath)
+        newResearchersDirectory = os.listdir(self.usersPath)
         assert userCount == newUserCount
         assert newDatetimeModified != datetimeModified
         assert resp['username'] == u'johnbuck'
@@ -767,7 +731,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to update the user as a contributor and expect to fail
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johnbuck',
             'password': u'Aaaaaa_1',
@@ -786,7 +750,7 @@ class TestUsersController(TestController):
 
         # Attempt to update the user as the user and expect to succeed
         user_environ = {'test.authentication.id': userId}
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johnbuck',
             'password': u'Zzzzzz.9',    # Change the password too
@@ -807,7 +771,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Simulate a user attempting to update his username.  Expect to fail.
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'iroc_z',  # Not permitted
             'password': u'Zzzzzz.9',
@@ -825,7 +789,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Simulate a user attempting to update his role.  Expect to fail.
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johnbuck',
             'password': u'Zzzzzz.9',
@@ -855,7 +819,7 @@ class TestUsersController(TestController):
             '* Item 2',
             ''
         ])
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'firstName': u'John',
             'lastName': u'Buckley',         # Here is a change
@@ -875,7 +839,7 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'firstName': u'John',
             'lastName': u'Buckley',
@@ -895,9 +859,9 @@ class TestUsersController(TestController):
         """Tests that DELETE /users/id deletes the user with id=id."""
 
         # Create a user to delete.
-        originalResearchersDirectory = os.listdir(self.researchersPath)
+        originalResearchersDirectory = os.listdir(self.usersPath)
         originalUserCount = Session.query(User).count()
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -913,8 +877,8 @@ class TestUsersController(TestController):
         userId = resp['id']
         datetimeModified = resp['datetimeModified']
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
+        researchersDirectoryMTime = os.stat(self.usersPath).st_mtime
         assert newUserCount == originalUserCount + 1
         assert resp['username'] == u'johndoe'
         assert resp['email'] == u'john.doe@gmail.com'
@@ -924,10 +888,10 @@ class TestUsersController(TestController):
 
         # Write a file to the user's directory just to make sure that the deletion
         # works on a non-empty directory
-        f = open(os.path.join(self.researchersPath, 'johndoe', 'test_file.txt'), 'w')
+        f = open(os.path.join(self.usersPath, 'johndoe', 'test_file.txt'), 'w')
         f.write('Some content here.')
         f.close()
-        assert u'test_file.txt' in os.listdir(os.path.join(self.researchersPath, 'johndoe'))
+        assert u'test_file.txt' in os.listdir(os.path.join(self.usersPath, 'johndoe'))
 
         # Now delete the user
         response = self.app.delete(url('user', id=userId), headers=self.json_headers,
@@ -936,7 +900,7 @@ class TestUsersController(TestController):
         userCount = newUserCount
         newUserCount = Session.query(User).count()
         researchersDirectory = newResearchersDirectory
-        newResearchersDirectory = os.listdir(self.researchersPath)
+        newResearchersDirectory = os.listdir(self.usersPath)
         deletedUser = Session.query(User).get(userId)
         assert deletedUser is None
         assert newUserCount == userCount - 1
@@ -948,9 +912,9 @@ class TestUsersController(TestController):
         assert response.content_type == 'application/json'
 
         # Again create a user to (attempt to) delete.
-        originalResearchersDirectory = os.listdir(self.researchersPath)
+        originalResearchersDirectory = os.listdir(self.usersPath)
         originalUserCount = Session.query(User).count()
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -964,10 +928,8 @@ class TestUsersController(TestController):
         response = self.app.post(url('users'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         userId = resp['id']
-        datetimeModified = resp['datetimeModified']
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
         assert newUserCount == originalUserCount + 1
         assert resp['username'] == u'johndoe'
         assert resp['email'] == u'john.doe@gmail.com'
@@ -1004,9 +966,9 @@ class TestUsersController(TestController):
         """Tests that GET /users/id returns the user with id=id or an appropriate error."""
 
         # Create a user to show.
-        originalResearchersDirectory = os.listdir(self.researchersPath)
+        originalResearchersDirectory = os.listdir(self.usersPath)
         originalUserCount = Session.query(User).count()
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -1020,10 +982,8 @@ class TestUsersController(TestController):
         response = self.app.post(url('users'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         userId = resp['id']
-        datetimeModified = resp['datetimeModified']
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
         assert newUserCount == originalUserCount + 1
         assert resp['username'] == u'johndoe'
         assert resp['email'] == u'john.doe@gmail.com'
@@ -1080,9 +1040,9 @@ class TestUsersController(TestController):
         data = json.loads(json.dumps(data, cls=h.JSONOLDEncoder))
 
         # Create a user to edit.
-        originalResearchersDirectory = os.listdir(self.researchersPath)
+        originalResearchersDirectory = os.listdir(self.usersPath)
         originalUserCount = Session.query(User).count()
-        params = self.createParams.copy()
+        params = self.userCreateParams.copy()
         params.update({
             'username': u'johndoe',
             'password': u'Aaaaaa_1',
@@ -1096,10 +1056,8 @@ class TestUsersController(TestController):
         response = self.app.post(url('users'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         userId = resp['id']
-        datetimeModified = resp['datetimeModified']
         newUserCount = Session.query(User).count()
-        newResearchersDirectory = os.listdir(self.researchersPath)
-        researchersDirectoryMTime = os.stat(self.researchersPath).st_mtime
+        newResearchersDirectory = os.listdir(self.usersPath)
         assert newUserCount == originalUserCount + 1
         assert resp['username'] == u'johndoe'
         assert resp['email'] == u'john.doe@gmail.com'

@@ -12,45 +12,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
-import datetime
 import logging
-import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-import webtest
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import Tag
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
 
 log = logging.getLogger(__name__)
-
 
 ################################################################################
 # Functions for creating & retrieving test data
 ################################################################################
 
 class TestTagsController(TestController):
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language; recreate the users.
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -236,7 +214,6 @@ class TestTagsController(TestController):
         resp = json.loads(response.body)
         tagCount = Session.query(Tag).count()
         tagId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Now delete the tag
         response = self.app.delete(url('tag', id=tagId), headers=self.json_headers,
@@ -293,9 +270,7 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        tagCount = Session.query(Tag).count()
         tagId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Try to get a tag using an invalid id
         id = 100000000000
@@ -334,9 +309,7 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        tagCount = Session.query(Tag).count()
         tagId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_tag', id=tagId), status=401)

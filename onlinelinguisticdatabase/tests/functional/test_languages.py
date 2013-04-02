@@ -12,16 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import datetime
 import logging
-import os
-import webtest
 import simplejson as json
 from nose.tools import nottest
-from base64 import encodestring
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
@@ -29,22 +23,7 @@ from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
 class TestLanguagesController(TestController):
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    def tearDown(self):
-        # Clear all models in the database except Language; recreate the users.
-        pass
 
     #@nottest
     def test_index(self):
@@ -104,7 +83,7 @@ class TestLanguagesController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the search action
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
         # A search on language transcriptions using POST /languages/search
         jsonQuery = json.dumps({'query': {'filter':

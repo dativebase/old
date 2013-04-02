@@ -19,79 +19,26 @@ from time import sleep
 import simplejson as json
 from nose.tools import nottest
 from base64 import encodestring
-from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
-import onlinelinguisticdatabase.lib.testutils as testutils
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import webtest
 
 log = logging.getLogger(__name__)
 
-
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestFormsController(TestController):
 
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
-    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
-                             'data', 'files')
-
-    createParams = testutils.formCreateParams
-
-    createFileParams = {
-        'name': u'',
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'embeddedFileMarkup': u'',
-        'embeddedFilePassword': u'',
-        'tags': [],
-        'forms': [],
-        'file': ''      # file data Base64 encoded
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Set up some stuff for the tests
-    def setUp(self):
-        pass
+    def __init__(self, *args, **kwargs):
+        TestController.__init__(self, *args, **kwargs)
+        self.addSEARCHToWebTestValidMethods()
 
     # Clear all models in the database except Language; recreate the users.
     def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
-
-        h.clearDirectoryOfFiles(self.filesPath)
-        h.clearDirectoryOfFiles(self.reducedFilesPath)
-
-        # Perform a vacuous GET just to delete app_globals.applicationSettings
-        # to clean up for subsequent tests.
-        extra_environ = self.extra_environ_admin.copy()
-        extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('forms'), extra_environ=extra_environ)
-
+        TestController.tearDown(self, dirsToClear=['reducedFilesPath', 'filesPath'],
+                delGlobalAppSet=True)
 
     #@nottest
     def test_index(self):
@@ -100,9 +47,7 @@ class TestFormsController(TestController):
         # Test that the restricted tag is working correctly.
         # First get the users.
         users = h.getUsers()
-        administratorId = [u for u in users if u.role == u'administrator'][0].id
         contributorId = [u for u in users if u.role == u'contributor'][0].id
-        viewerId = [u for u in users if u.role == u'viewer'][0].id
 
         # Then add a contributor and a restricted tag.
         restrictedTag = h.generateRestrictedTag()
@@ -130,7 +75,7 @@ class TestFormsController(TestController):
                          'test.applicationSettings': True}
 
         # Create the restricted form.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
             'translations': [{'transcription': u'test restricted tag translation',
@@ -144,7 +89,7 @@ class TestFormsController(TestController):
         restrictedFormId = resp['id']
 
         # Create the unrestricted form.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription 2',
             'translations': [{'transcription': u'test restricted tag translation 2',
@@ -154,7 +99,6 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                         extra_environ)
         resp = json.loads(response.body)
-        unrestrictedFormId = resp['id']
 
         # Expectation: the administrator, the default contributor (qua enterer)
         # and the unrestricted myContributor should all be able to view both forms.
@@ -346,7 +290,7 @@ class TestFormsController(TestController):
         assert resp['error'] == u'JSON decode error: the parameters provided were not valid JSON.'
 
         # Create a test form.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test_create_transcription',
             'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
@@ -383,7 +327,7 @@ class TestFormsController(TestController):
         # category
 
         # chien/dog/N
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'chien',
             'morphemeBreak': u'chien',
@@ -397,7 +341,7 @@ class TestFormsController(TestController):
         dogId = resp['id']
 
         # s/PL/Num
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u's',
             'morphemeBreak': u's',
@@ -413,7 +357,7 @@ class TestFormsController(TestController):
         assert formCount == 3
 
         # s/PL/Agr
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u's',
             'morphemeBreak': u's',
@@ -430,7 +374,7 @@ class TestFormsController(TestController):
         # lexical items created above.  Since the current application settings
         # lists no morpheme delimiters, each word will be treated as a morpheme
         # by compileMorphemicAnalysis.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Les chiens aboient.',
             'morphemeBreak': u'les chien-s aboient',
@@ -495,7 +439,7 @@ class TestFormsController(TestController):
 
         # Recreate the above form but put morpheme delimiters in unexpected
         # places.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Les chiens aboient.',
             'morphemeBreak': u'les chien- -s aboient',
@@ -519,7 +463,7 @@ class TestFormsController(TestController):
 
         # Empty transcription and translations should raise error
         formCount = Session.query(model.Form).count()
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
@@ -530,7 +474,7 @@ class TestFormsController(TestController):
         assert newFormCount == formCount
 
         # Exceeding length restrictions should return errors also.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test create invalid transcription' * 100,
             'grammaticality': u'*',
@@ -564,12 +508,10 @@ class TestFormsController(TestController):
         extra_environ = self.extra_environ_admin.copy()
         extra_environ['test.applicationSettings'] = True
         badGrammaticality = u'***'
-        availableGrammaticalities = u', '.join(
-            [u''] + applicationSettings.grammaticalities.split(','))
         goodGrammaticality = applicationSettings.grammaticalities.split(',')[0]
 
         # Create a form with an invalid grammaticality
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test create invalid transcription',
             'grammaticality': badGrammaticality,
@@ -588,7 +530,7 @@ class TestFormsController(TestController):
         assert newFormCount == formCount
 
         # Create a form with a valid grammaticality
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test create invalid transcription',
             'grammaticality': goodGrammaticality,
@@ -609,7 +551,7 @@ class TestFormsController(TestController):
         # method, speaker, enterer, etc.
         badId = 109
         badInt = u'abc'
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test create invalid transcription',
             'translations': [{'transcription': 'test create invalid translation',
@@ -653,7 +595,7 @@ class TestFormsController(TestController):
             model.User.role==u'contributor').first()
         administrator = Session.query(model.User).filter(
             model.User.role==u'administrator').first()
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test create invalid transcription',
             'translations': [{'transcription': 'test create invalid translation',
@@ -706,7 +648,7 @@ class TestFormsController(TestController):
         extra_environ['test.applicationSettings'] = True
 
         # Create a form with all invalid transcriptions.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'test narrow phonetic transcription validation',
             'phoneticTranscription': u'test broad phonetic transcription validation',
@@ -731,7 +673,7 @@ class TestFormsController(TestController):
         assert formCount == 0
 
         # Create a form with some invalid and some valid transcriptions.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'np NP n P N p',    # Now it's valid
             'phoneticTranscription': u'test broad phonetic transcription validation',
@@ -765,7 +707,7 @@ class TestFormsController(TestController):
         applicationSettings.storageOrthography = h.getOrthographies()[0]
         Session.add(applicationSettings)
         Session.commit()
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'test narrow phonetic transcription validation',
             'phoneticTranscription': u'test broad phonetic transcription validation',
@@ -788,7 +730,7 @@ class TestFormsController(TestController):
 
         # Now perform a successful create by making the narrow phonetic and
         # morpheme break fields valid according to the relevant inventories.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'n p NP N P NNNN pPPP pnNpP   ',
             'phoneticTranscription': u'test broad phonetic transcription validation',
@@ -817,7 +759,7 @@ class TestFormsController(TestController):
         foreignWordTag = h.generateForeignWordTag()
         Session.add(foreignWordTag)
         Session.commit()
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'f`ore_n',
             'phoneticTranscription': u'foren',
@@ -841,7 +783,7 @@ class TestFormsController(TestController):
 
         # Now create a form that would violate inventory-based validation rules
         # but is nevertheless accepted because the violations are foreign words.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'narrowPhoneticTranscription': u'n f`ore_np',
             'phoneticTranscription': u'b p',
@@ -877,7 +819,7 @@ class TestFormsController(TestController):
         Session.commit()
 
         # Create a form with some files and tags.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test relational transcription',
             'translations': [{'transcription': u'test relational translation',
@@ -905,7 +847,7 @@ class TestFormsController(TestController):
         tags.reverse()
         files = [f.id for f in h.getFiles()]
         files.reverse()
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test relational transcription',
             'translations': [{'transcription': u'test relational translation',
@@ -921,7 +863,7 @@ class TestFormsController(TestController):
             u'The update request failed because the submitted data were not new.'
 
         # Now update by removing one of the files and expect success.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test relational transcription',
             'translations': [{'transcription': u'test relational translation',
@@ -941,7 +883,7 @@ class TestFormsController(TestController):
         assert foreignWordTag.name in [t['name'] for t in resp['tags']]
 
         # Attempt to create a form with some *invalid* files and tags and fail.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test relational transcription invalid',
             'translations': [{'transcription': u'test relational translation invalid',
@@ -976,7 +918,7 @@ class TestFormsController(TestController):
         contrib.update({'test.applicationSettings': True})
 
         # Create a test form.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}]
@@ -997,10 +939,9 @@ class TestFormsController(TestController):
 
         # Then create two files, one restricted and one not.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
         wavFileBase64 = encodestring(open(wavFilePath).read())
 
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'restrictedFile.wav',
             'base64EncodedFile': wavFileBase64,
@@ -1012,7 +953,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         restrictedFileId = resp['id']
 
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'unrestrictedFile.wav',
             'base64EncodedFile': wavFileBase64
@@ -1025,7 +966,7 @@ class TestFormsController(TestController):
 
         # Now, as a (restricted) contributor, attempt to create a form and
         # associate it to a restricted file -- expect to fail.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
@@ -1040,7 +981,7 @@ class TestFormsController(TestController):
 
         # Now, as a (restricted) contributor, attempt to create a form and
         # associate it to an unrestricted file -- expect to succeed.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
@@ -1057,7 +998,7 @@ class TestFormsController(TestController):
         # Now, as a(n unrestricted) administrator, attempt to create a form and
         # associate it to a restricted file -- expect (a) to succeed and (b) to
         # find that the form is now restricted.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}],
@@ -1079,7 +1020,7 @@ class TestFormsController(TestController):
         assert indirectlyRestrictedFormId not in [f['id'] for f in resp]
 
         # Now, as a(n unrestricted) administrator, create a form.
-        unrestrictedFormParams = self.createParams.copy()
+        unrestrictedFormParams = self.formCreateParams.copy()
         unrestrictedFormParams.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test_create_translation', 'grammaticality': u''}]
@@ -1226,7 +1167,7 @@ class TestFormsController(TestController):
         restrictedTag = h.getRestrictedTag()
 
         # Create a form to update.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         originalTranscription = u'test_update_transcription'
         originalTranslation = u'test_update_translation'
         params.update({
@@ -1249,7 +1190,7 @@ class TestFormsController(TestController):
         # Expect to fail.
         extra_environ = {'test.authentication.role': 'viewer',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Updated!',
             'translations': [{'transcription': u'test_update_translation', 'grammaticality': u''}],
@@ -1263,7 +1204,7 @@ class TestFormsController(TestController):
         # As an administrator now, update the form just created and expect to
         # succeed.
         origBackupCount = Session.query(model.FormBackup).count()
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Updated!',
             'translations': [{'transcription': u'test_update_translation', 'grammaticality': u''}],
@@ -1313,7 +1254,7 @@ class TestFormsController(TestController):
         origBackupCount = Session.query(model.FormBackup).count()
         updatedWord = Session.query(model.Form).get(id)
         assert json.loads(updatedWord.morphemeBreakIDs) == morphemeBreakIDsOfWord
-        newParams = self.createParams.copy()
+        newParams = self.formCreateParams.copy()
         newParams.update({
             'transcription': u'a',
             'translations': [{'transcription': u'lexical', 'grammaticality': u''}],
@@ -1379,7 +1320,7 @@ class TestFormsController(TestController):
         extra_environ['test.retainApplicationSettings'] = True
         # Now we update using the same params as before, only this time we tag
         # as a foreign word.  
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Updated!',
             'translations': [{'transcription': u'test_update_translation', 'grammaticality': u''}],
@@ -1405,7 +1346,7 @@ class TestFormsController(TestController):
         Session.add(speaker)
         Session.commit()
         speaker = h.getSpeakers()[0]
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'oO',
             'translations': [{'transcription': 'Updated again translation',
@@ -1445,7 +1386,6 @@ class TestFormsController(TestController):
         myContributorFirstName = myContributor.firstName
         tagId = tag.id
         fileId = file.id
-        speakerId = speaker.id
         speakerFirstName = speaker.firstName
 
         # Count the original number of forms and formBackups.
@@ -1455,7 +1395,7 @@ class TestFormsController(TestController):
         # First, as myContributor, create a form to delete.
         extra_environ = {'test.authentication.id': myContributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test_delete_transcription',
             'translations': [{'transcription': u'test_delete_translation', 'grammaticality': u''}],
@@ -1594,7 +1534,7 @@ class TestFormsController(TestController):
         extra_environ['test.retainApplicationSettings'] = True
 
         # Then create a foreign word form to delete.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test_delete_transcription',
             'translations': [{'transcription': u'test_delete_translation', 'grammaticality': u''}],
@@ -1683,7 +1623,7 @@ class TestFormsController(TestController):
         # the *default* contributor as the enterer.
         extra_environ = {'test.authentication.id': contributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
             'translations': [{'transcription': u'test restricted tag translation',
@@ -1916,7 +1856,7 @@ class TestFormsController(TestController):
 
         extra_environ = {'test.authentication.role': u'contributor',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'created by the contributor',
             'translations': [{'transcription': u'created by the contributor', 'grammaticality': u''}],
@@ -1935,7 +1875,7 @@ class TestFormsController(TestController):
         # Update our form (via request) as the default administrator
         extra_environ = {'test.authentication.role': u'administrator',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'grammaticality': u'?',
             'transcription': u'updated by the administrator',
@@ -1960,7 +1900,7 @@ class TestFormsController(TestController):
         # Finally, update our form (via request) as the default contributor.
         extra_environ = {'test.authentication.role': u'contributor',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'grammaticality': u'#',
             'transcription': u'updated by the contributor',
@@ -2134,7 +2074,7 @@ class TestFormsController(TestController):
         assert byFormIdResp == byUUIDResp
 
         # Create a new restricted form as an administrator.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'2nd form restricted',
             'translations': [{'transcription': u'2nd form restricted',
@@ -2151,7 +2091,7 @@ class TestFormsController(TestController):
         assert formCount == 1
 
         # Update the just-created form by removing the restricted tag.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'2nd form unrestricted',
             'translations': [{'transcription': u'2nd form unrestricted', 'grammaticality': u''}],
@@ -2163,7 +2103,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
 
         # Now update it in another way.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'2nd form unrestricted updated',
             'translations': [{'transcription': u'2nd form unrestricted updated',
@@ -2346,7 +2286,7 @@ class TestFormsController(TestController):
                                'test.applicationSettings': True}
 
         # Create two forms with morphological analyses.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'abc',
             'morphemeBreak': u'a-b-c',
@@ -2356,7 +2296,7 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'xyz',
             'morphemeBreak': u'x-y-z',
@@ -2390,7 +2330,7 @@ class TestFormsController(TestController):
 
         # Now add the implicit lexical items for the two forms just entered and
         # *then* call /forms/update_morpheme_references and expect a change
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'x',
             'morphemeBreak': u'x',
@@ -2402,7 +2342,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'y',
             'morphemeBreak': u'y',
@@ -2414,7 +2354,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'z',
             'morphemeBreak': u'z',
@@ -2426,7 +2366,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'a',
             'morphemeBreak': u'a',
@@ -2438,7 +2378,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'b',
             'morphemeBreak': u'b',
@@ -2450,7 +2390,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers,
                                  extra_environ)
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'c',
             'morphemeBreak': u'c',
@@ -2549,7 +2489,7 @@ class TestFormsController(TestController):
         # Create a restricted form as a restricted user (the contributor).
         extra_environ = {'test.authentication.id': contributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
             'translations': [{'transcription': u'test restricted tag translation',
@@ -2565,7 +2505,7 @@ class TestFormsController(TestController):
         # Create a restricted form as an unrestricted user (administrator).
         extra_environ = {'test.authentication.id': administratorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test restricted tag transcription',
             'translations': [{'transcription': u'test restricted tag translation',
@@ -2590,12 +2530,11 @@ class TestFormsController(TestController):
     def test_normalization(self):
         """Tests that unicode input data are normalized and so too are search patterns."""
 
-        addSEARCHToWebTestValidMethods()
         eAcuteCombining = u'e\u0301'  # LATIN SMALL LETTER E, COMBINING ACUTE ACCENT
         eAcutePrecomposed = u'\u00E9'   # LATIN SMALL LETTER E WITH ACUTE
 
         # Create a form with a unicode combining character in its transcription
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': eAcuteCombining,
             'translations': [{'transcription': u'test normalization', 'grammaticality': u''}]
@@ -2607,7 +2546,7 @@ class TestFormsController(TestController):
         combiningTranscription = resp['transcription']
 
         # Create a form with a unicode precomposed character in its transcription
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': eAcutePrecomposed,
             'translations': [{'transcription': u'test normalization', 'grammaticality': u''}]
@@ -2659,7 +2598,7 @@ class TestFormsController(TestController):
                                'test.applicationSettings': True}
 
         # Create two forms with morphological analyses.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'abc',
             'morphemeBreak': u'a-b-c',
@@ -2668,9 +2607,8 @@ class TestFormsController(TestController):
         })
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
-        abcId = json.loads(response.body)['id']
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'xyz',
             'morphemeBreak': u'x-y-z',
@@ -2696,7 +2634,7 @@ class TestFormsController(TestController):
         # have changed.
         sleep(1)
 
-        xParams = self.createParams.copy()
+        xParams = self.formCreateParams.copy()
         xParams.update({
             'transcription': u'x',
             'morphemeBreak': u'x',
@@ -2715,7 +2653,7 @@ class TestFormsController(TestController):
         assert xResp['syntacticCategoryString'] == u'Num'
         assert xResp['breakGlossCategory'] == u'x|7|Num'
 
-        yParams = self.createParams.copy()
+        yParams = self.formCreateParams.copy()
         yParams.update({
             'transcription': u'y',
             'morphemeBreak': u'y',
@@ -2727,7 +2665,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), yParams, self.json_headers, extra_environ)
         yId = json.loads(response.body)['id']
 
-        zParams = self.createParams.copy()
+        zParams = self.formCreateParams.copy()
         zParams.update({
             'transcription': u'z',
             'morphemeBreak': u'z',
@@ -2739,7 +2677,7 @@ class TestFormsController(TestController):
         response = self.app.post(url('forms'), zParams, self.json_headers, extra_environ)
         zId = json.loads(response.body)['id']
 
-        aParams = self.createParams.copy()
+        aParams = self.formCreateParams.copy()
         aParams.update({
             'transcription': u'a',
             'morphemeBreak': u'a',
@@ -2749,9 +2687,8 @@ class TestFormsController(TestController):
         })
         aParams = json.dumps(aParams)
         response = self.app.post(url('forms'), aParams, self.json_headers, extra_environ)
-        aId = json.loads(response.body)['id']
 
-        bParams = self.createParams.copy()
+        bParams = self.formCreateParams.copy()
         bParams.update({
             'transcription': u'b',
             'morphemeBreak': u'b',
@@ -2761,9 +2698,8 @@ class TestFormsController(TestController):
         })
         bParams = json.dumps(bParams)
         response = self.app.post(url('forms'), bParams, self.json_headers, extra_environ)
-        bId = json.loads(response.body)['id']
 
-        cParams = self.createParams.copy()
+        cParams = self.formCreateParams.copy()
         cParams.update({
             'transcription': u'c',
             'morphemeBreak': u'c',
@@ -2773,7 +2709,6 @@ class TestFormsController(TestController):
         })
         cParams = json.dumps(cParams)
         response = self.app.post(url('forms'), cParams, self.json_headers, extra_environ)
-        cId = json.loads(response.body)['id']
 
         # Use search to get our two original morphologically complex forms
         jsonQuery = json.dumps({'query': {'filter':
@@ -2827,7 +2762,6 @@ class TestFormsController(TestController):
         # Update the morphemeBreak value of the lexical form 'x' and expect the
         # phrasal form 'xyz' to get updated too.
         formBackupCount = Session.query(model.FormBackup).count()
-        fbs = Session.query(model.FormBackup).order_by(model.FormBackup.id).all()
         xParams = json.loads(xParams)
         xParams['morphemeBreak'] = u'xx'
         xParams = json.dumps(xParams)
@@ -2836,7 +2770,6 @@ class TestFormsController(TestController):
         xyzMorphemeGlossIDs = json.loads(xyzPhrase.morphemeGlossIDs)
         xyzMorphemeBreakIDs = json.loads(xyzPhrase.morphemeBreakIDs)
         newFormBackupCount = Session.query(model.FormBackup).count()
-        fbs = Session.query(model.FormBackup).order_by(model.FormBackup.id).all()
         assert newFormBackupCount == formBackupCount + 2    # 'x' and 'xyz' are both updated
         assert xyzMorphemeGlossIDs[0][0][0][1] == u'xx' # The 'x' morpheme is still glossed as '7'
         assert xyzMorphemeBreakIDs[0][0] == []  # No more 'x' morpheme so w1, m1 is empty
@@ -2900,7 +2833,7 @@ class TestFormsController(TestController):
         assert xyzPhraseSyntacticCategoryString == newXyzPhrase.syntacticCategoryString
 
         # Now create a new lexical item that will cause the 'xyz' phrasal form to be udpated
-        x2Params = self.createParams.copy()
+        x2Params = self.formCreateParams.copy()
         x2Params.update({
             'transcription': u'x',
             'morphemeBreak': u'x',
@@ -2980,7 +2913,7 @@ class TestFormsController(TestController):
         # and morphemeGloss lines do not match.  Show that the morpheme
         # delimiters from the morphemeBreak line are the ones that are used in
         # the breakGlossCategory and syntacticCategoryString values.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'xyz',
             'morphemeBreak': u'x=y-z',
@@ -3038,7 +2971,7 @@ class TestFormsController(TestController):
         # Test that compileMorphemicAnalysis works when there are no morpheme delimiters
 
         # First add a sentence with no word-internal morphemes indicated
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Le chien a courru.',
             'morphemeBreak': u'le chien a courru',
@@ -3055,7 +2988,7 @@ class TestFormsController(TestController):
         assert resp['breakGlossCategory'] == u'le|the|? chien|dog|? a|has|? courru|run.PP|?'
 
         # Now add the words/morphemes for the sentence above.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'le',
             'morphemeBreak': u'le',
@@ -3066,14 +2999,13 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        leId = resp['id']
         assert resp['morphemeBreakIDs'][0][0][0][1] == u'the'
         assert resp['morphemeBreakIDs'][0][0][0][2] == u'D'
         assert resp['morphemeGlossIDs'][0][0][0][1] == u'le'
         assert resp['syntacticCategoryString'] == u'D'
         assert resp['breakGlossCategory'] == u'le|the|D'
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'chien',
             'morphemeBreak': u'chien',
@@ -3084,9 +3016,8 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        chienId = resp['id']
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'a',
             'morphemeBreak': u'a',
@@ -3097,9 +3028,8 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        aId = resp['id']
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'courru',
             'morphemeBreak': u'courru',
@@ -3110,7 +3040,6 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        courruId = resp['id']
 
         sentence = Session.query(model.Form).get(sentId)
         morphemeBreakIDs = json.loads(sentence.morphemeBreakIDs)
@@ -3143,7 +3072,7 @@ class TestFormsController(TestController):
         Session.commit()
 
         # Now add a sentence that is morphologically parsed using those odd delimiters
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Les chiens ont courru.',
             'morphemeBreak': u'le^s chien.s o?nt courr+u',
@@ -3171,7 +3100,7 @@ class TestFormsController(TestController):
         assert resp['breakGlossCategory'] == u'le|the|D^s|PL|? chien|dog|N.s|PL|? o|have|??nt|3PL|? courr|run|?+u|PP|?'
 
         # s/PL/Num
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u's',
             'morphemeBreak': u's',
@@ -3182,10 +3111,9 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        sId = resp['id']
 
         # o/have/T
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'o',
             'morphemeBreak': u'o',
@@ -3196,10 +3124,9 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        oId = resp['id']
 
         # nt/3PL/Agr
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'nt',
             'morphemeBreak': u'nt',
@@ -3210,10 +3137,9 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        ntId = resp['id']
 
         # courr/run/V
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'courr',
             'morphemeBreak': u'courr',
@@ -3224,10 +3150,9 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        courrId = resp['id']
 
         # u/PP/T
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'u',
             'morphemeBreak': u'u',
@@ -3238,7 +3163,6 @@ class TestFormsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('forms'), params, self.json_headers, extra_environ)
         resp = json.loads(response.body)
-        uId = resp['id']
 
         sentence2 = Session.query(model.Form).get(sent2Id)
         morphemeBreakIDs = json.loads(sentence2.morphemeBreakIDs)
@@ -3296,7 +3220,7 @@ class TestFormsController(TestController):
         # Once matches for the first 7 unique morphemes of this form have been found,
         # compileMorphemicAnalysis should thenceforward rely on matchesFound for the
         # repeats.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Les chiens ont courru; les chiens ont courru; les chiens ont courru.',
             'morphemeBreak': u'le^s chien.s o?nt courr+u le^s chien.s o?nt courr+u le^s chien.s o?nt courr+u',

@@ -16,14 +16,12 @@ import datetime
 import logging
 import simplejson as json
 from nose.tools import nottest
-
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 from onlinelinguisticdatabase.model import ApplicationSettings, User, Orthography
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 
 log = logging.getLogger(__name__)
-
 
 def addDefaultApplicationSettings():
     """Add the default application settings to the database."""
@@ -37,42 +35,6 @@ def addDefaultApplicationSettings():
 
 
 class TestApplicationsettingsController(TestController):
-
-    createParams = {
-        'objectLanguageName': u'',
-        'objectLanguageId': u'',
-        'metalanguageName': u'',
-        'metalanguageId': u'',
-        'metalanguageInventory': u'',
-        'orthographicValidation': u'None', # Value should be one of [u'None', u'Warning', u'Error']
-        'narrowPhoneticInventory': u'',
-        'narrowPhoneticValidation': u'None',
-        'broadPhoneticInventory': u'',
-        'broadPhoneticValidation': u'None',
-        'morphemeBreakIsOrthographic': u'',
-        'morphemeBreakValidation': u'None',
-        'phonemicInventory': u'',
-        'morphemeDelimiters': u'',
-        'punctuation': u'',
-        'grammaticalities': u'',
-        'unrestrictedUsers': [],        # A list of user ids
-        'storageOrthography': u'',        # An orthography id
-        'inputOrthography': u'',          # An orthography id
-        'outputOrthography': u'',         # An orthography id
-    }
-
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language and User
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -96,12 +58,10 @@ class TestApplicationsettingsController(TestController):
         orthography2 = h.generateDefaultOrthography2()
         Session.add_all([orthography1, orthography2])
         Session.commit()
-        orthographies = [orthography1.id, orthography2.id]
-        orthography1Id = orthography1.id
         orthography2Id = orthography2.id
         orthography2Orthography = orthography2.orthography
 
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'test_create object language name',
             'objectLanguageId': u'tco',
@@ -142,7 +102,7 @@ class TestApplicationsettingsController(TestController):
     def test_create_invalid(self):
         """Tests that POST /applicationsettings responds with an appropriate error when invalid params are submitted in the request."""
 
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'!' * 256,   # too long
             'objectLanguageId': u'too long',    # too long also
@@ -240,7 +200,7 @@ class TestApplicationsettingsController(TestController):
         contributorId = Session.query(User).filter(User.role==u'contributor').first().id
 
         # Create an application settings to update.
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'test_update object language name',
             'objectLanguageId': u'tuo',
@@ -266,7 +226,7 @@ class TestApplicationsettingsController(TestController):
 
         # Update the application settings we just created but expect to fail
         # because the unrestricted users ids are invalid.
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'Updated!',
             'unrestrictedUsers': [2000, 5000],
@@ -283,7 +243,7 @@ class TestApplicationsettingsController(TestController):
         assert response.content_type == 'application/json'
 
         # Update the application settings.
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'Updated!',
             'unrestrictedUsers': [contributorId],
@@ -308,7 +268,7 @@ class TestApplicationsettingsController(TestController):
         assert u'the submitted data were not new' in resp['error']
 
         # Unauthorized update attempt as contributor
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'Updated by a contrib!',
             'unrestrictedUsers': [contributorId],
@@ -340,10 +300,9 @@ class TestApplicationsettingsController(TestController):
         orthography1 = h.getOrthographies()[0]
         orthography1Id = orthography1.id
         orthography1 = Session.query(Orthography).get(orthography1Id)
-        orthography1Orthography = orthography1.orthography
 
         # First create an application settings to delete.
-        params = self.createParams.copy()
+        params = self.applicationSettingsCreateParams.copy()
         params.update({
             'objectLanguageName': u'test_delete object language name',
             'objectLanguageId': u'tdo',

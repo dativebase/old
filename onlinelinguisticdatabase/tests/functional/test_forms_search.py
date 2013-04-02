@@ -24,8 +24,7 @@ I altered the global valid_methods tuple of webtest.lint at runtime by adding a
 """
 
 import re
-import time
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 from nose.tools import nottest
 import simplejson as json
 import logging
@@ -33,9 +32,6 @@ from datetime import date, datetime, timedelta
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import onlinelinguisticdatabase.lib.testutils as testutils
-import webtest
-from sqlalchemy import func
 
 log = logging.getLogger(__name__)
 
@@ -159,21 +155,9 @@ def createTestData(n=100):
     createTestForms(n)
 
 
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestFormsSearchController(TestController):
 
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    extra_environ_viewer = {'test.authentication.role': u'viewer'}
-    json_headers = {'Content-Type': 'application/json'}
     n = 100
-
-    # Clear all models in the database except Language; recreate the users.
     def tearDown(self):
         pass
 
@@ -186,7 +170,7 @@ class TestFormsSearchController(TestController):
         """Tests POST /forms/search: initialize database."""
         # Add a bunch of data to the db.
         createTestData(self.n)
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
     #@nottest
     def test_search_b_equals(self):
@@ -1013,7 +997,9 @@ class TestFormsSearchController(TestController):
             u'Datetime search parameters must be valid ISO 8601 datetime strings.'
 
         # regex on valid datetime will work and will similarly to equality test.
-        todayString = todayTimestamp.isoformat().split('.')[0]
+        todayString = todayTimestamp.isoformat()
+        if h.getRDBMSName(configFilename='test.ini') == 'mysql':
+            todayString = todayString.split('.')[0]
         jsonQuery = json.dumps({'query': {'filter':
                 ['Form', 'datetimeModified', 'regex', todayString]}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
@@ -1055,9 +1041,7 @@ class TestFormsSearchController(TestController):
         testModels = getTestModels()
         users = h.getUsers()
         forms = h.getForms()
-        viewer = [u for u in users if u.role == u'viewer'][0]
         contributor = [u for u in users if u.role == u'contributor'][0]
-        administrator = [u for u in users if u.role == u'administrator'][0]
 
         # = int
         jsonQuery = json.dumps(
@@ -1419,21 +1403,16 @@ class TestFormsSearchController(TestController):
         # Get some pertinent data
         forms = h.getForms()
         users = h.getUsers()
-        viewer = [u for u in users if u.role == u'viewer'][0]   # i > 75
         viewerRememberedForms = [f for f in forms
                                  if int(f.transcription.split(' ')[-1]) > 75]
-        viewerId = viewer.id
 
         contributor = [u for u in users if u.role == u'contributor'][0] # i > 65, i < 86
         contributorRememberedForms = [f for f in forms
                                  if int(f.transcription.split(' ')[-1]) > 65 and
                                  int(f.transcription.split(' ')[-1]) < 86]
         contributorId = contributor.id
-
-        administrator = [u for u in users if u.role == u'administrator'][0] # i > 50
         administratorRememberedForms = [f for f in forms
                                  if int(f.transcription.split(' ')[-1]) > 50]
-        administratorId = administrator.id
 
         # Everything memorized by admins and viewers
         jsonQuery = json.dumps({'query': {'filter':
@@ -1641,8 +1620,6 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_z_order_by(self):
         """Tests POST /forms/search: order by."""
-        forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
-
         # order by transcription ascending
         jsonQuery = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
@@ -1753,7 +1730,7 @@ class TestFormsSearchController(TestController):
         jsonQuery = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regex', '[tT]']}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
-            headers=self.json_headers, environ=self.extra_environ_viewer)
+            headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert len(resp) == restrictedFormCount
         assert 'restricted' not in [
@@ -1774,7 +1751,7 @@ class TestFormsSearchController(TestController):
             ['Form', 'transcription', 'regex', '[tT]']},
             'paginator': {'page': 3, 'itemsPerPage': 7}})
         response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
-            headers=self.json_headers, environ=self.extra_environ_viewer)
+            headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
         resultSet = [f for f in forms
                         if int(f.transcription.split(' ')[-1]) % 2 != 0]
@@ -1794,7 +1771,7 @@ class TestFormsSearchController(TestController):
         or "%" in LIKE queries (regexp will do the trick though...).
         """
 
-        createParams = testutils.formCreateParams
+        createParams = self.formCreateParams
         RDBMSName = h.getRDBMSName(configFilename='test.ini')
 
         # Create a form with an underscore and a percent sign in it.
@@ -1902,4 +1879,4 @@ class TestFormsSearchController(TestController):
         # to clean up for subsequent tests.
         extra_environ = self.extra_environ_admin.copy()
         extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('forms'), extra_environ=extra_environ)
+        self.app.get(url('forms'), extra_environ=extra_environ)

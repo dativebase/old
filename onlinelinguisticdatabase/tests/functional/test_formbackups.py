@@ -12,47 +12,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import datetime
 import logging
-import os
-import webtest
 import simplejson as json
 from nose.tools import nottest
-from base64 import encodestring
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-from uuid import uuid4
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import onlinelinguisticdatabase.lib.testutils as testutils
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
 
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
 class TestFormbackupsController(TestController):
-    createParams = testutils.formCreateParams
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    def tearDown(self):
-        # Clear all models in the database except Language; recreate the users.
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -80,7 +52,6 @@ class TestFormbackupsController(TestController):
 
         # Create a restricted form (via request) as the default contributor
         users = h.getUsers()
-        contributorId = [u for u in users if u.role==u'contributor'][0].id
         administratorId = [u for u in users if u.role==u'administrator'][0].id
 
         # Define some extra_environs
@@ -88,7 +59,7 @@ class TestFormbackupsController(TestController):
         contrib = {'test.authentication.role': u'contributor', 'test.applicationSettings': True}
         admin = {'test.authentication.role': u'administrator', 'test.applicationSettings': True}
 
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Created by the Contributor',
             'translations': [{'transcription': u'test', 'grammaticality': u''}],
@@ -103,7 +74,7 @@ class TestFormbackupsController(TestController):
 
         # Update our form (via request) as the default administrator; this
         # will create one form backup.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'translations': [{'transcription': u'test', 'grammaticality': u''}],
             'transcription': u'Updated by the Administrator',
@@ -120,7 +91,7 @@ class TestFormbackupsController(TestController):
 
         # Finally, update our form (via request) as the default contributor.
         # Now we will have two form backups.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Updated by the Contributor',
             'translations': [{'transcription': u'test', 'grammaticality': u''}],
@@ -153,7 +124,7 @@ class TestFormbackupsController(TestController):
         assert len(resp) == 0
 
         # Now update the form and de-restrict it.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Updated and de-restricted by the Contributor',
             'translations': [{'transcription': u'test', 'grammaticality': u''}],
@@ -181,7 +152,7 @@ class TestFormbackupsController(TestController):
         assert len(resp) == 0
 
         # Finally, update our form in some trivial way.
-        params = self.createParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'Updated by the Contributor *again*',
             'translations': [{'transcription': u'test', 'grammaticality': u''}],
@@ -270,7 +241,7 @@ class TestFormbackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the search action
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
         # A search on form backup transcriptions using POST /formbackups/search
         jsonQuery = json.dumps({'query': {'filter':

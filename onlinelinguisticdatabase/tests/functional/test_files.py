@@ -18,16 +18,12 @@ import simplejson as json
 import os
 from base64 import b64encode
 from nose.tools import nottest
-from paste.deploy import appconfig
 from mimetypes import guess_type
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import onlinelinguisticdatabase.lib.testutils as testutils
-from pylons import config
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
-from paste.deploy.converters import asbool
 
 try:
     import Image
@@ -38,96 +34,9 @@ log = logging.getLogger(__name__)
 
 class TestFilesController(TestController):
 
-    config = appconfig('config:test.ini', relative_to='.')
-    create_reduced_size_file_copies = asbool(config.get(
-        'create_reduced_size_file_copies', False))
-    preferred_lossy_audio_format = config.get('preferred_lossy_audio_format', 'ogg')
-    here = config['here']
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
-    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
-                                 'data', 'files')
-
-    createParams = {
-        'filename': u'',        # Will be filtered out on update requests
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'tags': [],
-        'forms': [],
-        'base64EncodedFile': '' # file data Base64 encoded; will be filtered out on update requests
-    }
-
-    # Empty create dict for multipart/form-data file creation requests.  Will be
-    # converted to a conventional POST k=v body format.  'tags-i' and 'forms-i' for
-    # i > 0 can be added.
-    createParamsBasic = {
-        'filename': u'',        # Will be filtered out on update requests
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'tags-0': u'',
-        'forms-0': u''
-    }
-
-    # Empty create dict for subinterval-referencing file creation requests
-    createParamsSR = {
-        'parentFile': u'',
-        'name': u'',
-        'start': u'',
-        'end': u'',
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'tags': [],
-        'forms': []
-    }
-
-    # Empty create dict for externally hosted file creation requests
-    createParamsEH = {
-        'url': u'',
-        'name': u'',
-        'password': u'',
-        'MIMEtype': u'',
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'tags': [],
-        'forms': []
-    }
-
-    createFormParams = testutils.formCreateParams
-
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language, recreate the default
-    # users and clear the files directory.
     def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator(config=self.config)
-        contributor = h.generateDefaultContributor(config=self.config)
-        viewer = h.generateDefaultViewer(config=self.config)
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
-        h.clearDirectoryOfFiles(self.filesPath)
-        h.clearDirectoryOfFiles(self.reducedFilesPath)
-
-        # Perform a vacuous GET just to delete app_globals.applicationSettings
-        # to clean up for subsequent tests.
-        extra_environ = self.extra_environ_admin.copy()
-        extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('forms'), extra_environ=extra_environ)
+        TestController.tearDown(self, ddelGlobalAppSet=True,
+                dirsToClear=['filesPath', 'reducedFilesPath'])
 
     #@nottest
     def test_index(self):
@@ -135,9 +44,7 @@ class TestFilesController(TestController):
         # Test that the restricted tag is working correctly.
         # First get the users.
         users = h.getUsers()
-        administratorId = [u for u in users if u.role == u'administrator'][0].id
         contributorId = [u for u in users if u.role == u'contributor'][0].id
-        viewerId = [u for u in users if u.role == u'viewer'][0].id
 
         # Then add a contributor and a restricted tag.
         restrictedTag = h.generateRestrictedTag()
@@ -165,15 +72,13 @@ class TestFilesController(TestController):
                          'test.applicationSettings': True}
 
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
         wavFileBase64Encoded = b64encode(open(wavFilePath).read())
 
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-        jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64Encoded = b64encode(open(jpgFilePath).read())
 
         # Create the restricted file.
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'test_restricted_file.wav',
             'base64EncodedFile': wavFileBase64Encoded,
@@ -186,7 +91,7 @@ class TestFilesController(TestController):
         restrictedFileId = resp['id']
 
         # Create the unrestricted file.
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'test_unrestricted_file.jpg',
             'base64EncodedFile': jpgFileBase64Encoded
@@ -195,7 +100,6 @@ class TestFilesController(TestController):
         response = self.app.post(url('files'), params, self.json_headers,
                         extra_environ)
         resp = json.loads(response.body)
-        unrestrictedFileId = resp['id']
 
         # Expectation: the administrator, the default contributor (qua enterer)
         # and the unrestricted myContributor should all be able to view both files.
@@ -392,7 +296,7 @@ class TestFilesController(TestController):
         # Create a test audio file.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.wav',
             'base64EncodedFile': b64encode(open(wavFilePath).read())
@@ -413,7 +317,7 @@ class TestFilesController(TestController):
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64
@@ -444,7 +348,7 @@ class TestFilesController(TestController):
         restrictedTagId = restrictedTag.id
 
         # Then create a form to associate.
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test', 'grammaticality': u''}]
@@ -456,7 +360,7 @@ class TestFilesController(TestController):
         formId = resp['id']
 
         # Now create the file with forms and tags
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64,
@@ -468,7 +372,6 @@ class TestFilesController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         fileCount = Session.query(model.File).count()
-        fileId = resp['id']
         assert resp['filename'][:9] == u'old_test_'
         assert resp['MIMEtype'] == u'image/jpeg'
         assert resp['size'] == jpgFileSize
@@ -480,7 +383,7 @@ class TestFilesController(TestController):
         # Invalid input
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'',                    # empty; not allowed
             'base64EncodedFile': '',        # empty; not allowed
@@ -507,7 +410,7 @@ class TestFilesController(TestController):
         # removed.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'\u201Cold te\u0301st\u201D.wav',
             'base64EncodedFile': b64encode(open(wavFilePath).read()),
@@ -535,7 +438,7 @@ class TestFilesController(TestController):
         filesDirList = os.listdir(self.filesPath)
         htmlFilePath = os.path.join(self.testFilesPath, 'illicit.html')
         htmlFileBase64 = b64encode(open(htmlFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'pretend_its_wav.wav',
             'base64EncodedFile': htmlFileBase64
@@ -560,7 +463,7 @@ class TestFilesController(TestController):
         # in filedata.  The controller removes the path separators of its os
         # when it creates the filename; however path separators from a foreign os
         # may remain in the generated filename.
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', wavFilePath)])
         resp = json.loads(response.body)
@@ -576,7 +479,7 @@ class TestFilesController(TestController):
 
         # Upload a file using the multipart/form-data Content-Type and a POST
         # request to /files.  Here we do supply a filename and some metadata.
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         params.update({
             'filename': u'wavfile.wav',
             'description': u'multipart/form-data',
@@ -608,7 +511,7 @@ class TestFilesController(TestController):
         # filename; the path separator should be removed from the filename.  If
         # the separator were not removed, this filename could cause the file to
         # be written to the parent directory of the files directory
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         params.update({'filename': u'../wavfile.wav'})
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
             upload_files=[('filedata', wavFilePath)])
@@ -629,7 +532,7 @@ class TestFilesController(TestController):
         # type (.html) but with a valid extension (.wav).  Expect an error.
         htmlFilePath = os.path.join(self.testFilesPath, 'illicit.html')
         filesDirList = os.listdir(self.filesPath)
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         params.update({'filename': u'pretend_its_wav.wav'})
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
             upload_files=[('filedata', htmlFilePath)], status=400)
@@ -644,7 +547,7 @@ class TestFilesController(TestController):
         # the POST params, upload a file with a false extension.
         htmlFilePath = os.path.join(self.testFilesPath, 'illicit.wav')
         filesDirList = newFilesDirList
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
             upload_files=[('filedata', htmlFilePath)], status=400)
         resp = json.loads(response.body)
@@ -660,7 +563,7 @@ class TestFilesController(TestController):
 
         # Create a subinterval-referencing audio file; reference one of the wav
         # files created earlier.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': aWavFileId,
             'name': u'subinterval_x',
@@ -675,7 +578,6 @@ class TestFilesController(TestController):
         newBinaryFilesList = os.listdir(self.filesPath)
         newBinaryFilesListCount = len(newBinaryFilesList)
         subintervalReferencingId = resp['id']
-        x = Session.query(model.File).get(subintervalReferencingId)
         assert newBinaryFilesListCount == binaryFilesListCount
         assert u'\u201Cold_te\u0301st\u201D.wav' in newBinaryFilesList
         assert u'subinterval_x' not in newBinaryFilesList
@@ -696,7 +598,7 @@ class TestFilesController(TestController):
         # Attempt to create another subinterval-referencing audio file; fail
         # because name is too long, parentFile is empty, start is not a number
         # and end is unspecified
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'name': u'subinterval_x' * 200,
             'start': u'a',
@@ -715,7 +617,7 @@ class TestFilesController(TestController):
 
         # Attempt to create another subinterval-referencing audio file; fail
         # because the contributor is not authorized to access the restricted parentFile.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': aWavFileId,
             'name': u'subinterval_y',
@@ -733,7 +635,7 @@ class TestFilesController(TestController):
         # Create another subinterval-referencing audio file; this one's parent is
         # restricted.  Note that it does not itself become restricted.  Note also
         # that a name is not required.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': aWavFileId,
             'start': 3.75,
@@ -751,7 +653,7 @@ class TestFilesController(TestController):
 
         # Attempt to create another subinterval-referencing file; fail because
         # the parent file is not an A/V file.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': anImageId,
             'name': u'subinterval_y',
@@ -769,7 +671,7 @@ class TestFilesController(TestController):
         # Attempt to create another subinterval-referencing file; fail because
         # the parent file id is invalid
         badId = 1000009252345345
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': badId,
             'name': u'subinterval_y',
@@ -786,7 +688,7 @@ class TestFilesController(TestController):
 
         # Attempt to create another subinterval-referencing file; fail because
         # the parent file id is itself a subinterval-referencing file
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': subintervalReferencingId,
             'name': u'subinterval_y',
@@ -803,7 +705,7 @@ class TestFilesController(TestController):
 
         # Attempt to create a subinterval-referencing audio file; fail because
         # start >= end.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': aWavFileId,
             'name': u'subinterval_z',
@@ -823,7 +725,7 @@ class TestFilesController(TestController):
         ########################################################################
 
         # Create a valid externally hosted file
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         url_ = 'http://vimeo.com/54144270'
         params.update({
             'url': url_,
@@ -838,7 +740,7 @@ class TestFilesController(TestController):
         assert resp['url'] == url_
 
         # Attempt to create an externally hosted file with invalid params
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         url_ = 'http://vimeo/541442705414427054144270541442705414427054144270'  # Invalid url
         params.update({
             'url': url_,
@@ -854,7 +756,7 @@ class TestFilesController(TestController):
         resp['errors']['url'] == u'You must provide a full domain name (like vimeo.com)'
 
         # Attempt to create an externally hosted file with different invalid params
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         params.update({
             'url': u'',   # shouldn't be empty
             'name': u'invalid externally hosted file' * 200,    # too long
@@ -870,7 +772,7 @@ class TestFilesController(TestController):
         assert resp['errors']['name'] ==  u'Enter a value not more than 255 characters long'
 
         # Show that the name param is optional
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         url_ = 'http://vimeo.com/54144270'
         params.update({
             'url': url_,
@@ -898,7 +800,7 @@ class TestFilesController(TestController):
         # Create a test audio file.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.wav',
             'base64EncodedFile': b64encode(open(wavFilePath).read())
@@ -922,7 +824,7 @@ class TestFilesController(TestController):
         restrictedTagId = restrictedTag.id
 
         # Then create two forms, one restricted and one not.
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'restricted',
             'translations': [{'transcription': u'restricted', 'grammaticality': u''}],
@@ -934,7 +836,7 @@ class TestFilesController(TestController):
         resp = json.loads(response.body)
         restrictedFormId = resp['id']
 
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'unrestricted',
             'translations': [{'transcription': u'unrestricted', 'grammaticality': u''}]
@@ -950,7 +852,7 @@ class TestFilesController(TestController):
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64,
@@ -968,7 +870,7 @@ class TestFilesController(TestController):
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64,
@@ -986,9 +888,8 @@ class TestFilesController(TestController):
         # associate it to a restricted form -- expect (a) to succeed and (b) to
         # find that the file is now restricted.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-        jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64,
@@ -1010,7 +911,7 @@ class TestFilesController(TestController):
         assert indirectlyRestrictedFileId not in [f['id'] for f in resp]
 
         # Now, as a(n unrestricted) administrator, create a file.
-        unrestrictedFileParams = self.createParams.copy()
+        unrestrictedFileParams = self.fileCreateParamsBase64.copy()
         unrestrictedFileParams.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64
@@ -1049,7 +950,7 @@ class TestFilesController(TestController):
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create_large(self):
         """Tests that POST /files correctly creates a large file.
 
@@ -1069,7 +970,7 @@ class TestFilesController(TestController):
         longWavFilePath = os.path.join(self.testFilesPath, longWavFileName)
         if os.path.exists(longWavFilePath):
             longWavFileSize = os.path.getsize(longWavFilePath)
-            params = self.createParams.copy()
+            params = self.fileCreateParamsBase64.copy()
             params.update({
                 'filename': longWavFileName,
                 'base64EncodedFile': b64encode(open(longWavFilePath).read())
@@ -1090,7 +991,7 @@ class TestFilesController(TestController):
         if os.path.exists(mediumWavFilePath):
             oldReducedDirList = os.listdir(self.reducedFilesPath)
             mediumWavFileSize = os.path.getsize(mediumWavFilePath)
-            params = self.createParams.copy()
+            params = self.fileCreateParamsBase64.copy()
             params.update({
                 'filename': mediumWavFileName,
                 'base64EncodedFile': b64encode(open(mediumWavFilePath).read())
@@ -1121,7 +1022,7 @@ class TestFilesController(TestController):
         # POST method.
         if os.path.exists(longWavFilePath):
             longWavFileSize = os.path.getsize(longWavFilePath)
-            params = self.createParamsBasic.copy()
+            params = self.fileCreateParamsMPFD.copy()
             params.update({'filename': longWavFileName})
             response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', longWavFilePath)])
@@ -1238,7 +1139,8 @@ class TestFilesController(TestController):
         # Create a file to update.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
         wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
+
         originalName = u'test_update_name.wav'
         params.update({
             'filename': originalName,
@@ -1259,7 +1161,7 @@ class TestFilesController(TestController):
         # Expect to fail.
         extra_environ = {'test.authentication.role': 'viewer',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'description': u'A file that has been updated.',
         })
@@ -1272,7 +1174,7 @@ class TestFilesController(TestController):
 
         # As an administrator now, update the file just created and expect to
         # succeed.
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'description': u'A file that has been updated.'
         })
@@ -1308,7 +1210,7 @@ class TestFilesController(TestController):
         speakerId = speaker.id
 
         # Now update our file by adding a many-to-one datum, viz. a speaker
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({'speaker': speaker.id})
         params = json.dumps(params)
         response = self.app.put(url('file', id=id), params, self.json_headers,
@@ -1317,7 +1219,7 @@ class TestFilesController(TestController):
         assert resp['speaker']['firstName'] == speaker.firstName
 
         # Finally, update the file by adding some many-to-many data, i.e., tags
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({'tags': [tag1Id, tag2Id]})
         params = json.dumps(params)
         response = self.app.put(url('file', id=id), params, self.json_headers,
@@ -1330,7 +1232,7 @@ class TestFilesController(TestController):
         ########################################################################
 
         # Create a file using the multipart/form-data POST method.
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         params.update({'filename': u'multipart.wav'})
         response = self.app.post(url('/files'), params, extra_environ=self.extra_environ_admin,
                                  upload_files=[('filedata', wavFilePath)])
@@ -1345,7 +1247,7 @@ class TestFilesController(TestController):
         assert response.content_type == 'application/json'
 
         # Update the plain file by adding some metadata.
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'tags': [tag1Id, tag2Id],
             'description': u'plain updated',
@@ -1371,7 +1273,7 @@ class TestFilesController(TestController):
 
         # Create a subinterval-referencing audio file; reference one of the wav
         # files created earlier.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': plainFileId,
             'name': u'anyname',
@@ -1403,7 +1305,7 @@ class TestFilesController(TestController):
         assert response.content_type == 'application/json'
 
         # Update the subinterval-referencing file.
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'parentFile': plainFileId,
             'start': 13.3,
@@ -1436,7 +1338,7 @@ class TestFilesController(TestController):
         # parent file may accessible to restricted users via the child file;
         # however, this is ok since the serve action still will not allow
         # the contents of the restricted file to be served to the restricted users.
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'tags': [tag1Id, tag2Id, restrictedTagId],
             'description': u'plain updated',
@@ -1459,7 +1361,7 @@ class TestFilesController(TestController):
 
         # Create a valid externally hosted file
         url_ = 'http://vimeo.com/54144270'
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         params.update({
             'url': url_,
             'name': u'externally hosted file',
@@ -1473,7 +1375,7 @@ class TestFilesController(TestController):
         assert resp['url'] == url_
 
         # Update the externally hosted file
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         params.update({
             'url': url_,
             'name': u'externally hosted file',
@@ -1489,7 +1391,7 @@ class TestFilesController(TestController):
         assert resp['password'] == u'abc'
 
         # Attempt to update the externally hosted file with invalid params.
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         params.update({
             'url': u'abc',      # Invalid
             'name': u'externally hosted file' * 200,    # too long
@@ -1527,17 +1429,15 @@ class TestFilesController(TestController):
         myContributorId = myContributor.id
         tagId = tag.id
         speakerId = speaker.id
-        speakerFirstName = speaker.firstName
 
         # Count the original number of files
         fileCount = Session.query(model.File).count()
 
         # First, as myContributor, create a file to delete.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-        jpgFileSize = os.path.getsize(jpgFilePath)
         extra_environ = {'test.authentication.id': myContributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'test_delete.jpg',
             'base64EncodedFile': b64encode(open(jpgFilePath).read()),
@@ -1613,7 +1513,7 @@ class TestFilesController(TestController):
         # Create and delete a file with unicode characters in the file name
         extra_environ = {'test.authentication.id': myContributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'\u201Cte\u0301st delete\u201D.jpg',
             'base64EncodedFile': b64encode(open(jpgFilePath).read()),
@@ -1640,7 +1540,7 @@ class TestFilesController(TestController):
 
         # Create the parent WAV file.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'parent.wav',
             'base64EncodedFile': b64encode(open(wavFilePath).read())
@@ -1654,7 +1554,7 @@ class TestFilesController(TestController):
 
         # Create a subinterval-referencing audio file; reference one of the wav
         # files created earlier.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': parentId,
             'name': u'child',
@@ -1699,7 +1599,7 @@ class TestFilesController(TestController):
         # First create a test image file.
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': b64encode(open(jpgFilePath).read())
@@ -1718,7 +1618,7 @@ class TestFilesController(TestController):
 
         # Then create a form associated to the image file just created and make sure
         # we can access the form via the file.forms backreference.
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test',
             'translations': [{'transcription': u'test', 'grammaticality': u''}],
@@ -1785,10 +1685,9 @@ class TestFilesController(TestController):
         # Finally, issue a POST request to create the restricted file with
         # the *default* contributor as the enterer.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
         extra_environ = {'test.authentication.id': contributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.wav',
             'base64EncodedFile': b64encode(open(wavFilePath).read()),
@@ -1866,10 +1765,9 @@ class TestFilesController(TestController):
 
         # Create a restricted file.
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
         extra_environ = {'test.authentication.id': contributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.wav',
             'base64EncodedFile': b64encode(open(wavFilePath).read()),
@@ -1991,13 +1889,12 @@ class TestFilesController(TestController):
         Session.add(restrictedTag)
         Session.commit()
         restrictedTagId = restrictedTag.id
-        here = self.here
         testFilesPath = self.testFilesPath
         wavFilename = u'old_test.wav'
         wavFilePath = os.path.join(testFilesPath, wavFilename)
         wavFileSize = os.path.getsize(wavFilePath)
         wavFileBase64 = b64encode(open(wavFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': wavFilename,
             'base64EncodedFile': wavFileBase64,
@@ -2034,7 +1931,7 @@ class TestFilesController(TestController):
         # Attempt to serve an externally hosted file and expect a 400 status response.
 
         # Create a valid externally hosted file
-        params = self.createParamsEH.copy()
+        params = self.fileCreateParamsExtHost.copy()
         url_ = 'http://vimeo.com/54144270'
         params.update({
             'url': url_,
@@ -2058,7 +1955,7 @@ class TestFilesController(TestController):
         # the file data from its parentFile
 
         # Create a subinterval-referencing audio file; reference the wav created above.
-        params = self.createParamsSR.copy()
+        params = self.fileCreateParamsSubRef.copy()
         params.update({
             'parentFile': wavFileId,
             'name': u'subinterval_x',
@@ -2112,7 +2009,7 @@ class TestFilesController(TestController):
         jpgFilePath = os.path.join(testFilesPath, jpgFilename)
         jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': jpgFilename,
             'base64EncodedFile': jpgFileBase64
@@ -2152,7 +2049,7 @@ class TestFilesController(TestController):
         oggFilePath = os.path.join(testFilesPath, oggFilename)
         oggFileSize = os.path.getsize(oggFilePath)
         oggFileBase64 = b64encode(open(oggFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': oggFilename,
             'base64EncodedFile': oggFileBase64
@@ -2199,7 +2096,7 @@ class TestFilesController(TestController):
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
         jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64
@@ -2223,7 +2120,7 @@ class TestFilesController(TestController):
         jpgFilePath = os.path.join(self.testFilesPath, filename)
         jpgReducedFilePath = os.path.join(self.reducedFilesPath, filename)
         jpgFileBase64 = b64encode(open(jpgFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': filename,
             'base64EncodedFile': jpgFileBase64
@@ -2251,7 +2148,7 @@ class TestFilesController(TestController):
         gifFilePath = os.path.join(self.testFilesPath, filename)
         gifReducedFilePath = os.path.join(self.reducedFilesPath, filename)
         gifFileBase64 = b64encode(open(gifFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': filename,
             'base64EncodedFile': gifFileBase64
@@ -2279,7 +2176,7 @@ class TestFilesController(TestController):
         filename = 'large_image.png'
         pngFilePath = os.path.join(self.testFilesPath, filename)
         pngReducedFilePath = os.path.join(self.reducedFilesPath, filename)
-        params = self.createParamsBasic.copy()
+        params = self.fileCreateParamsMPFD.copy()
         params.update({'filename': filename})
         response = self.app.post(url('/files'), params,
                                  extra_environ=self.extra_environ_admin,
@@ -2311,7 +2208,7 @@ class TestFilesController(TestController):
         wavFilePath = os.path.join(self.testFilesPath, filename)
         wavFileSize = os.path.getsize(wavFilePath)
         wavFileBase64 = b64encode(open(wavFilePath).read())
-        params = self.createParams.copy()
+        params = self.fileCreateParamsBase64.copy()
         params.update({
             'filename': filename,
             'base64EncodedFile': wavFileBase64

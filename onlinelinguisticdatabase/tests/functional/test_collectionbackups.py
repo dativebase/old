@@ -12,17 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import datetime
 import logging
-import os
-import webtest
 import simplejson as json
 from nose.tools import nottest
-from base64 import encodestring
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-from uuid import uuid4
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
@@ -30,44 +23,11 @@ from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
-
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
 class TestCollectionbackupsController(TestController):
 
-    createParams = {
-        'title': u'',
-        'type': u'',
-        'url': u'',
-        'description': u'',
-        'markupLanguage': u'',
-        'contents': u'',
-        'speaker': u'',
-        'source': u'',
-        'elicitor': u'',
-        'enterer': u'',
-        'dateElicited': u'',
-        'tags': [],
-        'files': []
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    def tearDown(self):
-        # Clear all models in the database except Language; recreate the users.
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
+    def __init__(self, *args, **kwargs):
+        TestController.__init__(self, *args, **kwargs)
+        self.addSEARCHToWebTestValidMethods()
 
     #@nottest
     def test_index(self):
@@ -103,7 +63,7 @@ class TestCollectionbackupsController(TestController):
         contrib = {'test.authentication.role': u'contributor', 'test.applicationSettings': True}
         admin = {'test.authentication.role': u'administrator', 'test.applicationSettings': True}
 
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Created by the Contributor',
             'elicitor': contributorId,
@@ -114,13 +74,12 @@ class TestCollectionbackupsController(TestController):
         collectionCount = Session.query(model.Collection).count()
         resp = json.loads(response.body)
         collectionId = resp['id']
-        collectionUUID = resp['UUID']
         assert response.content_type == 'application/json'
         assert collectionCount == 1
 
         # Update our collection (via request) as the default administrator; this
         # will create one collection backup.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'url': u'find/me/here',
             'title': u'Updated by the Administrator',
@@ -138,7 +97,7 @@ class TestCollectionbackupsController(TestController):
 
         # Finally, update our collection (via request) as the default contributor.
         # Now we will have two collection backups.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Updated by the Contributor',
             'speaker': speakerId,
@@ -170,7 +129,7 @@ class TestCollectionbackupsController(TestController):
         assert len(resp) == 0
 
         # Now update the collection and de-restrict it.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Updated and de-restricted by the Contributor',
             'speaker': speakerId,
@@ -198,7 +157,7 @@ class TestCollectionbackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Finally, update our collection in some trivial way.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Updated by the Contributor *again*',
             'speaker': speakerId,
@@ -286,7 +245,7 @@ class TestCollectionbackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the search action
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
         # A search on collection backup titles using POST /collectionbackups/search
         jsonQuery = json.dumps({'query': {'filter':

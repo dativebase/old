@@ -12,8 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
-import datetime
 import logging
 import os
 import codecs
@@ -21,78 +19,36 @@ import simplejson as json
 from uuid import uuid4
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
 from sqlalchemy.sql import desc
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import Phonology, PhonologyBackup
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
 
 log = logging.getLogger(__name__)
 
-
 class TestPhonologiesController(TestController):
 
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    researchersPath = h.getOLDDirectoryPath('users', config=config)
-    phonologyPath = h.getOLDDirectoryPath('phonologies', config=config)
-    testPhonologiesPath = os.path.join(here, 'onlinelinguisticdatabase',
-                        'tests', 'data', 'phonologies')
-    testPhonologyScriptPath = os.path.join(testPhonologiesPath,
-                                           'test_phonology.script')
-    testPhonologyScript = h.normalize(
-        codecs.open(testPhonologyScriptPath, 'r', 'utf8').read())
-
-    testMalformedPhonologyScriptPath = os.path.join(testPhonologiesPath,
-                                                    'test_phonology_malformed.script')
-    testMalformedPhonologyScript = h.normalize(
-        codecs.open(testMalformedPhonologyScriptPath, 'r', 'utf8').read())
-
-    testPhonologyNoPhonologyScriptPath = os.path.join(testPhonologiesPath,
-                                                      'test_phonology_malformed.script')
-    testPhonologyNoPhonologyScript = h.normalize(
-        codecs.open(testPhonologyNoPhonologyScriptPath, 'r', 'utf8').read())
-
-    testMediumPhonologyScriptPath = os.path.join(testPhonologiesPath,
-                                                 'test_phonology_medium.script')
-    testMediumPhonologyScript = h.normalize(
-        codecs.open(testMediumPhonologyScriptPath, 'r', 'utf8').read())
-
-    testLargePhonologyScriptPath = os.path.join(testPhonologiesPath,
-                                                'test_phonology_large.script')
-    testLargePhonologyScript = h.normalize(
-        codecs.open(testLargePhonologyScriptPath, 'r', 'utf8').read())
-
-    testPhonologyTestlessScriptPath = os.path.join(testPhonologiesPath,
-                                                   'test_phonology_no_tests.script')
-    testPhonologyTestlessScript = h.normalize(
-        codecs.open(testPhonologyTestlessScriptPath, 'r', 'utf8').read())
-
-
-    createParams = {
-        'name': u'',
-        'description': u'',
-        'script': u''
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
+    def __init__(self, *args, **kwargs):
+        TestController.__init__(self, *args, **kwargs)
+        self.testPhonologyScript = h.normalize(
+            codecs.open(self.testPhonologyScriptPath, 'r', 'utf8').read())
+        self.testMalformedPhonologyScript = h.normalize(
+            codecs.open(self.testMalformedPhonologyScriptPath, 'r', 'utf8').read())
+        self.testPhonologyNoPhonologyScript = h.normalize(
+            codecs.open(self.testPhonologyNoPhonologyScriptPath, 'r', 'utf8').read())
+        self.testMediumPhonologyScript = h.normalize(
+            codecs.open(self.testMediumPhonologyScriptPath, 'r', 'utf8').read())
+        self.testLargePhonologyScript = h.normalize(
+            codecs.open(self.testLargePhonologyScriptPath, 'r', 'utf8').read())
+        self.testPhonologyTestlessScript = h.normalize(
+            codecs.open(self.testPhonologyTestlessScriptPath, 'r', 'utf8').read())
 
     # Clear all models in the database except Language; recreate the phonologies.
     def tearDown(self):
-        h.clearAllModels()
-        h.destroyAllUserDirectories()
-        h.destroyAllPhonologyDirectories()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
+        TestController.tearDown(self, delGlobalAppSet=True,
+                dirsToDestroy=['user', 'phonology'])
 
     #@nottest
     def test_index(self):
@@ -190,7 +146,7 @@ class TestPhonologiesController(TestController):
         """
 
         # Attempt to create a phonology as a viewer and expect to fail
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
@@ -208,7 +164,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         newPhonologyCount = Session.query(Phonology).count()
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         assert newPhonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
@@ -218,7 +174,7 @@ class TestPhonologiesController(TestController):
         assert resp['script'] == self.testPhonologyScript
 
         # Invalid because name is not unique
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
@@ -235,7 +191,7 @@ class TestPhonologiesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'',
             'description': u'Covers a lot of the data.',
@@ -252,7 +208,7 @@ class TestPhonologiesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': None,
             'description': u'Covers a lot of the data.',
@@ -269,7 +225,7 @@ class TestPhonologiesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is too long.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': 'Phonology' * 200,
             'description': u'Covers a lot of the data.',
@@ -300,7 +256,7 @@ class TestPhonologiesController(TestController):
 
         # Create a phonology to update.
         originalPhonologyCount = Session.query(Phonology).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         originalScript = u'# The rules will begin after this comment.\n\n'
         params.update({
             'name': u'Phonology',
@@ -321,7 +277,7 @@ class TestPhonologiesController(TestController):
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
         newScript = u'define phonology o -> 0 || t "-" _ k "-";'
         origBackupCount = Session.query(PhonologyBackup).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.  Best yet!',
@@ -370,7 +326,7 @@ class TestPhonologiesController(TestController):
         phonologyBackupCount = Session.query(PhonologyBackup).count()
 
         # Create a phonology to delete.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
@@ -380,8 +336,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         phonologyId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
@@ -443,7 +398,7 @@ class TestPhonologiesController(TestController):
 
         # Create a phonology to show.
         originalPhonologyCount = Session.query(Phonology).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
@@ -454,7 +409,6 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         phonologyCount = Session.query(Phonology).count()
         phonologyId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
         assert phonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
@@ -494,7 +448,7 @@ class TestPhonologiesController(TestController):
 
         # Create a phonology to edit.
         originalPhonologyCount = Session.query(Phonology).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
@@ -505,7 +459,6 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         phonologyCount = Session.query(Phonology).count()
         phonologyId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
         assert phonologyCount == originalPhonologyCount + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
@@ -562,7 +515,7 @@ class TestPhonologiesController(TestController):
 
         """
         # Create a phonology with the test phonology script
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -573,7 +526,7 @@ class TestPhonologiesController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         phonology1Id = resp['id']
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id)
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
         assert resp['name'] == u'Blackfoot Phonology'
@@ -627,7 +580,7 @@ class TestPhonologiesController(TestController):
 
         # 1. Create a phonology whose script is malformed using
         # ``tests/data/test_phonology_malformed.script``.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 2',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -637,7 +590,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyId = resp['id']
         phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
@@ -676,7 +629,7 @@ class TestPhonologiesController(TestController):
 
         # 2. Create a phonology whose script does not define a regex called "phonology"
         # using ``tests/data/test_phonology_no_phonology.script``.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 3',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -686,7 +639,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyId = resp['id']
         phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
@@ -723,7 +676,7 @@ class TestPhonologiesController(TestController):
         assert phonologyBinaryFilename not in os.listdir(phonologyDir)
 
         # 3. Create a phonology whose script is empty.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 4',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -733,7 +686,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyId = resp['id']
         phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
@@ -774,7 +727,7 @@ class TestPhonologiesController(TestController):
         # Compile a medium phonology -- compilation should be long but not exceed the 30s limit.
         ########################################################################
         
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 5',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -784,7 +737,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyId = resp['id']
         phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
@@ -825,7 +778,7 @@ class TestPhonologiesController(TestController):
         # Compile a large phonology -- compilation should exceed the 30s limit.
         ########################################################################
         
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 6',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -835,7 +788,7 @@ class TestPhonologiesController(TestController):
         response = self.app.post(url('phonologies'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyId = resp['id']
         phonologyBinaryFilename = 'phonology_%d.foma' % phonologyId
@@ -878,10 +831,8 @@ class TestPhonologiesController(TestController):
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id)
         datetimeCompiled = resp['datetimeCompiled']
-        compileSucceeded = resp['compileSucceeded']
-        compileMessage = resp['compileMessage']
 
         # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
         # changed.
@@ -906,7 +857,7 @@ class TestPhonologiesController(TestController):
         
         """
         # Create a phonology with the test phonology script
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -917,7 +868,7 @@ class TestPhonologiesController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         phonology1Id = resp['id']
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id)
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
         assert resp['name'] == u'Blackfoot Phonology'
@@ -944,8 +895,6 @@ class TestPhonologiesController(TestController):
                                 headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         datetimeCompiled = resp['datetimeCompiled']
-        compileSucceeded = resp['compileSucceeded']
-        compileMessage = resp['compileMessage']
 
         # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
         while True:
@@ -970,8 +919,7 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='applydown',
                     id=phonology1Id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        config = h.getConfig(configFilename='test.ini')
-        phonologyDirPath = os.path.join(self.phonologyPath,
+        phonologyDirPath = os.path.join(self.phonologiesPath,
                                         'phonology_%d' % phonology1Id)
         phonologyDirContents = os.listdir(phonologyDirPath)
         assert resp[u'nit-wa'] == [u'nita']
@@ -1089,7 +1037,7 @@ class TestPhonologiesController(TestController):
 
         # Attempt to phonologize with a phonology whose script has not been compiled;
         # expect to fail.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 2',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -1113,7 +1061,7 @@ class TestPhonologiesController(TestController):
         """Tests that ``GET /phonologies/runtests/id`` runs the tests in the phonology's script."""
 
         # Create a phonology with the test phonology script
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -1124,7 +1072,7 @@ class TestPhonologiesController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         phonology1Id = resp['id']
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id)
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
         assert resp['name'] == u'Blackfoot Phonology'
@@ -1192,13 +1140,11 @@ class TestPhonologiesController(TestController):
         for t, e in incorrect:
             log.debug('%s expected to be %s but phonology returned %s' % (
                 t, e, ', '.join(resp[t]['actual'])))
-        
-        
 
         # Try to request GET /phonologies/runtests/id on a phonology with no tests.
-        
+
         # Create the test-less phonology.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Blackfoot Phonology 2',
             'description': u'The phonological rules of Frantz (1997) as FSTs',
@@ -1209,7 +1155,7 @@ class TestPhonologiesController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         phonology1Id = resp['id']
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % phonology1Id)
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id)
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
         assert resp['name'] == u'Blackfoot Phonology 2'
@@ -1225,8 +1171,6 @@ class TestPhonologiesController(TestController):
                                 headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         datetimeCompiled = resp['datetimeCompiled']
-        compileSucceeded = resp['compileSucceeded']
-        compileMessage = resp['compileMessage']
 
         # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
         while True:
@@ -1267,7 +1211,7 @@ class TestPhonologiesController(TestController):
 
         # Create a phonology.
         originalPhonologyCount = Session.query(Phonology).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         originalScript = u'# The rules will begin after this comment.\n\n'
         params.update({
             'name': u'Phonology',
@@ -1289,7 +1233,7 @@ class TestPhonologiesController(TestController):
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
         newScript = u'define phonology o -> 0 || t "-" _ k "-";'
         origBackupCount = Session.query(PhonologyBackup).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.  Best yet!',
@@ -1321,7 +1265,7 @@ class TestPhonologiesController(TestController):
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
         newestScript = u'define phonology o -> 0 || k "-" _ k "-";'
         origBackupCount = Session.query(PhonologyBackup).count()
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers even more data.  Better than ever!',

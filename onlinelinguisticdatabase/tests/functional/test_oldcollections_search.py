@@ -22,10 +22,8 @@ WSGIWarning when unknown HTTP methods (e.g., SEARCH) are used.  To prevent this,
 I altered the global valid_methods tuple of webtest.lint at runtime by adding a
 'SEARCH' method (see addSEARCHToWebTestValidMethods() below).
 """
-
-import re, os
-from base64 import encodestring
-from onlinelinguisticdatabase.tests import *
+import re
+from onlinelinguisticdatabase.tests import TestController, url
 from nose.tools import nottest
 import simplejson as json
 import logging
@@ -33,8 +31,6 @@ from datetime import date, datetime, timedelta
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import webtest
-from paste.deploy import appconfig
 
 log = logging.getLogger(__name__)
 
@@ -58,37 +54,7 @@ def isofy(date):
 # Functions for creating & retrieving test data
 ################################################################################
 
-
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestFormsSearchController(TestController):
-
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
-    testFilesPath = os.path.join(here, 'test_files')
-
-    createParams = {
-        'title': u'',
-        'type': u'',
-        'url': u'',
-        'description': u'',
-        'markupLanguage': u'',
-        'contents': u'',
-        'speaker': u'',
-        'source': u'',
-        'elicitor': u'',
-        'enterer': u'',
-        'dateElicited': u'',
-        'tags': [],
-        'files': []
-    }
 
     mdContents = u'\n'.join([
         'Chapter',
@@ -159,12 +125,10 @@ class TestFormsSearchController(TestController):
         """
         testModels = self._getTestModels()
         tags = dict([(t['name'], t) for t in testModels['tags']])
-        viewer = [u for u in testModels['users'] if u['role'] == u'viewer'][0]
         contributor = [u for u in testModels['users'] if u['role'] == u'contributor'][0]
-        administrator = [u for u in testModels['users'] if u['role'] == u'administrator'][0]
         for i in range(1, n + 1):
 
-            params = self.createParams.copy()
+            params = self.collectionCreateParams.copy()
             params.update({'speaker': testModels['speakers'][i - 1]['id']})
 
             if i > 10:
@@ -197,12 +161,9 @@ class TestFormsSearchController(TestController):
                     'contents': u'%s\nform[%d]\n' % (self.rstContents, testModels['forms'][i - 1]['id'])
                 })
             params = json.dumps(params)
-            response = self.app.post(url('collections'), params, self.json_headers,
+            self.app.post(url('collections'), params, self.json_headers,
                                      self.extra_environ_admin)
 
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    extra_environ_viewer = {'test.authentication.role': u'viewer'}
-    json_headers = {'Content-Type': 'application/json'}
     n = 20
 
     def tearDown(self):
@@ -217,7 +178,7 @@ class TestFormsSearchController(TestController):
 
         # Add a bunch of data to the db.
         self._createTestData(self.n)
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
     #@nottest
     def test_search_b_equals(self):
@@ -556,9 +517,6 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_m_conjunction(self):
         """Tests SEARCH /collections: conjunction."""
-        users = h.getUsers()
-        contributor = [u for u in users if u.role == u'contributor'][0]
-        models = self._getTestModels()
         collections = [c.getFullDict() for c in h.getCollections()]
 
         # 1 conjunct -- pointless, but it works...
@@ -1162,10 +1120,7 @@ class TestFormsSearchController(TestController):
 
         testModels = self._getTestModels()
         users = h.getUsers()
-        forms = h.getForms()
-        viewer = [u for u in users if u.role == u'viewer'][0]
         contributor = [u for u in users if u.role == u'contributor'][0]
-        administrator = [u for u in users if u.role == u'administrator'][0]
 
         # = int
         jsonQuery = json.dumps(
@@ -1611,7 +1566,7 @@ class TestFormsSearchController(TestController):
         jsonQuery = json.dumps({'query': {'filter':
             ['Collection', 'title', 'regex', '[cC]']}})
         response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
-            headers=self.json_headers, environ=self.extra_environ_viewer)
+            headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert len(resp) == restrictedCollectionCount
         assert 'restricted' not in [
@@ -1632,7 +1587,7 @@ class TestFormsSearchController(TestController):
             ['Collection', 'title', 'regex', '[cC]']},
             'paginator': {'page': 2, 'itemsPerPage': 3}})
         response = self.app.request(url('collections'), method='SEARCH', body=jsonQuery,
-            headers=self.json_headers, environ=self.extra_environ_viewer)
+            headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
         resultSet = [c for c in collections
                      if int(c.title.split(' ')[-1]) % 2 != 0]
@@ -1655,7 +1610,7 @@ class TestFormsSearchController(TestController):
         # to clean up for subsequent tests.
         extra_environ = self.extra_environ_admin.copy()
         extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('collections'), extra_environ=extra_environ)
+        self.app.get(url('collections'), extra_environ=extra_environ)
 
         # Remove all of the binary (file system) files created.
         h.clearDirectoryOfFiles(self.filesPath)

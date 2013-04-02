@@ -12,51 +12,26 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import gzip
-import StringIO
-import re
-import datetime
 import logging
-import os, sys
-import codecs
+import os
 import simplejson as json
-from uuid import uuid4
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import or_, and_, not_, asc, desc
-from onlinelinguisticdatabase.tests import *
+from sqlalchemy.sql import and_
+from onlinelinguisticdatabase.tests import TestController, url, getFileSize, decompressGzipString
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import onlinelinguisticdatabase.lib.testutils as testutils
-from onlinelinguisticdatabase.model import Corpus, CorpusBackup, CorpusFile
-from subprocess import Popen, PIPE, call
+from onlinelinguisticdatabase.model import Corpus
+from subprocess import call
 
 log = logging.getLogger(__name__)
 
 class TestCorporaLargeController(TestController):
     """Test the ``CorporaController`` making use of large "lorem ipsum" datasets."""
 
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    corpusPath = h.getOLDDirectoryPath('corpora', config=config)
-    testCorporaPath = os.path.join(here, 'onlinelinguisticdatabase',
-                        'tests', 'data', 'corpora')
-    testScriptsPath = os.path.join(here, 'onlinelinguisticdatabase',
-                        'tests', 'scripts')
-    loremipsum100Path = os.path.join(testCorporaPath, 'loremipsum_100.txt')
-    loremipsum1000Path = os.path.join(testCorporaPath, 'loremipsum_1000.txt')
-    loremipsum10000Path = os.path.join(testCorporaPath, 'loremipsum_10000.txt')
-
-    createParams = testutils.corpusCreateParams
-    formCreateParams = testutils.formCreateParams
-    syntacticCategoryCreateParams = testutils.syntacticCategoryCreateParams
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
+    def tearDown(self):
+        pass
 
     #@nottest
     def test_aaa_initialize(self):
@@ -109,7 +84,7 @@ class TestCorporaLargeController(TestController):
         # Set ``loremipsumPath`` this to ``self.loremipsum100Path``,
         # ``self.loremipsum1000Path`` or ``self.loremipsum10000Path``.
         # WARNING: the larger ones will take a long time.
-        loremipsumPath = self.loremipsum1000Path 
+        loremipsumPath = self.loremipsum100Path 
 
         # Set ``viaRequest`` to ``True`` to create all forms via HTTP requests.
         viaRequest = True
@@ -120,7 +95,6 @@ class TestCorporaLargeController(TestController):
             model = 'Form'
             elements = unicode(line).split('\t')
             nonEmptyElements = filter(None, elements)
-            lenNonEmptyElements = len(nonEmptyElements)
             try:
                 ol, mb, mg, ml, sc, sx = nonEmptyElements
             except Exception:
@@ -317,7 +291,6 @@ class TestCorporaLargeController(TestController):
         restrictedTag = h.generateRestrictedTag()
         Session.add(restrictedTag)
         Session.commit()
-        restrictedTagId = restrictedTag.id
         aForm = Session.query(model.Form).\
             filter(model.Form.syntacticCategory.\
                 has(model.SyntacticCategory.name==u'S')).first()
@@ -358,10 +331,9 @@ class TestCorporaLargeController(TestController):
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         sentenceCount = resp['paginator']['count']
-        aTree = resp['items'][0]['syntax']
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus of sentences',
             'description': u'No ordering, no duplicates.',
@@ -370,7 +342,7 @@ class TestCorporaLargeController(TestController):
         params = json.dumps(params)
 
         # Create the corpus
-        #assert os.listdir(self.corpusPath) == []
+        #assert os.listdir(self.corporaPath) == []
         originalCorpusCount = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
@@ -378,7 +350,7 @@ class TestCorporaLargeController(TestController):
         corpusId = resp['id']
         newCorpusCount = Session.query(Corpus).count()
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert newCorpusCount == originalCorpusCount + 1
         assert resp['name'] == u'Corpus of sentences'
@@ -405,8 +377,7 @@ class TestCorporaLargeController(TestController):
         assert resp2['datetimeModified'] > resp['datetimeModified']
         assert os.path.exists(corpusTbkPath)
         assert os.path.exists(corpusTbkGzippedPath)
-        assert testutils.getFileSize(corpusTbkPath) > testutils.getFileSize(
-                                                        corpusTbkGzippedPath)
+        assert getFileSize(corpusTbkPath) > getFileSize(corpusTbkGzippedPath)
         assert sentenceCount == corpusTbkFileLength
 
         # Retrieve the corpus file directly from the filesystem.
@@ -426,7 +397,7 @@ class TestCorporaLargeController(TestController):
         response = self.app.get(url('/corpora/%d/servefile/%d' % (
             corpusId, corpusFileId)), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        unzippedCorpusFileContent = testutils.decompressGzipString(response.body)
+        unzippedCorpusFileContent = decompressGzipString(response.body)
         assert unzippedCorpusFileContent == corpusFileContent
 
 
@@ -457,7 +428,7 @@ class TestCorporaLargeController(TestController):
         description = u'Ordered by content field; duplicates of words with more than 6 words.'
 
         # Generate some valid corpus creation input parameters.
-        params = self.createParams.copy()
+        params = self.corpusCreateParams.copy()
         params.update({
             'name': name,
             'description': description,
@@ -473,7 +444,7 @@ class TestCorporaLargeController(TestController):
         corpusId = resp['id']
         newCorpusCount = Session.query(Corpus).count()
         corpus = Session.query(Corpus).get(corpusId)
-        corpusDir = os.path.join(self.corpusPath, 'corpus_%d' % corpusId)
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert newCorpusCount == originalCorpusCount + 1
         assert resp['name'] == name
@@ -493,7 +464,7 @@ class TestCorporaLargeController(TestController):
         corpusDirContents = os.listdir(corpusDir)
         corpusTbkPath = os.path.join(corpusDir, 'corpus_%d.tbk' % corpusId)
         corpusTbkGzippedPath = '%s.gz' % corpusTbkPath
-        corpusTbkGzippedSize = testutils.getFileSize(corpusTbkGzippedPath)
+        corpusTbkGzippedSize = getFileSize(corpusTbkGzippedPath)
         corpusTbkFileLength = h.getFileLength(corpusTbkPath)
         corpusFileId = resp2['files'][0]['id']
         assert resp['id'] == resp2['id']
@@ -501,10 +472,8 @@ class TestCorporaLargeController(TestController):
         assert resp2['datetimeModified'] > resp['datetimeModified']
         assert os.path.exists(corpusTbkPath)
         assert os.path.exists(corpusTbkGzippedPath)
-        assert testutils.getFileSize(corpusTbkPath) > corpusTbkGzippedSize
+        assert getFileSize(corpusTbkPath) > corpusTbkGzippedSize
         assert anticipatedLength == corpusTbkFileLength
-        log.debug(h.prettyPrintBytes(corpusTbkGzippedSize))
-        log.debug(anticipatedLength)
 
         # Retrieve the corpus file directly from the filesystem.
         corpusFileObject = open(corpusTbkPath, 'r')
@@ -523,7 +492,7 @@ class TestCorporaLargeController(TestController):
             corpusId, corpusFileId)),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert len(response.body) < len(corpusFileContent)
-        unzippedCorpusFileContent = testutils.decompressGzipString(response.body)
+        unzippedCorpusFileContent = decompressGzipString(response.body)
         assert unzippedCorpusFileContent == corpusFileContent
 
     #@nottest

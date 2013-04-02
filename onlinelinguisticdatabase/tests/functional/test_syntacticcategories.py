@@ -12,47 +12,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
-import datetime
 import logging
-import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-import webtest
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import SyntacticCategory
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
-import onlinelinguisticdatabase.lib.testutils as testutils
 
 log = logging.getLogger(__name__)
-
 
 ################################################################################
 # Functions for creating & retrieving test data
 ################################################################################
 
 class TestSyntacticcategoriesController(TestController):
-
-    createFormParams = testutils.formCreateParams
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language; recreate the users.
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -246,7 +222,6 @@ class TestSyntacticcategoriesController(TestController):
         resp = json.loads(response.body)
         syntacticCategoryCount = Session.query(SyntacticCategory).count()
         syntacticCategoryId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Now delete the syntactic category
         response = self.app.delete(url('syntacticcategory', id=syntacticCategoryId), headers=self.json_headers,
@@ -284,9 +259,7 @@ class TestSyntacticcategoriesController(TestController):
         response = self.app.post(url('syntacticcategories'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        syntacticCategoryCount = Session.query(SyntacticCategory).count()
         syntacticCategoryId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Try to get a syntacticCategory using an invalid id
         id = 100000000000
@@ -325,9 +298,7 @@ class TestSyntacticcategoriesController(TestController):
         response = self.app.post(url('syntacticcategories'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        syntacticCategoryCount = Session.query(SyntacticCategory).count()
         syntacticCategoryId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_syntacticcategory', id=syntacticCategoryId), status=401)
@@ -379,7 +350,7 @@ class TestSyntacticcategoriesController(TestController):
         assert response.content_type == 'application/json'
 
         # Create a lexical form 'chien/dog' of category N
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'chien',
             'morphemeBreak': u'chien',
@@ -399,7 +370,7 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['breakGlossCategory'] == u'chien|dog|N'
 
         # Create a phrasal form 'chien-s/dog-PL' that will contain 'chien/dog'
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'chiens',
             'morphemeBreak': u'chien-s',

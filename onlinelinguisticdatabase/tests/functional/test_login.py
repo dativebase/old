@@ -14,32 +14,15 @@
 
 import logging
 import simplejson as json
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 from nose.tools import nottest
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-from paste.deploy import appconfig
-from paste.deploy.converters import asbool
 
 log = logging.getLogger(__name__)
 
-
 class TestLoginController(TestController):
-
-    here = appconfig('config:test.ini', relative_to='.')['here']
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language and User
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
-
     #@nottest
     def test_authenticate(self):
         """Tests that POST /login/authenticate correctly handles authentication attempts."""

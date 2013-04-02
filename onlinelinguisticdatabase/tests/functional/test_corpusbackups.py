@@ -1,4 +1,4 @@
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 
 class TestCorpusbackupsController(TestController):
 

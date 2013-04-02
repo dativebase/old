@@ -18,14 +18,15 @@
 NOTE: getting the non-standard http SEARCH method to work in the tests required
 using the request method of TestController().app and specifying values for the
 method, body, headers, and environ kwarg parameters.  WebTest prints a
-WSGIWarning when unknown HTTP methods (e.g., SEARCH) are used.  To prevent this,
-I altered the global valid_methods tuple of webtest.lint at runtime by adding a
-'SEARCH' method (see addSEARCHToWebTestValidMethods() below).
+WSGIWarning when unknown HTTP methods (e.g., SEARCH) are used.  To prevent
+this, I altered the global valid_methods tuple of webtest.lint at runtime by
+adding a 'SEARCH' method (see addSEARCHToWebTestValidMethods() below).
 """
 
-import re, os
+import re
+import os
 from base64 import encodestring
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 from nose.tools import nottest
 import simplejson as json
 import logging
@@ -33,8 +34,6 @@ from datetime import date, datetime, timedelta
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-import webtest
-from paste.deploy import appconfig
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +47,7 @@ jan2 = date(2012, 01, 02)
 jan3 = date(2012, 01, 03)
 jan4 = date(2012, 01, 04)
 
+
 def isofy(date):
     try:
         return date.isoformat()
@@ -58,35 +58,7 @@ def isofy(date):
 # Functions for creating & retrieving test data
 ################################################################################
 
-
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestFormsSearchController(TestController):
-
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
-    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
-                                 'data', 'files')
-
-    createParams = {
-        'name': u'',
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'embeddedFileMarkup': u'',
-        'embeddedFilePassword': u'',
-        'tags': [],
-        'file': ''      # file data Base64 encoded
-    }
 
     def _createTestModels(self, n=20):
         self._addTestModelsToSession('Tag', n, ['name'])
@@ -121,16 +93,13 @@ class TestFormsSearchController(TestController):
         """Create n files with various properties.  A testing ground for searches!
         """
         testModels = self._getTestModels()
-        viewer = [u for u in testModels['users'] if u['role'] == u'viewer'][0]
-        contributor = [u for u in testModels['users'] if u['role'] == u'contributor'][0]
-        administrator = [u for u in testModels['users'] if u['role'] == u'administrator'][0]
         ids = []
         for i in range(1, n + 1):
             jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
             jpgBase64 = encodestring(open(jpgFilePath).read())
             wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
             wavBase64 = encodestring(open(wavFilePath).read())
-            params = self.createParams.copy()
+            params = self.fileCreateParams.copy()
 
             if i < 11:
                 params.update({
@@ -176,13 +145,11 @@ class TestFormsSearchController(TestController):
                                      self.extra_environ_admin)
             resp = json.loads(response.body)
             ids.append(resp['id'])
-
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    extra_environ_viewer = {'test.authentication.role': u'viewer'}
-    json_headers = {'Content-Type': 'application/json'}
     n = 50
 
     def tearDown(self):
+        """Vacuous teardown prevents TestController's tearDown from destroying 
+        data between test methods."""
         pass
 
     # Initialization for the tests - this needs to be run first in order for the
@@ -192,7 +159,7 @@ class TestFormsSearchController(TestController):
         """Tests POST /files/search: initialize database."""
         # Add a bunch of data to the db.
         self._createTestData(self.n)
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
     #@nottest
     def test_search_b_equals(self):
@@ -209,9 +176,11 @@ class TestFormsSearchController(TestController):
     def test_search_c_not_equals(self):
         """Tests SEARCH /files: not equals."""
         jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['File', 'name', '=', u'name_10.jpg']]}})
-        response = self.app.request(url('files'), method='SEARCH',
-            body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
+            {'query': 
+                {'filter': ['not', ['File', 'name', '=', u'name_10.jpg']]}})
+        response = self.app.request(
+            url('files'), method='SEARCH', body=jsonQuery,
+            headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == self.n - 1
         assert u'name_10.jpg' not in [f['name'] for f in resp]
@@ -1137,10 +1106,7 @@ class TestFormsSearchController(TestController):
 
         testModels = self._getTestModels()
         users = h.getUsers()
-        forms = h.getForms()
-        viewer = [u for u in users if u.role == u'viewer'][0]
         contributor = [u for u in users if u.role == u'contributor'][0]
-        administrator = [u for u in users if u.role == u'administrator'][0]
 
         # = int
         jsonQuery = json.dumps(
@@ -1422,7 +1388,8 @@ class TestFormsSearchController(TestController):
         files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
 
         # A basic search with a paginator provided.
-        jsonQuery = json.dumps({'query': {
+        jsonQuery = json.dumps(
+            {'query': {
                 'filter': ['File', 'name', 'like', '%N%']},
             'paginator': {'page': 2, 'itemsPerPage': 3}})
         response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
@@ -1574,7 +1541,7 @@ class TestFormsSearchController(TestController):
         jsonQuery = json.dumps({'query': {'filter':
             ['File', 'name', 'regex', '[nN]']}})
         response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
-            headers=self.json_headers, environ=self.extra_environ_viewer)
+            headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert len(resp) == restrictedFileCount
         assert 'restricted' not in [
@@ -1595,7 +1562,7 @@ class TestFormsSearchController(TestController):
             ['File', 'name', 'regex', '[nN]']},
             'paginator': {'page': 2, 'itemsPerPage': 3}})
         response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
-            headers=self.json_headers, environ=self.extra_environ_viewer)
+            headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
         resultSet = [f for f in files
                         if int(f.name.split('_')[-1].split('.')[0]) % 2 != 0]
@@ -1606,14 +1573,11 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_zb_file_type(self):
         """Tests SEARCH /files: get the different types of files."""
-        files = json.loads(json.dumps(h.getFiles(), cls=h.JSONOLDEncoder))
-
         # Get all files with real files to back them up, (they're the ones with filenames).
         jsonQuery = json.dumps({'query': {'filter': ['File', 'filename', '!=', None]}})
         response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['filename']]
         assert len(resp) == 30
 
         # Get all the subinterval-referencing.
@@ -1621,7 +1585,6 @@ class TestFormsSearchController(TestController):
         response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['parentFile']]
         assert len(resp) == 10
 
         # Get all the subinterval-referencing.
@@ -1629,7 +1592,6 @@ class TestFormsSearchController(TestController):
         response = self.app.request(url('files'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in files if f['url']]
         assert len(resp) == 10
 
     #@nottest
@@ -1647,7 +1609,8 @@ class TestFormsSearchController(TestController):
         # to clean up for subsequent tests.
         extra_environ = self.extra_environ_admin.copy()
         extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('files'), extra_environ=extra_environ)
+        self.app.get(url('files'), extra_environ=extra_environ)
 
         # Remove all of the binary (file system) files created.
         h.clearDirectoryOfFiles(self.filesPath)
+        h.clearDirectoryOfFiles(self.reducedFilesPath)

@@ -15,14 +15,10 @@
 import re
 import datetime
 import logging
-import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-import webtest
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
@@ -44,9 +40,7 @@ def createTestFormSearches(n=100):
     """Create n form searches with various properties.  A testing ground for searches!
     """
     users = h.getUsers()
-    viewer = [u for u in users if u.role == u'viewer'][0]
     contributor = [u for u in users if u.role == u'contributor'][0]
-    administrator = [u for u in users if u.role == u'administrator'][0]
 
     for i in range(1, n + 1):
         fs = model.FormSearch()
@@ -74,35 +68,7 @@ def createTestFormSearches(n=100):
 def createTestData(n=100):
     createTestFormSearches(n)
 
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestFormsearchesController(TestController):
-
-    createParams = {
-        'name': u'',
-        'search': u'',
-        'description': u'',
-        'searcher': u''
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language; recreate the users.
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -201,7 +167,7 @@ class TestFormsearchesController(TestController):
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
 
         # Create a valid one
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -218,7 +184,7 @@ class TestFormsearchesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search',
             'description': u'Another one worth saving!',
@@ -231,7 +197,7 @@ class TestFormsearchesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is empty
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'',
             'description': u'Another one worth saving!',
@@ -243,7 +209,7 @@ class TestFormsearchesController(TestController):
         assert resp['errors']['name'] == u'Please enter a value'
 
         # Invalid because name is too long
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search' * 300,
             'description': u'Another one worth saving!',
@@ -256,7 +222,7 @@ class TestFormsearchesController(TestController):
 
         # Invalid because search is invalid
         query = {'filter': ['Form', 'bar', 'like', '%m%']}
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'invalid query',
             'description': u'Another one worth saving!',
@@ -269,7 +235,7 @@ class TestFormsearchesController(TestController):
 
         # Another invalid search
         query = {'filter': ['Form', 'files', 'like', '%m%']}
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'invalid query again',
             'description': u'Yet another one worth saving!',
@@ -296,7 +262,7 @@ class TestFormsearchesController(TestController):
 
         # Create a form search to update.
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -314,7 +280,7 @@ class TestFormsearchesController(TestController):
 
         # Update the form search
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search for keeping',
             'description': u'This one\'s worth saving!',
@@ -349,7 +315,7 @@ class TestFormsearchesController(TestController):
 
         # Create a form search to delete.
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -360,7 +326,6 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         formSearchCount = Session.query(FormSearch).count()
         formSearchId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
         assert json.loads(resp['search']) == query
@@ -397,7 +362,7 @@ class TestFormsearchesController(TestController):
 
         # Create a form search to show.
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -406,9 +371,7 @@ class TestFormsearchesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('formsearches'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchCount = Session.query(FormSearch).count()
         formSearchId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
         assert json.loads(resp['search']) == query
@@ -445,7 +408,7 @@ class TestFormsearchesController(TestController):
 
         # Create a form search to edit.
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
-        params = self.createParams.copy()
+        params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -454,9 +417,7 @@ class TestFormsearchesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('formsearches'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchCount = Session.query(FormSearch).count()
         formSearchId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
         assert json.loads(resp['search']) == query
@@ -494,7 +455,7 @@ class TestFormsearchesController(TestController):
 
         # Create some formSearches (and other models) to search and add SEARCH to the list of allowable methods
         createTestData(100)
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
         formSearches = json.loads(json.dumps(h.getFormSearches(True), cls=h.JSONOLDEncoder))
 
@@ -589,9 +550,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted(formSearches, key=lambda fs: fs['name'].lower(), reverse=True)
         assert len(resp) == 100
-        rsIds = [fs['id'] for fs in resultSet]
         rsNames = [fs['name'] for fs in resultSet]
-        rIds = [fs['id'] for fs in resp]
         rNames = [fs['name'] for fs in resp]
         assert rsNames == rNames
         assert resp[0]['name'] == u'form search 99'

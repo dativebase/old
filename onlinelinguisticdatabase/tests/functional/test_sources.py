@@ -15,14 +15,10 @@
 import re
 import datetime
 import logging
-import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-import webtest
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
@@ -31,8 +27,6 @@ from onlinelinguisticdatabase.lib.bibtex import entryTypes
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
-
-
 
 ################################################################################
 # Functions for creating & retrieving test data
@@ -60,10 +54,6 @@ def createTestSources(n=100):
     """Create n sources with various properties.  A testing ground for searches!
     """
     files = getTestModels()['files']
-    users = h.getUsers()
-    viewer = [u for u in users if u.role == u'viewer'][0]
-    contributor = [u for u in users if u.role == u'contributor'][0]
-    administrator = [u for u in users if u.role == u'administrator'][0]
 
     for i in range(1, n + 1):
         s = model.Source()
@@ -137,72 +127,7 @@ def createTestData(n=100):
     createTestSources(n)
 
 
-def addSEARCHToWebTestValidMethods():
-    new_valid_methods = list(webtest.lint.valid_methods)
-    new_valid_methods.append('SEARCH')
-    new_valid_methods = tuple(new_valid_methods)
-    webtest.lint.valid_methods = new_valid_methods
-
-
 class TestSourcesController(TestController):
-
-    createParams = {
-        'file': u'',
-        'type': u'',
-        'key': u'',
-        'address': u'',
-        'annote': u'',
-        'author': u'',
-        'booktitle': u'',
-        'chapter': u'',
-        'crossref': u'',
-        'edition': u'',
-        'editor': u'',
-        'howpublished': u'',
-        'institution': u'',
-        'journal': u'',
-        'keyField': u'',
-        'month': u'',
-        'note': u'',
-        'number': u'',
-        'organization': u'',
-        'pages': u'',
-        'publisher': u'',
-        'school': u'',
-        'series': u'',
-        'title': u'',
-        'typeField': u'',
-        'url': u'',
-        'volume': u'',
-        'year': u'',
-        'affiliation': u'',
-        'abstract': u'',
-        'contents': u'',
-        'copyright': u'',
-        'ISBN': u'',
-        'ISSN': u'',
-        'keywords': u'',
-        'language': u'',
-        'location': u'',
-        'LCCN': u'',
-        'mrnumber': u'',
-        'price': u'',
-        'size': u'',
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Clear all models in the database except Language; recreate the users.
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -310,7 +235,7 @@ class TestSourcesController(TestController):
         # Attempt to create a source that has an invalid BibTeX entry type and
         # expect to fail.  Also, check that the length restrictions on the other
         # fields are working too.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'novella',
             'author': u'author' * 255
@@ -324,7 +249,7 @@ class TestSourcesController(TestController):
         assert response.content_type == 'application/json'
 
         # Create a book; required: author or editor, title, publisher and year
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'bOOk',    # case is irrelevant for entry types
             'key': u'chomsky57',
@@ -348,7 +273,7 @@ class TestSourcesController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to create another book with the same key and expect to fail.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'bOOk',
             'key': u'chomsky57',    # This duplicate is the bad part.
@@ -367,7 +292,7 @@ class TestSourcesController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to create another book with an invalid key and expect to fail.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'bOOk',
             'key': u'cho\u0301msky57',    # Unicode characters are not permitted, PERHAPS THEY SHOULD BE? ...
@@ -385,7 +310,7 @@ class TestSourcesController(TestController):
         assert resp['errors']['key'] == u'Source keys can only contain letters, numerals and symbols (except the comma)'
 
         # Attempt to create a book source that is invalid because it lacks a year.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57a',
@@ -407,7 +332,7 @@ class TestSourcesController(TestController):
 
         # Attempt to create a book source that is invalid because it lacks both
         # author and editor 
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57a',
@@ -431,7 +356,7 @@ class TestSourcesController(TestController):
         ########################################################################
 
         # Create an article; required: author, title, journal, year
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'Article',    # case is irrelevant for entry types
             'key': u'bloomfield46',
@@ -457,7 +382,7 @@ class TestSourcesController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to create an article without a year and expect to fail
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'Article',    # case is irrelevant for entry types
             'key': u'bloomfieldL46',
@@ -483,7 +408,7 @@ class TestSourcesController(TestController):
         ########################################################################
 
         # Create a booklet; required: title
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'BOOKLET',    # case is irrelevant for entry types
             'key': u'mypoetry',
@@ -501,7 +426,7 @@ class TestSourcesController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to create a booklet without a title and expect to fail
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'Booklet',    # case is irrelevant for entry types
             'key': u'mypoetry2',
@@ -525,7 +450,7 @@ class TestSourcesController(TestController):
 
         # Create an inbook; required: title, publisher, year and one of author
         # or editor and one of chapter or pages.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inbook',    # case is irrelevant for entry types
             'key': u'vendler67',
@@ -553,7 +478,7 @@ class TestSourcesController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to create an inbook without a chapter or pages and expect to fail
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inbook',    # case is irrelevant for entry types
             'key': u'vendler67again',
@@ -577,7 +502,7 @@ class TestSourcesController(TestController):
         # 'required': (('author', 'editor'), 'title', ('chapter', 'pages'), 'publisher', 'year')
         # Create a book that the inbook above will cross-reference once updated.
         # required: author or editor, title, publisher and year
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'bOOk',    # case is irrelevant for entry types
             'key': u'vendler67book',
@@ -603,7 +528,7 @@ class TestSourcesController(TestController):
         # Now update the valid inbook created above and have it cross-reference
         # the book just created above.  Because the Vendler book has all of the
         # rest of the attributes, all we need to specify is the chapter.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inbook',    # case is irrelevant for entry types
             'key': u'vendler67',
@@ -623,7 +548,7 @@ class TestSourcesController(TestController):
 
         # Now update our inbook back to how it was and remove the cross-reference;
         # make sure that the crossrefSource value is now None.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inbook',    # case is irrelevant for entry types
             'key': u'vendler67',
@@ -657,7 +582,7 @@ class TestSourcesController(TestController):
         ########################################################################
 
         # Create a misc; required: nothing.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'misc',    # case is irrelevant for entry types
             'key': u'manuel83',
@@ -677,7 +602,7 @@ class TestSourcesController(TestController):
         ########################################################################
 
         # Create an inproceedings; required: author, title, booktitle, year.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inpROceedings',    # case is irrelevant for entry types
             'key': u'oaho83',
@@ -703,7 +628,7 @@ class TestSourcesController(TestController):
 
         # Attempt to create an inproceedings that lacks booktitle and year
         # values; expect to fail.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inpROceedings',    # case is irrelevant for entry types
             'key': u'oaho83_2',
@@ -722,7 +647,7 @@ class TestSourcesController(TestController):
 
         # Now create a proceedings source that will be cross-referenced by the
         # above inproceedings source.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'PROceedings',    # case is irrelevant for entry types
             'key': u'acm15_83',
@@ -746,7 +671,7 @@ class TestSourcesController(TestController):
 
         # Now attempt to create an inproceedings that lacks booktitle and year
         # values but cross-reference the proceedings source we just created; expect to succeed.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inpROceedings',    # case is irrelevant for entry types
             'key': u'oaho83_2',
@@ -772,7 +697,7 @@ class TestSourcesController(TestController):
         assert resp['crossrefSource']['id'] == proceedingsId
 
         # Make sure the crossref stuff works with updates
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'inpROceedings',    # case is irrelevant for entry types
             'key': u'oaho83',
@@ -810,7 +735,7 @@ class TestSourcesController(TestController):
         """Tests that PUT /sources/1 updates an existing source."""
 
         # Create a book to update.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -829,7 +754,7 @@ class TestSourcesController(TestController):
 
         # Update the book
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -850,7 +775,7 @@ class TestSourcesController(TestController):
 
         # Attempt an update with no new input and expect to fail
         sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -879,7 +804,7 @@ class TestSourcesController(TestController):
         fileName = file_.name
 
         sleep(1)    # sleep for a second to ensure that MySQL can register a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -906,7 +831,7 @@ class TestSourcesController(TestController):
         """Tests that DELETE /sources/id deletes the source with id=id."""
 
         # Create a book to delete.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -921,7 +846,6 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         sourceCount = Session.query(Source).count()
         bookId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Now delete the source
         response = self.app.delete(url('source', id=bookId), headers=self.json_headers,
@@ -955,7 +879,7 @@ class TestSourcesController(TestController):
         """Tests that GET /source/id returns the source with id=id or an appropriate error."""
 
         # Create a book to show.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -968,9 +892,7 @@ class TestSourcesController(TestController):
         response = self.app.post(url('sources'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        sourceCount = Session.query(Source).count()
         bookId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Try to get a source using an invalid id
         id = 100000000000
@@ -1005,7 +927,7 @@ class TestSourcesController(TestController):
         """
 
         # Create a book to request edit on.
-        params = self.createParams.copy()
+        params = self.sourceCreateParams.copy()
         params.update({
             'type': u'book',
             'key': u'chomsky57',
@@ -1018,7 +940,6 @@ class TestSourcesController(TestController):
         response = self.app.post(url('sources'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        sourceCount = Session.query(Source).count()
         bookId = resp['id']
 
         # Not logged in: expect 401 Unauthorized
@@ -1055,7 +976,7 @@ class TestSourcesController(TestController):
 
         # Create some sources (and other models) to search and add SEARCH to the list of allowable methods
         createTestData(100)
-        addSEARCHToWebTestValidMethods()
+        self.addSEARCHToWebTestValidMethods()
 
         sources = json.loads(json.dumps(h.getSources(True), cls=h.JSONOLDEncoder))
 
@@ -1163,10 +1084,6 @@ class TestSourcesController(TestController):
         resp = json.loads(response.body)
         resultSet = sorted(sources, key=lambda k: k['title'], reverse=True)
         assert len(resp) == 100
-        rsIds = [s['id'] for s in resultSet]
-        rsTitles = [s['title'] for s in resultSet]
-        rIds = [s['id'] for s in resp]
-        rTitles = [s['title'] for s in resp]
         assert [s['title'] for s in resultSet] == [s['title'] for s in resp]
         assert resp[-1]['title'] == None
         assert resp[0]['title'] == u'Title 90'

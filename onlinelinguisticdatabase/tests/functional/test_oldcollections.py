@@ -19,86 +19,21 @@ import simplejson as json
 from time import sleep
 from nose.tools import nottest
 from base64 import encodestring
-from paste.deploy import appconfig
 from sqlalchemy.sql import desc
 from uuid import uuid4
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
-import onlinelinguisticdatabase.lib.testutils as testutils
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 
 log = logging.getLogger(__name__)
 
-
 class TestOldcollectionsController(TestController):
 
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
-    testFilesPath = os.path.join(here, 'onlinelinguisticdatabase', 'tests',
-                                 'data', 'files')
-
-    createParams = {
-        'title': u'',
-        'type': u'',
-        'url': u'',
-        'description': u'',
-        'markupLanguage': u'',
-        'contents': u'',
-        'speaker': u'',
-        'source': u'',
-        'elicitor': u'',
-        'enterer': u'',
-        'dateElicited': u'',
-        'tags': [],
-        'files': []
-    }
-
-    createFormParams = testutils.formCreateParams
-    createFileParams = {
-        'name': u'',
-        'description': u'',
-        'dateElicited': u'',    # mm/dd/yyyy
-        'elicitor': u'',
-        'speaker': u'',
-        'utteranceType': u'',
-        'embeddedFileMarkup': u'',
-        'embeddedFilePassword': u'',
-        'tags': [],
-        'forms': [],
-        'file': ''      # file data Base64 encoded
-    }
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
-    # Set up some stuff for the tests
-    def setUp(self):
-        pass
-
     def tearDown(self):
-        # Clear all models in the database except Language; recreate the users.
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator(config=self.config)
-        contributor = h.generateDefaultContributor(config=self.config)
-        viewer = h.generateDefaultViewer(config=self.config)
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
-
-        # Clear the files directory
-        h.clearDirectoryOfFiles(self.filesPath)
-        h.clearDirectoryOfFiles(self.reducedFilesPath)
-
-        # Perform a vacuous GET just to delete app_globals.applicationSettings
-        # to clean up for subsequent tests.
-        extra_environ = self.extra_environ_admin.copy()
-        extra_environ['test.applicationSettings'] = True
-        response = self.app.get(url('forms'), extra_environ=extra_environ)
+        TestController.tearDown(self, dirsToClear=['reducedFilesPath', 'filesPath'],
+                delGlobalAppSet=True)
 
     #@nottest
     def test_index(self):
@@ -107,9 +42,7 @@ class TestOldcollectionsController(TestController):
         # Test that the restricted tag is working correctly.
         # First get the users.
         users = h.getUsers()
-        administratorId = [u for u in users if u.role == u'administrator'][0].id
         contributorId = [u for u in users if u.role == u'contributor'][0].id
-        viewerId = [u for u in users if u.role == u'viewer'][0].id
 
         # Then add a contributor and a restricted tag.
         restrictedTag = h.generateRestrictedTag()
@@ -137,7 +70,7 @@ class TestOldcollectionsController(TestController):
                          'test.applicationSettings': True}
 
         # Create the restricted collection.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Restricted Collection',
             'tags': [h.getTags()[0].id]    # the restricted tag should be the only one
@@ -149,13 +82,12 @@ class TestOldcollectionsController(TestController):
         restrictedCollectionId = resp['id']
 
         # Create the unrestricted collection.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({'title': u'Unrestricted Collection'})
         params = json.dumps(params)
         response = self.app.post(url('collections'), params, self.json_headers,
                         extra_environ)
         resp = json.loads(response.body)
-        unrestrictedCollectionId = resp['id']
 
         # Expectation: the administrator, the default contributor (qua enterer)
         # and the unrestricted myContributor should all be able to view both
@@ -358,8 +290,7 @@ class TestOldcollectionsController(TestController):
 
         # Create some test files
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'old_test.wav',
             'base64EncodedFile': encodestring(open(wavFilePath).read())
@@ -371,9 +302,8 @@ class TestOldcollectionsController(TestController):
         file1Id = resp['id']
 
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-        jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64
@@ -385,7 +315,7 @@ class TestOldcollectionsController(TestController):
         file2Id = resp['id']
 
         # Create some test forms
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'transcription 1',
             'translations': [{'transcription': u'translation 1', 'grammaticality': u''}]
@@ -396,7 +326,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         form1Id = resp['id']
 
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'transcription 2',
             'translations': [{'transcription': u'translation 2', 'grammaticality': u''}]
@@ -421,7 +351,7 @@ class TestOldcollectionsController(TestController):
             'form[%d]' % form1Id,
             'form[%d]' % form2Id
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Chapter 1',
             'markupLanguage': u'Markdown',
@@ -446,7 +376,7 @@ class TestOldcollectionsController(TestController):
         assert response.content_type == 'application/json'
 
         # Create two more forms
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'transcription 3',
             'translations': [{'transcription': u'translation 3', 'grammaticality': u''}]
@@ -456,7 +386,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         form3Id = resp['id']
 
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'transcription 4',
             'translations': [{'transcription': u'translation 4', 'grammaticality': u''}]
@@ -476,7 +406,7 @@ class TestOldcollectionsController(TestController):
             '',
             'form[%d]' % form3Id
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Book 1',
             'markupLanguage': u'Markdown',
@@ -514,7 +444,7 @@ class TestOldcollectionsController(TestController):
             '',
             'form[%d]' % form4Id
         ])
-        params3 = self.createParams.copy()
+        params3 = self.collectionCreateParams.copy()
         params3.update({
             'title': u'Novel',
             'markupLanguage': u'Markdown',
@@ -576,7 +506,7 @@ class TestOldcollectionsController(TestController):
             '',
             'form[%d]' % form2Id    # THE CHANGE: reference to form1 has been removed
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Chapter 1',
             'markupLanguage': u'Markdown',
@@ -684,7 +614,6 @@ class TestOldcollectionsController(TestController):
         newCollection2 = Session.query(model.Collection).get(collection2Id)
         newCollection3 = Session.query(model.Collection).get(collection3Id)
         newCollection2Contents = newCollection2.contents
-        newCollection2ContentsUnpacked = newCollection2.contentsUnpacked
         newCollection2Forms = [f.id for f in newCollection2.forms]
         newCollection2HTML = newCollection2.html
         newCollection3Forms = [f.id for f in newCollection3.forms]
@@ -715,7 +644,7 @@ class TestOldcollectionsController(TestController):
 
         # Empty title should raise error
         collectionCount = Session.query(model.Collection).count()
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params = json.dumps(params)
         response = self.app.post(url('collections'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
@@ -725,7 +654,7 @@ class TestOldcollectionsController(TestController):
         assert newCollectionCount == collectionCount
 
         # Exceeding length restrictions should return errors also.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test create invalid title' * 100,
             'url': u'test_create_invalid_url' * 100
@@ -753,7 +682,7 @@ class TestOldcollectionsController(TestController):
         badURL = u'bad&url'
         badMarkupLanguage = u'rtf'
         badCollectionType = u'novella'
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test create invalid title',
             'url': badURL,
@@ -774,7 +703,7 @@ class TestOldcollectionsController(TestController):
         assert response.content_type == 'application/json'
 
         # Create a collection with a valid type, markupLanguage and url
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test create valid title',
             'url': u'good-url/really',
@@ -795,7 +724,7 @@ class TestOldcollectionsController(TestController):
         # enterer, etc.
         badId = 109
         badInt = u'abc'
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test create invalid title',
             'speaker': badId,
@@ -823,9 +752,7 @@ class TestOldcollectionsController(TestController):
         Session.commit()
         contributor = Session.query(model.User).filter(
             model.User.role==u'contributor').first()
-        administrator = Session.query(model.User).filter(
-            model.User.role==u'administrator').first()
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test create title',
             'speaker': h.getSpeakers()[0].id,
@@ -858,13 +785,12 @@ class TestOldcollectionsController(TestController):
         contrib.update({'test.applicationSettings': True})
 
         # Create a test collection.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         originalTitle = u'test_update_title'
         params.update({'title': originalTitle})
         params = json.dumps(params)
         response = self.app.post(url('collections'), params, self.json_headers, admin)
         resp = json.loads(response.body)
-        collectionId = int(resp['id'])
         collectionCount = Session.query(model.Collection).count()
         assert resp['title'] == originalTitle
         assert collectionCount == 1
@@ -877,9 +803,8 @@ class TestOldcollectionsController(TestController):
 
         # Then create two files, one restricted and one not ...
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
         wavFileBase64 = encodestring(open(wavFilePath).read())
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'restrictedFile.wav',
             'base64EncodedFile': wavFileBase64,
@@ -890,7 +815,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         restrictedFileId = resp['id']
 
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'unrestrictedFile.wav',
             'base64EncodedFile': wavFileBase64
@@ -901,7 +826,7 @@ class TestOldcollectionsController(TestController):
         unrestrictedFileId = resp['id']
 
         # ... and create two forms, one restricted and one not.
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'restricted',
             'translations': [{'transcription': u'restricted', 'grammaticality': u''}],
@@ -913,7 +838,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         restrictedFormId = resp['id']
 
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'unrestricted',
             'translations': [{'transcription': u'unrestricted', 'grammaticality': u''}]
@@ -926,7 +851,7 @@ class TestOldcollectionsController(TestController):
 
         # Now, as a (restricted) contributor, attempt to create a collection and
         # associate it to a restricted file -- expect to fail.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test',
             'files': [restrictedFileId]
@@ -956,7 +881,7 @@ class TestOldcollectionsController(TestController):
             '',
             'form[%d]' % restrictedFormId
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test',
             'markupLanguage': u'Markdown',
@@ -971,7 +896,7 @@ class TestOldcollectionsController(TestController):
 
         # Now, as a (restricted) contributor, attempt to create a collection and
         # associate it to an unrestricted file -- expect to succeed.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test',
             'files': [unrestrictedFileId]
@@ -1001,7 +926,7 @@ class TestOldcollectionsController(TestController):
             '',
             'form[%d]' % unrestrictedFormId
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test',
             'markupLanguage': u'Markdown',
@@ -1015,7 +940,7 @@ class TestOldcollectionsController(TestController):
         # Now, as a(n unrestricted) administrator, attempt to create a collection
         # and associate it to a restricted file -- expect (a) to succeed and (b) to
         # find that the form is now restricted.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test',
             'files': [restrictedFileId]
@@ -1046,7 +971,7 @@ class TestOldcollectionsController(TestController):
             '',
             'form[%d]' % restrictedFormId
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test',
             'markupLanguage': u'Markdown',
@@ -1070,7 +995,7 @@ class TestOldcollectionsController(TestController):
         assert indirectlyRestrictedCollection2Id not in [c['id'] for c in resp]
 
         # Now, as a(n unrestricted) administrator, create a collection.
-        unrestrictedCollectionParams = self.createParams.copy()
+        unrestrictedCollectionParams = self.collectionCreateParams.copy()
         unrestrictedCollectionParams.update({'title': u'test'})
         params = json.dumps(unrestrictedCollectionParams)
         response = self.app.post(url('collections'), params, self.json_headers, admin)
@@ -1206,7 +1131,7 @@ class TestOldcollectionsController(TestController):
         restrictedTagId = restrictedTag.id
 
         # Create a collection to update.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         originalTitle = u'test_update_title'
         params.update({
             'title': originalTitle,
@@ -1225,7 +1150,7 @@ class TestOldcollectionsController(TestController):
         # Expect to fail.
         extra_environ = {'test.authentication.role': 'viewer',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({'title': u'Updated!'})
         params = json.dumps(params)
         response = self.app.put(url('collection', id=id), params,
@@ -1237,7 +1162,7 @@ class TestOldcollectionsController(TestController):
         # collection we just created.  Expect to fail.
         extra_environ = {'test.authentication.role': 'contributor',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({'title': u'Updated!'})
         params = json.dumps(params)
         response = self.app.put(url('collection', id=id), params,
@@ -1249,7 +1174,7 @@ class TestOldcollectionsController(TestController):
         # As an administrator now, update the collection just created and expect to
         # succeed.
         origBackupCount = Session.query(model.CollectionBackup).count()
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({'title': u'Updated!'})
         params = json.dumps(params)
         response = self.app.put(url('collection', id=id), params,
@@ -1264,7 +1189,7 @@ class TestOldcollectionsController(TestController):
             model.CollectionBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(model.CollectionBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == resp['datetimeModified']
+        assert backup.datetimeModified.isoformat() <= resp['datetimeModified']
         assert backup.title == originalTitle
         assert response.content_type == 'application/json'
 
@@ -1287,7 +1212,7 @@ class TestOldcollectionsController(TestController):
         speaker = h.getSpeakers()[0]
         speakerId = speaker.id
         speakerFirstName = speaker.firstName
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Another title',
             'speaker': speakerId
@@ -1315,8 +1240,7 @@ class TestOldcollectionsController(TestController):
 
         # Create some test files
         wavFilePath = os.path.join(self.testFilesPath, 'old_test.wav')
-        wavFileSize = os.path.getsize(wavFilePath)
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'old_test.wav',
             'base64EncodedFile': encodestring(open(wavFilePath).read())
@@ -1328,9 +1252,8 @@ class TestOldcollectionsController(TestController):
         file1Id = resp['id']
 
         jpgFilePath = os.path.join(self.testFilesPath, 'old_test.jpg')
-        jpgFileSize = os.path.getsize(jpgFilePath)
         jpgFileBase64 = encodestring(open(jpgFilePath).read())
-        params = self.createFileParams.copy()
+        params = self.fileCreateParams.copy()
         params.update({
             'filename': u'old_test.jpg',
             'base64EncodedFile': jpgFileBase64
@@ -1342,7 +1265,7 @@ class TestOldcollectionsController(TestController):
         file2Id = resp['id']
 
         # Create some test forms
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'transcription 1',
             'translations': [{'transcription': u'translation 1', 'grammaticality': u''}]
@@ -1353,7 +1276,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
         form1Id = resp['id']
 
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'transcription 2',
             'translations': [{'transcription': u'translation 2', 'grammaticality': u''}]
@@ -1381,7 +1304,7 @@ class TestOldcollectionsController(TestController):
             'form[%d]' % form1Id,
             'form[%d]' % form2Id
         ])
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test_create_title',
             'markupLanguage': u'Markdown',
@@ -1410,7 +1333,7 @@ class TestOldcollectionsController(TestController):
         tags.reverse()
         files = [f.id for f in h.getFiles()]
         files.reverse()
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test_create_title',
             'markupLanguage': u'Markdown',
@@ -1427,7 +1350,7 @@ class TestOldcollectionsController(TestController):
         assert response.content_type == 'application/json'
 
         # Now update by removing one of the files and expect success.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test_create_title',
             'markupLanguage': u'Markdown',
@@ -1446,7 +1369,7 @@ class TestOldcollectionsController(TestController):
         assert response.content_type == 'application/json'
 
         # Attempt to create a form with some *invalid* files and tags and fail.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'test_create_title',
             'markupLanguage': u'Markdown',
@@ -1499,7 +1422,7 @@ class TestOldcollectionsController(TestController):
         speakerFirstName = speaker.firstName
 
         # Add a form for testing
-        params = self.createFormParams.copy()
+        params = self.formCreateParams.copy()
         params.update({
             'transcription': u'test_delete_transcription',
             'translations': [{'transcription': u'test_delete_translation', 'grammaticality': u''}]
@@ -1531,7 +1454,7 @@ class TestOldcollectionsController(TestController):
         ])
         extra_environ = {'test.authentication.id': myContributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Test Delete',
             'speaker': speakerId,
@@ -1687,7 +1610,7 @@ class TestOldcollectionsController(TestController):
         # the *default* contributor as the enterer.
         extra_environ = {'test.authentication.id': contributorId,
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Test Restricted Tag',
             'tags': [restrictedTagId]
@@ -1903,7 +1826,7 @@ class TestOldcollectionsController(TestController):
 
         extra_environ = {'test.authentication.role': u'contributor',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Created by the Contributor',
             'elicitor': contributorId,
@@ -1922,7 +1845,7 @@ class TestOldcollectionsController(TestController):
         # Update our collection (via request) as the default administrator
         extra_environ = {'test.authentication.role': u'administrator',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'url': u'find/me/here',
             'title': u'Updated by the Administrator',
@@ -1941,7 +1864,7 @@ class TestOldcollectionsController(TestController):
         # Finally, update our collection (via request) as the default contributor.
         extra_environ = {'test.authentication.role': u'contributor',
                          'test.applicationSettings': True}
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'Updated by the Contributor',
             'speaker': speakerId,
@@ -1984,7 +1907,7 @@ class TestOldcollectionsController(TestController):
         assert secondVersion['elicitor'] == None
         assert secondVersion['enterer']['id'] == contributorId
         assert secondVersion['modifier']['id'] == administratorId
-        assert secondVersion['datetimeModified'] == currentVersion['datetimeModified']
+        assert secondVersion['datetimeModified'] <= currentVersion['datetimeModified']
         assert secondVersion['speaker']['id'] == speakerId
         assert sorted([t['id'] for t in secondVersion['tags']]) == sorted(tagIds)
         assert secondVersion['files'] == []
@@ -2078,7 +2001,7 @@ class TestOldcollectionsController(TestController):
         assert byCollectionIdResp == byUUIDResp
 
         # Create a new restricted collection as an administrator.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'2nd collection restricted',
             'tags': [restrictedTagId]
@@ -2093,7 +2016,7 @@ class TestOldcollectionsController(TestController):
         assert collectionCount == 1
 
         # Update the just-created collection by removing the restricted tag.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'2nd collection unrestricted',
             'tags': []
@@ -2104,7 +2027,7 @@ class TestOldcollectionsController(TestController):
         resp = json.loads(response.body)
 
         # Now update it in another way.
-        params = self.createParams.copy()
+        params = self.collectionCreateParams.copy()
         params.update({
             'title': u'2nd collection unrestricted updated',
             'tags': []

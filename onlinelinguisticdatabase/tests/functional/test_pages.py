@@ -12,25 +12,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import re
-import datetime
 import logging
-import os
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-import webtest
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import Page
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
 
 log = logging.getLogger(__name__)
-
 
 ################################################################################
 # Functions for creating & retrieving test data
@@ -38,11 +30,6 @@ log = logging.getLogger(__name__)
 
 class TestPagesController(TestController):
     
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
-
     mdContents = u'\n'.join([
         'My Page',
         '=======',
@@ -54,23 +41,6 @@ class TestPagesController(TestController):
         '* Item 2',
         ''
     ])
-
-    createParams = {
-        'name': u'',
-        'heading': u'',
-        'markupLanguage': u'',
-        'content': u'',
-        'html': u''
-    }
-
-    # Clear all models in the database except Language; recreate the users.
-    def tearDown(self):
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
 
     #@nottest
     def test_index(self):
@@ -168,7 +138,7 @@ class TestPagesController(TestController):
         originalPageCount = Session.query(Page).count()
 
         # Create a valid one
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'page',
             'markupLanguage': u'Markdown',
@@ -185,7 +155,7 @@ class TestPagesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is empty and markup language is invalid
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'',
             'markupLanguage': u'markdownable',
@@ -200,7 +170,7 @@ class TestPagesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is too long
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'name' * 200,
             'markupLanguage': u'Markdown',
@@ -226,7 +196,7 @@ class TestPagesController(TestController):
         """Tests that PUT /pages/id updates the page with id=id."""
 
         # Create a page to update.
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'page',
             'markupLanguage': u'Markdown',
@@ -241,7 +211,7 @@ class TestPagesController(TestController):
 
         # Update the page
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'Awesome Page',
             'markupLanguage': u'Markdown',
@@ -276,7 +246,7 @@ class TestPagesController(TestController):
         """Tests that DELETE /pages/id deletes the page with id=id."""
 
         # Create a page to delete.
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'page',
             'markupLanguage': u'Markdown',
@@ -287,7 +257,6 @@ class TestPagesController(TestController):
         resp = json.loads(response.body)
         pageCount = Session.query(Page).count()
         pageId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Now delete the page
         response = self.app.delete(url('page', id=pageId), headers=self.json_headers,
@@ -321,7 +290,7 @@ class TestPagesController(TestController):
         """Tests that GET /pages/id returns the page with id=id or an appropriate error."""
 
         # Create a page to show.
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'page',
             'markupLanguage': u'Markdown',
@@ -330,9 +299,7 @@ class TestPagesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('pages'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        pageCount = Session.query(Page).count()
         pageId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Try to get a page using an invalid id
         id = 100000000000
@@ -367,7 +334,7 @@ class TestPagesController(TestController):
         """
 
         # Create a page to edit.
-        params = self.createParams.copy()
+        params = self.pageCreateParams.copy()
         params.update({
             'name': u'page',
             'markupLanguage': u'Markdown',
@@ -376,9 +343,7 @@ class TestPagesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('pages'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        pageCount = Session.query(Page).count()
         pageId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_page', id=pageId), status=401)

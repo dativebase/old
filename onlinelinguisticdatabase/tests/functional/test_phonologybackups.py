@@ -12,70 +12,33 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import datetime
 import logging
 import os
-import webtest
 import codecs
 import simplejson as json
 from nose.tools import nottest
-from base64 import encodestring
-from paste.deploy import appconfig
-from sqlalchemy.sql import desc
-from uuid import uuid4
-from onlinelinguisticdatabase.tests import *
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model import Phonology
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 
 log = logging.getLogger(__name__)
 
-
 class TestPhonologybackupsController(TestController):
 
-    createParams = {
-        'name': u'',
-        'description': u'',
-        'script': u''
-    }
-
-    config = appconfig('config:test.ini', relative_to='.')
-    here = config['here']
-    researchersPath = h.getOLDDirectoryPath('users', config=config)
-    phonologyPath = h.getOLDDirectoryPath('phonologies', config=config)
-    testPhonologiesPath = os.path.join(here, 'onlinelinguisticdatabase',
-                        'tests', 'data', 'phonologies')
-    testPhonologyScriptPath = os.path.join(testPhonologiesPath,
-                                           'test_phonology.script')
-    testPhonologyScript = h.normalize(
-        codecs.open(testPhonologyScriptPath, 'r', 'utf8').read())
-
-    extra_environ_view = {'test.authentication.role': u'viewer'}
-    extra_environ_contrib = {'test.authentication.role': u'contributor'}
-    extra_environ_admin = {'test.authentication.role': u'administrator'}
-    json_headers = {'Content-Type': 'application/json'}
+    def __init__(self, *args, **kwargs):
+        TestController.__init__(self, *args, **kwargs)
+        self.testPhonologyScript = h.normalize(
+            codecs.open(self.testPhonologyScriptPath, 'r', 'utf8').read())
 
     def tearDown(self):
-        # Clear all models in the database except Language; recreate the users.
-        h.clearAllModels()
-        h.destroyAllPhonologyDirectories()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
-        Session.add_all([administrator, contributor, viewer])
-        Session.commit()
+        TestController.tearDown(self, dirsToDestroy=['phonology'])
 
     #@nottest
     def test_index(self):
         """Tests that ``GET /phonologybackups`` behaves correctly.
         """
-
-        # Get the users
-        users = h.getUsers()
-        contributorId = [u for u in users if u.role==u'contributor'][0].id
-        administratorId = [u for u in users if u.role==u'administrator'][0].id
 
         # Define some extra_environs
         view = {'test.authentication.role': u'viewer', 'test.applicationSettings': True}
@@ -83,7 +46,7 @@ class TestPhonologybackupsController(TestController):
         admin = {'test.authentication.role': u'administrator', 'test.applicationSettings': True}
 
         # Create a phonology.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
@@ -94,10 +57,9 @@ class TestPhonologybackupsController(TestController):
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         phonologyCount = Session.query(Phonology).count()
-        phonologyDir = os.path.join(self.phonologyPath, 'phonology_%d' % resp['id'])
+        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
         phonologyDirContents = os.listdir(phonologyDir)
         phonologyId = resp['id']
-        phonologyUUID = resp['UUID']
         assert phonologyCount == 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
@@ -106,7 +68,7 @@ class TestPhonologybackupsController(TestController):
         assert resp['script'] == self.testPhonologyScript
 
         # Update the phonology as the admin to create a phonology backup.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology Renamed',
             'description': u'Covers a lot of the data.',
@@ -121,7 +83,7 @@ class TestPhonologybackupsController(TestController):
         assert phonologyCount == 1
 
         # Now Update the phonology as the default contributor to create a second backup.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology Renamed by Contributor',
             'description': u'Covers a lot of the data.',
@@ -142,7 +104,7 @@ class TestPhonologybackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Now update the phonology.
-        params = self.createParams.copy()
+        params = self.phonologyCreateParams.copy()
         params.update({
             'name': u'Phonology Updated',
             'description': u'Covers a lot of the data.',
