@@ -22,33 +22,33 @@
 import logging
 import datetime
 import simplejson as json
-from pylons import request, response, session, app_globals
-from pylons.decorators.rest import restrict
+from pylons import request, response, app_globals
 from formencode.validators import Invalid
-from sqlalchemy.sql import desc, asc
+from sqlalchemy.sql import asc
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import ApplicationSettingsSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import ApplicationSettings, Orthography, User
+from onlinelinguisticdatabase.model import ApplicationSettings
 
 log = logging.getLogger(__name__)
+
 
 class ApplicationsettingsController(BaseController):
     """Generate responses to requests on application settings resources.
 
     REST Controller styled on the Atom Publishing Protocol.
-    
+
     The most recently created application settings resource is considered to be
     the *active* one.
 
     .. note::
-    
+
        The ``h.jsonify`` decorator converts the return value of the methods to
        JSON.
 
     .. note::
-    
+
        Only administrators are authorized to create, update or delete
        application settings resources.
 
@@ -60,12 +60,13 @@ class ApplicationsettingsController(BaseController):
     def index(self):
         """Get all application settings resources.
 
-        :URL: ``GET /applicationsettings`` 
+        :URL: ``GET /applicationsettings``
         :returns: a list of all application settings resources.
 
         """
-        return h.eagerloadApplicationSettings(Session.query(ApplicationSettings))\
-                    .order_by(asc(ApplicationSettings.id)).all()
+        return h.eagerloadApplicationSettings(
+            Session.query(ApplicationSettings)).order_by(
+                asc(ApplicationSettings.id)).all()
 
     @h.jsonify
     @h.restrict('POST')
@@ -102,13 +103,13 @@ class ApplicationsettingsController(BaseController):
     def new(self):
         """Return the data necessary to create a new application settings.
 
-        :URL: ``GET /applicationsettings/new`` with optional query string parameters 
+        :URL: ``GET /applicationsettings/new`` with optional query string parameters
         :returns: A dictionary of lists of resources
 
         .. note::
-        
-           See :func:`getNewApplicationSettingsData` to understand how the query
-           string parameters can affect the contents of the lists in the
+
+           See :func:`getNewApplicationSettingsData` to understand how the 
+           query string parameters can affect the contents of the lists in the
            returned dictionary.
 
         """

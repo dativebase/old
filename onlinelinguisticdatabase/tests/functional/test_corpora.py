@@ -129,7 +129,6 @@ class TestCorporaController(TestController):
         or returns an appropriate error if the input is invalid.
 
         """
-
         # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
         def createFormFromIndex(index):
             form = model.Form()
@@ -142,11 +141,13 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
+        halfForms = forms[:5]
+        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in halfForms])
         formIds = [form.id for form in forms]
+        halfFormIds = [form.id for form in halfForms]
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -183,6 +184,7 @@ class TestCorporaController(TestController):
         corpusId = resp['id']
         newCorpusCount = Session.query(Corpus).count()
         corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
         corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert newCorpusCount == originalCorpusCount + 1
@@ -191,16 +193,15 @@ class TestCorporaController(TestController):
         assert corpusDirContents == []
         assert response.content_type == 'application/json'
         assert resp['content'] == testCorpusContent
-        assert sorted([f.id for f in corpus.forms]) == sorted(formIds)
+        assert corpusFormIds == sorted(formIds)
         assert resp['formSearch']['id'] == formSearchId
 
-        # Invalid because ``content`` refers to non-existent forms and ``formSearch``
-        # a non-existent form search.
+        # Invalid because ``formSearch`` refers to a non-existent form search.
         params = self.corpusCreateParams.copy()
         params.update({
             'name': u'Corpus Chi',
             'description': u'Covers a lot of the data, padre.',
-            'content': testCorpusContent + u'\nform[123456789]',
+            'content': testCorpusContent,
             'formSearch': 123456789
         })
         params = json.dumps(params)
@@ -210,8 +211,25 @@ class TestCorporaController(TestController):
         corpusCount = newCorpusCount
         newCorpusCount = Session.query(Corpus).count()
         assert newCorpusCount == corpusCount
-        assert u'There is no form with id 123456789.' in resp['errors']['forms']
         assert resp['errors']['formSearch'] == u'There is no form search with id 123456789.'
+        assert response.content_type == 'application/json'
+
+        # Invalid because ``content`` refers to non-existent forms
+        params = self.corpusCreateParams.copy()
+        params.update({
+            'name': u'Corpus Chi Squared',
+            'description': u'Covers a lot of the data, padre.',
+            'content': testCorpusContent + u'\nform[123456789]'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('corpora'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        corpusCount = newCorpusCount
+        newCorpusCount = Session.query(Corpus).count()
+        assert newCorpusCount == corpusCount
+        #assert u'There is no form with id 123456789.' in resp['errors']['forms']
+        assert resp['errors'] == 'At least one form id in the content was invalid.'
         assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
@@ -282,6 +300,33 @@ class TestCorporaController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
+        # Create a corpus whose forms are specified in the content value.
+        params = self.corpusCreateParams.copy()
+        params.update({
+            'name': u'Corpus by contents',
+            'description': u'Covers a lot of the data.',
+            'content': testCorpusContent
+        })
+        params = json.dumps(params)
+        originalCorpusCount = Session.query(Corpus).count()
+        response = self.app.post(url('corpora'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        corpusId = resp['id']
+        newCorpusCount = Session.query(Corpus).count()
+        corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
+        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
+        corpusDirContents = os.listdir(corpusDir)
+        assert newCorpusCount == originalCorpusCount + 1
+        assert resp['name'] == u'Corpus by contents'
+        assert resp['description'] == u'Covers a lot of the data.'
+        assert corpusDirContents == []
+        assert response.content_type == 'application/json'
+        assert resp['content'] == testCorpusContent
+        assert corpusFormIds == sorted(halfFormIds)
+        assert resp['formSearch'] == None
+
     #@nottest
     def test_new(self):
         """Tests that GET /corpora/new returns data needed to create a new corpus."""
@@ -292,7 +337,7 @@ class TestCorporaController(TestController):
         Session.commit()
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -382,7 +427,7 @@ class TestCorporaController(TestController):
         formIds = [form.id for form in forms]
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -412,6 +457,7 @@ class TestCorporaController(TestController):
         corpusId = resp['id']
         newCorpusCount = Session.query(Corpus).count()
         corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
         corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         originalDatetimeModified = resp['datetimeModified']
@@ -421,7 +467,7 @@ class TestCorporaController(TestController):
         assert corpusDirContents == []
         assert response.content_type == 'application/json'
         assert resp['content'] == testCorpusContent
-        assert sorted([f.id for f in corpus.forms]) == sorted(formIds)
+        assert corpusFormIds == sorted(formIds)
         assert resp['formSearch']['id'] == formSearchId
 
         # Update the corpus
@@ -493,7 +539,7 @@ class TestCorporaController(TestController):
         formIds = [form.id for form in forms]
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -521,6 +567,7 @@ class TestCorporaController(TestController):
         resp = json.loads(response.body)
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
         corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert resp['name'] == u'Corpus'
@@ -528,7 +575,7 @@ class TestCorporaController(TestController):
         assert corpusDirContents == []
         assert response.content_type == 'application/json'
         assert resp['content'] == testCorpusContent
-        assert sorted([f.id for f in corpus.forms]) == sorted(formIds)
+        assert corpusFormIds == sorted(formIds)
         assert resp['formSearch']['id'] == formSearchId
 
         # Now count the corpora and corpusBackups.
@@ -599,7 +646,7 @@ class TestCorporaController(TestController):
         formIds = [form.id for form in forms]
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -629,6 +676,7 @@ class TestCorporaController(TestController):
         corpusCount = Session.query(Corpus).count()
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
         corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert resp['name'] == u'Corpus'
@@ -636,7 +684,7 @@ class TestCorporaController(TestController):
         assert corpusDirContents == []
         assert response.content_type == 'application/json'
         assert resp['content'] == testCorpusContent
-        assert sorted([f.id for f in corpus.forms]) == sorted(formIds)
+        assert corpusFormIds == sorted(formIds)
         assert resp['formSearch']['id'] == formSearchId
         assert corpusCount == originalCorpusCount + 1
 
@@ -689,7 +737,7 @@ class TestCorporaController(TestController):
         formIds = [form.id for form in forms]
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -719,6 +767,7 @@ class TestCorporaController(TestController):
         corpusCount = Session.query(Corpus).count()
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
         corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         assert resp['name'] == u'Corpus'
@@ -726,7 +775,7 @@ class TestCorporaController(TestController):
         assert corpusDirContents == []
         assert response.content_type == 'application/json'
         assert resp['content'] == testCorpusContent
-        assert sorted([f.id for f in corpus.forms]) == sorted(formIds)
+        assert corpusFormIds == sorted(formIds)
         assert resp['formSearch']['id'] == formSearchId
         assert corpusCount == originalCorpusCount + 1
 
@@ -800,7 +849,7 @@ class TestCorporaController(TestController):
         formIds = [form.id for form in forms]
 
         # Create a form search model
-        query = {'filter': ['Form', 'transcription', 'regex', u'[a-g]{3,}']}
+        query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
         params = json.dumps({
             'name': u'form search',
             'description': u'This one\'s worth saving!',
@@ -830,6 +879,7 @@ class TestCorporaController(TestController):
         corpusCount = Session.query(Corpus).count()
         corpusId = resp['id']
         corpus = Session.query(Corpus).get(corpusId)
+        corpusFormIds = sorted([f.id for f in corpus.forms])
         corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
         corpusDirContents = os.listdir(corpusDir)
         originalDatetimeModified = resp['datetimeModified']
@@ -838,7 +888,7 @@ class TestCorporaController(TestController):
         assert corpusDirContents == []
         assert response.content_type == 'application/json'
         assert resp['content'] == testCorpusContent
-        assert sorted([f.id for f in corpus.forms]) == sorted(formIds)
+        assert corpusFormIds == sorted(formIds)
         assert resp['formSearch']['id'] == formSearchId
         assert corpusCount == originalCorpusCount + 1
 

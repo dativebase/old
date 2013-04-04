@@ -15,8 +15,8 @@
 """Corpus model"""
 
 from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 import logging
 log = logging.getLogger(name=__name__)

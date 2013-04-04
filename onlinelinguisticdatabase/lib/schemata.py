@@ -12,23 +12,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from formencode import All
 from formencode.variabledecode import NestedVariables
 from formencode.schema import Schema
 from formencode.validators import Invalid, FancyValidator, Int, DateConverter, \
     UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL, Number
 from formencode.foreach import ForEach
-from formencode.api import NoDefault
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import onlinelinguisticdatabase.lib.helpers as h
-from sqlalchemy.sql import and_, desc
+from sqlalchemy.sql import and_
 import onlinelinguisticdatabase.lib.bibtex as bibtex
 from pylons import app_globals
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import logging
 from base64 import b64decode
-import os, re
+import re
 import simplejson as json
 try:
     from magic import Magic
@@ -1056,6 +1054,21 @@ class MorphophonemicTranscriptionsSchema(Schema):
     filter_extra_fields = True
     transcriptions = ForEach(UnicodeString(), not_empty=True)
 
+class ValidFormReferences(FancyValidator):
+    messages = {'invalid': 'At least one form id in the content was invalid.'}
+
+    def _to_python(self, values, state):
+        if values.get('formSearch'):
+            values['forms'] = SQLAQueryBuilder().getSQLAQuery(
+                json.loads(values['formSearch'].search)).all()
+            return values
+        formReferences = list(set(h.getIdsOfFormsReferenced(values.get('content', u''))))
+        forms = Session.query(model.Form).filter(model.Form.id.in_(formReferences)).all()
+        if len(forms) != len(formReferences):
+            raise Invalid(self.message('invalid', state), values, state)
+        else:
+            values['forms'] = forms
+            return values
 
 class CorpusSchema(Schema):
     """CorpusSchema is a Schema for validating the data submitted to
@@ -1070,6 +1083,7 @@ class CorpusSchema(Schema):
         not changed ...
 
     """
+    chained_validators = [ValidFormReferences()]
     allow_extra_fields = True
     filter_extra_fields = True
     name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Corpus', attributeName='name')
@@ -1077,7 +1091,6 @@ class CorpusSchema(Schema):
     content = UnicodeString()
     tags = ForEach(ValidOLDModelObject(modelName='Tag'))
     formSearch = ValidOLDModelObject(modelName='FormSearch')
-    forms = ForEach(ValidOLDModelObject(modelName='Form'))
 
 class CorpusFormatSchema(Schema):
     """Validates the data submitted to ``PUT /corpora/writetofile/id`` and
@@ -1087,3 +1100,9 @@ class CorpusFormatSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     format = OneOf(h.corpusFormats.keys(), not_empty=True)
+
+class TGrep2PatternSchema(Schema):
+    allow_extra_fields = True
+    filter_extra_fields = True
+    tgrep2pattern = UnicodeString()
+

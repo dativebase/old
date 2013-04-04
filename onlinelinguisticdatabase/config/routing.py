@@ -59,6 +59,18 @@ def make_map(config):
 
     # CUSTOM ROUTES HERE
     map.connect('/collections/{id}/history', controller='oldcollections', action='history')
+    map.connect('/corpora/{id}', controller='corpora', action='search',
+                conditions=dict(method='SEARCH'))
+    map.connect('/corpora/{id}/history', controller='corpora', action='history')
+    map.connect('/corpora/{id}/search', controller='corpora', action='search',
+                conditions=dict(method='POST'))
+    map.connect('/corpora/{id}/servefile/{fileId}', controller='corpora',
+                action='servefile', conditions=dict(method='GET'))
+    map.connect('/corpora/{id}/tgrep2', controller='corpora',
+                action='tgrep2', conditions=dict(method=['POST', 'SEARCH']))
+    map.connect('/corpora/{id}/writetofile', controller='corpora',
+                action='writetofile', conditions=dict(method='PUT'))
+    map.connect('/corpora/new_search', controller='corpora', action='new_search')
     map.connect('/files/{id}/serve', controller='files', action='serve')
     map.connect('/files/{id}/serve_reduced', controller='files', action='serve_reduced')
     map.connect('/forms/{id}/history', controller='forms', action='history')
@@ -77,11 +89,6 @@ def make_map(config):
     map.connect('/phonologies/{id}/runtests', controller='phonologies',
                 action='runtests', conditions=dict(method='GET'))
     map.connect('/phonologies/{id}/history', controller='phonologies', action='history')
-    map.connect('/corpora/{id}/writetofile', controller='corpora',
-                action='writetofile', conditions=dict(method='PUT'))
-    map.connect('/corpora/{id}/history', controller='corpora', action='history')
-    map.connect('/corpora/{id}/servefile/{fileId}', controller='corpora',
-                action='servefile', conditions=dict(method='GET'))
 
     # SEARCH routes
     map = searchConnect(map, 'collectionbackups')

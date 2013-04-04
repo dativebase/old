@@ -37,15 +37,13 @@ from passlib.hash import pbkdf2_sha512
 from uuid import uuid4, UUID
 from mimetypes import guess_type
 import simplejson as json
+from simplejson.decoder import JSONDecodeError
 from sqlalchemy.sql import or_, not_, desc, asc
 from sqlalchemy.orm import subqueryload, joinedload
 import onlinelinguisticdatabase.model as model
-from onlinelinguisticdatabase.model import Form, FormBackup, File, Collection, CollectionBackup
+from onlinelinguisticdatabase.model import Form, File, Collection
 from onlinelinguisticdatabase.model.meta import Session, Model, Base
-import orthography
-from simplejson.decoder import JSONDecodeError
 from paste.deploy import appconfig
-from paste.deploy.converters import asbool
 from pylons import app_globals, session, url
 from formencode.schema import Schema
 from formencode.validators import Int, UnicodeString, OneOf
@@ -53,7 +51,7 @@ from markdown import Markdown
 from docutils.core import publish_parts
 from decorator import decorator
 from pylons.decorators.util import get_pylons
-from subprocess import Popen, PIPE, call
+from subprocess import Popen, PIPE
 
 import logging
 
@@ -224,6 +222,8 @@ def getModificationTime(path):
         return os.path.getmtime(path)
     except Exception:
         return None
+
+getFileModificationTime = getModificationTime
 
 def getConfig(**kwargs):
     """Try desperately to get a Pylons config object.  The best thing is if a
@@ -1372,7 +1372,7 @@ corpusFormats = {
     },
     'transcriptions only': {
         'extension': 'txt',
-        'sfx': '_transcriptions',
+        'suffix': '_transcriptions',
         'writer': lambda f: u'%s\n' % f.transcription
     }
 }
@@ -1754,9 +1754,12 @@ def compressFile(filePath):
 
     """
     with open(filePath, 'rb') as fi:
-        fo = gzip.open('%s.gz' % filePath, 'wb')
+        gzipPath = '%s.gz' % filePath
+        fo = gzip.open(gzipPath, 'wb')
         fo.writelines(fi)
         fo.close()
+        return gzipPath
+
 
 def prettyPrintBytes(numBytes):
     """Print an integer byte count to human-readable form.

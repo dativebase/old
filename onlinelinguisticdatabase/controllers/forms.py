@@ -32,7 +32,7 @@ from onlinelinguisticdatabase.lib.schemata import FormSchema, FormIdsSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Form, FormBackup, Translation, User, Collection
+from onlinelinguisticdatabase.model import Form, FormBackup, Collection
 from onlinelinguisticdatabase.controllers.oldcollections import updateCollectionByDeletionOfReferencedForm
 
 log = logging.getLogger(__name__)
