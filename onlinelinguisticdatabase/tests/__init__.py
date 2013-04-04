@@ -77,13 +77,13 @@ class TestController(TestCase):
             'create_reduced_size_file_copies', False))
         self.preferred_lossy_audio_format = config.get('preferred_lossy_audio_format', 'ogg')
         self.corporaPath = h.getOLDDirectoryPath('corpora', config=config)
-        self.testCorporaPath = os.path.join(self.here, 'onlinelinguisticdatabase',
-                            'tests', 'data', 'corpora')
+        self.testDatasetsPath = os.path.join(self.here, 'onlinelinguisticdatabase',
+                            'tests', 'data', 'datasets')
         self.testScriptsPath = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'scripts')
-        self.loremipsum100Path = os.path.join(self.testCorporaPath, 'loremipsum_100.txt')
-        self.loremipsum1000Path = os.path.join(self.testCorporaPath, 'loremipsum_1000.txt')
-        self.loremipsum10000Path = os.path.join(self.testCorporaPath, 'loremipsum_10000.txt')
+        self.loremipsum100Path = os.path.join(self.testDatasetsPath, 'loremipsum_100.txt')
+        self.loremipsum1000Path = os.path.join(self.testDatasetsPath , 'loremipsum_1000.txt')
+        self.loremipsum10000Path = os.path.join(self.testDatasetsPath, 'loremipsum_10000.txt')
         self.usersPath = h.getOLDDirectoryPath('users', config=config)
         self.phonologiesPath = h.getOLDDirectoryPath('phonologies', config=config)
         self.testPhonologiesPath = os.path.join(self.here, 'onlinelinguisticdatabase',
