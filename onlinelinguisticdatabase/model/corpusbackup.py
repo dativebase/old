@@ -45,7 +45,7 @@ class CorpusBackup(Base):
     name = Column(Unicode(255))
     type = Column(Unicode(255))
     description = Column(UnicodeText)
-    content = Column(UnicodeText)
+    content = Column(UnicodeText(length=2**31))
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
     formSearch = Column(UnicodeText)

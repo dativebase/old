@@ -1,4 +1,5 @@
 # Copyright 2013 Joel Dunham
+
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +16,7 @@
 import logging
 import os
 import simplejson as json
-from time import sleep
+from time import sleep, time
 from nose.tools import nottest
 from sqlalchemy.sql import and_
 from onlinelinguisticdatabase.tests import TestController, url, getFileSize, decompressGzipString
@@ -86,6 +87,8 @@ class TestCorporaLargeController(TestController):
         # Set ``loremipsumPath`` this to ``self.loremipsum100Path``,
         # ``self.loremipsum1000Path`` or ``self.loremipsum10000Path``.
         # WARNING: the larger ones will take a long time.
+        # Use the 10,000-sentence lorem ipsum dataset to ensure that
+        # very large corpora are handled correctly.
         loremipsumPath = self.loremipsum100Path 
 
         # Set ``viaRequest`` to ``True`` to create all forms via HTTP requests.
@@ -391,6 +394,7 @@ class TestCorporaLargeController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         unzippedCorpusFileContent = decompressGzipString(response.body)
         assert unzippedCorpusFileContent == corpusFileContent
+        assert response.content_type == u'application/x-gzip'
 
         # Now update the corpus by changing the form search, re-write-to-file
         # and make sure everything works.
@@ -509,61 +513,71 @@ class TestCorporaLargeController(TestController):
         assert os.path.exists(corpusTbkPath)
 
         # TGrep2-search the corpus-as-treebank
-        tgrep2pattern = json.dumps({'tgrep2pattern': u'S < NP-SBJ'})
+        # {'orderBy': {'orderByModel': '', 'orderByAttribute': '', 'orderByDirection': ''}}
+        # {'paginator': {'page': 0, 'itemsPerPage': 0}}
+        
+        tgrep2pattern = u'S < NP-SBJ'
+        query = {'paginator': {'page': 1, 'itemsPerPage': 10}, 'tgrep2pattern': tgrep2pattern}
+        jsonQuery = json.dumps(query)
         if not h.commandLineProgramInstalled('tgrep2'):
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
                     environ=self.extra_environ_admin, status=400)
             resp = json.loads(response.body)
             assert resp["error"] ==  "TGrep2 is not installed."
         else:
             # TGrep2-search the corpus-as-treebank
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
                     environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            for f in resp[:10]:
+            for f in resp['items']:
                 assert '(S ' in f['syntax'] and '(NP-SBJ ' in f['syntax']
 
             # A slightly more complex TGrep2 search
-            tgrep2pattern = json.dumps({'tgrep2pattern': u'S < NP-SBJ < DT'})
+            tgrep2pattern = u'S < NP-SBJ << DT'
+            query['tgrep2pattern'] = tgrep2pattern
+            jsonQuery = json.dumps(query)
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
                     environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            for f in resp[:10]:
+            for f in resp['items']:
                 assert ('(S ' in f['syntax'] and '(NP-SBJ ' in f['syntax'] and 
                     '(DT ' in f['syntax'])
 
             # Another TGrep2 search
-            tgrep2pattern = json.dumps({'tgrep2pattern': u'NP-SBJ < DT . VP'})
+            tgrep2pattern = u'NP-SBJ < DT . VP'
+            query['tgrep2pattern'] = tgrep2pattern
+            jsonQuery = json.dumps(query)
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
                     environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            for f in resp[:10]:
+            matchCount = resp['paginator']['count']
+            for f in resp['items']:
                 assert ('(NP-SBJ ' in f['syntax'] and '(DT ' in f['syntax'] and 
                     '(VP ' in f['syntax'])
 
             # Failed tgrep2 search with invalid corpus id.
             response = self.app.request(url(controller='corpora', action='tgrep2', id=123456789),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
                     environ=self.extra_environ_admin, status=404)
             resp = json.loads(response.body)
             assert resp['error'] == u'There is no corpus with id 123456789'
 
-            # Failed TGrep2 search: user unauthorized
-            tgrep2pattern = json.dumps({'tgrep2pattern': u'NP-SBJ < DT . VP'})
+            # Restricted user will not get all of the results.
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
-                    environ=self.extra_environ_view, status=403)
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
+                    environ=self.extra_environ_view)
             resp = json.loads(response.body)
-            assert resp == h.unauthorizedMsg
+            restrictedMatchCount = resp['paginator']['count']
+            assert isinstance(restrictedMatchCount, int) and restrictedMatchCount < matchCount
 
             # Failed TGrep2 search: bad JSON in request body
-            tgrep2pattern = json.dumps({'tgrep2pattern': u'NP-SBJ < DT . VP'})[:-2]
+            jsonQuery = jsonQuery[:-1]
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
-                    method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
+                    method='SEARCH', body=jsonQuery, headers=self.json_headers,
                     environ=self.extra_environ_admin, status=400)
             resp = json.loads(response.body)
             assert resp ==  h.JSONDecodeErrorResponse
@@ -574,17 +588,16 @@ class TestCorporaLargeController(TestController):
                     method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
                     environ=self.extra_environ_admin, status=400)
             resp = json.loads(response.body)
-            assert resp['errors']['tgrep2pattern'] == 'Missing value'
+            assert resp['errors']['tgrep2pattern'] == \
+                    "A tgrep2pattern attribute must be supplied and must have a unicode/string value"
 
             # Empty string TGrep2 pattern results in no forms being returned.
             tgrep2pattern = json.dumps({'tgrep2pattern': u''})
             response = self.app.request(url(controller='corpora', action='tgrep2', id=corpusId),
                     method='SEARCH', body=tgrep2pattern, headers=self.json_headers,
-                    environ=self.extra_environ_admin, status=[200, 400])
+                    environ=self.extra_environ_admin)
             resp = json.loads(response.body)
             assert resp == []
-
-        # TODO: search the corpus as a set of forms ... implement ...
 
     #@nottest
     def test_search(self):
@@ -603,7 +616,7 @@ class TestCorporaLargeController(TestController):
         longSentence = longSentences[0]
         lenLongSentences = len(longSentences)
         longSentenceIds = [f.id for f in longSentences]
-        longSentences = '\n'.join(['form[%d]' % id for id in longSentenceIds])
+        longSentences = u','.join(map(str, longSentenceIds))
 
         # Restrict one of the forms that will be in the corpus.
         restrictedTag = h.getRestrictedTag()
@@ -696,7 +709,7 @@ class TestCorporaLargeController(TestController):
             filter(model.Form.syntacticCategory.\
                 has(model.SyntacticCategory.name==u'S')).all()
         lenSentences = len(sentences)
-        sentences = '\n'.join(['form[%d]' % f.id for f in sentences])
+        sentences = u','.join(map(str, map(lambda f: f.id, sentences)))
 
         # Get ids of all sentences with more than 5 words.
         longSentences = Session.query(model.Form).\
@@ -704,9 +717,9 @@ class TestCorporaLargeController(TestController):
                 model.Form.syntacticCategory.has(model.SyntacticCategory.name==u'S'),
                 model.Form.transcription.op('regexp')(u'^([^ ]+ ){5}[^ ]+'))).all()
         lenLongSentences = len(longSentences)
-        longSentences = '\n'.join(['form[%d]' % f.id for f in longSentences])
+        longSentences = u','.join(map(str, map(lambda f: f.id, longSentences)))
 
-        content = '\n'.join([sentences, longSentences, longSentences, longSentences])
+        content = u','.join([sentences, longSentences, longSentences, longSentences])
         anticipatedLength = lenSentences + (3 * lenLongSentences)
         name = u'Corpus of sentences with 6+ word sentences repeated'
         description = u'Ordered by content field; duplicates of words with more than 6 words.'

@@ -1062,7 +1062,7 @@ class ValidFormReferences(FancyValidator):
             values['forms'] = SQLAQueryBuilder().getSQLAQuery(
                 json.loads(values['formSearch'].search)).all()
             return values
-        formReferences = list(set(h.getIdsOfFormsReferenced(values.get('content', u''))))
+        formReferences = list(set(h.getFormReferences(values.get('content', u''))))
         forms = Session.query(model.Form).filter(model.Form.id.in_(formReferences)).all()
         if len(forms) != len(formReferences):
             raise Invalid(self.message('invalid', state), values, state)
@@ -1100,9 +1100,4 @@ class CorpusFormatSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     format = OneOf(h.corpusFormats.keys(), not_empty=True)
-
-class TGrep2PatternSchema(Schema):
-    allow_extra_fields = True
-    filter_extra_fields = True
-    tgrep2pattern = UnicodeString()
 

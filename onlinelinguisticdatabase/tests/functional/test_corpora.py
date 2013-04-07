@@ -43,7 +43,7 @@ class TestCorporaController(TestController):
             corpus = model.Corpus()
             corpus.name = u'Corpus %d' % index
             corpus.description = u'A corpus with %d rules' % index
-            corpus.content = u'form[1]'
+            corpus.content = u'1'
             return corpus
         corpora = [createCorpusFromIndex(i) for i in range(1, 101)]
         Session.add_all(corpora)
@@ -142,9 +142,9 @@ class TestCorporaController(TestController):
         Session.commit()
         forms = h.getForms()
         halfForms = forms[:5]
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in halfForms])
         formIds = [form.id for form in forms]
         halfFormIds = [form.id for form in halfForms]
+        testCorpusContent = u','.join(map(str, halfFormIds))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -219,7 +219,7 @@ class TestCorporaController(TestController):
         params.update({
             'name': u'Corpus Chi Squared',
             'description': u'Covers a lot of the data, padre.',
-            'content': testCorpusContent + u'\nform[123456789]'
+            'content': testCorpusContent + u',123456789'
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
@@ -422,9 +422,9 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
-        newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
         formIds = [form.id for form in forms]
+        testCorpusContent = u','.join(map(str, formIds))
+        newTestCorpusContent = u','.join(map(str, formIds[:5]))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -535,8 +535,8 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
         formIds = [form.id for form in forms]
+        testCorpusContent = u','.join(map(str, formIds))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -642,8 +642,8 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
         formIds = [form.id for form in forms]
+        testCorpusContent = u','.join(map(str, formIds))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -733,8 +733,8 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
         formIds = [form.id for form in forms]
+        testCorpusContent = u','.join(map(str, formIds))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -843,10 +843,10 @@ class TestCorporaController(TestController):
         Session.add_all(forms)
         Session.commit()
         forms = h.getForms()
-        testCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms])
-        newTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:5]])
-        newestTestCorpusContent = '\n'.join(['form[%d]' % form.id for form in forms[:4]])
         formIds = [form.id for form in forms]
+        testCorpusContent = u','.join(map(str, formIds))
+        newTestCorpusContent = u','.join(map(str, formIds[:5]))
+        newestTestCorpusContent = u','.join(map(str, formIds[:4]))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}

@@ -738,8 +738,7 @@ def filterRestrictedModelsFromQuery(modelName, query, user):
         unrestrictedCondition = not_(model_.tags.like(u'%"name": "restricted"%'))
     else:
         entererCondition = model_.enterer == user
-        restrictedTag = getRestrictedTag()
-        unrestrictedCondition = not_(model_.tags.contains(restrictedTag))
+        unrestrictedCondition = not_(model_.tags.any(model.Tag.name==u'restricted'))
     return query.filter(or_(entererCondition, unrestrictedCondition))
 
 def getFormsUserCanAccess(user, paginator=None):
@@ -894,8 +893,8 @@ def getPaginatedQueryResults(query, paginator):
     }
 
 def addPagination(query, paginator):
-    if paginator and paginator.get('page') is not None and \
-    paginator.get('itemsPerPage') is not None:
+    if (paginator and paginator.get('page') is not None and
+        paginator.get('itemsPerPage') is not None):
         paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
         return getPaginatedQueryResults(query, paginator)
     else:
@@ -1201,10 +1200,10 @@ def dateString2date(dateString):
 # Miscellaneous Functions & Classes
 ################################################################################
 
-def getInt(int_):
+def getInt(input_):
     try:
-        return int(int_)
-    except (ValueError, TypeError):
+        return int(input_)
+    except Exception:
         return None
 
 class FakeForm(object):
@@ -1825,3 +1824,25 @@ def getLanguageObject(languageList):
     language.Ref_Name = languageList[6]
     language.Comment = languageList[7]
     return language
+
+
+# makefilter is a unicode filter factory -- taken from The Python Cookbook
+class Keeper(object):
+    """Filters everything from a unicode string except the characters in ``keep``."""
+    def __init__(self, keep):
+        self.keep = set(map(ord, keep))
+    def __getitem__(self, n):
+        if n not in self.keep:
+            return None
+        return unichr(n)
+    def __call__(self, s):
+        return unicode(s).translate(self)
+makefilter = Keeper
+
+def getFormReferences(content):
+    """Similar to ``getIdsOfFormsReferenced`` except that references are
+    assumed to be comma-delimited strings of digits -- all other text is
+    filtered out.
+    """
+    digits_comma_only = makefilter('1234567890,')
+    return filter(None, map(getInt, digits_comma_only(content).split(',')))

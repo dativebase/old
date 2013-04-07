@@ -30,7 +30,7 @@ from pylons import request, response, session, config
 from pylons.controllers.util import forward
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
-from onlinelinguisticdatabase.lib.schemata import CorpusSchema, CorpusFormatSchema, TGrep2PatternSchema
+from onlinelinguisticdatabase.lib.schemata import CorpusSchema, CorpusFormatSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
@@ -361,7 +361,7 @@ class CorporaController(BaseController):
 
         :URL: ``PUT /corpora/id/servefile/fileId``.
         :param str id: the ``id`` value of the corpus.
-        :param str id: the ``id`` value of the corpus file.
+        :param str fileId: the ``id`` value of the corpus file.
         :returns: the file data
 
         """
@@ -372,7 +372,7 @@ class CorporaController(BaseController):
                 corpusFilePath = os.path.join(getCorpusDirPath(corpus),
                                               '%s.gz' % corpusFile.filename)
                 if authorizedToAccessCorpusFile(session['user'], corpusFile):
-                    return forward(FileApp(corpusFilePath))
+                    return forward(FileApp(corpusFilePath, content_type='application/x-gzip'))
                 else:
                     response.status_int = 403
                     return json.dumps(h.unauthorizedMsg)
@@ -392,6 +392,8 @@ class CorporaController(BaseController):
         """Search the corpus-as-treebank using Tgrep2.
 
         :URL: ``SEARCH/POST /corpora/id/tgrep2``.
+        :Request body: JSON object with obligatory 'tgrep2pattern' attribute and
+            optional 'paginator' and 'orderBy' attributes.
         :param str id: the ``id`` value of the corpus.
         :returns: an array of forms as JSON objects
 
@@ -402,7 +404,7 @@ class CorporaController(BaseController):
         corpus = Session.query(Corpus).get(id)
         if corpus:
             try:
-                treebankCorpusFileObject = filter(lambda cf: cf.format == u'treebank', 
+                treebankCorpusFileObject = filter(lambda cf: cf.format == u'treebank',
                         corpus.files)[0]
                 corpusDirPath = getCorpusDirPath(corpus)
                 tgrep2CorpusFilePath = os.path.join(corpusDirPath,
@@ -413,26 +415,39 @@ class CorporaController(BaseController):
             if not os.path.exists(tgrep2CorpusFilePath):
                 response.status_int = 400
                 return {'error': 'Corpus %d has not been written to file as a treebank.'}
-            if not authorizedToAccessCorpusFile(session['user'], treebankCorpusFileObject):
-                response.status_int = 403
-                return h.unauthorizedMsg
+            #if not authorizedToAccessCorpusFile(session['user'], treebankCorpusFileObject):
+            #    response.status_int = 403
+            #    return h.unauthorizedMsg
             try:
-                schema = TGrep2PatternSchema()
-                values = json.loads(unicode(request.body, request.charset))
-                tgrep2pattern = schema.to_python(values)['tgrep2pattern']
+                requestParams = json.loads(unicode(request.body, request.charset))
+                try:
+                    tgrep2pattern = requestParams['tgrep2pattern']
+                    assert isinstance(tgrep2pattern, basestring)
+                except Exception:
+                    response.status_int = 400
+                    return {'errors': {'tgrep2pattern':
+                        'A tgrep2pattern attribute must be supplied and must have a unicode/string value'}}
                 tmpPath = os.path.join(corpusDirPath, '%s%s.txt' % (session['user'].username, h.generateSalt()))
                 with open(os.devnull, "w") as fnull:
                     with open(tmpPath, 'w') as stdout:
+                        # The -wu option causes TGrep2 to print only the root symbol of each matching tree
                         process = Popen(['tgrep2', '-c', tgrep2CorpusFilePath, '-wu', tgrep2pattern],
                             stdout=stdout, stderr=fnull)
                         process.communicate()
-                #tgrep2 -c corpus_1.tbk.t2c -wt 'S < NP-SBJ'
-                #return "1"
-                matchIds = map(getFormIdsFromTGrep2OutputLine, open(tmpPath, 'r'))
-                if matchIds:
-                    return Session.query(Form).filter(Form.id.in_(matchIds)).all()
-                return []
+                matchIds = filter(None, map(getFormIdsFromTGrep2OutputLine, open(tmpPath, 'r')))
                 os.remove(tmpPath)
+                if matchIds:
+                    query = h.eagerloadForm(Session.query(Form)).filter(Form.id.in_(matchIds))
+                    query = h.filterRestrictedModels('Form', query)
+                    query = h.addOrderBy(query, requestParams.get('orderBy'), self.queryBuilder)
+                    result = h.addPagination(query, requestParams.get('paginator'))
+                elif requestParams.get('paginator'):
+                    paginator = requestParams['paginator']
+                    paginator['count'] = 0
+                    result = {'paginator': paginator, 'items': []}
+                else:
+                    result = []
+                return result
             except h.JSONDecodeError:
                 response.status_int = 400
                 return h.JSONDecodeErrorResponse
@@ -468,7 +483,7 @@ def writeToFile(corpus, format_):
     :param corpus: a corpus model.
     :param str format_: the form of the file to be written.
     :returns: the corpus modified appropriately (assuming success)
-    :side effects: may write a file to disk and update/create a corpus file model.
+    :side effects: may write (a) file(s) to disk and update/create a corpus file model.
 
     .. note::
     
@@ -518,7 +533,7 @@ def writeToFile(corpus, format_):
                         restricted = True
                     f.write(writer(form))
         else:
-            formReferences = h.getIdsOfFormsReferenced(corpus.content)
+            formReferences = h.getFormReferences(corpus.content)
             forms = dict([(f.id, f) for f in corpus.forms])
             with codecs.open(corpusFilePath, 'w', 'utf8') as f:
                 for id in formReferences:
@@ -613,7 +628,7 @@ def createNewCorpus(data):
     corpus.UUID = unicode(uuid4())
     corpus.name = h.normalize(data['name'])
     corpus.description = h.normalize(data['description'])
-    corpus.content = h.normalize(data['content'])
+    corpus.content = data['content']
     corpus.formSearch = data['formSearch']
     corpus.forms = data['forms']
     corpus.tags = data['tags']
@@ -634,7 +649,7 @@ def updateCorpus(corpus, data):
     # Unicode Data
     changed = h.setAttr(corpus, 'name', h.normalize(data['name']), changed)
     changed = h.setAttr(corpus, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(corpus, 'content', h.normalize(data['content']), changed)
+    changed = h.setAttr(corpus, 'content', data['content'], changed)
     changed = h.setAttr(corpus, 'formSearch', data['formSearch'], changed)
 
     corpus.tags = data['tags']
@@ -719,3 +734,5 @@ def getDataForNewEdit(GET_params):
         'corpusFormats': lambda: h.corpusFormats.keys()
     }
     return h.getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes)
+
+
