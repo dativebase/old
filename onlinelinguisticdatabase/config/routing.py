@@ -93,6 +93,7 @@ def make_map(config):
     # SEARCH routes
     map = searchConnect(map, 'collectionbackups')
     map = searchConnect(map, 'collections', 'oldcollections')
+    map = searchConnect(map, 'corpusbackups')
     map = searchConnect(map, 'files')
     map = searchConnect(map, 'formbackups')
     map = searchConnect(map, 'forms')

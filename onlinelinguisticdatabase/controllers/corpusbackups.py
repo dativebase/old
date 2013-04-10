@@ -34,12 +34,12 @@ from onlinelinguisticdatabase.lib.base import BaseController
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import CollectionBackup
+from onlinelinguisticdatabase.model import CorpusBackup
 
 log = logging.getLogger(__name__)
 
 class CorpusbackupsController(BaseController):
-    """Generate responses to requests on collection backup resources.
+    """Generate responses to requests on corpus backup resources.
 
     REST Controller styled on the Atom Publishing Protocol.
     
@@ -50,22 +50,22 @@ class CorpusbackupsController(BaseController):
 
     .. note::
     
-        Collection backups are created when updating and deleting collections;
+        Corpus backups are created when updating and deleting corpora;
         they cannot be created directly and they should never be deleted.  This
-        controller facilitates searching and getting of collection backups only.
+        controller facilitates searching and getting of corpus backups only.
 
     """
 
-    queryBuilder = SQLAQueryBuilder('CollectionBackup', config=config)
+    queryBuilder = SQLAQueryBuilder('CorpusBackup', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
     def search(self):
-        """Return the list of collection backup resources matching the input
+        """Return the list of corpus backup resources matching the input
         JSON query.
 
-        :URL: ``SEARCH /collectionbackups`` (or ``POST /collectionbackups/search``)
+        :URL: ``SEARCH /corpusbackups`` (or ``POST /corpusbackups/search``)
         :request body: A JSON object of the form::
 
                 {"query": {"filter": [ ... ], "orderBy": [ ... ]},
@@ -78,8 +78,7 @@ class CorpusbackupsController(BaseController):
         try:
             jsonSearchParams = unicode(request.body, request.charset)
             pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            query = h.filterRestrictedModels('CollectionBackup', SQLAQuery)
+            query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
             return h.addPagination(query, pythonSearchParams.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
@@ -98,9 +97,9 @@ class CorpusbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def new_search(self):
-        """Return the data necessary to search the collection backup resources.
+        """Return the data necessary to search the corpus backup resources.
 
-        :URL: ``GET /collectionbackups/new_search``
+        :URL: ``GET /corpusbackups/new_search``
         :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
@@ -110,16 +109,15 @@ class CorpusbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def index(self):
-        """Get all collection backup resources.
+        """Get all corpus backup resources.
 
-        :URL: ``GET /collectionbackups`` 
-        :returns: a list of all collection backup resources.
+        :URL: ``GET /corpusbackups`` 
+        :returns: a list of all corpus backup resources.
 
         """
         try:
-            query = Session.query(CollectionBackup)
+            query = Session.query(CorpusBackup)
             query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = h.filterRestrictedModels(u'CollectionBackup', query)
             return h.addPagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
@@ -149,25 +147,25 @@ class CorpusbackupsController(BaseController):
     @h.restrict('GET')
     @h.authenticate
     def show(self, id):
-        """Return a collection backup.
+        """Return a corpus backup.
         
-        :URL: ``GET /collectionbackups/id``
-        :param str id: the ``id`` value of the collection backup to be returned.
-        :returns: a collection backup model object.
+        :URL: ``GET /corpusbackups/id``
+        :param str id: the ``id`` value of the corpus backup to be returned.
+        :returns: a corpus backup model object.
 
         """
-        collectionBackup = Session.query(CollectionBackup).get(id)
-        if collectionBackup:
+        corpusBackup = Session.query(CorpusBackup).get(id)
+        if corpusBackup:
             unrestrictedUsers = h.getUnrestrictedUsers()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, collectionBackup, unrestrictedUsers):
-                return collectionBackup
+            if h.userIsAuthorizedToAccessModel(user, corpusBackup, unrestrictedUsers):
+                return corpusBackup
             else:
                 response.status_int = 403
                 return h.unauthorizedMsg
         else:
             response.status_int = 404
-            return {'error': 'There is no collection backup with id %s' % id}
+            return {'error': 'There is no corpus backup with id %s' % id}
 
     @h.jsonify
     def edit(self, id, format='html'):

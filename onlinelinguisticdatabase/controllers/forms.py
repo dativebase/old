@@ -846,9 +846,10 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
 
         """
 
-        if bgc[0] in morphemeDelimiters and bgc[1] in morphemeDelimiters and \
-        bgc[2] in morphemeDelimiters:
+        if (bgc[0] in morphemeDelimiters and bgc[1] in morphemeDelimiters and
+            bgc[2] in morphemeDelimiters):
             return bgc[0]
+
         return bgcDelimiter.join(bgc)
 
     def morphemicAnalysisIsConsistent(**kwargs):
@@ -863,11 +864,11 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         same number of morphemes as its morpheme gloss counterpart.
 
         """
-        return kwargs['morphemeBreak'] != u'' and \
-        kwargs['morphemeGloss'] != u'' and \
-        len(kwargs['mbWords']) == len(kwargs['mgWords']) and \
-        [len(re.split(kwargs['morphemeSplitter'], mbw)) for mbw in kwargs['mbWords']] == \
-        [len(re.split(kwargs['morphemeSplitter'], mgw)) for mgw in kwargs['mgWords']]
+        return (kwargs['morphemeBreak'] != u'' and
+            kwargs['morphemeGloss'] != u'' and
+            len(kwargs['mbWords']) == len(kwargs['mgWords']) and
+            [len(re.split(kwargs['morphemeSplitter'], mbw)) for mbw in kwargs['mbWords']] ==
+            [len(re.split(kwargs['morphemeSplitter'], mgw)) for mgw in kwargs['mgWords']])
 
     def getCategoryFromPartialMatch(morphemeMatches, glossMatches):
         """Return a syntactic category name for a partially matched morpheme.
@@ -1120,8 +1121,8 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
                                                    morphemeGloss, syntacticCategoryString, bgcDelimiter)
     else:
         morphemeBreakIDs = morphemeGlossIDs = syntacticCategoryString = breakGlossCategory = None
-    return unicode(json.dumps(morphemeBreakIDs)), unicode(json.dumps(morphemeGlossIDs)), \
-           syntacticCategoryString, breakGlossCategory
+    return (unicode(json.dumps(morphemeBreakIDs)), unicode(json.dumps(morphemeGlossIDs)),
+           syntacticCategoryString, breakGlossCategory)
 
 
 

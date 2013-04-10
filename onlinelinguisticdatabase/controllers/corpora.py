@@ -652,18 +652,13 @@ def updateCorpus(corpus, data):
     changed = h.setAttr(corpus, 'content', data['content'], changed)
     changed = h.setAttr(corpus, 'formSearch', data['formSearch'], changed)
 
-    corpus.tags = data['tags']
-    corpus.forms = data['forms']
-
-    # Many-to-Many Data: tags & forms
-    # Update only if the user has made changes.
-    formsToAdd = [f for f in data['forms'] if f]
     tagsToAdd = [t for t in data['tags'] if t]
-    if set(formsToAdd) != set(corpus.forms):
-        corpus.forms = formsToAdd
-        changed = True
+    formsToAdd = [f for f in data['forms'] if f]
     if set(tagsToAdd) != set(corpus.tags):
         corpus.tags = tagsToAdd
+        changed = True
+    if set(formsToAdd) != set(corpus.forms):
+        corpus.forms = formsToAdd
         changed = True
 
     if changed:
