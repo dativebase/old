@@ -20,7 +20,7 @@ from uuid import uuid4
 from time import sleep
 from nose.tools import nottest
 from sqlalchemy.sql import desc
-from onlinelinguisticdatabase.tests import TestController, url
+from onlinelinguisticdatabase.tests import TestController, url, decompressGzipString
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
@@ -575,10 +575,11 @@ class TestPhonologiesController(TestController):
             else:
                 log.debug('Waiting for phonology %d to compile ...' % phonology1Id)
             sleep(1)
-
+        phonologyDirContents = os.listdir(phonologyDir)
         assert resp['compileSucceeded'] == True
         assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
-        assert phonologyBinaryFilename in os.listdir(phonologyDir)
+        assert phonologyBinaryFilename in phonologyDirContents
+        assert '%s.gz' % phonologyBinaryFilename in phonologyDirContents
         assert resp['modifier']['role'] == u'contributor'
 
         # Get the compiled foma script.
@@ -588,8 +589,8 @@ class TestPhonologiesController(TestController):
                'phonology_%d.foma' % phonology1Id)
         fomaFile = open(phonologyBinaryPath, 'rb')
         fomaFileContent = fomaFile.read()
-        #unzippedCorpusFileContent = decompressGzipString(response.body)
-        assert fomaFileContent == response.body
+        unzippedFomaFileContent = decompressGzipString(response.body)
+        assert fomaFileContent == unzippedFomaFileContent
         assert response.content_type == u'application/octet-stream'
 
         # Attempt to get the comopiled foma script of a non-existent phonology.
@@ -1224,7 +1225,7 @@ class TestPhonologiesController(TestController):
     #@nottest
     def test_history(self):
         """Tests that GET /phonologies/id/history returns the phonology with id=id and its previous incarnations.
-        
+
         The JSON object returned is of the form
         {'phonology': phonology, 'previousVersions': [...]}.
 

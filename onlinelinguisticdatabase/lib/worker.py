@@ -167,6 +167,7 @@ def compilePhonologyScript(phonologyId, phonologyDirPath, userId, timeout=30):
             if returncode == 0:
                 if os.path.isfile(phonologyBinaryPath) and \
                 phonologyBinaryMTime != h.getModificationTime(phonologyBinaryPath):
+                    h.compressFile(phonologyBinaryPath)
                     phonology.compileSucceeded = True
                     phonology.compileMessage = u'Compilation process terminated successfully and new binary file was written.'
                 else:

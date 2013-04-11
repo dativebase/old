@@ -307,9 +307,9 @@ class PhonologiesController(BaseController):
         phonology = Session.query(Phonology).get(id)
         if phonology:
             if h.fomaInstalled():
-                phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
-                if os.path.isfile(phonologyBinaryPath):
-                    return forward(FileApp(phonologyBinaryPath))
+                phonologyCompressedBinaryPath = '%s.gz' % getPhonologyFilePath(phonology, 'binary')
+                if os.path.isfile(phonologyCompressedBinaryPath):
+                    return forward(FileApp(phonologyCompressedBinaryPath))
                 else:
                     response.status_int = 400
                     return json.dumps({'error': 'Phonology %d has not been compiled yet.' % phonology.id})
