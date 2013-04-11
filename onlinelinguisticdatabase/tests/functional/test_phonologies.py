@@ -547,6 +547,13 @@ class TestPhonologiesController(TestController):
             assert resp['error'] == u'Foma and flookup are not installed.'
             return
 
+        # Attempt to get the compiled script before it has been created.
+        response = self.app.get(url(controller='phonologies', action='servecompiled',
+            id=phonology1Id), headers=self.json_headers, extra_environ=self.extra_environ_admin,
+            status=400)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'Phonology %d has not been compiled yet.' % phonology1Id
+
         # Compile the phonology's script
         response = self.app.put(url(controller='phonologies', action='compile',
                     id=phonology1Id), headers=self.json_headers,
@@ -573,6 +580,24 @@ class TestPhonologiesController(TestController):
         assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
         assert phonologyBinaryFilename in os.listdir(phonologyDir)
         assert resp['modifier']['role'] == u'contributor'
+
+        # Get the compiled foma script.
+        response = self.app.get(url(controller='phonologies', action='servecompiled',
+            id=phonology1Id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        phonologyBinaryPath = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id,
+               'phonology_%d.foma' % phonology1Id)
+        fomaFile = open(phonologyBinaryPath, 'rb')
+        fomaFileContent = fomaFile.read()
+        #unzippedCorpusFileContent = decompressGzipString(response.body)
+        assert fomaFileContent == response.body
+        assert response.content_type == u'application/octet-stream'
+
+        # Attempt to get the comopiled foma script of a non-existent phonology.
+        response = self.app.get(url(controller='phonologies', action='servecompiled',
+            id=123456789), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'There is no phonology with id 123456789'
 
         ########################################################################
         # Three types of scripts that won't compile

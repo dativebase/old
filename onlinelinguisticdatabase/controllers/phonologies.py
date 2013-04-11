@@ -20,23 +20,20 @@
 """
 
 import logging
-import datetime
-import re
 import simplejson as json
 import os
 from uuid import uuid4
 import codecs
-from subprocess import call, PIPE, Popen
+from subprocess import Popen
+from paste.fileapp import FileApp
+from pylons.controllers.util import forward
 from shutil import rmtree
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, session, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import PhonologySchema, MorphophonemicTranscriptionsSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Phonology, PhonologyBackup
 from onlinelinguisticdatabase.lib.worker import worker_q
@@ -297,10 +294,35 @@ class PhonologiesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no phonology with id %s' % id}
 
+    @h.restrict('GET')
+    @h.authenticateWithJSON
+    def servecompiled(self, id):
+        """Serve the compiled foma script of the phonology.
+
+        :URL: ``PUT /phonologies/servecompiled/id``
+        :param str id: the ``id`` value of a phonology.
+        :returns: a stream of bytes -- the compiled phonology script.  
+
+        """
+        phonology = Session.query(Phonology).get(id)
+        if phonology:
+            if h.fomaInstalled():
+                phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
+                if os.path.isfile(phonologyBinaryPath):
+                    return forward(FileApp(phonologyBinaryPath))
+                else:
+                    response.status_int = 400
+                    return json.dumps({'error': 'Phonology %d has not been compiled yet.' % phonology.id})
+            else:
+                response.status_int = 400
+                return json.dumps({'error': 'Foma and flookup are not installed.'})
+        else:
+            response.status_int = 404
+            return json.dumps({'error': 'There is no phonology with id %s' % id})
+
     @h.jsonify
     @h.restrict('PUT')
     @h.authenticate
-    @h.authorize(['administrator', 'contributor'])
     def applydown(self, id):
         """Apply-down (i.e., phonologize) the input in the request body using a phonology.
 
@@ -448,7 +470,7 @@ def savePhonologyScript(phonology):
 
     """
     try:
-        phonologyDirPath = createPhonologyDir(phonology)
+        createPhonologyDir(phonology)
         phonologyScriptPath = getPhonologyFilePath(phonology, 'script')
         phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
         phonologyCompilerPath = getPhonologyFilePath(phonology, 'compiler')

@@ -376,7 +376,7 @@ class TestCorporaLargeController(TestController):
         assert sentenceCount == corpusTbkFileLength
 
         # Retrieve the corpus file directly from the filesystem.
-        corpusFileObject = open(corpusTbkPath, 'r')
+        corpusFileObject = open(corpusTbkPath, 'rb')
         corpusFileContent = corpusFileObject.read()
 
         # Attempt to retrieve the gzipped corpus file via request as a restricted
@@ -478,7 +478,7 @@ class TestCorporaLargeController(TestController):
         assert sentenceCount == corpusTbkFileLength
 
         # Retrieve the corpus file directly from the filesystem.
-        corpusFileObject = open(corpusTbkPath, 'r')
+        corpusFileObject = open(corpusTbkPath, 'rb')
         corpusFileContent = corpusFileObject.read()
 
         # Attempt to retrieve the gzipped corpus file via request as a restricted
@@ -778,7 +778,7 @@ class TestCorporaLargeController(TestController):
         assert anticipatedLength == corpusTbkFileLength
 
         # Retrieve the corpus file directly from the filesystem.
-        corpusFileObject = open(corpusTbkPath, 'r')
+        corpusFileObject = open(corpusTbkPath, 'rb')
         corpusFileContent = corpusFileObject.read()
 
         # Attempt to retrieve the gzipped corpus file via request as a restricted
