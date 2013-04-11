@@ -21,15 +21,9 @@
 
 import logging
 import datetime
-import re
 import simplejson as json
-
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, session, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import FormSearchSchema
 import onlinelinguisticdatabase.lib.helpers as h
@@ -247,7 +241,6 @@ class FormsearchesController(BaseController):
         :returns: a form search model object.
 
         """
-
         formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
         if formSearch:
             return formSearch

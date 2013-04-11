@@ -1700,7 +1700,8 @@ def eagerloadFile(query):
         joinedload(model.File.forms))
 
 def eagerloadFormSearch(query):
-    return query.options(subqueryload(model.FormSearch.searcher))
+    #return query.options(subqueryload(model.FormSearch.enterer))
+    return query
 
 def eagerloadPhonology(query):
     return query.options(

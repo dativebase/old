@@ -45,10 +45,9 @@ def createTestFormSearches(n=100):
     for i in range(1, n + 1):
         fs = model.FormSearch()
 
-        fs.enterer = contributor.id
+        fs.enterer_id = contributor.id
         fs.search = unicode(json.dumps(
                 {'query': {'filter': ['Form', 'transcription', 'regex', '%d' % i]}}))
-        # name, description, search, searcher, datetimeModified
         if i % 2 == 0:
             fs.name = u'Form Search %d' % i
         else:
@@ -180,7 +179,8 @@ class TestFormsearchesController(TestController):
         assert newFormSearchCount == originalFormSearchCount + 1
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
-        assert json.loads(resp['search']) == query
+        assert resp['enterer']['firstName'] == u'Admin'
+        assert resp['search'] == query
         assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
@@ -276,7 +276,7 @@ class TestFormsearchesController(TestController):
         originalDatetimeModified = resp['datetimeModified']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
-        assert json.loads(resp['search']) == query
+        assert resp['search'] == query
 
         # Update the form search
         sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
@@ -328,7 +328,7 @@ class TestFormsearchesController(TestController):
         formSearchId = resp['id']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
-        assert json.loads(resp['search']) == query
+        assert resp['search'] == query
 
         # Now delete the formSearch
         response = self.app.delete(url('formsearch', id=formSearchId), headers=self.json_headers,
@@ -374,7 +374,7 @@ class TestFormsearchesController(TestController):
         formSearchId = resp['id']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
-        assert json.loads(resp['search']) == query
+        assert resp['search'] == query
 
         # Try to get a form search using an invalid id
         id = 100000000000
@@ -420,7 +420,7 @@ class TestFormsearchesController(TestController):
         formSearchId = resp['id']
         assert resp['name'] == u'form search'
         assert resp['description'] == u"This one's worth saving!"
-        assert json.loads(resp['search']) == query
+        assert resp['search'] == query
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_formsearch', id=formSearchId), status=401)
@@ -452,7 +452,6 @@ class TestFormsearchesController(TestController):
     #@nottest
     def test_search(self):
         """Tests that SEARCH /formsearches (a.k.a. POST /formsearches/search) correctly returns an array of formsearches based on search criteria."""
-
         # Create some formSearches (and other models) to search and add SEARCH to the list of allowable methods
         createTestData(100)
         self.addSEARCHToWebTestValidMethods()
@@ -464,7 +463,7 @@ class TestFormsearchesController(TestController):
         response = self.app.post(url('/formsearches/search'), jsonQuery,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [fs for fs in formSearches if u'2' in fs['search']]
+        resultSet = [fs for fs in formSearches if u'2' in json.dumps(fs['search'])]
         assert resp
         assert len(resp) == len(resultSet)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in resultSet])
@@ -483,7 +482,7 @@ class TestFormsearchesController(TestController):
         resp = json.loads(response.body)
         resultSet = [fs for fs in formSearches if
             re.search('[13456]', fs['name']) and not 'F' in fs['name'] and
-            (re.search('[1456]', fs['search']) or fs['datetimeModified'] > yesterdayTimestamp.isoformat())]
+            (re.search('[1456]', json.dumps(fs['search'])) or fs['datetimeModified'] > yesterdayTimestamp.isoformat())]
         assert resp
         assert len(resp) == len(resultSet)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in resultSet])
@@ -495,7 +494,7 @@ class TestFormsearchesController(TestController):
         response = self.app.request(url('formsearches'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [fs for fs in formSearches if fs['search'] and '3' in fs['search']]
+        resultSet = [fs for fs in formSearches if json.dumps(fs['search']) and '3' in json.dumps(fs['search'])]
         assert resp['paginator']['count'] == len(resultSet)
         assert len(resp['items']) == 5
         assert resp['items'][0]['id'] == resultSet[5]['id']
@@ -523,7 +522,7 @@ class TestFormsearchesController(TestController):
         response = self.app.request(url('formsearches'), method='SEARCH', body=jsonQuery,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len([fs for fs in formSearches if s['search'] and '3' in fs['search']])
+        assert len(resp) == len([fs for fs in formSearches if json.dumps(fs['search']) and '3' in json.dumps(fs['search'])])
 
         # Adding a 'count' key to the paginator object in the request will spare
         # the server from running query.count().  Note that the server will not

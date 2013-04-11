@@ -14,10 +14,12 @@
 
 """FormSearch model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
+import logging
+log = logging.getLogger(__name__)
 
 class FormSearch(Base):
 
@@ -31,6 +33,16 @@ class FormSearch(Base):
     name = Column(Unicode(255))
     search = Column(UnicodeText)    # The search params as JSON
     description = Column(UnicodeText)
-    searcher_id = Column(Integer, ForeignKey('user.id'))
-    searcher = relation('User')
+    enterer_id = Column(Integer, ForeignKey('user.id'))
+    enterer = relation('User')
     datetimeModified = Column(DateTime, default=now)
+
+    def getDict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'search': self.jsonLoads(self.search),
+            'description': self.description,
+            'enterer': self.getMiniUserDict(self.enterer),
+            'datetimeModified': self.datetimeModified
+        }
