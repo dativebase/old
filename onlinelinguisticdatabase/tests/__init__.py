@@ -85,6 +85,7 @@ class TestController(TestCase):
         self.loremipsum1000Path = os.path.join(self.testDatasetsPath , 'loremipsum_1000.txt')
         self.loremipsum10000Path = os.path.join(self.testDatasetsPath, 'loremipsum_10000.txt')
         self.usersPath = h.getOLDDirectoryPath('users', config=config)
+        self.morphologiesPath = h.getOLDDirectoryPath('morphologies', config=config)
         self.phonologiesPath = h.getOLDDirectoryPath('phonologies', config=config)
         self.testPhonologiesPath = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'phonologies')
@@ -235,6 +236,12 @@ class TestController(TestCase):
             'description': u'',
             'searcher': u''
         }
+        self.morphologyCreateParams = {
+            'name': u'',
+            'description': u'',
+            'lexiconCorpus': u'',
+            'rulesCorpus': u''
+        }
         self.orthographyCreateParams = {
             'name': u'',
             'orthography': u'',
@@ -339,9 +346,10 @@ class TestController(TestCase):
             h.clearDirectoryOfFiles(getattr(self, dirPath))
         for dirName in dirsToDestroy:
             {
-                'user': h.destroyAllUserDirectories,
-                'corpus': h.destroyAllCorpusDirectories,
-                'phonology': h.destroyAllPhonologyDirectories
+                'user': lambda: h.destroyAllDirectories('users', 'test.ini'),
+                'corpus': lambda: h.destroyAllDirectories('corpora', 'test.ini'),
+                'phonology': lambda: h.destroyAllDirectories('phonologies', 'test.ini'),
+                'morphology': lambda: h.destroyAllDirectories('morphologies', 'test.ini'),
             }.get(dirName, lambda: None)()
         if delGlobalAppSet:
             # Perform a vacuous GET just to delete app_globals.applicationSettings

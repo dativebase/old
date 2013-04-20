@@ -282,9 +282,10 @@ class PhonologiesController(BaseController):
                 phonologyDirPath = getPhonologyDirPath(phonology)
                 worker_q.put({
                     'id': h.generateSalt(),
-                    'func': 'compilePhonologyScript',
-                    'args': (phonology.id, phonologyDirPath, session['user'].id,
-                             h.phonologyCompileTimeout)
+                    'func': 'compileFomaScript',
+                    'args': {'modelName': u'Phonology', 'modelId': phonology.id,
+                        'scriptDirPath': phonologyDirPath, 'userId': session['user'].id,
+                        'verificationString': u'defined phonology: ', 'timeout': h.phonologyCompileTimeout}
                 })
                 return phonology
             else:
@@ -307,9 +308,9 @@ class PhonologiesController(BaseController):
         phonology = Session.query(Phonology).get(id)
         if phonology:
             if h.fomaInstalled():
-                phonologyCompressedBinaryPath = '%s.gz' % getPhonologyFilePath(phonology, 'binary')
-                if os.path.isfile(phonologyCompressedBinaryPath):
-                    return forward(FileApp(phonologyCompressedBinaryPath))
+                fomaFilePath = getPhonologyFilePath(phonology, 'binary')
+                if os.path.isfile(fomaFilePath):
+                    return forward(FileApp(fomaFilePath))
                 else:
                     response.status_int = 400
                     return json.dumps({'error': 'Phonology %d has not been compiled yet.' % phonology.id})

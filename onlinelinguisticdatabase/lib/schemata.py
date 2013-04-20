@@ -1101,3 +1101,15 @@ class CorpusFormatSchema(Schema):
     filter_extra_fields = True
     format = OneOf(h.corpusFormats.keys(), not_empty=True)
 
+class MorphologySchema(Schema):
+    """MorphologySchema is a Schema for validating the data submitted to
+    MorphologiesController (controllers/morphologies.py).
+
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Morphology', attributeName='name')
+    description = UnicodeString()
+    lexiconCorpus = ValidOLDModelObject(modelName='Corpus')
+    rulesCorpus = ValidOLDModelObject(modelName='Corpus', not_empty=True)
+

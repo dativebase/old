@@ -876,12 +876,12 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         :param list morphemeMatches: forms matching the morpheme's transcription.
         :param list glossMatches: forms matching the morpheme's gloss.
         :returns: the category name of the first morpheme match, else that of
-            the first gloss match, else ``u'?'``.
+            the first gloss match, else the value of ``h.unknownCategory``, i.e,. ``u'?'``.
 
         """
         return filter(None,
             [getattr(m.syntacticCategory, 'name', None) for m in morphemeMatches] +
-            [getattr(g.syntacticCategory, 'name', None) for g in glossMatches] + [u'?'])[0]
+            [getattr(g.syntacticCategory, 'name', None) for g in glossMatches] + [h.unknownCategory])[0]
 
     def getBreakGlossCategory(morphemeDelimiters, morphemeBreak, morphemeGloss,
                               syntacticCategoryString, bgcDelimiter):
@@ -1055,7 +1055,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         matchesFound[(morpheme, gloss)] = result
         return result, matchesFound
 
-    bgcDelimiter = kwargs.get('bgcDelimiter', u'|')     # The default delimiter for the breakGlossCategory field
+    bgcDelimiter = kwargs.get('bgcDelimiter', h.defaultDelimiter)     # The default delimiter for the breakGlossCategory field
     lexicalItems = kwargs.get('lexicalItems', [])
     deletedLexicalItems = kwargs.get('deletedLexicalItems', [])
     morphemeBreakIDs = []
@@ -1094,7 +1094,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
                         getattr(f.syntacticCategory, 'name', None)) for f in perfectMatches])
                     mgWordAnalysis.append([(f.id, f.morphemeBreak,
                         getattr(f.syntacticCategory, 'name', None)) for f in perfectMatches])
-                    scWordAnalysis[j * 2] = getattr(perfectMatches[0].syntacticCategory, 'name', u'?')
+                    scWordAnalysis[j * 2] = getattr(perfectMatches[0].syntacticCategory, 'name', h.unknownCategory)
                 else:
                     morphemeMatches, matchesFound = getPartialMatches(form, i, j, matchesFound, morpheme=morpheme,
                                         forceQuery=perfectMatches, lexicalItems=lexicalItems,

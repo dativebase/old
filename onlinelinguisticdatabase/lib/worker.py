@@ -15,16 +15,19 @@
 """Worker thread and Queue for the OLD.
 
 Worker threads are useful for executing long running tasks and returning to the
-user immediately.  
+user immediately.
 
 The worker can only run a callable that is a global in
-:mod:`onlinelinguisticdatabase.lib.worker`.  Example usage::
+:mod:`onlinelinguisticdatabase.lib.worker` and which takes keyword arguments. 
+Example usage::
 
     from onlinelinguisticdatabase.lib.worker import worker_q
     worker_q.put({
         'id': h.generateSalt(),
-        'func': 'compilePhonologyScript',
-        'args': (phonology.id, phonologyDirPath, session['user'].id)
+        'func': 'compileFomaScript',
+        'args': {'modelName': u'Phonology', 'modelId': phonology.id,
+            'scriptDirPath': phonologyDirPath, 'userId': session['user'].id,
+            'verificationString': u'defined phonology: ', 'timeout': h.phonologyCompileTimeout}
     })
 
 Cf. http://www.chrismoos.com/2009/03/04/pylons-worker-threads.
@@ -40,8 +43,8 @@ import logging
 import os
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Phonology, User
-from subprocess import Popen, PIPE, call
+import onlinelinguisticdatabase.model as model
+from subprocess import Popen, PIPE
 from signal import SIGKILL
 
 log = logging.getLogger(__name__)
@@ -54,7 +57,7 @@ class WorkerThread(threading.Thread):
         while True:
             msg = worker_q.get()
             try:
-                globals()[msg.get('func')](*msg.get('args'))
+                globals()[msg.get('func')](**msg.get('args'))
             except Exception, e:
                 log.warn('Unable to process in worker thread: ' + str(e))
             worker_q.task_done()
@@ -70,7 +73,21 @@ def start_worker():
 # Phonology Compile Functions
 ################################################################################
 
-def getPhonologyFilePath(phonology, phonologyDirPath, fileType='script'):
+def getFilePath(modelObject, scriptDirPath, fileType='script'):
+    """Return the path to a foma-based model's file of the given type.
+    
+    :param modelObject: a phonology or morphology model object.
+    :param str scriptDirPath: the absolute path to the directory that houses the foma 
+        script of the phonology or morphology
+    :param str fileType: one of 'script', 'binary', 'compiler' or 'log'.
+    :returns: an absolute path to the file of the supplied type for the model object given.
+
+    """
+    extMap = {'script': 'script', 'binary': 'foma', 'compiler': 'sh', 'log': 'log'}
+    return os.path.join(scriptDirPath,
+                '%s_%d.%s' % (modelObject.__tablename__, modelObject.id, extMap.get(fileType, 'script')))
+
+def getPhonologyFilePath_(phonology, phonologyDirPath, fileType='script'):
     """Return the path to a phonology's file of the given type.
     
     :param phonology: a phonology model object.
@@ -106,11 +123,9 @@ class Command(object):
 
         """
         def target():
-            #with open(os.devnull, "w") as fnull:
             with open(self.logpath or os.devnull, "w") as logfile:
                 self.process = Popen(self.cmd, stdout=logfile, stderr=logfile)
             self.process.communicate()
-            #self.stdout = self.process.communicate()[0]
         thread = threading.Thread(target=target)
         thread.start()
         thread.join(timeout)
@@ -139,7 +154,70 @@ class Command(object):
         stdout, stderr = p.communicate()
         return [int(p) for p in stdout.split()]
 
-def compilePhonologyScript(phonologyId, phonologyDirPath, userId, timeout=30):
+def compileFomaScript(**kwargs):
+    """Compile the foma script of an OLD model (a phonology or a morphology).
+
+    This function is called by the OLD worker.  It uses :class:`Command` to
+    cancel the compilation if it exceeds ``timeout`` seconds.
+
+    :param str kwargs['modelName']: the name of an OLD model, i.e., 'Phonology' or 'Morphology'.
+    :param int kwargs['modelId']: a model's ``id`` value.
+    :param str kwargs['scriptDirPath']: the absolute path to the model's script directory.
+    :param int kwargs['userId']: a user model's ``id`` value.
+    :param float/int kwargs['timeout']: how long to wait before terminating the compile process.
+    :returns: ``None``
+    :side effect: updates the values of the model object's ``datetimeCompiled``,
+        ``compileSucceeded``, ``compileMessage``, ``modifier`` and
+        ``datetimeModified`` attributes.
+
+    """
+    modelName = kwargs.get('modelName')
+    modelId = kwargs.get('modelId')
+    scriptDirPath = kwargs.get('scriptDirPath')
+    userId = kwargs.get('userId')
+    verificationString = kwargs.get('verificationString')
+    timeout = kwargs.get('timeout', 30)
+    try:
+        modelObject = Session.query(getattr(model, modelName)).get(modelId)
+        compilerPath = getFilePath(modelObject, scriptDirPath, 'compiler')
+        binaryPath = getFilePath(modelObject, scriptDirPath, 'binary')
+        logPath = getFilePath(modelObject, scriptDirPath, 'log')
+        binaryMTime = h.getModificationTime(binaryPath)
+        command = Command([compilerPath], logPath)
+        returncode, output = command.run(timeout=timeout)
+        if verificationString in output:
+            if returncode == 0:
+                if (os.path.isfile(binaryPath) and
+                    binaryMTime != h.getModificationTime(binaryPath)):
+                    modelObject.compileSucceeded = True
+                    modelObject.compileMessage = u'Compilation process terminated successfully and new binary file was written.'
+                else:
+                    modelObject.compileSucceeded = False
+                    modelObject.compileMessage = u'Compilation process terminated successfully yet no new binary file was written.'
+            else:
+                modelObject.compileSucceeded = False
+                modelObject.compileMessage = u'Compilation process failed.'
+        else:
+            modelObject.compileSucceeded = False
+            modelObject.compileMessage = u'Foma script is not a well-formed %s.' % modelName.lower()
+    except Exception:
+        modelObject.compileSucceeded = False
+        modelObject.compileMessage = u'Compilation attempt raised an error.'
+    if modelObject.compileSucceeded:
+        os.chmod(binaryPath, 0744)
+    else:
+        try:
+            os.remove(binaryPath)
+        except Exception:
+            pass
+    now = h.now()
+    modelObject.datetimeModified = now
+    modelObject.datetimeCompiled = now
+    modelObject.modifier_id = userId
+    Session.commit()
+
+
+def compilePhonologyScript_(phonologyId, phonologyDirPath, userId, timeout=30):
     """Compile the foma script of the phonology model.
 
     This function is called by the OLD worker.  It uses :class:`Command` to
@@ -165,9 +243,8 @@ def compilePhonologyScript(phonologyId, phonologyDirPath, userId, timeout=30):
         returncode, output = command.run(timeout=timeout)
         if 'defined phonology: ' in output:
             if returncode == 0:
-                if os.path.isfile(phonologyBinaryPath) and \
-                phonologyBinaryMTime != h.getModificationTime(phonologyBinaryPath):
-                    h.compressFile(phonologyBinaryPath)
+                if (os.path.isfile(phonologyBinaryPath) and
+                    phonologyBinaryMTime != h.getModificationTime(phonologyBinaryPath)):
                     phonology.compileSucceeded = True
                     phonology.compileMessage = u'Compilation process terminated successfully and new binary file was written.'
                 else:

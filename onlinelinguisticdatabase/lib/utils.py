@@ -196,7 +196,8 @@ def getOLDDirectoryPath(directoryName, **kwargs):
             u'reduced_files': os.path.join(u'files', u'reduced_files'),
             u'users': u'users',
             u'corpora': u'corpora',
-            u'phonologies': u'phonologies'
+            u'phonologies': u'phonologies',
+            u'morphologies': u'morphologies'
         }
         return os.path.join(store, map_[directoryName])
     except Exception:
@@ -209,8 +210,9 @@ def createOLDDirectories(**kwargs):
     :param kwargs['configFilename']: the name of a config file, e.g., "test.ini"
 
     """
-    [makeDirectorySafely(getOLDDirectoryPath(dn, **kwargs)) for dn in
-     ('files', 'reduced_files', 'users', 'corpora', 'phonologies')]
+    for directoryName in ('files', 'reduced_files', 'users', 'corpora', 'phonologies', 'morphologies'):
+        makeDirectorySafely(getOLDDirectoryPath(directoryName, **kwargs))
+
 
 def getModificationTime(path):
     """Return the modification time of the file or directory with ``path``.
@@ -264,17 +266,6 @@ def destroyUserDirectory(user, **kwargs):
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def destroyAllUserDirectories(**kwargs):
-    """Removes all directories from files/researchers/."""
-    try:
-        usersPath = getOLDDirectoryPath('users', **kwargs)
-        for name in os.listdir(usersPath):
-            path = os.path.join(usersPath, name)
-            if os.path.isdir(path):
-                rmtree(path)
-    except (TypeError, KeyError):
-        raise Exception('The config object was inadequate.')
-
 def renameUserDirectory(oldName, newName, **kwargs):
     try:
         oldPath = os.path.join(getOLDDirectoryPath('users', **kwargs), oldName)
@@ -286,27 +277,16 @@ def renameUserDirectory(oldName, newName, **kwargs):
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def destroyAllPhonologyDirectories(**kwargs):
-    """Remove all directories from ``<permanent_store>/phonologies``."""
+def destroyAllDirectories(directoryName, configFilename='test.ini'):
+    """Remove all subdirectories from ``<permanent_store>/directoryName``, e.g., all in /store/corpora/."""
     try:
-        phonologyPath = getOLDDirectoryPath('phonologies', **kwargs)
-        for name in os.listdir(phonologyPath):
-            path = os.path.join(phonologyPath, name)
+        dirPath = getOLDDirectoryPath(directoryName, configFilename=configFilename)
+        for name in os.listdir(dirPath):
+            path = os.path.join(dirPath, name)
             if os.path.isdir(path):
                 rmtree(path)
-    except (TypeError, KeyError):
-        raise Exception('The config object was inadequate.')
-
-def destroyAllCorpusDirectories(**kwargs):
-    """Remove all directories from ``<permanent_store>/corpora``."""
-    try:
-        corporaPath = getOLDDirectoryPath('corpora', **kwargs)
-        for name in os.listdir(corporaPath):
-            path = os.path.join(corporaPath, name)
-            if os.path.isdir(path):
-                rmtree(path)
-    except (TypeError, KeyError):
-        raise Exception('The config object was inadequate.')
+    except (TypeError, KeyError), e:
+        raise Exception('The config object was inadequate (%s).' % e)
 
 def makeDirectorySafely(path):
     """Create a directory and avoid race conditions.
@@ -1708,6 +1688,11 @@ def eagerloadPhonology(query):
         subqueryload(model.Phonology.enterer),
         subqueryload(model.Phonology.modifier))
 
+def eagerloadMorphology(query):
+    return query.options(
+        subqueryload(model.Morphology.enterer),
+        subqueryload(model.Morphology.modifier))
+
 def eagerloadUser(query):
     return query.options(
         #subqueryload(model.User.inputOrthography),
@@ -1734,6 +1719,7 @@ validationValues = (u'None', u'Warning', u'Error')
 # How long to wait (in seconds) before terminating a process that is trying to
 # compile a foma script.
 phonologyCompileTimeout = 30
+morphologyCompileTimeout = 30
 
 def getFileLength(filePath):
     """Return the number of lines in a file.
@@ -1847,3 +1833,12 @@ def getFormReferences(content):
     """
     digits_comma_only = makefilter('1234567890,')
     return filter(None, map(getInt, digits_comma_only(content).split(',')))
+
+# String to use when a morpheme's category cannot be determined
+unknownCategory = u'?'
+
+# Default delimiter: used to delimit break-gloss-category strings in the ``breakGlossCategory`` attribute.
+defaultDelimiter = u'|'
+
+# Rare delimiter: used to delimit morphemes shapes from glosses in foma lexica.
+rareDelimiter = u'\u2980'

@@ -16,7 +16,7 @@
 import logging
 import os
 import simplejson as json
-from time import sleep, time
+from time import sleep
 from nose.tools import nottest
 from sqlalchemy.sql import and_
 from onlinelinguisticdatabase.tests import TestController, url, getFileSize, decompressGzipString
@@ -69,14 +69,14 @@ class TestCorporaLargeController(TestController):
                 grant lock tables, update on old_test.* to 'old'@'localhost';
 
         .. warning::
-        
+
             Loading the .txt or .sql files with the ``viaRequest`` option set to
             ``True`` will take a very long time.  This might be an argument for
             separating the interface and logic components of the controllers so
             that a "core" HTTP-less OLD application could be exposed.  This
             would facilitate the creation of models with system-generated data
             and validation but without the HTTP overhead...
-            
+
         """
 
 
@@ -101,7 +101,6 @@ class TestCorporaLargeController(TestController):
         Session.add(applicationSettings)
         Session.commit()
 
-        # S				sentential	
         def createModel(line, categories, viaRequest=False):
             """Create a model (form or syncat) using the string in ``line``."""
             model = 'Form'
@@ -848,8 +847,8 @@ class TestCorporaLargeController(TestController):
         """Clean up after the tests."""
         # Destruction
         h.clearAllTables()
-        h.destroyAllUserDirectories()
-        h.destroyAllCorpusDirectories()
+        h.destroyAllDirectories(directoryName='users', configFilename='test.ini')
+        h.destroyAllDirectories(directoryName='corpora', configFilename='test.ini')
         # Creation
         languages = h.getLanguageObjects('test.ini', self.config)
         administrator = h.generateDefaultAdministrator()

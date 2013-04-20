@@ -20,7 +20,7 @@ from uuid import uuid4
 from time import sleep
 from nose.tools import nottest
 from sqlalchemy.sql import desc
-from onlinelinguisticdatabase.tests import TestController, url, decompressGzipString
+from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
@@ -579,7 +579,6 @@ class TestPhonologiesController(TestController):
         assert resp['compileSucceeded'] == True
         assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
         assert phonologyBinaryFilename in phonologyDirContents
-        assert '%s.gz' % phonologyBinaryFilename in phonologyDirContents
         assert resp['modifier']['role'] == u'contributor'
 
         # Get the compiled foma script.
@@ -589,8 +588,7 @@ class TestPhonologiesController(TestController):
                'phonology_%d.foma' % phonology1Id)
         fomaFile = open(phonologyBinaryPath, 'rb')
         fomaFileContent = fomaFile.read()
-        unzippedFomaFileContent = decompressGzipString(response.body)
-        assert fomaFileContent == unzippedFomaFileContent
+        assert fomaFileContent == response.body
         assert response.content_type == u'application/octet-stream'
 
         # Attempt to get the comopiled foma script of a non-existent phonology.
@@ -650,7 +648,7 @@ class TestPhonologiesController(TestController):
             sleep(1)
 
         assert resp['compileSucceeded'] == False
-        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert resp['compileMessage'] == u'Foma script is not a well-formed phonology.'
         assert phonologyBinaryFilename not in os.listdir(phonologyDir)
 
         # 2. Create a phonology whose script does not define a regex called "phonology"
@@ -698,7 +696,7 @@ class TestPhonologiesController(TestController):
             sleep(1)
 
         assert resp['compileSucceeded'] == False
-        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert resp['compileMessage'] == u'Foma script is not a well-formed phonology.'
         assert phonologyBinaryFilename not in os.listdir(phonologyDir)
 
         # 3. Create a phonology whose script is empty.
@@ -746,7 +744,7 @@ class TestPhonologiesController(TestController):
             sleep(1)
 
         assert resp['compileSucceeded'] == False
-        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert resp['compileMessage'] == u'Foma script is not a well-formed phonology.'
         assert phonologyBinaryFilename not in os.listdir(phonologyDir)
 
         ########################################################################
@@ -848,7 +846,7 @@ class TestPhonologiesController(TestController):
             sleep(3)
 
         assert resp['compileSucceeded'] == False
-        assert resp['compileMessage'] == u'Phonology script is not well-formed; maybe no "phonology" FST was defined (?).'
+        assert resp['compileMessage'] == u'Foma script is not a well-formed phonology.'
         assert phonologyBinaryFilename not in os.listdir(phonologyDir)
 
 

@@ -27,6 +27,7 @@ class Model(object):
 
     # Maps names of tables to the sets of attributes required for mini-dict creation
     tableName2coreAttributes = {
+        'corpus': ['id', 'name'],
         'corpusfile': ['id', 'filename', 'datetimeModified', 'format', 'restricted'],
         'elicitationmethod': ['id', 'name'],
         'file': ['id', 'name', 'filename', 'MIMEtype', 'size', 'url', 'lossyFilename'],

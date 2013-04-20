@@ -80,6 +80,11 @@ def make_map(config):
     map.connect('/login/authenticate', controller='login', action='authenticate')
     map.connect('/login/logout', controller='login', action='logout')
     map.connect('/login/email_reset_password', controller='login', action='email_reset_password')
+    map.connect('/morphologies/{id}/history', controller='morphologies', action='history')
+    map.connect('/morphologies/{id}/compile', controller='morphologies',
+                action='compile', conditions=dict(method='PUT'))
+    map.connect('/morphologies/{id}/servecompiled', controller='morphologies',
+                action='servecompiled', conditions=dict(method='GET'))
     map.connect('/phonologies/{id}/compile', controller='phonologies',
                 action='compile', conditions=dict(method='PUT'))
     map.connect('/phonologies/{id}/applydown', controller='phonologies',
@@ -129,6 +134,7 @@ def make_map(config):
     map.resource('formsearch', 'formsearches')
     map.resource('formbackup', 'formbackups')       # read-only
     map.resource('language', 'languages')           # read-only
+    map.resource('morphology', 'morphologies')
     map.resource('orthography', 'orthographies')
     map.resource('page', 'pages')
     map.resource('phonology', 'phonologies')

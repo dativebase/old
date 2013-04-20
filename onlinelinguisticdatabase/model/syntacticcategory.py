@@ -14,15 +14,18 @@
 
 """SyntacticCategory model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class SyntacticCategory(Base):
 
     __tablename__ = 'syntacticcategory'
     __table_args__ = {'mysql_charset': 'utf8'}
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
 
     def __repr__(self):
         return '<SyntacticCategory (%s)>' % self.id

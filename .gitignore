@@ -23,6 +23,9 @@ TODO.txt
 onlinelinguisticdatabase/tests/data/files/old_test_long.wav
 onlinelinguisticdatabase/tests/data/files/old_test_medium.wav
 
+# Ignore the Blackfoot MySQL dump file
+onlinelinguisticdatabase/tests/data/datasets/blackfoot_mysql.sql
+
 # The client-side JavaScript application should be kept separate, at least for now
 onlinelinguisticdatabase/public/coffee/
 onlinelinguisticdatabase/public/css/

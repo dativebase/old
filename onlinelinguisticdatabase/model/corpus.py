@@ -49,7 +49,6 @@ class Corpus(Base):
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    #content = Column(UnicodeText)
     content = Column(UnicodeText(length=2**31))
     enterer_id = Column(Integer, ForeignKey('user.id'))
     enterer = relation('User', primaryjoin='Corpus.enterer_id==User.id')
