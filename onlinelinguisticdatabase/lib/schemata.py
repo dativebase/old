@@ -1054,6 +1054,12 @@ class MorphophonemicTranscriptionsSchema(Schema):
     filter_extra_fields = True
     transcriptions = ForEach(UnicodeString(), not_empty=True)
 
+class MorphemeSequencesSchema(Schema):
+    """Validates input to ``morphologies/applydown/id``."""
+    allow_extra_fields = True
+    filter_extra_fields = True
+    morphemeSequences = ForEach(UnicodeString(), not_empty=True)
+
 class ValidFormReferences(FancyValidator):
     messages = {'invalid': 'At least one form id in the content was invalid.'}
 

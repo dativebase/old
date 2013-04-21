@@ -88,7 +88,7 @@ class TestMorphologiesController(TestController):
             ('aient', 'aient', '3PL.IMPV', 'third person plural imperfective', cats['AGR']),
 
             ('Les chiens nageaient.', 'le-s chien-s nage-aient', 'the-PL dog-PL swim-3PL.IMPV', 'The dogs were swimming.', cats['S']),
-            ('La tortue parlait', 'la tortue parle-ait', 'the turtle speak-3SG.IMPF', 'The turtle was speaking.', cats['S'])
+            ('La tortue parlait', 'la tortue parle-ait', 'the turtle speak-3SG.IMPV', 'The turtle was speaking.', cats['S'])
         )
 
         for tuple_ in dataset:
@@ -175,7 +175,6 @@ class TestMorphologiesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        secondMorphologyI = resp['id']
         assert resp['name'] == u'Rules corpus only'
         assert u'define morphology' in resp['script']
         assert u'(N)' in resp['script'] # cf. tortue
@@ -455,7 +454,7 @@ class TestMorphologiesController(TestController):
         """Tests that PUT /morphologies/id/compile compiles the foma script of the morphology with id.
 
         .. note::
-        
+
             Morphology compilation is accomplished via a worker thread and
             requests to /morphologies/id/compile return immediately.  When the
             script compilation attempt has terminated, the values of the
@@ -465,7 +464,7 @@ class TestMorphologiesController(TestController):
             in order to know when the compilation-tasked worker has finished.
 
         .. note::
-        
+
             Depending on system resources, the following tests may fail.  A fast
             system may compile the large FST in under 30 seconds; a slow one may
             fail to compile the medium one in under 30.
@@ -561,6 +560,74 @@ class TestMorphologiesController(TestController):
         assert resp['compileSucceeded'] == True
         assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
         assert morphologyBinaryFilename in os.listdir(morphologyDir)
+
+        # Test that PUT /morphologies/id/applydown and PUT /morphologies/id/applyup are working correctly.
+        # Note that the value of the ``transcriptions`` key can be a string or a list of strings.
+
+        # Test applydown with a valid form|gloss-form|gloss sequence.
+        morphemeSequence = u'chien%sdog-s%sPL' % (h.rareDelimiter, h.rareDelimiter)
+        params = json.dumps({'morphemeSequences': morphemeSequence})
+        response = self.app.put(url(controller='morphologies', action='applydown',
+                    id=morphology1Id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % morphology1Id)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert resp[morphemeSequence] == ['chien-s']
+
+        # Make sure the temporary morphologization files have been deleted.
+        assert not [fn for fn in morphologyDirContents if fn.startswith('inputs_')]
+        assert not [fn for fn in morphologyDirContents if fn.startswith('outputs_')]
+        assert not [fn for fn in morphologyDirContents if fn.startswith('apply_')]
+
+        # Test applydown with an invalid form|gloss-form|gloss sequence.
+        invalidMorphemeSequence = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rareDelimiter, h.rareDelimiter)
+        params = json.dumps({'morphemeSequences': invalidMorphemeSequence})
+        response = self.app.put(url(controller='morphologies', action='applydown',
+                    id=morphology1Id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % morphology1Id)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert resp[invalidMorphemeSequence] == [None]
+
+        # Test applydown with multiple morpheme sequences.
+        ms1 = u'chien%sdog-s%sPL' % (h.rareDelimiter, h.rareDelimiter)
+        ms2 = u'tombe%sfall-s%sPL' % (h.rareDelimiter, h.rareDelimiter)
+        params = json.dumps({'morphemeSequences': [ms1, ms2]})
+        response = self.app.put(url(controller='morphologies', action='applydown',
+                    id=morphology1Id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % morphology1Id)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert resp[ms1] == [u'chien-s']
+        assert resp[ms2] == [u'tombe-s']
+
+        # Test applyup
+        morphemeSequence = u'chien-s'
+        params = json.dumps({'morphemeSequences': morphemeSequence})
+        response = self.app.put(url(controller='morphologies', action='applyup',
+                    id=morphology1Id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % morphology1Id)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert resp[morphemeSequence] == ['chien%sdog-s%sPL' % (h.rareDelimiter, h.rareDelimiter)]
+
+        # Test applyup with multiple input sequences
+        ms1 = u'vache-s'
+        ms2 = u'cheval'
+        ms3 = u'vache-ait'
+        ms4 = u'tombe-ait'
+        params = json.dumps({'morphemeSequences': [ms1, ms2, ms3, ms4]})
+        response = self.app.put(url(controller='morphologies', action='applyup',
+                    id=morphology1Id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp[ms1] == ['vache%scow-s%sPL' % (h.rareDelimiter, h.rareDelimiter)]
+        assert resp[ms2] == ['cheval%shorse' % h.rareDelimiter]
+        assert resp[ms3] == [None]
+        assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rareDelimiter, h.rareDelimiter)]
 
     #@nottest
     def test_z_cleanup(self):

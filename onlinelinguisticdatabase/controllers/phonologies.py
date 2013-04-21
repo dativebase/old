@@ -533,25 +533,6 @@ def removePhonologyDirectory(phonology):
     except Exception:
         return None
 
-
-def fomaOutputFile2Dict(file_):
-    """Return the content of the foma output file ``file_`` as a dict.
-
-    :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
-    :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
-
-    """
-    result = {}
-    for line in file_:
-        line = line.strip()
-        if line:
-            i, o = line.split('\t')[:2]
-            try:
-                result[i].append(o)
-            except (KeyError, ValueError):
-                result[i] = [o]
-    return result
-
 def phonologize(inputs, phonology, phonologyBinaryPath, user):
     """Phonologize the inputs using the phonology's compiled script.
     
@@ -581,7 +562,7 @@ def phonologize(inputs, phonology, phonologyBinaryPath, user):
             p = Popen(applydownFilePath, shell=False, stdout=outfile, stderr=devnull)
     p.communicate()
     with codecs.open(outputsFilePath, 'r', 'utf8') as f:
-        result = fomaOutputFile2Dict(f)
+        result = h.fomaOutputFile2Dict(f)
     os.remove(inputsFilePath)
     os.remove(outputsFilePath)
     os.remove(applydownFilePath)

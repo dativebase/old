@@ -32,7 +32,7 @@ from shutil import rmtree
 from pylons import request, response, session, config
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
-from onlinelinguisticdatabase.lib.schemata import MorphologySchema
+from onlinelinguisticdatabase.lib.schemata import MorphologySchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
@@ -43,6 +43,13 @@ log = logging.getLogger(__name__)
 
 class MorphologiesController(BaseController):
     """Generate responses to requests on morphology resources.
+
+    A morphology, as here conceived, is an FST that is both a recognizer and a transducer, i.e.,
+    it recognizes only those sequences of morphemes that are form valid words and it maps sequences
+    of morphemes (in the general sense) to sequences of morpheme *forms*.  By a morpheme in the general
+    sense, I mean to refer to ordered pairs of morpheme form and morpheme gloss.  That is, an OLD 
+    morphology is an FST that maps something like 'chien|dog-s|PL' to 'chien-s' (and vice versa) and 
+    which does not recognize 's|PL-chien|dog'.
 
     REST Controller styled on the Atom Publishing Protocol.
 
@@ -327,6 +334,78 @@ class MorphologiesController(BaseController):
             response.status_int = 404
             return json.dumps({'error': 'There is no morphology with id %s' % id})
 
+    @h.jsonify
+    @h.restrict('PUT')
+    @h.authenticate
+    def applydown(self, id):
+        """Call foma apply down on the input in the request body using a morphology.
+
+        :URL: ``PUT /morphologies/applydown/id``
+        :param str id: the ``id`` value of the morphology that will be used.
+        :Request body: JSON object of the form ``{'transcriptions': [t1, t2, ...]}``.
+        :returns: if the morphology exists and foma is installed, a JSON object
+            of the form ``{t1: [p1t1, p2t1, ...], ...}`` where ``t1`` is a
+            transcription from the request body and ``p1t1``, ``p2t1``, etc. are
+            outputs of ``t1`` after apply down.
+
+        """
+        return self.apply(id, 'down')
+
+    @h.jsonify
+    @h.restrict('PUT')
+    @h.authenticate
+    def applyup(self, id):
+        """Call foma apply up on the input in the request body using a morphology.
+
+        :URL: ``PUT /morphologies/applyup/id``
+        :param str id: the ``id`` value of the morphology that will be used.
+        :Request body: JSON object of the form ``{'transcriptions': [t1, t2, ...]}``.
+        :returns: if the morphology exists and foma is installed, a JSON object
+            of the form ``{t1: [p1t1, p2t1, ...], ...}`` where ``t1`` is a
+            transcription from the request body and ``p1t1``, ``p2t1``, etc. are
+            outputs of ``t1`` after apply up.
+
+        """
+        return self.apply(id, 'up')
+
+    def apply(self, id, direction):
+        """Call foma apply in the direction of ``direction`` on the input in the request body using a morphology.
+
+        :param str id: the ``id`` value of the morphology that will be used.
+        :param str direction: the direction of foma application.
+        :Request body: JSON object of the form ``{'transcriptions': [t1, t2, ...]}``.
+        :returns: if the morphology exists and foma is installed, a JSON object
+            of the form ``{t1: [p1t1, p2t1, ...], ...}`` where ``t1`` is a
+            transcription from the request body and ``p1t1``, ``p2t1``, etc. are
+            outputs of ``t1`` after apply up/down.
+
+        """
+        morphology = Session.query(Morphology).get(id)
+        if morphology:
+            if h.fomaInstalled():
+                morphologyBinaryPath = getMorphologyFilePath(morphology, 'binary')
+                if os.path.isfile(morphologyBinaryPath):
+                    try:
+                        inputs = json.loads(unicode(request.body, request.charset))
+                        inputs = MorphemeSequencesSchema.to_python(inputs)
+                        return apply(direction, inputs['morphemeSequences'], morphology,
+                                                 morphologyBinaryPath, session['user'])
+                    except h.JSONDecodeError:
+                        response.status_int = 400
+                        return h.JSONDecodeErrorResponse
+                    except Invalid, e:
+                        response.status_int = 400
+                        return {'errors': e.unpack_errors()}
+                else:
+                    response.status_int = 400
+                    return {'error': 'Morphology %d has not been compiled yet.' % morphology.id}
+            else:
+                response.status_int = 400
+                return {'error': 'Foma and flookup are not installed.'}
+        else:
+            response.status_int = 404
+            return {'error': 'There is no morphology with id %s' % id}
+
 def getDataForNewEdit(GET_params):
     """Return the data needed to create a new morphology or edit one."""
     modelNameMap = {'corpora': 'Corpus'}
@@ -607,27 +686,10 @@ def removeMorphologyDirectory(morphology):
     except Exception:
         return None
 
-def fomaOutputFile2Dict(file_):
-    """Return the content of the foma output file ``file_`` as a dict.
+def apply(direction, inputs, morphology, morphologyBinaryPath, user):
+    """Foma-apply the inputs in the direction of ``direction`` using the morphology's compiled foma script.
 
-    :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
-    :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
-
-    """
-    result = {}
-    for line in file_:
-        line = line.strip()
-        if line:
-            i, o = line.split('\t')[:2]
-            try:
-                result[i].append(o)
-            except (KeyError, ValueError):
-                result[i] = [o]
-    return result
-
-def morphologize(inputs, morphology, morphologyBinaryPath, user):
-    """Morphologize the inputs using the morphology's compiled script.
-    
+    :param str direction: the direction in which to use the transducer
     :param list inputs: a list of morpho-phonemic transcriptions.
     :param morphology: a morphology model.
     :param str morphologyBinaryPath: an absolute path to a compiled morphology script.
@@ -641,25 +703,24 @@ def morphologize(inputs, morphology, morphologyBinaryPath, user):
             'inputs_%s_%s.txt' % (user.username, randomString))
     outputsFilePath = os.path.join(morphologyDirPath,
             'outputs_%s_%s.txt' % (user.username, randomString))
-    applydownFilePath = os.path.join(morphologyDirPath,
-            'applydown_%s_%s.sh' % (user.username, randomString))
+    applyFilePath = os.path.join(morphologyDirPath,
+            'apply_%s_%s.sh' % (user.username, randomString))
     with codecs.open(inputsFilePath, 'w', 'utf8') as f:
         f.write(u'\n'.join(inputs))
-    with codecs.open(applydownFilePath, 'w', 'utf8') as f:
-        f.write('#!/bin/sh\ncat %s | flookup -i %s' % (
-                inputsFilePath, morphologyBinaryPath))
-    os.chmod(applydownFilePath, 0744)
+    with codecs.open(applyFilePath, 'w', 'utf8') as f:
+        f.write('#!/bin/sh\ncat %s | flookup %s%s' % (
+            inputsFilePath, {'up': '', 'down': '-i '}.get(direction, '-i '), morphologyBinaryPath))
+    os.chmod(applyFilePath, 0744)
     with open(os.devnull, 'w') as devnull:
         with codecs.open(outputsFilePath, 'w', 'utf8') as outfile:
-            p = Popen(applydownFilePath, shell=False, stdout=outfile, stderr=devnull)
+            p = Popen(applyFilePath, shell=False, stdout=outfile, stderr=devnull)
     p.communicate()
     with codecs.open(outputsFilePath, 'r', 'utf8') as f:
-        result = fomaOutputFile2Dict(f)
+        result = h.fomaOutputFile2Dict(f)
     os.remove(inputsFilePath)
     os.remove(outputsFilePath)
-    os.remove(applydownFilePath)
+    os.remove(applyFilePath)
     return result
-
 
 def getTests(morphology):
     """Return any tests defined in a morphology's script as a dictionary."""

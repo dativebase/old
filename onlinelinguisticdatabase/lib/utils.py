@@ -1721,6 +1721,26 @@ validationValues = (u'None', u'Warning', u'Error')
 phonologyCompileTimeout = 30
 morphologyCompileTimeout = 30
 
+def fomaOutputFile2Dict(file_):
+    """Return the output of a foma apply request as a dictionary.
+
+    :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
+    :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
+
+    .. note::
+
+        The flookup foma utility returns '+?' when there is no output for a given 
+        input -- hence the replacement of '+?' with None below.
+
+    """
+    result = {}
+    for line in file_:
+        line = line.strip()
+        if line:
+            i, o = line.split('\t')[:2]
+            result.setdefault(i, []).append({u'+?': None}.get(o, o))
+    return result
+
 def getFileLength(filePath):
     """Return the number of lines in a file.
     
