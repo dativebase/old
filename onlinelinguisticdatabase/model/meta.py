@@ -13,7 +13,6 @@
 #  limitations under the License.
 
 """SQLAlchemy Metadata and Session object"""
-import simplejson as json
 import datetime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker

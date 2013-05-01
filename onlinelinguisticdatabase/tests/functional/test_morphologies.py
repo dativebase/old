@@ -14,6 +14,7 @@
 
 import logging
 import os
+from time import time
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
@@ -21,6 +22,7 @@ from sqlalchemy.sql import desc
 from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
+from subprocess import call
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
 
@@ -146,11 +148,11 @@ class TestMorphologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == name
         assert u'define morphology' in resp['script']
-        assert u'(N)' in resp['script'] # cf. tortue
-        assert u'(D)' in resp['script'] # cf. la
-        assert u'(N "-" PHI)' in resp['script'] # cf. chien-s
-        assert u'(D "-" PHI)' in resp['script'] # cf. le-s
-        assert u'(V "-" AGR)' in resp['script'] # cf. nage-aient, parle-ait
+        assert u'(NCat)' in resp['script'] # cf. tortue
+        assert u'(DCat)' in resp['script'] # cf. la
+        assert u'(NCat "-" PHICat)' in resp['script'] # cf. chien-s
+        assert u'(DCat "-" PHICat)' in resp['script'] # cf. le-s
+        assert u'(VCat "-" AGRCat)' in resp['script'] # cf. nage-aient, parle-ait
         assert u'g r e n o u i l l e "%sfrog":0' % h.rareDelimiter in resp['script']
         assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rareDelimiter in resp['script']
 
@@ -177,11 +179,11 @@ class TestMorphologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == u'Rules corpus only'
         assert u'define morphology' in resp['script']
-        assert u'(N)' in resp['script'] # cf. tortue
-        assert u'(D)' in resp['script'] # cf. la
-        assert u'(N "-" PHI)' in resp['script'] # cf. chien-s
-        assert u'(D "-" PHI)' in resp['script'] # cf. le-s
-        assert u'(V "-" AGR)' in resp['script'] # cf. nage-aient, parle-ait
+        assert u'(NCat)' in resp['script'] # cf. tortue
+        assert u'(DCat)' in resp['script'] # cf. la
+        assert u'(NCat "-" PHICat)' in resp['script'] # cf. chien-s
+        assert u'(DCat "-" PHICat)' in resp['script'] # cf. le-s
+        assert u'(VCat "-" AGRCat)' in resp['script'] # cf. nage-aient, parle-ait
         # Note the change in the following two assertions from above.
         assert u'g r e n o u i l l e "%sfrog":0' % h.rareDelimiter not in resp['script']
         assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rareDelimiter not in resp['script']
@@ -396,15 +398,15 @@ class TestMorphologiesController(TestController):
         resp = json.loads(response.body)
         assert morphology1Script != resp['script']
         assert u'define morphology' in resp['script']
-        assert u'(N)' in resp['script'] # cf. tortue
-        assert u'(D)' in resp['script'] # cf. la
-        assert u'(N "-" PHI)' in resp['script'] # cf. chien-s
-        assert u'(D "-" PHI)' in resp['script'] # cf. le-s
-        assert u'(V "-" AGR)' in resp['script'] # cf. nage-aient, parle-ait
+        assert u'(NCat)' in resp['script'] # cf. tortue
+        assert u'(DCat)' in resp['script'] # cf. la
+        assert u'(NCat "-" PHICat)' in resp['script'] # cf. chien-s
+        assert u'(DCat "-" PHICat)' in resp['script'] # cf. le-s
+        assert u'(VCat "-" AGRCat)' in resp['script'] # cf. nage-aient, parle-ait
         assert u'g r e n o u i l l e "%sfrog":0' % h.rareDelimiter in resp['script']
         assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rareDelimiter in resp['script']
-        assert u'(V "-" PHI)' in resp['script'] # THIS IS THE NEW PART
-        assert u'(V "-" PHI)' not in morphology1Script # THIS IS THE NEW PART
+        assert u'(VCat "-" PHICat)' in resp['script'] # THIS IS THE NEW PART
+        assert u'(VCat "-" PHICat)' not in morphology1Script # THIS IS THE NEW PART
 
     #@nottest
     def test_f_history(self):
@@ -630,10 +632,238 @@ class TestMorphologiesController(TestController):
         assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rareDelimiter, h.rareDelimiter)]
 
     #@nottest
+    def test_h_large_morphologies(self):
+        """Tests that morphology functionality works with large datasets.
+
+        .. note::
+
+            This test only works if MySQL is being used as the RDBMS for the test
+            *and* there is a file in 
+            ``onlinelinguisticdatabase/onlinelinguisticdatabase/tests/data/datasets/``
+            that is a MySQL dump file that drops, recreates and populates the form,
+            formbackup, user, tag, elicitationmethod, syntacticcategory, source and
+            translation tables.  The name of this file can be configured by setting 
+            the ``olddumpfile`` variable.  Note that no such dump file is provided
+            with the OLD source since the file used by the developer contains data
+            that cannot be publicly shared.
+
+        """
+
+        # If foma is not installed, exit.
+        if not h.fomaInstalled(forceCheck=True):
+            return
+
+        # Here we load a whole bunch of form (and auxiliary) data from the mysql dumpfile
+        # in the tests/data/datesets directory.
+
+        # Change the value of ``olddumpfile`` to use a different dumpfile in the ``datasets`` dir
+        olddumpfile = 'blaold_1.0a1_select_tables.sql'
+
+        olddumpfilePath = os.path.join(self.testDatasetsPath, olddumpfile)
+        if not os.path.isfile(olddumpfilePath):
+            return
+        config = h.getConfig(configFilename='test.ini')
+        SQLAlchemyURL = config['sqlalchemy.url']
+        if not SQLAlchemyURL.split(':')[0] == 'mysql':
+            return 
+        rdbms, username, password, db_name = SQLAlchemyURL.split(':')
+        username = username[2:]
+        password = password.split('@')[0]
+        db_name = db_name.split('/')[-1]
+        tmpscriptPath = os.path.join(self.testDatasetsPath, 'tmp.sh')
+        with open(tmpscriptPath, 'w') as tmpscript:
+            tmpscript.write('#!/bin/sh\nmysql -u %s -p%s %s < %s' % (username, password, db_name, olddumpfilePath))
+        os.chmod(tmpscriptPath, 0744)
+        with open(os.devnull, "w") as fnull:
+            call([tmpscriptPath], stdout=fnull, stderr=fnull)
+        os.remove(tmpscriptPath)
+
+        # Convert NULL syntacticCategoryString values to empty strings
+        # TODO: the function in morphologies that generates the script value will
+        # raise an exception if syntacticCategoryString is None -- deal with this ...
+        connection = Session.connection()
+        connection.execute("UPDATE form SET syntacticCategoryString='' WHERE syntacticCategoryString IS NULL;")
+
+        # Create a lexicon form search and corpus
+        # NOTE: I removed the syncat name "o" since, as a single character, it was causeing problems in Foma ...
+        lexicalSynCatNames = ['nan', 'nin', 'nar', 'nir', 'vai', 'vii', 'vta', 'vti', 'vrt', 'adt', 'dem',
+            'prev', 'med', 'fin', 'oth', 'und', 'pro', 'asp', 'ten', 'mod', 'agra', 'agrb', 'thm', 'whq',
+            'num', 'drt', 'dim', 'stp', 'PN', 'INT']
+        query = {'filter': ['Form', 'syntacticCategory', 'name', 'in', lexicalSynCatNames]}
+        params = self.formSearchCreateParams.copy()
+        params.update({
+            'name': u'Blackfoot morphemes',
+            'search': query
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('formsearches'), params, self.json_headers, self.extra_environ_admin)
+        lexiconFormSearchId = json.loads(response.body)['id']
+        params = self.corpusCreateParams.copy()
+        params.update({
+            'name': u'Corpus of Blackfoot morphemes',
+            'formSearch': lexiconFormSearchId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
+        lexiconCorpusId = json.loads(response.body)['id']
+
+        # Create a rules corpus
+        query = {'filter': ['or', [['Form', 'syntacticCategory', 'name', '=', u'S'],
+                                   ['Form', 'transcription', 'like', '% %']]]}
+        params = self.formSearchCreateParams.copy()
+        params.update({
+            'name': u'Find Blackfoot sentences',
+            'description': u'Returns all sentential forms',
+            'search': query
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('formsearches'), params, self.json_headers, self.extra_environ_admin)
+        rulesFormSearchId = json.loads(response.body)['id']
+        params = self.corpusCreateParams.copy()
+        params.update({
+            'name': u'Corpus of Blackfoot sentences',
+            'formSearch': rulesFormSearchId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
+        rulesCorpusId = json.loads(response.body)['id']
+
+        # Finally, create a morphology using the lexicon and rules corpora
+        name = u'Morphology of Blackfoot'
+        params = self.morphologyCreateParams.copy()
+        params.update({
+            'name': name,
+            'lexiconCorpus': lexiconCorpusId,
+            'rulesCorpus': rulesCorpusId
+        })
+        params = json.dumps(params)
+        t1 = time()
+        response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin)
+        t2 = time()
+        log.debug('Took %f seconds to create the morphology' % (t2 - t1))
+        resp = json.loads(response.body)
+        largeMorphologyId = resp['id']
+        assert resp['name'] == name
+        assert u'define morphology' in resp['script']
+
+        # Compile the morphology's script
+        morphologyDir = os.path.join(self.morphologiesPath, 'morphology_%d' % largeMorphologyId)
+        morphologyBinaryFilename = 'morphology_%d.foma' % largeMorphologyId
+        response = self.app.put(url(controller='morphologies', action='compile',
+                    id=largeMorphologyId), headers=self.json_headers,
+                    extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        datetimeCompiled = resp['datetimeCompiled']
+
+        # Poll ``GET /morphologies/largeMorphologyId`` until ``datetimeCompiled`` has
+        # changed.
+        # WARNING: it takes about 7 minutes on my machine for foma to compile this morphology
+        secondsElapsed = 0
+        wait = 10
+        while True:
+            response = self.app.get(url('morphology', id=largeMorphologyId),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if datetimeCompiled != resp['datetimeCompiled']:
+                log.debug('Compile attempt for morphology %d has terminated.' % largeMorphologyId)
+                break
+            else:
+                log.debug('Waiting for morphology %d to compile (%.2f minutes elapsed) ...' % (
+                    largeMorphologyId, (secondsElapsed / 60.0)))
+            sleep(wait)
+            secondsElapsed = secondsElapsed + 10
+        morphologyDirContents = os.listdir(morphologyDir)
+        log.debug(morphologyDirContents)
+        assert resp['compileSucceeded'] == True
+        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert morphologyBinaryFilename in morphologyDirContents
+        assert resp['modifier']['role'] == u'contributor'
+
+        # Get the compiled foma script.
+        response = self.app.get(url(controller='morphologies', action='servecompiled',
+            id=largeMorphologyId), headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        morphologyBinaryPath = os.path.join(self.morphologiesPath, 'morphology_%d' % largeMorphologyId,
+               'morphology_%d.foma' % largeMorphologyId)
+        fomaFile = open(morphologyBinaryPath, 'rb')
+        fomaFileContent = fomaFile.read()
+        assert fomaFileContent == response.body
+        assert response.content_type == u'application/octet-stream'
+
+        # Test that PUT /morphologies/id/applydown and PUT /morphologies/id/applyup are working correctly.
+        # Note that the value of the ``transcriptions`` key can be a string or a list of strings.
+        seqs = (
+            (
+                u'ipommo%stransfer.title.to-oki%sINV-wa%s3SG' % (h.rareDelimiter, h.rareDelimiter, h.rareDelimiter),
+                u'ipommo-oki-wa'
+            ),
+            (u'Joel%sJoel' % h.rareDelimiter, u'Joel')
+        )
+
+        # Test applydown with a valid morpheme sequence.
+        params = json.dumps({'morphemeSequences': seqs[0][0]})
+        response = self.app.put(url(controller='morphologies', action='applydown',
+                    id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % largeMorphologyId)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert seqs[0][1] in resp[seqs[0][0]]
+
+        # Make sure the temporary morphologization files have been deleted.
+        assert not [fn for fn in morphologyDirContents if fn.startswith('inputs_')]
+        assert not [fn for fn in morphologyDirContents if fn.startswith('outputs_')]
+        assert not [fn for fn in morphologyDirContents if fn.startswith('apply_')]
+
+        # Test applydown with an invalid form|gloss-form|gloss sequence.
+        invalidMorphemeSequence = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rareDelimiter, h.rareDelimiter)
+        params = json.dumps({'morphemeSequences': invalidMorphemeSequence})
+        response = self.app.put(url(controller='morphologies', action='applydown',
+                    id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % largeMorphologyId)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert resp[invalidMorphemeSequence] == [None]
+
+        # Test applydown with multiple morpheme sequences.
+        ms1 = seqs[0][0]
+        ms2 = seqs[1][0]
+        params = json.dumps({'morphemeSequences': [ms1, ms2]})
+        response = self.app.put(url(controller='morphologies', action='applydown',
+                    id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % largeMorphologyId)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert seqs[0][1] in resp[ms1]
+        assert seqs[1][1] in resp[ms2]
+
+        # Test applyup
+        params = json.dumps({'morphemeSequences': seqs[0][1]})
+        response = self.app.put(url(controller='morphologies', action='applyup',
+                    id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphologyDirPath = os.path.join(self.morphologiesPath,
+                                        'morphology_%d' % largeMorphologyId)
+        morphologyDirContents = os.listdir(morphologyDirPath)
+        assert seqs[0][0] in resp[seqs[0][1]]
+
+        # Test applyup with multiple input sequences
+        params = json.dumps({'morphemeSequences': [seqs[0][1], seqs[1][1]]})
+        response = self.app.put(url(controller='morphologies', action='applyup',
+                    id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert seqs[0][0] in resp[seqs[0][1]]
+        assert seqs[1][0] in resp[seqs[1][1]]
+
+    #@nottest
     def test_z_cleanup(self):
         """Clean up after the tests.
 
         """
 
-        TestController.tearDown(self, delGlobalAppSet=True,
+        TestController.tearDown(
+                self,
+                clearAllTables=True,
+                delGlobalAppSet=True,
                 dirsToDestroy=['user', 'morphology', 'corpus'])

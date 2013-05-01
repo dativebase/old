@@ -118,6 +118,9 @@ class MorphologiesController(BaseController):
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
+        except MorphologyScriptGenerationError, e:
+            response.status_int = 400
+            return {'error': e}
 
     @h.jsonify
     @h.restrict('GET')
@@ -172,6 +175,9 @@ class MorphologiesController(BaseController):
             except Invalid, e:
                 response.status_int = 400
                 return {'errors': e.unpack_errors()}
+            except MorphologyScriptGenerationError, e:
+                response.status_int = 400
+                return {'error': e}
         else:
             response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}
@@ -497,6 +503,9 @@ def saveMorphologyScript(morphology):
     except Exception:
         return None
 
+class MorphologyScriptGenerationError(Exception):
+    pass
+
 def generateMorphologyScript(morphology):
     """Generate a foma script representing a morphology.
 
@@ -595,18 +604,35 @@ def createLexiconScript(morphemes):
         not actually used -- the delimiter character is actually that defined in ``utils.rareDelimiter``
         which, by default, is U+2980 'TRIPLE VERTICAL BAR DELIMITER'.
 
+    .. warning::
+
+        Foma reserved symbols are escaped in morpheme transcriptions (cf. ``h.escapeFomaReservedSymbols``
+        below) and are removed from the names of defined regexes (cf. ``getValidFomaRegexName`` below).
+        If removing reserved symbols from a name reduces it to the empty string, an exception is raised.
+
     """
     delimiter =  h.rareDelimiter
     regexes = []
     for POS, data in sorted(morphemes.items()):
-        regex = [u'define %s [' % POS]
+        regex = [u'define %s [' % getValidFomaRegexName(POS)]
         lexicalItems = []
         for mb, mg in sorted(data):
-            lexicalItems.append(u'    %s "%s%s":0' % (u' '.join(list(mb)), delimiter, mg))
+            lexicalItems.append(u'    %s "%s%s":0' % (
+                u' '.join(map(h.escapeFomaReservedSymbols, list(mb))), delimiter, mg))
         regex.append(u' |\n'.join(lexicalItems))
         regex.append(u'];\n')
         regexes.append(u'\n'.join(regex))
     return u'\n'.join(regexes)
+
+def getValidFomaRegexName(candidate):
+    """Return the candidate foma regex name with all reserved symbols removed and suffixed
+    by "Cat".  This prevents conflicts between regex names and symbols in regexes.
+
+    """
+    name = h.deleteFomaReservedSymbols(candidate)
+    if not name:
+        raise Exception('The syntactic category name %s cannot be used as the name of a Foma regex since it contains only reserved symbols.' % name)
+    return u'%sCat' % name
 
 def posSequenceToFomaDisjunct(POSSequence):
     """Return a foma disjunct representing a POS sequence.
@@ -619,7 +645,7 @@ def posSequenceToFomaDisjunct(POSSequence):
     tmp = []
     for index, element in enumerate(POSSequence):
         if index % 2 == 0:
-            tmp.append(element)
+            tmp.append(getValidFomaRegexName(element))
         else:
             tmp.append('"%s"' % element)
     return u' '.join(tmp)
@@ -633,7 +659,7 @@ def createRulesScript(POSSequences):
     """
     regex = [u'define morphology (']
     disjuncts = []
-    for POSSequence in POSSequences:
+    for POSSequence in sorted(POSSequences):
         disjuncts.append(u'    (%s)' % posSequenceToFomaDisjunct(POSSequence))
     regex.append(u' |\n'.join(disjuncts))
     regex.append(u');\n')

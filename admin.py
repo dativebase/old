@@ -25,10 +25,16 @@ import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.lib.helpers as h
 
-conf = appconfig('config:test.ini', relative_to='.')
-load_environment(conf.global_conf, conf.local_conf)
 
 # forms = Session.query(model.Form).all()
 # etc. ...
 
-print type(h.dateString2date('2012-01-01'))
+class OLD(object):
+    def __init__(self, configFilename):
+        conf = appconfig('config:%s' % configFilename, relative_to='.')
+        load_environment(conf.global_conf, conf.local_conf)
+        self.config = config
+        self.Session = Session
+        self.model = model
+        self.h = h
+

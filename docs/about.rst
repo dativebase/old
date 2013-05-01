@@ -84,9 +84,9 @@ Core features
    morphemes, phrase-morpheme auto-linking, etc.)
 #. Resource search, i.e., open-ended, nested boolean search with substring,
    exact and regular expression matches against specified fields.
-#. (Linguistic analysis: phonology & corpora specification, automatic
+#. Linguistic analysis: phonology & corpora specification, automatic
    morphological modeling and morphological parser creation, syntactic parser
-   specification & generation.)
+   specification & generation.
 
 
 Technologies

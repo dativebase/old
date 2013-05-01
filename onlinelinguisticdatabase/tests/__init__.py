@@ -331,19 +331,24 @@ class TestController(TestCase):
         }
 
     def tearDown(self, **kwargs):
-        # Default tearDown
-        h.clearAllModels()
+        clearAllTables = kwargs.get('clearAllTables', False)
+        dirsToClear = kwargs.get('dirsToClear', [])
+        delGlobalAppSet = kwargs.get('delGlobalAppSet', False)
+        dirsToDestroy = kwargs.get('dirsToDestroy', [])
+
+        if clearAllTables:
+            h.clearAllTables(['language'])
+        else:
+            h.clearAllModels()
         administrator = h.generateDefaultAdministrator()
         contributor = h.generateDefaultContributor()
         viewer = h.generateDefaultViewer()
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
-        # Configurable teardown
-        dirsToClear = kwargs.get('dirsToClear', [])
-        delGlobalAppSet = kwargs.get('delGlobalAppSet', False)
-        dirsToDestroy = kwargs.get('dirsToDestroy', [])
+
         for dirPath in dirsToClear:
             h.clearDirectoryOfFiles(getattr(self, dirPath))
+
         for dirName in dirsToDestroy:
             {
                 'user': lambda: h.destroyAllDirectories('users', 'test.ini'),
@@ -351,6 +356,7 @@ class TestController(TestCase):
                 'phonology': lambda: h.destroyAllDirectories('phonologies', 'test.ini'),
                 'morphology': lambda: h.destroyAllDirectories('morphologies', 'test.ini'),
             }.get(dirName, lambda: None)()
+
         if delGlobalAppSet:
             # Perform a vacuous GET just to delete app_globals.applicationSettings
             # to clean up for subsequent tests.

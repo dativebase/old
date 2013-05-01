@@ -602,8 +602,8 @@ def createNewForm(data):
     # We add the form first to get an ID so that monomorphemic Forms can be
     # self-referential.
     Session.add(form)
-    form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString, form.breakGlossCategory = \
-                                                        compileMorphemicAnalysis(form)
+    (form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString,
+        form.breakGlossCategory, cache) = compileMorphemicAnalysis(form)
     return form
 
 def updateForm(form, data):
@@ -681,8 +681,8 @@ def updateForm(form, data):
         changed = True
 
     # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
-    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory = \
-                                                        compileMorphemicAnalysis(form)
+    (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString,
+        breakGlossCategory, cache) = compileMorphemicAnalysis(form)
 
     changed = h.setAttr(form, 'morphemeBreakIDs', morphemeBreakIDs, changed)
     changed = h.setAttr(form, 'morphemeGlossIDs', morphemeGlossIDs, changed)
@@ -712,8 +712,8 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
 
     """
     changed = False
-    morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory = \
-        compileMorphemicAnalysis(form, validDelimiters, **kwargs)
+    (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString,
+        breakGlossCategory, cache) = compileMorphemicAnalysis(form, validDelimiters, **kwargs)
     changed = h.setAttr(form, 'morphemeBreakIDs', morphemeBreakIDs, changed)
     changed = h.setAttr(form, 'morphemeGlossIDs', morphemeGlossIDs, changed)
     changed = h.setAttr(form, 'syntacticCategoryString', syntacticCategoryString, changed)
@@ -721,8 +721,8 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
     if changed:
         form.datetimeModified = h.now()
         form.modifier = session['user']
-        return form
-    return changed
+        return form, cache
+    return changed, cache
 
 def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
     """Update the morphological analysis-related attributes of a list of form models.
@@ -744,7 +744,7 @@ def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
     updatedFormIds = []
     for form in forms:
         formDict = form.getDict()
-        form = updateMorphemeReferencesOfForm(form, validDelimiters, **kwargs)
+        form, kwargs['cache'] = updateMorphemeReferencesOfForm(form, validDelimiters, **kwargs)
         # form will be False if there are no changes.
         if form:
             backupForm(formDict)
@@ -771,7 +771,7 @@ def compileMorphemicAnalysis(form, morphemeDelimiters=None, **kwargs):
     except Exception, e:
         log.debug('compileMorphemicAnalysis raised an error (%s) on "%s"/"%s".' % (
             e, form.morphemeBreak, form.morphemeGloss))
-        return None, None, None, None
+        return None, None, None, None, {}
 
 def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
     """Generate values fo the morphological analysis-related attributes of a form model.
@@ -789,7 +789,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
     For each morpheme detected in the ``form``, search the database for forms
     whose ``morphemeBreak`` value matches the morpheme's phonemic form and whose
     ``morphemeGloss`` value matches the morpheme's gloss.  If a perfect match is
-    not found, searc the database for forms matching just the phonemic form or
+    not found, search the database for forms matching just the phonemic form or
     just the gloss.
 
     Matching forms are represented as triples where the first element is the
@@ -1058,6 +1058,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
     bgcDelimiter = kwargs.get('bgcDelimiter', h.defaultDelimiter)     # The default delimiter for the breakGlossCategory field
     lexicalItems = kwargs.get('lexicalItems', [])
     deletedLexicalItems = kwargs.get('deletedLexicalItems', [])
+    matchesFound = kwargs.get('cache', {})   # temporary store -- eliminates redundant queries & processing -- updated as a byproduct of getPerfectMatches and getPartialMatches
     morphemeBreakIDs = []
     morphemeGlossIDs = []
     syntacticCategoryString = []
@@ -1073,7 +1074,6 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
     if morphemicAnalysisIsConsistent(morphemeDelimiters=morphemeDelimiters,
         morphemeBreak=morphemeBreak, morphemeGloss=morphemeGloss, mbWords=mbWords,
         mgWords=mgWords, morphemeSplitter=morphemeSplitter):
-        matchesFound = {}   # temporary store -- eliminates redundant queries & processing -- updated as a byproduct of getPerfectMatches and getPartialMatches
         for i in range(len(mbWords)):
             mbWordAnalysis = []
             mgWordAnalysis = []
@@ -1122,7 +1122,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
     else:
         morphemeBreakIDs = morphemeGlossIDs = syntacticCategoryString = breakGlossCategory = None
     return (unicode(json.dumps(morphemeBreakIDs)), unicode(json.dumps(morphemeGlossIDs)),
-           syntacticCategoryString, breakGlossCategory)
+           syntacticCategoryString, breakGlossCategory, matchesFound)
 
 
 

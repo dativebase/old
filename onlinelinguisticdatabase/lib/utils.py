@@ -854,11 +854,12 @@ def clearAllModels(retain=['Language']):
                 Session.delete(model)
     Session.commit()
 
-def clearAllTables():
+def clearAllTables(retain=[]):
     """Like ``clearAllModels`` above, except **much** faster."""
     for table in reversed(Base.metadata.sorted_tables):
-        Session.execute(table.delete())
-        Session.commit()
+        if table.name not in retain:
+            Session.execute(table.delete())
+            Session.commit()
 
 def getAllModels():
     return dict([(mn, getModelsByName(mn)) for mn in getModelNames()])
@@ -1719,7 +1720,7 @@ validationValues = (u'None', u'Warning', u'Error')
 # How long to wait (in seconds) before terminating a process that is trying to
 # compile a foma script.
 phonologyCompileTimeout = 30
-morphologyCompileTimeout = 30
+morphologyCompileTimeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile!
 
 def fomaOutputFile2Dict(file_):
     """Return the output of a foma apply request as a dictionary.
@@ -1740,6 +1741,26 @@ def fomaOutputFile2Dict(file_):
             i, o = line.split('\t')[:2]
             result.setdefault(i, []).append({u'+?': None}.get(o, o))
     return result
+
+# Cf. http://code.google.com/p/foma/wiki/RegularExpressionReference#Reserved_symbols
+fomaReservedSymbols = [u'\u0021', u'\u0022', u'\u0023', u'\u0024', u'\u0025',
+    u'\u0026', u'\u0028', u'\u0029', u'\u002A', u'\u002B', u'\u002C', u'\u002D',
+    u'\u002E', u'\u002F', u'\u0030', u'\u003A', u'\u003B', u'\u003C', u'\u003E',
+    u'\u003F', u'\u005B', u'\u005C', u'\u005D', u'\u005E', u'\u005F', u'\u0060',
+    u'\u007B', u'\u007C', u'\u007D', u'\u007E', u'\u00AC', u'\u00B9', u'\u00D7',
+    u'\u03A3', u'\u03B5', u'\u207B', u'\u2081', u'\u2082', u'\u2192', u'\u2194',
+    u'\u2200', u'\u2203', u'\u2205', u'\u2208', u'\u2218', u'\u2225', u'\u2227',
+    u'\u2228', u'\u2229', u'\u222A', u'\u2264', u'\u2265', u'\u227A', u'\u227B']
+
+fomaReservedSymbolsPatt = re.compile(u'[%s]' % u''.join(fomaReservedSymbols))
+
+def escapeFomaReservedSymbols(string):
+    """Prepend foma reserved symbols with % to escape them."""
+    return fomaReservedSymbolsPatt.sub(lambda m: u'%' + m.group(0), string)
+
+def deleteFomaReservedSymbols(string):
+    """Delete foma reserved symbols -- good for names of defined regexes."""
+    return fomaReservedSymbolsPatt.sub(u'', string)
 
 def getFileLength(filePath):
     """Return the number of lines in a file.
