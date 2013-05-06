@@ -303,6 +303,7 @@ class OldcollectionsController(BaseController):
         if collection:
             if session['user'].role == u'administrator' or \
             collection.enterer is session['user']:
+                collection.modifier = session['user']
                 collectionDict = collection.getFullDict()
                 backupCollection(collectionDict)
                 updateCollectionsThatReferenceThisCollection(collection,

@@ -21,20 +21,16 @@
 
 import logging
 import datetime
-import re
 import os, shutil
-from cgi import FieldStorage
 import simplejson as json
 from string import letters, digits
 from random import sample
 from paste.fileapp import FileApp
-from pylons import request, response, session, app_globals, config
+from pylons import request, response, session, config
 from pylons.decorators.rest import restrict
 from pylons.decorators import jsonify
 from pylons.controllers.util import forward
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
 from sqlalchemy.orm import subqueryload
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import FileCreateWithBase64EncodedFiledataSchema, \
@@ -42,8 +38,8 @@ from onlinelinguisticdatabase.lib.schemata import FileCreateWithBase64EncodedFil
     FileExternallyHostedSchema, FileUpdateSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
-from onlinelinguisticdatabase.model.meta import Session, Model
-from onlinelinguisticdatabase.model import File, User
+from onlinelinguisticdatabase.model.meta import Session
+from onlinelinguisticdatabase.model import File
 from onlinelinguisticdatabase.lib.resize import saveReducedCopy
 
 log = logging.getLogger(__name__)
