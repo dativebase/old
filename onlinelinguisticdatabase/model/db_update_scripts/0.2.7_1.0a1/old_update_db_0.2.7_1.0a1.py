@@ -21,11 +21,43 @@ Usage:
 
     $ ./old_update_db_0.2.7_1.0a1.py mysql_db_name mysql_username mysql_password [mysql_dump_file_path]
 
+The script will print out a list of warnings or reminders to hand-edit some of the data, as necessary.
+
+The username and password supplied must have full db access, i.e., permission to create, drop and alter
+databases, tables, etc.
+
 If the optional ``mysql_dump_file_path`` parameter is not supplied,
 ensure that your MySQL server contains an OLD 0.2.7 database called 
 ``mysql_db_name``.  If the dump file path paramter is supplied, this script
 will drop any database called ``mysql_db_name``, recreate it and populate it
 with the data from the dump file.
+
+Please ensure that your MySQL installation is set up to use UTF-8 throughout.  This will probably mean
+making changes to your MySQL configuration file (/etc/mysql/my.cnf in Debian systems), cf. 
+http://cameronyule.com/2008/07/configuring-mysql-to-use-utf-8/.
+
+This script will change any non-UTF-8 databases, tables and columns to UTF-8 following the procedure
+outlined at https://codex.wordpress.org/Converting_Database_Character_Sets.  It will also perform 
+unicode canonical decompositional normalization on all the data.
+
+Notes on character sets
+
+Get info on the system generally:
+
+    $ show variables like "collation%";
+    $ show variables like "character_set%";
+
+Get info on the databases:
+
+    $ select schema_name, default_character_set_name, default_collation_name from information_schema.schemata;
+
+Get info on the tables:
+
+    $ select table_name, table_collation from information_schema.tables where table_schema="...";
+
+Get info on the columns:
+
+    $ select column_name, collation_name from information_schema.columns where table_schema="..." and table_name="...";
 
 """
 
@@ -35,6 +67,7 @@ import re
 import string
 import subprocess
 import datetime
+import filecmp
 from random import choice, shuffle
 from uuid import uuid4
 from sqlalchemy import create_engine, MetaData, Table, bindparam
@@ -575,8 +608,35 @@ ALTER TABLE user
 '''.strip()
 
 def print_(string):
+    """Print to stdout immediately."""
     sys.stdout.write(string)
     sys.stdout.flush()
+
+def get_db_to_text_script(mysql_db_name, mysql_username, mysql_password):
+    """Return a string of shell/mysql commands that will write a subset of the db to stdout."""
+    script = [
+        "#!/bin/sh",
+        "mysql -u %s -p%s -e 'select transcription, phoneticTranscription, \
+                narrowPhoneticTranscription, morphemeBreak, morphemeGloss from %s.form;'" % (mysql_username, mysql_password, mysql_db_name),
+        "mysql -u %s -p%s -e 'select contents from %s.collection;'" % (mysql_username, mysql_password, mysql_db_name),
+        "mysql -u %s -p%s -e 'select firstName, lastName from %s.user;'" % (mysql_username, mysql_password, mysql_db_name),
+        "mysql -u %s -p%s -e 'select name from %s.file;'" % (mysql_username, mysql_password, mysql_db_name),
+    ]
+    return '\n'.join(script)
+
+def write_db_to_text_file(pre_data_dump_name, here, mysql_updater, db_to_text_script):
+    """Write a subset of the data in the db to a text file; output will be used post-processing
+    to ensure data integrity.
+
+    """
+    print_('Writing a subset of the data in %s to a text file ... ' % mysql_db_name)
+    with open(mysql_updater, 'w') as f:
+        f.write(db_to_text_script)
+    pre_data_dump_path = os.path.join(here, pre_data_dump_name)
+    with open(pre_data_dump_path, 'w') as f:
+        subprocess.call([mysql_updater], shell=False, stdout=f, stderr=f)
+    print 'done.'
+    return pre_data_dump_path
 
 def write_cleanup_executable(mysql_cleanup_script_name, here):
     """Write the contents of cleanup_SQL to an executable and return the path to it."""
@@ -642,62 +702,98 @@ def get_non_utf8_tables_columns(mysql_db_name, mysql_username, mysql_password):
             info_schema_engine.execute(select, {'mysql_db_name': mysql_db_name}).fetchall()]
     return non_utf8_tables, non_utf8_columns
 
-def get_columns_with_collations(mysql_db_name, mysql_username, mysql_password):
-    """Return a dict whose keys are table names and whose values are tuples representing 
-    columns of the relevant table that have collations, i.e., TEXT and VARCHAR type columns.
+def get_database_info(mysql_db_name, mysql_username, mysql_password):
+    """Return information about the character sets and collations used in the database.
+
     """
-    tables = {}
+    columns = {}
     sqlalchemy_url = 'mysql://%s:%s@localhost:3306/information_schema' % (mysql_username, mysql_password)
     info_schema_engine = create_engine(sqlalchemy_url)
     columns_table = Table('COLUMNS', meta, autoload=True, autoload_with=info_schema_engine)
+    schemata_table = Table('SCHEMATA', meta, autoload=True, autoload_with=info_schema_engine)
+    db_charset = info_schema_engine.execute(schemata_table.select().where(schemata_table.c.SCHEMA_NAME==mysql_db_name)).\
+        fetchall()[0]['DEFAULT_CHARACTER_SET_NAME']
+    tables_table = Table('TABLES', meta, autoload=True, autoload_with=info_schema_engine)
+    table_collations = dict([(r['TABLE_NAME'], r['TABLE_COLLATION']) for r in 
+        info_schema_engine.execute(tables_table.select().where(tables_table.c.TABLE_SCHEMA==mysql_db_name))])
     select = columns_table.select().\
         where(columns_table.c.TABLE_SCHEMA == bindparam('mysql_db_name')).\
         where(columns_table.c.COLLATION_NAME != None)
     for row in info_schema_engine.execute(select, {'mysql_db_name': mysql_db_name}):
-        tables.setdefault(row['table_name'], []).append((row['column_name'], row['column_type'], row['column_key']))
-    return tables
+        columns.setdefault(row['table_name'], {})[row['COLUMN_NAME']] = (row['COLLATION_NAME'], row['COLUMN_TYPE'], row['COLUMN_KEY'])
+        #tables.setdefault(row['table_name'], []).append({row['COLUMN_NAME']: (row['COLLATION_NAME'], row['COLUMN_TYPE'], row['COLUMN_KEY'])})
+    return db_charset, table_collations, columns
 
-def write_charset_executable_content(mysql_charset_script, columns_with_collations, mysql_db_name):
-    """Write a series of MySQL commands to the file at mysql_charset_script; these commands will alter
+def get_binary_column_type(column_type):
+    """Return an appropriate binary column type for the input one, cf. https://codex.wordpress.org/Converting_Database_Character_Sets."""
+    try:
+        return {
+            'char': 'binary',
+            'text': 'blob',
+            'tinytext': 'tinyblob',
+            'mediumtext': 'mediumblob',
+            'longtext': 'longblob'
+        }[column_type.lower()]
+    except KeyError:
+        if column_type.lower().startswith('varchar('):
+            return 'varbinary(%s)' % column_type[8:-1]
+        return 'blob'
+
+def write_charset_executable_content(mysql_charset_script, mysql_db_name, mysql_username, mysql_password):
+    """Write a series of MySQL commands to the file at the path in mysql_charset_script; these commands will alter
     the tables and columns (and the db) so that they use the UTF-8 character set.
     """
+    db_charset, table_collations, columns = get_database_info(mysql_db_name, mysql_username, mysql_password)
     with open(mysql_charset_script, 'w') as f:
-        for table_name, columns in columns_with_collations.items():
-            indices = [(cn, ck) for cn, ct, ck in columns if ck]
+        if db_charset != 'utf8':
+            f.write('ALTER DATABASE %s CHARACTER SET utf8;\n\n' % mysql_db_name)
+        #for table_name, columns in columns_with_collations.items():
+        for table_name, table_collation in table_collations.items():
+            if not table_collation == 'utf8_general_ci':
+                f.write('ALTER TABLE %s CHARACTER SET utf8;\n\n' % table_name)
+            non_utf8_columns = dict([(c_name, (c_type, c_key)) for c_name, (c_coll, c_type, c_key) in
+                columns.get(table_name, {}).items() if c_coll != 'utf8_general_ci'])
+            if non_utf8_columns:
+                indices = [(c_name, c_key) for c_name, (c_type, c_key) in non_utf8_columns.items() if c_key]
+                f.write('ALTER TABLE %s\n' % table_name)
+                if indices:
+                    for c_name, c_key in indices:
+                        if c_key == 'PRI':
+                            f.write('  DROP PRIMARY KEY,\n')
+                        else:
+                            f.write('  DROP INDEX %s,\n' % c_name)
+                f.write('  %s;\n\n' % ',\n  '.join(
+                    ['CHANGE `%s` `%s` %s' % (c_name, c_name, get_binary_column_type(c_type))
+                     for c_name, (c_type, c_key) in non_utf8_columns.items()]))
+        for table_name, columns_dict in columns.items():
+            non_utf8_columns = dict([(c_name, (c_type, c_key)) for c_name, (c_coll, c_type, c_key) in
+                columns_dict.items() if c_coll != 'utf8_general_ci'])
+            indices = [(c_name, c_key) for c_name, (c_type, c_key) in non_utf8_columns.items() if c_key]
             f.write('ALTER TABLE %s\n' % table_name)
-            if indices:
-                for cn, ck in indices:
-                    if ck == 'PRI':
-                        f.write('  DROP PRIMARY KEY,\n')
-                    else:
-                        f.write('  DROP INDEX %s,\n' % cn)
-            f.write('  %s;\n\n' % ',\n  '.join(['CHANGE `%s` `%s` BLOB' % (cn, cn) for cn, ct, ck in columns]))
-        for table_name, columns in columns_with_collations.items():
-            indices = [(cn, ck) for cn, ct, ck in columns if ck]
-            f.write('ALTER TABLE %s\n' % table_name)
-            f.write('  %s' % ',\n  '.join(['CHANGE `%s` `%s` %s CHARACTER SET utf8' % (cn, cn, ct) for cn, ct, ck in columns]))
+            f.write('  %s' % ',\n  '.join(
+                ['CHANGE `%s` `%s` %s CHARACTER SET utf8' % (c_name, c_name, c_type) for c_name, (c_type, c_key) in non_utf8_columns.items()]))
             if indices:
                 f.write(',\n')
-                for index, (cn, ck) in enumerate(indices):
-                    if ck == 'PRI':
-                        f.write('  ADD INDEX (`%s`)' % cn)
+                for index, (c_name, c_key) in enumerate(indices):
+                    if c_key == 'PRI':
+                        f.write('  ADD INDEX (`%s`)' % c_name)
                     else:
-                        f.write('  ADD UNIQUE (`%s`)' % cn)
+                        f.write('  ADD UNIQUE (`%s`)' % c_name)
                     if index == len(indices) - 1:
                         f.write(';\n\n')
                     else:
                         f.write(',\n')
             else:
                 f.write(';\n\n')
-        for table_name in columns_with_collations:
-            f.write('ALTER TABLE %s DEFAULT CHARACTER SET utf8;\n\n' % table_name)
-        f.write('ALTER DATABASE %s DEFAULT CHARACTER SET utf8;\n' % mysql_db_name)
 
 def change_db_charset_to_utf8(mysql_db_name, mysql_charset_script, mysql_username, mysql_password, mysql_updater):
-    """Run the executable ast `mysql_charset_script` in order to change the character set of the db to UTF-8."""
+    """Run the executable at `mysql_charset_script` in order to change the character set of the db to UTF-8.
+    Note that this was not working correctly.  We need to make sure that MySQL is using UTF-8 everywhere, see 
+    this web page for how to do that: http://cameronyule.com/2008/07/configuring-mysql-to-use-utf-8/.
+
+    """
     print_('Changing the character set of the database to UTF-8 ... ')
-    columns_with_collations = get_columns_with_collations(mysql_db_name, mysql_username, mysql_password)
-    write_charset_executable_content(mysql_charset_script, columns_with_collations, mysql_db_name)
+    write_charset_executable_content(mysql_charset_script, mysql_db_name, mysql_username, mysql_password)
     script = [
         "#!/bin/sh",
         "mysql -u %s -p%s %s < %s" % (mysql_username, mysql_password, mysql_db_name, mysql_charset_script),
@@ -855,7 +951,7 @@ def fix_collection_table(engine, collection_table, collectionbackup_table, user_
     buffer1 = []
     buffer2 = []
     for row in engine.execute(collection_table.select()):
-        values = {'c_id': row['id'], 'UUID': str(uuid4()), 'html': rst2html(row['contents']).encode('utf8'),
+        values = {'c_id': row['id'], 'UUID': str(uuid4()), 'html': rst2html(row['contents']),
                   'contentsUnpacked': row['contents']}
         backups = sorted([cb for cb in collectionbackups if cb['collection_id'] == row['id']],
                          key=lambda cb: cb['datetimeModified'])
@@ -898,7 +994,7 @@ def fix_collectionbackup_table(engine, collectionbackup_table):
     buffer1 = []
     buffer2 = []
     for row in collectionbackups:
-        values = {'cb_id': row['id'], 'html': rst2html(row['contents']).encode('utf8')}
+        values = {'cb_id': row['id'], 'html': rst2html(row['contents'])}
         backups = sorted([cb for cb in collectionbackups if cb['collection_id'] == row['collection_id']],
                          key=lambda cb: cb['datetimeModified'])
         if backups:
@@ -936,9 +1032,9 @@ def fix_file_table(engine, file_table):
         if row['url']:
             values['url'] = ''
             values['description'] = '%s %s' % (row['description'], row['url'])
-            messages.append('WARNING: the url/embeddedFileMarkup value of file %d has been appended \
-                    to its description value.  Please alter this file by hand so that it has \
-                    an appropriate url value' % row['id'])
+            messages.append('''WARNING: the url/embeddedFileMarkup value of file %d has been appended 
+to its description value.  Please alter this file by hand so that it has 
+an appropriate url value''' % row['id'])
             buffer1.append(values)
         else:
             values['filename'] = row['name']
@@ -1161,7 +1257,7 @@ def fix_speaker_table(engine, speaker_table):
     print_('Fixing the speaker table ... ')
     buffer1 = []
     for row in engine.execute(speaker_table.select()):
-        buffer1.append({'s_id': row['id'], 'html': rst2html(row['pageContent']).encode('utf8')})
+        buffer1.append({'s_id': row['id'], 'html': rst2html(row['pageContent'])})
     update = speaker_table.update().where(speaker_table.c.id==bindparam('s_id')).\
             values(html=bindparam('html'))
     engine.execute(update, buffer1)
@@ -1190,7 +1286,7 @@ def getOrthographyReferenced(crappyReferenceString, row, orthographies):
 def rst2html(string):
     """Covert a restructuredText string to HTML."""
     try:
-        return publish_parts(string, writer_name='html', settings_overrides={'report_level':'quiet'})['html_body']
+        return publish_parts(string, writer_name='html', settings_overrides={'report_level':'quiet'})['html_body'].encode('utf8')
     except:
         return string
 
@@ -1231,7 +1327,10 @@ if __name__ == '__main__':
     try:
         mysql_db_name, mysql_username, mysql_password, mysql_dump_file = sys.argv[1:]
     except ValueError:
-        mysql_db_name, mysql_username, mysql_password = sys.argv[1:]
+        try:
+            mysql_db_name, mysql_username, mysql_password = sys.argv[1:]
+        except Exception:
+            sys.exit('Usage: ./old_update_db_0.2.7_1.0a1.py mysql_db_name, mysql_username, mysql_password')
     except Exception:
         sys.exit('Usage: ./old_update_db_0.2.7_1.0a1.py mysql_db_name, mysql_username, mysql_password')
 
@@ -1264,13 +1363,15 @@ if __name__ == '__main__':
     mysql_cleanup_script_name = 'old_cleanup_db_0.2.7_1.0a1.sql'
     mysql_cleanup_script = write_cleanup_executable(mysql_cleanup_script_name, here)
 
-    # If a dump file path was provided, recreate the db using it and change the character set to UTF-8
+    # If a dump file path was provided, recreate the db using it.
     if mysql_dump_file:
         if os.path.isfile(mysql_dump_file):
             recreate_database(mysql_db_name, mysql_dump_file, mysql_username, mysql_password, mysql_updater)
-            change_db_charset_to_utf8(mysql_db_name, mysql_charset_script, mysql_username, mysql_password, mysql_updater)
         else:
             sys.exit('Error: there is no such dump file %s' % os.path.join(os.getcwd(), mysql_dump_file))
+
+    # Change the character set to UTF-8
+    change_db_charset_to_utf8(mysql_db_name, mysql_charset_script, mysql_username, mysql_password, mysql_updater)
 
     # Perform the preliminary update of the database using ``mysql_update_script``
     perform_preliminary_update(mysql_db_name, mysql_update_script, mysql_username, mysql_password, mysql_updater)
@@ -1311,9 +1412,9 @@ if __name__ == '__main__':
 
     print '\n\n%s' % '\n\n'.join(messages)
 
+    # TODO: make sure that all of the alteration algorithms are working. Note: this may require adding some
+    # artificial data to the original databases.
     # TODO: make sure to check that the applicationsettings.unrestrictedUsers m-t-m value is set correctly
     # TODO: what to do about files without lossy copies?  A separate script to create them?
     # TODO: compile morphemic analysis on the forms ... yuch
-    # TODO: dump the unchanged data from the database before and after and run a diff to make sure
-    #       nothing has changed.
 
