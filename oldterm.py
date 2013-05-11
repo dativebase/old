@@ -79,6 +79,29 @@ class OLD(object):
         except Exception:
             return response
 
+    formCreateParams = {
+        'transcription': u'',
+        'phoneticTranscription': u'',
+        'narrowPhoneticTranscription': u'',
+        'morphemeBreak': u'',
+        'grammaticality': u'',
+        'morphemeGloss': u'',
+        'translations': [],
+        'comments': u'',
+        'speakerComments': u'',
+        'elicitationMethod': u'',
+        'tags': [],
+        'syntacticCategory': u'',
+        'speaker': u'',
+        'elicitor': u'',
+        'verifier': u'',
+        'source': u'',
+        'status': u'tested',
+        'dateElicited': u'',     # mm/dd/yyyy
+        'syntax': u'',
+        'semantics': u''
+    }
+
 def printform(form):
     tmp = [('id', form['id'])]
     if form.get('narrowPhoneticTranscription', None): tmp.append(('NP', form['narrowPhoneticTranscription']))
