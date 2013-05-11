@@ -96,7 +96,6 @@ CREATE TABLE `applicationsettingsuser` (
 CREATE TABLE `orthography` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
-  `numberName` varchar(255) DEFAULT NULL,
   `orthography` text,
   `lowercase` tinyint(1) DEFAULT NULL,
   `initialGlottalStops` tinyint(1) DEFAULT NULL,
@@ -269,7 +268,9 @@ ALTER TABLE file
     ADD COLUMN parentFile_id INT(11) DEFAULT NULL,
     ADD COLUMN start FLOAT DEFAULT NULL,
     ADD COLUMN end FLOAT DEFAULT NULL,
-    ADD KEY (parentFile_id);
+    ADD KEY (parentFile_id),
+    ADD UNIQUE (filename),
+    DROP INDEX name;
 
 CREATE TABLE `filetag` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -345,7 +346,8 @@ ALTER TABLE translation
 RENAME TABLE keyword TO tag;
 ALTER TABLE tag
     CONVERT TO CHARACTER SET utf8,
-    MODIFY description TEXT;
+    MODIFY description TEXT,
+    ADD UNIQUE (name);
 
 ALTER TABLE language
     CONVERT TO CHARACTER SET utf8;
@@ -405,7 +407,9 @@ ALTER TABLE phonology
     MODIFY script TEXT,
     ADD COLUMN datetimeCompiled datetime DEFAULT NULL,
     ADD COLUMN compileSucceeded tinyint(1) DEFAULT NULL,
-    ADD COLUMN compileMessage VARCHAR(255) DEFAULT NULL;
+    ADD COLUMN compileMessage VARCHAR(255) DEFAULT NULL,
+    ADD FOREIGN KEY (modifier_id) REFERENCES user(id),
+    ADD FOREIGN KEY (enterer_id) REFERENCES user(id);
 
 CREATE TABLE `phonologybackup` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -489,7 +493,8 @@ ALTER TABLE `user`
     ADD COLUMN inputOrthography_id INT(11) DEFAULT NULL,
     ADD COLUMN outputOrthography_id INT(11) DEFAULT NULL,
     ADD KEY (inputOrthography_id),
-    ADD KEY (outputOrthography_id);
+    ADD KEY (outputOrthography_id),
+    DROP COLUMN collectionViewType;
 UPDATE user SET markupLanguage='restructuredText';
 
 ALTER TABLE userform
@@ -536,6 +541,7 @@ ALTER TABLE applicationsettings
     DROP COLUMN unrestrictedUsers;
 
 ALTER TABLE collectionbackup
+    DROP COLUMN collectionViewType,
     DROP COLUMN backuper;
 
 ALTER TABLE file
@@ -1568,3 +1574,4 @@ if __name__ == '__main__':
     # 1. serve the system and request form.update_morpheme_references in order to, well, do that ...
     # 2. find all forms and collections that lack enterers and give them a default enterer (cf. the BLA OLD).
     #    Then find all forms and collections lacking modifiers and give them the value of their enterers.
+
