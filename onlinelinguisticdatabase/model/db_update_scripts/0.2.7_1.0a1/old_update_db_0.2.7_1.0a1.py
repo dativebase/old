@@ -748,7 +748,7 @@ def write_charset_executable_content(mysql_charset_script, mysql_db_name, mysql_
                     f.write(',\n')
                     for index, (c_name, c_key) in enumerate(indices):
                         if c_key == 'PRI':
-                            f.write('  ADD INDEX (`%s`)' % c_name)
+                            f.write('  ADD PRIMARY KEY (`%s`)' % c_name)
                         else:
                             f.write('  ADD UNIQUE (`%s`)' % c_name)
                         if index == len(indices) - 1:
@@ -1505,7 +1505,6 @@ if __name__ == '__main__':
         for col_name, tuple_ in sorted(table.items()):
             print '\t%s\t%s' % (col_name, tuple_[0])
     """
-
     # Change the character set to UTF-8
     change_db_charset_to_utf8(mysql_db_name, mysql_charset_script, mysql_username, mysql_password,
             mysql_updater, db_charset, table_collations, columns)
