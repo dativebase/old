@@ -657,7 +657,7 @@ class TestMorphologiesController(TestController):
         # in the tests/data/datesets directory.
 
         # Change the value of ``olddumpfile`` to use a different dumpfile in the ``datasets`` dir
-        olddumpfile = 'blaold_1.0a1_select_tables.sql'
+        olddumpfile = 'blaold.sql'
 
         olddumpfilePath = os.path.join(self.testDatasetsPath, olddumpfile)
         if not os.path.isfile(olddumpfilePath):
@@ -678,6 +678,21 @@ class TestMorphologiesController(TestController):
             call([tmpscriptPath], stdout=fnull, stderr=fnull)
         os.remove(tmpscriptPath)
 
+        # Recreate the default users that the loaded dump file deleted
+        administrator = h.generateDefaultAdministrator()
+        contributor = h.generateDefaultContributor()
+        viewer = h.generateDefaultViewer()
+        Session.add_all([administrator, contributor, viewer])
+        Session.commit()
+
+        """
+        # Create an application settings with morpheme delimiters appropriate for Blackfoot.
+        applicationSettings = h.generateDefaultApplicationSettings()
+        applicationSettings.morphemeDelimiters = u'-'
+        Session.add(applicationSettings)
+        Session.commit()
+        """
+
         # Convert NULL syntacticCategoryString values to empty strings
         # TODO: the function in morphologies that generates the script value will
         # raise an exception if syntacticCategoryString is None -- deal with this ...
@@ -690,6 +705,8 @@ class TestMorphologiesController(TestController):
             'prev', 'med', 'fin', 'oth', 'und', 'pro', 'asp', 'ten', 'mod', 'agra', 'agrb', 'thm', 'whq',
             'num', 'drt', 'dim', 'stp', 'PN', 'INT']
         query = {'filter': ['Form', 'syntacticCategory', 'name', 'in', lexicalSynCatNames]}
+        query_ = {'filter': ['and', [['Form', 'id', '<', 1000],
+                                    ['Form', 'syntacticCategory', 'name', 'in', lexicalSynCatNames]]]}
         params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'Blackfoot morphemes',
@@ -708,8 +725,13 @@ class TestMorphologiesController(TestController):
         lexiconCorpusId = json.loads(response.body)['id']
 
         # Create a rules corpus
-        query = {'filter': ['or', [['Form', 'syntacticCategory', 'name', '=', u'S'],
+        query = {'filter': ['or', [['Form', 'syntacticCategory', 'name', '=', u'sent'],
                                    ['Form', 'transcription', 'like', '% %']]]}
+        query_ = {'filter': ['and', [
+                                ['or', [['Form', 'syntacticCategory', 'name', '=', u'sent'],
+                                        ['Form', 'transcription', 'like', '% %']]],
+                                ['Form', 'id', '<', 23000],
+                                ['Form', 'id', '>', 22000]]]}
         params = self.formSearchCreateParams.copy()
         params.update({
             'name': u'Find Blackfoot sentences',
@@ -738,7 +760,7 @@ class TestMorphologiesController(TestController):
         })
         params = json.dumps(params)
         t1 = time()
-        response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin)
+        response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin_appset)
         t2 = time()
         log.debug('Took %f seconds to create the morphology' % (t2 - t1))
         resp = json.loads(response.body)

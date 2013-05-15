@@ -848,7 +848,8 @@ def fix_applicationsettings_table(engine, applicationsettings_table, user_table,
     print_('Fixing the applicationsettings table ... ')
     msgs = []
     orthographies = get_orthographies_by_name(engine)
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     users = engine.execute(user_table.select()).fetchall()
     user_ids = [u['id'] for u in users]
     buffer1 = []
@@ -897,7 +898,8 @@ def fix_user_table(engine, user_table):
         current_application_settings = engine.execute('SELECT * FROM applicationsettings ORDER BY id DESC LIMIT 1;').fetchall()[0]
     except Exception:
         current_application_settings = None
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     buffer1 = []
     for row in engine.execute(user_table.select()):
         values = row2dict(row)
@@ -907,7 +909,7 @@ def fix_user_table(engine, user_table):
         values['salt'] = generateSalt()
         new_password = generatePassword()
         values['password'] = encryptPassword(new_password, values['salt'])
-        msgs.append('User %d (%s %s) now has the password %s' % (values['id'], firstName, lastName, new_password))
+        msgs.append('%s %s (%s) now has the password %s' % (firstName, lastName, values['email'], new_password))
         if values['role'] not in ('administrator', 'contributor', 'viewer'):
             msgs.append('User %d (%s %s) had an invalid role (%s); now changed to viewer' % (values['id'], firstName, lastName, values['role']))
             values['role'] = 'viewer'
@@ -960,7 +962,8 @@ def fix_collection_table(engine, collection_table, collectionbackup_table, user_
     print_('Fixing the collection table ... ')
     collectionReferencePattern = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
     msgs = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     users = engine.execute(user_table.select()).fetchall()
     collectionbackups = engine.execute(collectionbackup_table.select()).fetchall()
     buffer1 = []
@@ -1010,7 +1013,8 @@ def fix_collectionbackup_table(engine, collectionbackup_table):
     """Add html, modifier and (potentially) UUID values to the collections backups."""
     print_('Fixing the collectionbackup table ... ')
     uuidless = {} # maps collection ids to UUIDs
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     collectionbackups = engine.execute(collectionbackup_table.select()).fetchall()
     buffer1 = []
     for row in collectionbackups:
@@ -1039,7 +1043,8 @@ def fix_collectionbackup_table(engine, collectionbackup_table):
 def fix_elicitationmethod_table(engine, elicitationmethod_table):
     print_('Fixing the elicitationmethod table ...')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(elicitationmethod_table.select()):
         values = row2dict(row)
         buffer1.append(values)
@@ -1056,7 +1061,8 @@ def fix_file_table(engine, file_table):
     """
     print_('Fixing the file table ... ')
     msgs = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     files = engine.execute(file_table.select()).fetchall()
     buffer1 = []
     for row in files:
@@ -1079,9 +1085,14 @@ an appropriate url value'''.replace('\n', ' ') % row['id'])
     print 'done.'
     return msgs
 
-def fix_form_table(engine, form_table, formbackup_table, user_table):
+def fix_form_table(engine, form_table, formbackup_table, user_table, default_morphemes):
     """Give UUID, modifier_id values to the form table.  Also give UUID values to
     all form backups that are backups of existing forms.
+
+    :param bool default_morphemes: if True, then forms that have no morphemeBreak and no morphemeGloss
+        and whose transcription contains no space will receive a default morphemeBreak value (the value
+        of the transcription attribute) and a default morphemeGloss value (the value of the first translation
+        transcription with spaces replaced by periods).
 
     .. note::
 
@@ -1105,25 +1116,25 @@ def fix_form_table(engine, form_table, formbackup_table, user_table):
         else
             this is the first backup and its modifier should be its enterer
 
-    engine.execute('set names latin1;')
-    forms = [row2dict(row) for row in engine.execute(form_table.select()).fetchall()]
-    engine.execute('set names utf8;')
-    update = form_table.update().where(form_table.c.id==bindparam('id_')).\
-        values(**dict([(k, bindparam(k)) for k in forms[0] if k not in ('id', 'id_')]))
-    engine.execute(update, forms)
-
     """
 
     print_('Fixing the form table ... ')
     msgs = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     users = engine.execute(user_table.select()).fetchall()
     formbackups = engine.execute(formbackup_table.select()).fetchall()
+    if default_morphemes:
+        translations = dict([(row['form_id'], row['transcription']) for row in 
+            engine.execute(translation_table.select().order_by(translation_table.c.id.desc())).fetchall()])
     form_update_cache = []
     formbackup_update_cache = []
     for row in engine.execute(form_table.select()):
         values = row2dict(row)
         values['UUID'] = str(uuid4())
+        if default_morphemes and not values['morphemeBreak'] and not values['morphemeGloss'] and ' ' not in values['transcription']:
+            values['morphemeBreak'] = values['transcription']
+            values['morphemeGloss'] = translations[values['id']].replace(' ', '.')
         backups = sorted([fb for fb in formbackups if fb['form_id'] == row['id']],
                          key=lambda fb: fb['datetimeModified'])
         if backups:
@@ -1186,7 +1197,8 @@ def fix_language_table(engine, language_table):
     """Unicode-normalize and UTF-8-ify the data in the language table."""
     print_('Fixing the language table ...')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(language_table.select()):
         values = row2dict(row)
         values['Id_'] = values['Id']
@@ -1202,7 +1214,8 @@ def fix_translation_table(engine, translation_table):
     """Unicode-normalize and UTF-8-ify the data in the translation table."""
     print_('Fixing the translation table ...')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(translation_table.select()):
         values = row2dict(row)
         buffer1.append(values)
@@ -1216,7 +1229,8 @@ def fix_translation_table(engine, translation_table):
 def fix_page_table(engine, page_table):
     print_('Fixing the page table ...')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(page_table.select()):
         values = row2dict(row)
         values['html'] = rst2html(values['content'])
@@ -1235,7 +1249,8 @@ def fix_phonology_table(engine, phonology_table, phonologybackup_table, user_tab
     """
     print_('Fixing the phonology table ... ')
     msgs = []
-    engine.execute('set names latin1')
+    #engine.execute('set names latin1')
+    engine.execute('set names utf8;')
     users = engine.execute(user_table.select()).fetchall()
     phonologybackups = engine.execute(phonologybackup_table.select()).fetchall()
     buffer1 = []
@@ -1279,7 +1294,8 @@ def fix_phonologybackup_table(engine, phonologybackup_table):
     print_('Fixing the phonologybackup table ... ')
     uuidless = {} # maps phonology ids to UUIDs
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     phonologybackups = engine.execute(phonologybackup_table.select()).fetchall()
     for row in phonologybackups:
         values = row2dict(row)
@@ -1306,7 +1322,8 @@ def fix_tag_table(engine, tag_table):
     """Warn the user about duplicate tags."""
     print_('Fixing the tag table ... ')
     msgs = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     tags = [row['name'] for row in engine.execute(tag_table.select()).fetchall()]
     duplicate_tags = set([x for x in tags if len([y for y in tags if y == x]) > 1])
     for dt in duplicate_tags:
@@ -1329,7 +1346,8 @@ def fix_source_table(engine, source_table):
     """
     print_('Fixing the source table ... ')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(source_table.select()):
         values = row2dict(row)
         first_name = values['authorFirstName']
@@ -1356,7 +1374,8 @@ def fix_speaker_table(engine, speaker_table):
     """Generate an html value for each speaker."""
     print_('Fixing the speaker table ... ')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(speaker_table.select()):
         values = row2dict(row)
         values['html'] = rst2html(values['pageContent'])
@@ -1371,7 +1390,8 @@ def fix_speaker_table(engine, speaker_table):
 def fix_syntacticcategory_table(engine, syntacticcategory_table):
     print_('Fixing the syntactic category table ...')
     buffer1 = []
-    engine.execute('set names latin1;')
+    #engine.execute('set names latin1;')
+    engine.execute('set names utf8;')
     for row in engine.execute(syntacticcategory_table.select()):
         values = row2dict(row)
         buffer1.append(values)
@@ -1441,20 +1461,35 @@ def normalize_(unistr):
     except UnicodeDecodeError:
         return unistr
 
+def parse_arguments(arg_list):
+    result = {}
+    map_ = {'-d': 'mysql_db_name', '-u': 'mysql_username', '-p': 'mysql_password',
+            '-f': 'mysql_dump_file', '--default-morphemes': 'default_morphemes'}
+    iterator = iter(arg_list)
+    try:
+        for element in iterator:
+            if element in map_:
+                if element == '--default-morphemes':
+                    result[map_[element]] = True
+                else:
+                    result[map_[element]] = iterator.next()
+    except Exception:
+        pass
+    if len(set(['mysql_db_name', 'mysql_username', 'mysql_password']) & set(result.keys())) != 3:
+        sys.exit('Usage: python old_update_db_0.2.7_1.0ay.py -d mysql_db_name -u mysql_username -p mysql_password [-f mysql_dump_file] [--default-morphemes]')
+    return result
+
 if __name__ == '__main__':
 
     # User must supply values for mysql_db_name, mysql_username and mysql_password.
-    # A value for the path to a MySQL dump file (absolute or relative to cwd) is optional.
-    mysql_dump_file = None
-    try:
-        mysql_db_name, mysql_username, mysql_password, mysql_dump_file = sys.argv[1:]
-    except ValueError:
-        try:
-            mysql_db_name, mysql_username, mysql_password = sys.argv[1:]
-        except Exception:
-            sys.exit('Usage: ./old_update_db_0.2.7_1.0a1.py mysql_db_name, mysql_username, mysql_password')
-    except Exception:
-        sys.exit('Usage: ./old_update_db_0.2.7_1.0a1.py mysql_db_name, mysql_username, mysql_password')
+    # optional argument: -p mysql_dump_file: path to a dump file
+    # optional argument: --default-morphemes: if present, default morphemes will be generated (see below)
+    arguments = parse_arguments(sys.argv[1:])
+    mysql_dump_file = arguments.get('mysql_dump_file')
+    mysql_db_name = arguments.get('mysql_db_name')
+    mysql_username = arguments.get('mysql_username')
+    mysql_password = arguments.get('mysql_password')
+    default_morphemes = arguments.get('default_morphemes', False)
 
     # The SQLAlchemy/MySQLdb/MySQL connection objects
     sqlalchemy_url = 'mysql://%s:%s@localhost:3306/%s' % (mysql_username, mysql_password, mysql_db_name)
@@ -1495,22 +1530,15 @@ if __name__ == '__main__':
     # Get info about the database
     db_charset, table_collations, columns = get_database_info(mysql_db_name, mysql_username, mysql_password)
 
-    """
-    print 'db_charset: %s\n\n' % db_charset
-    for table_name, collation_name in sorted(table_collations.items()):
-        print '%s\t%s' % (table_name, collation_name)
-    print '\n\n'
-    for table_name, table in columns.items():
-        print table_name
-        for col_name, tuple_ in sorted(table.items()):
-            print '\t%s\t%s' % (col_name, tuple_[0])
-    """
     # Change the character set to UTF-8
     change_db_charset_to_utf8(mysql_db_name, mysql_charset_script, mysql_username, mysql_password,
             mysql_updater, db_charset, table_collations, columns)
 
     # Perform the preliminary update of the database using ``mysql_update_script``
     perform_preliminary_update(mysql_db_name, mysql_update_script, mysql_username, mysql_password, mysql_updater)
+
+    # Get info about the database post utf8 conversion
+    db_charset_new, table_collations_new, columns_new = get_database_info(mysql_db_name, mysql_username, mysql_password)
 
     ##################################################################################
     # Now we update the values of the newly modified database Pythonically
@@ -1543,7 +1571,7 @@ if __name__ == '__main__':
     fix_collectionbackup_table(engine, collectionbackup_table)
     fix_elicitationmethod_table(engine, elicitationmethod_table)
     messages += fix_file_table(engine, file_table)
-    messages += fix_form_table(engine, form_table, formbackup_table, user_table)
+    messages += fix_form_table(engine, form_table, formbackup_table, user_table, default_morphemes)
     fix_formbackup_table(engine, formbackup_table)
     fix_language_table(engine, language_table)
     fix_page_table(engine, page_table)

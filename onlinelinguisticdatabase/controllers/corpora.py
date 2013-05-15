@@ -499,7 +499,7 @@ def writeToFile(corpus, format_):
         """Update the corpus file model of ``corpus`` that matches ``filename``."""
         corpusFile = [cf for cf in corpus.files if cf.filename == filename][0]
         corpusFile.restricted = restricted
-        corpusFile.modifier = user
+        corpusFile.modifier = modifier
         corpusFile.datetimeModified = corpus.datetimeModified = now
 
     def generateNewCorpusFile(corpus, filename, format_, creator, datetimeCreated, restricted):
@@ -551,6 +551,7 @@ def writeToFile(corpus, format_):
     # Update/create the corpusFile object
     try:
         now = h.now()
+        session['user'] = Session.merge(session['user'])
         user = session['user']
         corpusFilename = os.path.split(corpusFilePath)[1]
         if update:
@@ -662,6 +663,7 @@ def updateCorpus(corpus, data):
         changed = True
 
     if changed:
+        session['user'] = Session.merge(session['user'])
         corpus.modifier = session['user']
         corpus.datetimeModified = h.now()
         return corpus

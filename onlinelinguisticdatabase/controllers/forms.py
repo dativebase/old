@@ -21,10 +21,12 @@
 
 import logging
 import re
+import sys
 import simplejson as json
 from uuid import uuid4
 from pylons import request, response, session, app_globals, config
 from formencode.validators import Invalid
+from sqlalchemy import bindparam
 from sqlalchemy.sql import asc, or_
 from sqlalchemy.orm import subqueryload
 from onlinelinguisticdatabase.lib.base import BaseController
@@ -428,7 +430,8 @@ class FormsController(BaseController):
            removed in future versions of the OLD.
 
         """
-        return updateMorphemeReferencesOfForms(h.getForms(), h.getMorphemeDelimiters())
+        forms = h.getForms()
+        return updateMorphemeReferencesOfForms(h.getForms(), h.getMorphemeDelimiters(), whole_db=forms, make_backups=False)
 
 
 def updateApplicationSettingsIfFormIsForeignWord(form):
@@ -691,6 +694,7 @@ def updateForm(form, data):
 
     if changed:
         form.datetimeModified = h.now()
+        session['user'] = Session.merge(session['user'])
         form.modifier = session['user']
         return form
     return changed
@@ -720,6 +724,7 @@ def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
     changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
     if changed:
         form.datetimeModified = h.now()
+        session['user'] = Session.merge(session['user'])
         form.modifier = session['user']
         return form, cache
     return changed, cache
@@ -729,30 +734,59 @@ def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
 
     Attempt to update the values of the ``morphemeBreakIDs``,
     ``morphemeGlossIDs``, ``syntacticCategoryString`` and ``breakGlossCategory``
-    attributes of all forms in ``forms`` using only the lexical items specified
-    in the list ``kwargs['lexicalItems']`` or ``kwargs['deletedLexicalItems']``.
-    Whenever an update occurs, backup the form and commit the changes.
+    attributes of all forms in ``forms``.  The ``kwargs`` dict may contain
+    ``lexicalItems``, ``deletedLexicalItems`` or ``whole_db`` values which will be
+    passed to compileMorphemicAnalysis.
 
     :param list forms: the form models to be updated.
     :param list validDelimiters: morpheme delimiters as strings.
     :param list kwargs['lexicalItems']: a list of form models.
     :param list kwargs['deletedLexicalItems']: a list of form models.
+    :param list kwargs['whole_db']: a list of all the form models in the database.
     :returns: a list of form ``id`` values corresponding to the forms that have
         been updated.
 
     """
-    updatedFormIds = []
+    form_buffer = []
+    formbackup_buffer = []
+    make_backups = kwargs.get('make_backups', True)
+    modifier = session['user'] = Session.merge(session['user'])
+    modifier_id = modifier.id
+    modification_datetime = h.now()
+    form_table = Form.__table__
     for form in forms:
-        formDict = form.getDict()
-        form, kwargs['cache'] = updateMorphemeReferencesOfForm(form, validDelimiters, **kwargs)
-        # form will be False if there are no changes.
-        if form:
-            backupForm(formDict)
-            Session.add(form)
-            Session.commit()
-            updatedFormIds.append(form.id)
-    return updatedFormIds
+        (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString,
+            breakGlossCategory, kwargs['cache']) = compileMorphemicAnalysis(form, validDelimiters, **kwargs)
+        if (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory) != \
+            (form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString, form.breakGlossCategory):
+            form_buffer.append({
+                'id_': form.id, 
+                'morphemeBreakIDs': utf8_encode(morphemeBreakIDs),
+                'morphemeGlossIDs': utf8_encode(morphemeGlossIDs),
+                'syntacticCategoryString': utf8_encode(syntacticCategoryString),
+                'breakGlossCategory': utf8_encode(breakGlossCategory),
+                'modifier_id': modifier_id,
+                'datetimeModified': modification_datetime
+            })
+            if make_backups:
+                formbackup = FormBackup()
+                formbackup.vivify(form.getDict())
+                formbackup_buffer.append(formbackup)
+    if form_buffer:
+        Session.execute('set names utf8;')
+        update = form_table.update().where(form_table.c.id==bindparam('id_')).\
+                    values(**dict([(k, bindparam(k)) for k in form_buffer[0] if k != 'id_']))
+        Session.execute(update, form_buffer)
+    if make_backups and formbackup_buffer:
+        Session.add_all(formbackup_buffer)
+        Session.commit()
+    return [f['id_'] for f in form_buffer]
 
+def utf8_encode(unistr):
+    try:
+        return unistr.encode('utf8')
+    except AttributeError:
+        return None
 
 def compileMorphemicAnalysis(form, morphemeDelimiters=None, **kwargs):
     """An error-handling wrapper arround :func:`compileMorphemicAnalysis_`.
@@ -918,7 +952,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         return fakeForm
 
     def getPerfectMatches(form, wordIndex, morphemeIndex, morpheme, gloss, matchesFound,
-                          lexicalItems, deletedLexicalItems):
+                          lexicalItems, deletedLexicalItems, whole_db):
         """Return the list of forms that perfectly match a given morpheme.
         
         That is, return all forms ``f`` such that ``f.morphemeBreak==morpheme``
@@ -961,7 +995,9 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         """
         if (morpheme, gloss) in matchesFound:
             return matchesFound[(morpheme, gloss)], matchesFound
-        if lexicalItems or deletedLexicalItems:
+        if whole_db:
+            result = [f for f in whole_db if f.morphemeBreak == morpheme and f.morphemeGloss == gloss]
+        elif lexicalItems or deletedLexicalItems:
             extantMorphemeBreakIDs = json.loads(form.morphemeBreakIDs)
             extantMorphemeGlossIDs = json.loads(form.morphemeGlossIDs)
             # Extract extant perfect matches as quadruples: (id, mb, mg, sc)
@@ -1025,6 +1061,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         """
         lexicalItems = kwargs.get('lexicalItems')
         deletedLexicalItems = kwargs.get('deletedLexicalItems')
+        whole_db = kwargs.get('whole_db')
         forceQuery = kwargs.get('forceQuery')   # The output of getPerfectMatches: [] or (morpheme, gloss)
         morpheme = kwargs.get('morpheme')
         gloss = kwargs.get('gloss')
@@ -1032,7 +1069,9 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         value = morpheme or gloss
         if (morpheme, gloss) in matchesFound:
             return matchesFound[(morpheme, gloss)], matchesFound
-        if lexicalItems or deletedLexicalItems:
+        if whole_db:
+            result = [f for f in whole_db if getattr(f, attribute) == value]
+        elif lexicalItems or deletedLexicalItems:
             if value in forceQuery:
                 result = Session.query(Form)\
                         .filter(getattr(Form, attribute)==value).order_by(asc(Form.id)).all()
@@ -1059,6 +1098,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
     lexicalItems = kwargs.get('lexicalItems', [])
     deletedLexicalItems = kwargs.get('deletedLexicalItems', [])
     matchesFound = kwargs.get('cache', {})   # temporary store -- eliminates redundant queries & processing -- updated as a byproduct of getPerfectMatches and getPartialMatches
+    whole_db = kwargs.get('whole_db')
     morphemeBreakIDs = []
     morphemeGlossIDs = []
     syntacticCategoryString = []
@@ -1088,7 +1128,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
                 morpheme = mbWordMorphemesList[j]
                 gloss = mgWordMorphemesList[j]
                 perfectMatches, matchesFound = getPerfectMatches(form, i, j, morpheme, gloss,
-                                            matchesFound, lexicalItems, deletedLexicalItems)
+                                            matchesFound, lexicalItems, deletedLexicalItems, whole_db)
                 if perfectMatches and type(perfectMatches) is list:
                     mbWordAnalysis.append([(f.id, f.morphemeGloss,
                         getattr(f.syntacticCategory, 'name', None)) for f in perfectMatches])
@@ -1098,7 +1138,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
                 else:
                     morphemeMatches, matchesFound = getPartialMatches(form, i, j, matchesFound, morpheme=morpheme,
                                         forceQuery=perfectMatches, lexicalItems=lexicalItems,
-                                        deletedLexicalItems=deletedLexicalItems)
+                                        deletedLexicalItems=deletedLexicalItems, whole_db=whole_db)
                     if morphemeMatches:
                         mbWordAnalysis.append([(f.id, f.morphemeGloss,
                             getattr(f.syntacticCategory, 'name', None)) for f in morphemeMatches])
@@ -1106,7 +1146,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
                         mbWordAnalysis.append([])
                     glossMatches, matchesFound = getPartialMatches(form, i, j, matchesFound, gloss=gloss,
                                         forceQuery=perfectMatches, lexicalItems=lexicalItems,
-                                        deletedLexicalItems=deletedLexicalItems)
+                                        deletedLexicalItems=deletedLexicalItems, whole_db=whole_db)
                     if glossMatches:
                         mgWordAnalysis.append([(f.id, f.morphemeBreak,
                             getattr(f.syntacticCategory, 'name', None)) for f in glossMatches])
@@ -1133,7 +1173,7 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
 def updateFormsContainingThisFormAsMorpheme(form, change='create', previousVersion=None):
     """Update the morphological analysis-related attributes of every form containing the input form as morpheme.
     
-    Update the values of the ``morphemeBreadIDs``, ``morphemeGlossIDs``,
+    Update the values of the ``morphemeBreakIDs``, ``morphemeGlossIDs``,
     ``syntacticCategoryString``, and ``breakGlossCategory`` attributes of each
     form that contains the input form in its morphological analysis, i.e., each
     form whose ``morphemeBreak`` value contains the input form's

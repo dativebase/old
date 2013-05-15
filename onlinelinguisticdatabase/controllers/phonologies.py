@@ -455,6 +455,7 @@ def updatePhonology(phonology, data):
     changed = h.setAttr(phonology, 'script', h.normalize(data['script']), changed)
 
     if changed:
+        session['user'] = Session.merge(session['user'])
         phonology.modifier = session['user']
         phonology.datetimeModified = h.now()
         return phonology

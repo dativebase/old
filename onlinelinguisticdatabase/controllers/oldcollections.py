@@ -303,6 +303,7 @@ class OldcollectionsController(BaseController):
         if collection:
             if session['user'].role == u'administrator' or \
             collection.enterer is session['user']:
+                session['user'] = Session.merge(session['user'])
                 collection.modifier = session['user']
                 collectionDict = collection.getFullDict()
                 backupCollection(collectionDict)
@@ -572,6 +573,7 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwa
                     h.formReferencePattern.findall(collection.contentsUnpacked)]
     def updateModificationValues(collection, now):
         collection.datetimeModified = now
+        session['user'] = Session.merge(session['user'])
         collection.modifier = session['user']
     restricted = kwargs.get('restricted', False)
     contents_changed = kwargs.get('contents_changed', False)
@@ -950,6 +952,7 @@ def updateCollection(collection, data, collectionsReferenced):
 
     if changed:
         collection.datetimeModified = datetime.datetime.utcnow()
+        session['user'] = Session.merge(session['user'])
         collection.modifier = session['user']
         return collection, restricted, contents_changed
     return changed, restricted, contents_changed

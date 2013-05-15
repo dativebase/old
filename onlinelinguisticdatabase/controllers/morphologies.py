@@ -36,7 +36,7 @@ from onlinelinguisticdatabase.lib.schemata import MorphologySchema, MorphemeSequ
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
+from onlinelinguisticdatabase.model import Morphology, MorphologyBackup, ApplicationSettings
 from onlinelinguisticdatabase.lib.worker import worker_q
 
 log = logging.getLogger(__name__)
@@ -472,6 +472,7 @@ def updateMorphology(morphology, data):
     changed = h.setAttr(morphology, 'rulesCorpus', data['rulesCorpus'], changed)
     changed = h.setAttr(morphology, 'script', generateMorphologyScript(morphology), changed)
     if changed:
+        session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']
         morphology.datetimeModified = h.now()
         return morphology
@@ -507,6 +508,12 @@ class MorphologyScriptGenerationError(Exception):
     pass
 
 def generateMorphologyScript(morphology):
+    try:
+        return _generateMorphologyScript(morphology)
+    except Exception:
+        return u''
+
+def _generateMorphologyScript(morphology):
     """Generate a foma script representing a morphology.
 
     :param morphology: an OLD morphology model
@@ -517,7 +524,7 @@ def generateMorphologyScript(morphology):
     i.e., mappings from 'chat' to 'chat|cat', etc.
 
     The rules corpus (``morphology.rulesCorpus``) is used to extract morphological
-    rules in the form of POS templates and implement them all as a single foma regexe 
+    rules in the form of POS templates and implement them all as a single foma regex
     of the form 'define morphology (noun "-" agr) | (noun);', i.e., an FST that maps,
     e.g., 'chat-s' to 'chat|cat-s|PL'.
 
@@ -614,14 +621,16 @@ def createLexiconScript(morphemes):
     delimiter =  h.rareDelimiter
     regexes = []
     for POS, data in sorted(morphemes.items()):
-        regex = [u'define %s [' % getValidFomaRegexName(POS)]
-        lexicalItems = []
-        for mb, mg in sorted(data):
-            lexicalItems.append(u'    %s "%s%s":0' % (
-                u' '.join(map(h.escapeFomaReservedSymbols, list(mb))), delimiter, mg))
-        regex.append(u' |\n'.join(lexicalItems))
-        regex.append(u'];\n')
-        regexes.append(u'\n'.join(regex))
+        foma_regex_name = getValidFomaRegexName(POS)
+        if foma_regex_name:
+            regex = [u'define %s [' % foma_regex_name]
+            lexicalItems = []
+            for mb, mg in sorted(data):
+                lexicalItems.append(u'    %s "%s%s":0' % (
+                    u' '.join(map(h.escapeFomaReservedSymbols, list(mb))), delimiter, mg))
+            regex.append(u' |\n'.join(lexicalItems))
+            regex.append(u'];\n')
+            regexes.append(u'\n'.join(regex))
     return u'\n'.join(regexes)
 
 def getValidFomaRegexName(candidate):
@@ -631,7 +640,8 @@ def getValidFomaRegexName(candidate):
     """
     name = h.deleteFomaReservedSymbols(candidate)
     if not name:
-        raise Exception('The syntactic category name %s cannot be used as the name of a Foma regex since it contains only reserved symbols.' % name)
+        #raise Exception('The syntactic category name %s cannot be used as the name of a Foma regex since it contains only reserved symbols.' % name)
+        return None
     return u'%sCat' % name
 
 def posSequenceToFomaDisjunct(POSSequence):
@@ -648,6 +658,8 @@ def posSequenceToFomaDisjunct(POSSequence):
             tmp.append(getValidFomaRegexName(element))
         else:
             tmp.append('"%s"' % element)
+    if None in tmp:
+        return None
     return u' '.join(tmp)
 
 def createRulesScript(POSSequences):
@@ -660,7 +672,9 @@ def createRulesScript(POSSequences):
     regex = [u'define morphology (']
     disjuncts = []
     for POSSequence in sorted(POSSequences):
-        disjuncts.append(u'    (%s)' % posSequenceToFomaDisjunct(POSSequence))
+        foma_disjunct = posSequenceToFomaDisjunct(POSSequence)
+        if foma_disjunct:
+            disjuncts.append(u'    (%s)' % foma_disjunct)
     regex.append(u' |\n'.join(disjuncts))
     regex.append(u');\n')
     return u'\n'.join(regex)
