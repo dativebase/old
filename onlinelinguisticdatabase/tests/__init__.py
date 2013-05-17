@@ -101,6 +101,8 @@ class TestController(TestCase):
                 self.testPhonologiesPath, 'test_phonology_large.script')
         self.testPhonologyTestlessScriptPath = os.path.join(
                 self.testPhonologiesPath, 'test_phonology_no_tests.script')
+        self.testMorphologiesPath = os.path.join(self.here, 'onlinelinguisticdatabase',
+                            'tests', 'data', 'morphologies')
 
     def __setcreateparams__(self):
 

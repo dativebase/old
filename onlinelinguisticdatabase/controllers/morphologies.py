@@ -510,7 +510,8 @@ class MorphologyScriptGenerationError(Exception):
 def generateMorphologyScript(morphology):
     try:
         return _generateMorphologyScript(morphology)
-    except Exception:
+    except Exception, e:
+        log.warn(e)
         return u''
 
 def _generateMorphologyScript(morphology):
@@ -547,9 +548,10 @@ def _generateMorphologyScript(morphology):
     POSSequences = set()
     for form in morphology.rulesCorpus.forms:
         newPOSSequences, newMorphemes = extractWordPOSSequences(form, morphemeSplitter, unknownCategory)
-        POSSequences |= newPOSSequences
-        for POS, data in newMorphemes:
-            morphemes.setdefault(POS, set()).add(data)
+        if newPOSSequences:
+            POSSequences |= newPOSSequences
+            for POS, data in newMorphemes:
+                morphemes.setdefault(POS, set()).add(data)
     lexiconScript = createLexiconScript(morphemes)
     rulesScript = createRulesScript(POSSequences)
     script = u'%s\n\n%s' % (lexiconScript, rulesScript)
@@ -580,6 +582,8 @@ def extractWordPOSSequences(form, morphemeSplitter, unknownCategory):
     :returns: 2-tuple: (set of POS/delimiter sequences, list of morphemes as (POS, (mb, mg)) tuples).
 
     """
+    if not form.syntacticCategoryString:
+        return None, None
     POSSequences = set()
     morphemes = []
     scWords = form.syntacticCategoryString.split()
@@ -761,45 +765,3 @@ def apply(direction, inputs, morphology, morphologyBinaryPath, user):
     os.remove(outputsFilePath)
     os.remove(applyFilePath)
     return result
-
-def getTests(morphology):
-    """Return any tests defined in a morphology's script as a dictionary."""
-    result = {}
-    testLines = [l[6:] for l in morphology.script.splitlines() if l[:6] == u'#test ']
-    for l in testLines:
-        try:
-            i, o = map(unicode.strip, l.split(u'->'))
-            try:
-                result[i].append(o)
-            except KeyError:
-                result[i] = [o]
-        except ValueError:
-            pass
-    return result
-
-
-def runTests(morphology, morphologyBinaryPath, user):
-    """Run the test defined in the morphology's script and return a report.
-    
-    :param morphology: a morphology model.
-    :param str morphologyBinaryPath: an absolute path to the morphology's compiled foma script.
-    :param user: a user model.
-    :returns: a dictionary representing the report on the tests.
-
-    A line in a morphology's script that begins with "#test " signifies a
-    test.  After "#test " there should be a string of characters followed by
-    "->" followed by another string of characters.  The first string is the
-    underlying representation and the second is the anticipated surface
-    representation.  Requests to ``GET /morphologies/runtests/id`` will cause
-    the OLD to run a morphology script against its tests and return a
-    dictionary detailing the expected and actual outputs of each input in the
-    transcription.  :func:`runTests` generates that dictionary.
-
-    """
-
-    tests = getTests(morphology)
-    if not tests:
-        response.status_int = 400
-        return {'error': 'The script of morphology %d contains no tests.' % morphology.id}
-    results = morphologize(tests.keys(), morphology, morphologyBinaryPath, user)
-    return dict([(t, {'expected': tests[t], 'actual': results[t]}) for t in tests])

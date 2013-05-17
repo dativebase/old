@@ -14,6 +14,7 @@
 
 import logging
 import os
+from shutil import copyfileobj
 from time import time
 import simplejson as json
 from time import sleep
@@ -135,6 +136,26 @@ class TestMorphologiesController(TestController):
         response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
         rulesCorpusId = json.loads(response.body)['id']
 
+        # Create a rules corpus that contains no forms
+        query = {'filter': ['Form', 'syntacticCategory', 'name', '=', u'NO EXISTY']}
+        params = self.formSearchCreateParams.copy()
+        params.update({
+            'name': u'Find nothing',
+            'description': u'Returns the empty set',
+            'search': query
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('formsearches'), params, self.json_headers, self.extra_environ_admin)
+        emptyFormSearchId = json.loads(response.body)['id']
+        params = self.corpusCreateParams.copy()
+        params.update({
+            'name': u'Corpus of nada',
+            'formSearch': emptyFormSearchId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
+        emptyRulesCorpusId = json.loads(response.body)['id']
+
         # Finally, create a morphology using the lexicon and rules corpora
         name = u'Morphology of a very small subset of french'
         params = self.morphologyCreateParams.copy()
@@ -188,6 +209,18 @@ class TestMorphologiesController(TestController):
         assert u'g r e n o u i l l e "%sfrog":0' % h.rareDelimiter not in resp['script']
         assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rareDelimiter not in resp['script']
 
+        # Create a morphology with only an empty rules corpus; this will generate an invalid
+        # foma script, i.e., it will not compile.
+        params = self.morphologyCreateParams.copy()
+        params.update({
+            'name': u'Empty rules corpus',
+            'rulesCorpus': emptyRulesCorpusId
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['script'].replace(' ', '').replace('\n', '') == 'definemorphology();'
+
     #@nottest
     def test_b_index(self):
         """Tests that GET /morphologies returns all morphology resources.
@@ -199,7 +232,7 @@ class TestMorphologiesController(TestController):
         # Get all morphologies
         response = self.app.get(url('morphologies'), headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == 2
+        assert len(resp) == 3
 
         # Test the paginator GET params.
         paginator = {'itemsPerPage': 1, 'page': 1}
@@ -221,7 +254,7 @@ class TestMorphologiesController(TestController):
 
         # Test the orderBy *with* paginator.
         params = {'orderByModel': 'Morphology', 'orderByAttribute': 'id',
-                     'orderByDirection': 'desc', 'itemsPerPage': 1, 'page': 2}
+                     'orderByDirection': 'desc', 'itemsPerPage': 1, 'page': 3}
         response = self.app.get(url('morphologies'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -277,7 +310,7 @@ class TestMorphologiesController(TestController):
         # Test GET /morphologies/new
         response = self.app.get(url('new_morphology'), headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp['corpora']) == 2
+        assert len(resp['corpora']) == 3
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_morphology', id=morphologies[0].id), status=401)
@@ -304,7 +337,7 @@ class TestMorphologiesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['morphology']['name'] == morphologies[0].name
-        assert len(resp['data']['corpora']) == 2
+        assert len(resp['data']['corpora']) == 3
         assert response.content_type == 'application/json'
 
     #@nottest
@@ -656,8 +689,15 @@ class TestMorphologiesController(TestController):
         # Here we load a whole bunch of form (and auxiliary) data from the mysql dumpfile
         # in the tests/data/datesets directory.
 
-        # Change the value of ``olddumpfile`` to use a different dumpfile in the ``datasets`` dir
+        # The ``olddumpfile`` variable holds the name of a MySQL dump file in /tests/data/datasets
+        # that will be used to populate the database.
         olddumpfile = 'blaold.sql'
+
+        # The ``precompiled_morphology`` variable holds the name of a compiled foma script in /tests/data/morphologies
+        # which should be the same file that is generated from the code below.  Specifying this file sidesteps the
+        # lengthy compilation process, if desired.  Set this variable to None if you want the compilation.
+        #precompiled_morphology = 'blaold_morphology.foma'
+        precompiled_morphology = None
 
         olddumpfilePath = os.path.join(self.testDatasetsPath, olddumpfile)
         if not os.path.isfile(olddumpfilePath):
@@ -685,24 +725,9 @@ class TestMorphologiesController(TestController):
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-        """
-        # Create an application settings with morpheme delimiters appropriate for Blackfoot.
-        applicationSettings = h.generateDefaultApplicationSettings()
-        applicationSettings.morphemeDelimiters = u'-'
-        Session.add(applicationSettings)
-        Session.commit()
-        """
-
-        # Convert NULL syntacticCategoryString values to empty strings
-        # TODO: the function in morphologies that generates the script value will
-        # raise an exception if syntacticCategoryString is None -- deal with this ...
-        connection = Session.connection()
-        connection.execute("UPDATE form SET syntacticCategoryString='' WHERE syntacticCategoryString IS NULL;")
-
         # Create a lexicon form search and corpus
-        # NOTE: I removed the syncat name "o" since, as a single character, it was causeing problems in Foma ...
         lexicalSynCatNames = ['nan', 'nin', 'nar', 'nir', 'vai', 'vii', 'vta', 'vti', 'vrt', 'adt', 'dem',
-            'prev', 'med', 'fin', 'oth', 'und', 'pro', 'asp', 'ten', 'mod', 'agra', 'agrb', 'thm', 'whq',
+            'prev', 'med', 'fin', 'oth', 'o', 'und', 'pro', 'asp', 'ten', 'mod', 'agra', 'agrb', 'thm', 'whq',
             'num', 'drt', 'dim', 'stp', 'PN', 'INT']
         query = {'filter': ['Form', 'syntacticCategory', 'name', 'in', lexicalSynCatNames]}
         query_ = {'filter': ['and', [['Form', 'id', '<', 1000],
@@ -771,41 +796,49 @@ class TestMorphologiesController(TestController):
         # Compile the morphology's script
         morphologyDir = os.path.join(self.morphologiesPath, 'morphology_%d' % largeMorphologyId)
         morphologyBinaryFilename = 'morphology_%d.foma' % largeMorphologyId
-        response = self.app.put(url(controller='morphologies', action='compile',
-                    id=largeMorphologyId), headers=self.json_headers,
-                    extra_environ=self.extra_environ_contrib)
-        resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
-
-        # Poll ``GET /morphologies/largeMorphologyId`` until ``datetimeCompiled`` has
-        # changed.
-        # WARNING: it takes about 7 minutes on my machine for foma to compile this morphology
-        secondsElapsed = 0
-        wait = 10
-        while True:
-            response = self.app.get(url('morphology', id=largeMorphologyId),
-                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        morphologyBinaryPath = os.path.join(morphologyDir, morphologyBinaryFilename)
+        try:
+            precompiled_morphology_path = os.path.join(self.testMorphologiesPath, precompiled_morphology)
+        except Exception:
+            precompiled_morphology_path = None
+        if precompiled_morphology and precompiled_morphology_path and os.path.exists(precompiled_morphology_path):
+            # Use the precompiled morphology script if it's available,
+            copyfileobj(open(precompiled_morphology_path, 'rb'), open(morphologyBinaryPath, 'wb'))
+        else:
+            # Compile the morphology's script
+            response = self.app.put(url(controller='morphologies', action='compile',
+                        id=largeMorphologyId), headers=self.json_headers,
+                        extra_environ=self.extra_environ_contrib)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
-                log.debug('Compile attempt for morphology %d has terminated.' % largeMorphologyId)
-                break
-            else:
-                log.debug('Waiting for morphology %d to compile (%.2f minutes elapsed) ...' % (
-                    largeMorphologyId, (secondsElapsed / 60.0)))
-            sleep(wait)
-            secondsElapsed = secondsElapsed + 10
-        morphologyDirContents = os.listdir(morphologyDir)
-        log.debug(morphologyDirContents)
-        assert resp['compileSucceeded'] == True
-        assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
-        assert morphologyBinaryFilename in morphologyDirContents
-        assert resp['modifier']['role'] == u'contributor'
+            datetimeCompiled = resp['datetimeCompiled']
+
+            # Poll ``GET /morphologies/largeMorphologyId`` until ``datetimeCompiled`` has
+            # changed.
+            # WARNING: it takes about 7 minutes on my machine for foma to compile this morphology
+            secondsElapsed = 0
+            wait = 10
+            while True:
+                response = self.app.get(url('morphology', id=largeMorphologyId),
+                            headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+                resp = json.loads(response.body)
+                if datetimeCompiled != resp['datetimeCompiled']:
+                    log.debug('Compile attempt for morphology %d has terminated.' % largeMorphologyId)
+                    break
+                else:
+                    log.debug('Waiting for morphology %d to compile (%.2f minutes elapsed) ...' % (
+                        largeMorphologyId, (secondsElapsed / 60.0)))
+                sleep(wait)
+                secondsElapsed = secondsElapsed + 10
+            morphologyDirContents = os.listdir(morphologyDir)
+            log.debug(morphologyDirContents)
+            assert resp['compileSucceeded'] == True
+            assert resp['compileMessage'] == u'Compilation process terminated successfully and new binary file was written.'
+            assert morphologyBinaryFilename in morphologyDirContents
+            assert resp['modifier']['role'] == u'contributor'
 
         # Get the compiled foma script.
         response = self.app.get(url(controller='morphologies', action='servecompiled',
             id=largeMorphologyId), headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        morphologyBinaryPath = os.path.join(self.morphologiesPath, 'morphology_%d' % largeMorphologyId,
-               'morphology_%d.foma' % largeMorphologyId)
         fomaFile = open(morphologyBinaryPath, 'rb')
         fomaFileContent = fomaFile.read()
         assert fomaFileContent == response.body
@@ -818,7 +851,11 @@ class TestMorphologiesController(TestController):
                 u'ipommo%stransfer.title.to-oki%sINV-wa%s3SG' % (h.rareDelimiter, h.rareDelimiter, h.rareDelimiter),
                 u'ipommo-oki-wa'
             ),
-            (u'Joel%sJoel' % h.rareDelimiter, u'Joel')
+            (u'Joel%sJoel' % h.rareDelimiter, u'Joel'),
+            (
+                u'kit%s2-sska\u0301akanii%sagree' % (h.rareDelimiter, h.rareDelimiter),
+                u'kit-sska\u0301akanii'
+            )
         )
 
         # Test applydown with a valid morpheme sequence.
@@ -850,7 +887,8 @@ class TestMorphologiesController(TestController):
         # Test applydown with multiple morpheme sequences.
         ms1 = seqs[0][0]
         ms2 = seqs[1][0]
-        params = json.dumps({'morphemeSequences': [ms1, ms2]})
+        ms3 = seqs[2][0]
+        params = json.dumps({'morphemeSequences': [ms1, ms2, ms3]})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -859,6 +897,7 @@ class TestMorphologiesController(TestController):
         morphologyDirContents = os.listdir(morphologyDirPath)
         assert seqs[0][1] in resp[ms1]
         assert seqs[1][1] in resp[ms2]
+        assert seqs[2][1] in resp[ms3]
 
         # Test applyup
         params = json.dumps({'morphemeSequences': seqs[0][1]})
@@ -871,12 +910,13 @@ class TestMorphologiesController(TestController):
         assert seqs[0][0] in resp[seqs[0][1]]
 
         # Test applyup with multiple input sequences
-        params = json.dumps({'morphemeSequences': [seqs[0][1], seqs[1][1]]})
+        params = json.dumps({'morphemeSequences': [seqs[0][1], seqs[1][1], seqs[2][1]]})
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=largeMorphologyId), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert seqs[0][0] in resp[seqs[0][1]]
         assert seqs[1][0] in resp[seqs[1][1]]
+        assert seqs[2][0] in resp[seqs[2][1]]
 
     #@nottest
     def test_z_cleanup(self):

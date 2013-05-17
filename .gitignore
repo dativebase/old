@@ -26,6 +26,9 @@ onlinelinguisticdatabase/tests/data/files/old_test_medium.wav
 # Ignore the Blackfoot MySQL dump file
 onlinelinguisticdatabase/tests/data/datasets/blaold*
 
+# Ignore the morphology scripts and binaries
+onlinelinguisticdatabase/tests/data/morphologies/
+
 # The client-side JavaScript application should be kept separate, at least for now
 onlinelinguisticdatabase/public/coffee/
 onlinelinguisticdatabase/public/css/
