@@ -84,8 +84,10 @@ def make_map(config):
                 action='applydown', conditions=dict(method='PUT'))
     map.connect('/morphologies/{id}/applyup', controller='morphologies',
                 action='applyup', conditions=dict(method='PUT'))
-    map.connect('/morphologies/{id}/compile', controller='morphologies',
-                action='compile', conditions=dict(method='PUT'))
+    map.connect('/morphologies/{id}/generate', controller='morphologies',
+                action='generate', conditions=dict(method='PUT'))
+    map.connect('/morphologies/{id}/generate_and_compile', controller='morphologies',
+                action='generate_and_compile', conditions=dict(method='PUT'))
     map.connect('/morphologies/{id}/history', controller='morphologies', action='history')
     map.connect('/morphologies/{id}/servecompiled', controller='morphologies',
                 action='servecompiled', conditions=dict(method='GET'))

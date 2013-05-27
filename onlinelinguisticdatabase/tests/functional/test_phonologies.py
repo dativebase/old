@@ -500,7 +500,7 @@ class TestPhonologiesController(TestController):
             Phonology compilation is accomplished via a worker thread and
             requests to /phonologies/id/compile return immediately.  When the
             script compilation attempt has terminated, the values of the
-            ``datetimeCompiled``, ``datetimeModified``, ``compileSucceeded``,
+            ``compile_attempt``, ``datetimeModified``, ``compileSucceeded``,
             ``compileMessage`` and ``modifier`` attributes of the phonology are
             updated.  Therefore, the tests must poll ``GET /phonologies/id``
             in order to know when the compilation-tasked worker has finished.
@@ -559,17 +559,17 @@ class TestPhonologiesController(TestController):
                     id=phonology1Id), headers=self.json_headers,
                     extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
 
-        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonology1Id`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonology1Id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
                 break
             else:
@@ -629,18 +629,18 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
         assert resp['id'] == phonologyId
 
-        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonologyId`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonologyId),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
                 break
             else:
@@ -677,18 +677,18 @@ class TestPhonologiesController(TestController):
         # Attempt to compile the malformed phonology's script and expect to fail
         response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
         assert resp['id'] == phonologyId
 
-        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonologyId`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonologyId),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
                 break
             else:
@@ -725,18 +725,18 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
         assert resp['id'] == phonologyId
 
-        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonologyId`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonologyId),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
                 break
             else:
@@ -776,18 +776,18 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
         assert resp['id'] == phonologyId
 
-        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonologyId`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonologyId),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
                 break
             else:
@@ -827,18 +827,18 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonologyId),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
         assert resp['id'] == phonologyId
 
-        # Poll ``GET /phonologies/phonologyId`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonologyId`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonologyId),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonologyId)
                 break
             else:
@@ -856,15 +856,15 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         phonologyBinaryFilename = 'phonology_%d.foma' % phonology1Id
         phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % phonology1Id)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
 
-        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has
+        # Poll ``GET /phonologies/phonology1Id`` until ``compile_attempt`` has
         # changed.
         while True:
             response = self.app.get(url('phonology', id=phonology1Id),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
                 break
             else:
@@ -878,7 +878,7 @@ class TestPhonologiesController(TestController):
     #@nottest
     def test_applydown(self):
         """Tests that ``GET /phonologies/id/applydown`` phonologizes input morpho-phonemic segmentations.
-        
+
         """
         # Create a phonology with the test phonology script
         params = self.phonologyCreateParams.copy()
@@ -918,14 +918,14 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
                                 headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
 
-        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
+        # Poll ``GET /phonologies/phonology1Id`` until ``compile_attempt`` has changed.
         while True:
             response = self.app.get(url('phonology', id=phonology1Id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
                 break
             else:
@@ -1121,16 +1121,16 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
                                 headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
         compileSucceeded = resp['compileSucceeded']
         compileMessage = resp['compileMessage']
 
-        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
+        # Poll ``GET /phonologies/phonology1Id`` until ``compile_attempt`` has changed.
         while True:
             response = self.app.get(url('phonology', id=phonology1Id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
                 break
             else:
@@ -1194,14 +1194,14 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonology1Id),
                                 headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
-        datetimeCompiled = resp['datetimeCompiled']
+        compile_attempt = resp['compile_attempt']
 
-        # Poll ``GET /phonologies/phonology1Id`` until ``datetimeCompiled`` has changed.
+        # Poll ``GET /phonologies/phonology1Id`` until ``compile_attempt`` has changed.
         while True:
             response = self.app.get(url('phonology', id=phonology1Id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib)
             resp = json.loads(response.body)
-            if datetimeCompiled != resp['datetimeCompiled']:
+            if compile_attempt != resp['compile_attempt']:
                 log.debug('Compile attempt for phonology %d has terminated.' % phonology1Id)
                 break
             else:

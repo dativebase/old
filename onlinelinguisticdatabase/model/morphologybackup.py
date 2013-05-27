@@ -19,12 +19,13 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from onlinelinguisticdatabase.model.meta import Base, now
 import simplejson as json
-import datetime
+import logging
+
+log = logging.getLogger(__name__)
 
 class MorphologyBackup(Base):
     """Class for creating OLD morphologyBackup models.
@@ -46,17 +47,18 @@ class MorphologyBackup(Base):
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    #script = Column(UnicodeText)
-    script = Column(UnicodeText(length=2**31))
+    script_type = Column(Unicode(5))
     lexiconCorpus = Column(UnicodeText)
     rulesCorpus = Column(UnicodeText)
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
-    datetimeCompiled = Column(DateTime)
     compileSucceeded = Column(Boolean, default=False)
     compileMessage = Column(Unicode(255))
+    compile_attempt = Column(Unicode(36))
+    generate_attempt = Column(Unicode(36))
+    extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
 
     def vivify(self, morphologyDict):
         """The vivify method gives life to a morphologyBackup by specifying its
@@ -65,21 +67,22 @@ class MorphologyBackup(Base):
         to-be-backed-up morphology are converted into (truncated) JSON objects.
 
         """
-
         self.UUID = morphologyDict['UUID']
         self.morphology_id = morphologyDict['id']
         self.name = morphologyDict['name']
         self.description = morphologyDict['description']
-        self.script = morphologyDict['script']
+        self.script_type = morphologyDict['script_type']
         self.rulesCorpus = unicode(json.dumps(morphologyDict['rulesCorpus']))
         self.lexiconCorpus = unicode(json.dumps(morphologyDict['lexiconCorpus']))
         self.enterer = unicode(json.dumps(morphologyDict['enterer']))
         self.modifier = unicode(json.dumps(morphologyDict['modifier']))
         self.datetimeEntered = morphologyDict['datetimeEntered']
         self.datetimeModified = morphologyDict['datetimeModified']
-        self.datetimeCompiled = morphologyDict['datetimeCompiled']
         self.compileSucceeded = morphologyDict['compileSucceeded']
         self.compileMessage = morphologyDict['compileMessage']
+        self.compile_attempt = morphologyDict['compile_attempt']
+        self.generate_attempt = morphologyDict['generate_attempt']
+        self.extract_morphemes_from_rules_corpus = morphologyDict['extract_morphemes_from_rules_corpus']
 
     def getDict(self):
         return {
@@ -88,14 +91,16 @@ class MorphologyBackup(Base):
             'morphology_id': self.morphology_id,
             'name': self.name,
             'description': self.description,
-            'script': self.script,
+            'script_type': self.script_type,
             'rulesCorpus': self.jsonLoads(self.rulesCorpus),
             'lexiconCorpus': self.jsonLoads(self.lexiconCorpus),
             'enterer': self.jsonLoads(self.enterer),
             'modifier': self.jsonLoads(self.modifier),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
-            'datetimeCompiled': self.datetimeCompiled,
             'compileSucceeded': self.compileSucceeded,
             'compileMessage': self.compileMessage,
+            'compile_attempt': self.compile_attempt,
+            'generate_attempt': self.generate_attempt,
+            'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus
         }

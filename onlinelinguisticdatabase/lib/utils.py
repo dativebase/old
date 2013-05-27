@@ -1722,10 +1722,16 @@ validationValues = (u'None', u'Warning', u'Error')
 phonologyCompileTimeout = 30
 morphologyCompileTimeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile!
 
-def fomaOutputFile2Dict(file_):
+# The word boundary symbol is used in foma FST scripts to denote the beginning or end of a word,
+# i.e., it can be referred to in phonological rules, e.g., define semivowelDrop glides -> 0 || "#" _;$
+# The system will wrap inputs in this symbol when applying a phonology against them.
+word_boundary_symbol = u'#'
+
+def fomaOutputFile2Dict(file_, remove_word_boundaries=True):
     """Return the output of a foma apply request as a dictionary.
 
     :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
+    :param bool remove_word_boundaries: toggles whether word boundaries are removed in the output
     :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
 
     .. note::
@@ -1734,11 +1740,17 @@ def fomaOutputFile2Dict(file_):
         input -- hence the replacement of '+?' with None below.
 
     """
+    def word_boundary_remover(x):
+        if (x[0:1], x[-1:]) == (word_boundary_symbol, word_boundary_symbol):
+            return x[1:-1]
+        else:
+            return x
+    remover = word_boundary_remover if remove_word_boundaries else (lambda x: x)
     result = {}
     for line in file_:
         line = line.strip()
         if line:
-            i, o = line.split('\t')[:2]
+            i, o = map(remover, line.split('\t')[:2])
             result.setdefault(i, []).append({u'+?': None}.get(o, o))
     return result
 
@@ -1761,6 +1773,8 @@ def escapeFomaReservedSymbols(string):
 def deleteFomaReservedSymbols(string):
     """Delete foma reserved symbols -- good for names of defined regexes."""
     return fomaReservedSymbolsPatt.sub(u'', string)
+
+morphology_script_types = ('regex', 'lexc')
 
 def getFileLength(filePath):
     """Return the number of lines in a file.

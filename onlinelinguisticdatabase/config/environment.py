@@ -27,7 +27,7 @@ from pylons.error import handle_mako_error
 from sqlalchemy import engine_from_config
 import onlinelinguisticdatabase.lib.app_globals as app_globals
 import onlinelinguisticdatabase.lib.helpers
-from onlinelinguisticdatabase.lib.worker import start_worker
+from onlinelinguisticdatabase.lib.foma_worker import start_foma_worker
 from onlinelinguisticdatabase.config.routing import make_map
 from onlinelinguisticdatabase.model import init_model
 import logging
@@ -108,16 +108,12 @@ def load_environment(global_conf, app_conf):
                 cursor.close()
         except ImportError:
             from sqlalchemy.interfaces import PoolListener
-            engine = engine_from_config(
-                config, 'sqlalchemy.', listeners=[SQLiteSetup()])
-            # Make LIKE searches case sensitive in SQLite
-            engine.execute('PRAGMA case_sensitive_like=ON')
             class SQLiteSetup(PoolListener):
                 """A PoolListener used to provide the SQLite dbapi with a regexp function.
                 """
                 def connect(self, conn, conn_record):
                     conn.create_function('regexp', 2, self.regexp)
-            
+
                 def regexp(self, expr, item):
                     """This is the Python re-based regexp function that we provide for SQLite.
                     Note that searches will be case-sensitive by default, which may not be
@@ -129,10 +125,14 @@ def load_environment(global_conf, app_conf):
                     # I think this is desirable ...
                     except TypeError:
                         return item and patt.search(str(item)) is not None
+            engine = engine_from_config(
+                config, 'sqlalchemy.', listeners=[SQLiteSetup()])
+            # Make LIKE searches case sensitive in SQLite
+            engine.execute('PRAGMA case_sensitive_like=ON')
 
     init_model(engine)
 
-    # start worker -- used for long-running tasks like FST compilation
-    worker = start_worker()
+    # start foma worker -- used for long-running tasks like FST compilation
+    foma_worker = start_foma_worker()
 
     return config

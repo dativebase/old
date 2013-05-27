@@ -19,12 +19,10 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from onlinelinguisticdatabase.model.meta import Base, now
 import simplejson as json
-import datetime
 
 class PhonologyBackup(Base):
     """Class for creating OLD phonologyBackup models.
@@ -51,9 +49,9 @@ class PhonologyBackup(Base):
     modifier = Column(UnicodeText)
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
-    datetimeCompiled = Column(DateTime)
     compileSucceeded = Column(Boolean, default=False)
     compileMessage = Column(Unicode(255))
+    compile_attempt = Column(Unicode(36))
 
     def vivify(self, phonologyDict):
         """The vivify method gives life to a phonologyBackup by specifying its
@@ -72,9 +70,9 @@ class PhonologyBackup(Base):
         self.modifier = unicode(json.dumps(phonologyDict['modifier']))
         self.datetimeEntered = phonologyDict['datetimeEntered']
         self.datetimeModified = phonologyDict['datetimeModified']
-        self.datetimeCompiled = phonologyDict['datetimeCompiled']
         self.compileSucceeded = phonologyDict['compileSucceeded']
         self.compileMessage = phonologyDict['compileMessage']
+        self.compile_attempt = phonologyDict['compile_attempt']
 
     def getDict(self):
         return {
@@ -88,7 +86,7 @@ class PhonologyBackup(Base):
             'modifier': self.jsonLoads(self.modifier),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
-            'datetimeCompiled': self.datetimeCompiled,
             'compileSucceeded': self.compileSucceeded,
             'compileMessage': self.compileMessage,
+            'compile_attempt': self.compile_attempt
         }

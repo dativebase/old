@@ -242,7 +242,9 @@ class TestController(TestCase):
             'name': u'',
             'description': u'',
             'lexiconCorpus': u'',
-            'rulesCorpus': u''
+            'rulesCorpus': u'',
+            'script_type': u'lexc',
+            'extract_morphemes_from_rules_corpus': False
         }
         self.orthographyCreateParams = {
             'name': u'',

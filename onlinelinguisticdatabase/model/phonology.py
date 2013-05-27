@@ -14,9 +14,9 @@
 
 """Phonology model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class Phonology(Base):
@@ -38,9 +38,9 @@ class Phonology(Base):
     modifier = relation('User', primaryjoin='Phonology.modifier_id==User.id')
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
-    datetimeCompiled = Column(DateTime)
     compileSucceeded = Column(Boolean, default=False)
     compileMessage = Column(Unicode(255))
+    compile_attempt = Column(Unicode(36))
 
     def getDict(self):
         return {
@@ -53,7 +53,7 @@ class Phonology(Base):
             'modifier': self.getMiniUserDict(self.modifier),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
-            'datetimeCompiled': self.datetimeCompiled,
             'compileSucceeded': self.compileSucceeded,
-            'compileMessage': self.compileMessage
+            'compileMessage': self.compileMessage,
+            'compile_attempt': self.compile_attempt
         }

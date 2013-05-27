@@ -14,10 +14,11 @@
 
 """Morphology model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
+import simplejson as json
 
 class Morphology(Base):
 
@@ -31,8 +32,7 @@ class Morphology(Base):
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    #script = Column(UnicodeText)
-    script = Column(UnicodeText(length=2**31))
+    script_type = Column(Unicode(5))
     lexiconCorpus_id = Column(Integer, ForeignKey('corpus.id'))
     lexiconCorpus = relation('Corpus', primaryjoin='Morphology.lexiconCorpus_id==Corpus.id')
     rulesCorpus_id = Column(Integer, ForeignKey('corpus.id'))
@@ -43,24 +43,30 @@ class Morphology(Base):
     modifier = relation('User', primaryjoin='Morphology.modifier_id==User.id')
     datetimeEntered = Column(DateTime)
     datetimeModified = Column(DateTime, default=now)
-    datetimeCompiled = Column(DateTime)
     compileSucceeded = Column(Boolean, default=False)
     compileMessage = Column(Unicode(255))
+    compile_attempt = Column(Unicode(36)) # a UUID
+    generate_attempt = Column(Unicode(36)) # a UUID
+    extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
+    rules = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces
 
     def getDict(self):
         return {
             'id': self.id,
             'UUID': self.UUID,
             'name': self.name,
-            'lexiconCorpus': self.lexiconCorpus.getMiniDict(),
-            'rulesCorpus': self.rulesCorpus.getMiniDict(),
-            'script': self.script,
+            'lexiconCorpus': self.getMiniDictFor(self.lexiconCorpus),
+            'rulesCorpus': self.getMiniDictFor(self.rulesCorpus),
+            'script_type': self.script_type,
             'description': self.description,
             'enterer': self.getMiniUserDict(self.enterer),
             'modifier': self.getMiniUserDict(self.modifier),
             'datetimeEntered': self.datetimeEntered,
             'datetimeModified': self.datetimeModified,
-            'datetimeCompiled': self.datetimeCompiled,
             'compileSucceeded': self.compileSucceeded,
-            'compileMessage': self.compileMessage
+            'compileMessage': self.compileMessage,
+            'compile_attempt': self.compile_attempt,
+            'generate_attempt': self.generate_attempt,
+            'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus,
+            'rules': self.rules
         }

@@ -36,7 +36,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Phonology, PhonologyBackup
-from onlinelinguisticdatabase.lib.worker import worker_q
+from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
 
 log = logging.getLogger(__name__)
 
@@ -273,19 +273,19 @@ class PhonologiesController(BaseController):
         .. note::
 
             The script is compiled asynchronously in a worker thread.  See 
-            :mod:`onlinelinguisticdatabase.lib.worker`.
+            :mod:`onlinelinguisticdatabase.lib.foma_worker`.
 
         """
         phonology = Session.query(Phonology).get(id)
         if phonology:
             if h.fomaInstalled():
                 phonologyDirPath = getPhonologyDirPath(phonology)
-                worker_q.put({
+                foma_worker_q.put({
                     'id': h.generateSalt(),
-                    'func': 'compileFomaScript',
-                    'args': {'modelName': u'Phonology', 'modelId': phonology.id,
-                        'scriptDirPath': phonologyDirPath, 'userId': session['user'].id,
-                        'verificationString': u'defined phonology: ', 'timeout': h.phonologyCompileTimeout}
+                    'func': 'compile_phonology_script',
+                    'args': {'phonology_id': phonology.id, 'script_dir_path': phonologyDirPath,
+                        'user_id': session['user'].id, 'verification_string': u'defined phonology: ',
+                        'timeout': h.phonologyCompileTimeout}
                 })
                 return phonology
             else:
@@ -553,6 +553,8 @@ def phonologize(inputs, phonology, phonologyBinaryPath, user):
     applydownFilePath = os.path.join(phonologyDirPath,
             'applydown_%s_%s.sh' % (user.username, randomString))
     with codecs.open(inputsFilePath, 'w', 'utf8') as f:
+        inputs = [u'%s%s%s' % (h.word_boundary_symbol, input_, h.word_boundary_symbol)
+                  for input_ in inputs]
         f.write(u'\n'.join(inputs))
     with codecs.open(applydownFilePath, 'w', 'utf8') as f:
         f.write('#!/bin/sh\ncat %s | flookup -i %s' % (
@@ -577,14 +579,10 @@ def getTests(phonology):
     for l in testLines:
         try:
             i, o = map(unicode.strip, l.split(u'->'))
-            try:
-                result[i].append(o)
-            except KeyError:
-                result[i] = [o]
+            result.setdefault(i, []).append(o)
         except ValueError:
             pass
     return result
-
 
 def runTests(phonology, phonologyBinaryPath, user):
     """Run the test defined in the phonology's script and return a report.

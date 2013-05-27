@@ -1118,4 +1118,5 @@ class MorphologySchema(Schema):
     description = UnicodeString()
     lexiconCorpus = ValidOLDModelObject(modelName='Corpus')
     rulesCorpus = ValidOLDModelObject(modelName='Corpus', not_empty=True)
-
+    script_type = OneOf(h.morphology_script_types)
+    extract_morphemes_from_rules_corpus = StringBoolean()

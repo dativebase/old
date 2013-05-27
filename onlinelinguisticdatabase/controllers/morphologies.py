@@ -22,7 +22,7 @@
 import logging
 import simplejson as json
 import os
-import re
+import cPickle
 from uuid import uuid4
 import codecs
 from subprocess import Popen
@@ -36,8 +36,8 @@ from onlinelinguisticdatabase.lib.schemata import MorphologySchema, MorphemeSequ
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Morphology, MorphologyBackup, ApplicationSettings
-from onlinelinguisticdatabase.lib.worker import worker_q
+from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
+from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
 
 log = logging.getLogger(__name__)
 
@@ -107,10 +107,10 @@ class MorphologiesController(BaseController):
             schema = MorphologySchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            morphology = createNewMorphology(data)
+            morphology = create_new_morphology(data)
             Session.add(morphology)
             Session.commit()
-            saveMorphologyScript(morphology)
+            create_morphology_dir(morphology)
             return morphology
         except h.JSONDecodeError:
             response.status_int = 400
@@ -118,9 +118,6 @@ class MorphologiesController(BaseController):
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
-        except MorphologyScriptGenerationError, e:
-            response.status_int = 400
-            return {'error': e}
 
     @h.jsonify
     @h.restrict('GET')
@@ -157,13 +154,12 @@ class MorphologiesController(BaseController):
                 state.id = id
                 data = schema.to_python(values, state)
                 morphologyDict = morphology.getDict()
-                morphology = updateMorphology(morphology, data)
-                # morphology will be False if there are no changes (cf. updateMorphology).
+                morphology = update_morphology(morphology, data)
+                # morphology will be False if there are no changes (cf. update_morphology).
                 if morphology:
                     backupMorphology(morphologyDict)
                     Session.add(morphology)
                     Session.commit()
-                    saveMorphologyScript(morphology)
                     return morphology
                 else:
                     response.status_int = 400
@@ -175,9 +171,6 @@ class MorphologiesController(BaseController):
             except Invalid, e:
                 response.status_int = 400
                 return {'errors': e.unpack_errors()}
-            except MorphologyScriptGenerationError, e:
-                response.status_int = 400
-                return {'error': e}
         else:
             response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}
@@ -200,7 +193,7 @@ class MorphologiesController(BaseController):
             backupMorphology(morphologyDict)
             Session.delete(morphology)
             Session.commit()
-            removeMorphologyDirectory(morphology)
+            remove_morphology_directory(morphology)
             return morphology
         else:
             response.status_int = 404
@@ -214,12 +207,26 @@ class MorphologiesController(BaseController):
 
         :URL: ``GET /morphologies/id``
         :param str id: the ``id`` value of the morphology to be returned.
+        :GET param str script: if set to '1', the script will be returned with the morphology
         :returns: a morphology model object.
 
         """
         morphology = h.eagerloadMorphology(Session.query(Morphology)).get(id)
         if morphology:
-            return morphology
+            morphology_dict = morphology.getDict()
+            if request.GET.get('script') == u'1':
+                morphology_script_path = get_morphology_file_path(morphology, fileType='script')
+                if os.path.isfile(morphology_script_path):
+                    morphology_dict['script'] = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
+                else:
+                    morphology_dict['script'] = u''
+            if request.GET.get('lexicon') == u'1':
+                morphology_lexicon_path = get_morphology_file_path(morphology, fileType='lexicon')
+                if os.path.isfile(morphology_lexicon_path):
+                    morphology_dict['lexicon'] = cPickle.load(open(morphology_lexicon_path, 'rb'))
+                else:
+                    morphology_dict['lexicon'] = {}
+            return morphology_dict
         else:
             response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}
@@ -280,8 +287,8 @@ class MorphologiesController(BaseController):
     @h.restrict('PUT')
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
-    def compile(self, id):
-        """Compile the script of a morphology as a foma FST.
+    def generate_and_compile(self, id):
+        """Generate the morphology's script and compile it as a foma FST.
 
         :URL: ``PUT /morphologies/compile/id``
         :param str id: the ``id`` value of the morphology whose script will be compiled.
@@ -291,28 +298,27 @@ class MorphologiesController(BaseController):
 
         .. note::
 
-            The script is compiled asynchronously in a worker thread.  See 
-            :mod:`onlinelinguisticdatabase.lib.worker`.
+            The script is compiled asynchronously in a worker thread.  See
+            :mod:`onlinelinguisticdatabase.lib.foma_worker`.
 
         """
-        morphology = Session.query(Morphology).get(id)
-        if morphology:
-            if h.fomaInstalled():
-                morphologyDirPath = getMorphologyDirPath(morphology)
-                worker_q.put({
-                    'id': h.generateSalt(),
-                    'func': 'compileFomaScript',
-                    'args': {'modelName': u'Morphology', 'modelId': morphology.id,
-                        'scriptDirPath': morphologyDirPath, 'userId': session['user'].id,
-                        'verificationString': u'defined morphology: ', 'timeout': h.morphologyCompileTimeout}
-                })
-                return morphology
-            else:
-                response.status_int = 400
-                return {'error': 'Foma and flookup are not installed.'}
-        else:
-            response.status_int = 404
-            return {'error': 'There is no morphology with id %s' % id}
+        return generate_and_compile_morphology(id)
+
+    @h.jsonify
+    @h.restrict('PUT')
+    @h.authenticate
+    @h.authorize(['administrator', 'contributor'])
+    def generate(self, id):
+        """Generate the morphology's script -- do not compile it.
+
+        :URL: ``PUT /morphologies/compile/id``
+        :param str id: the ``id`` value of the morphology whose script will be compiled.
+        :returns: if the morphology exists and foma is installed, the morphology
+            model is returned;  ``GET /morphologies/id`` must be polled to
+            determine when the generation task has terminated.
+
+        """
+        return generate_and_compile_morphology(id, compile_=False)
 
     @h.restrict('GET')
     @h.authenticateWithJSON
@@ -327,7 +333,7 @@ class MorphologiesController(BaseController):
         morphology = Session.query(Morphology).get(id)
         if morphology:
             if h.fomaInstalled():
-                fomaFilePath = getMorphologyFilePath(morphology, 'binary')
+                fomaFilePath = get_morphology_file_path(morphology, 'binary')
                 if os.path.isfile(fomaFilePath):
                     return forward(FileApp(fomaFilePath))
                 else:
@@ -389,13 +395,13 @@ class MorphologiesController(BaseController):
         morphology = Session.query(Morphology).get(id)
         if morphology:
             if h.fomaInstalled():
-                morphologyBinaryPath = getMorphologyFilePath(morphology, 'binary')
-                if os.path.isfile(morphologyBinaryPath):
+                morphology_binary_path = get_morphology_file_path(morphology, 'binary')
+                if os.path.isfile(morphology_binary_path):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         inputs = MorphemeSequencesSchema.to_python(inputs)
-                        return apply(direction, inputs['morphemeSequences'], morphology,
-                                                 morphologyBinaryPath, session['user'])
+                        return foma_apply(direction, inputs['morphemeSequences'], morphology,
+                                                 morphology_binary_path, session['user'])
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
@@ -438,7 +444,7 @@ def backupMorphology(morphologyDict):
 # Morphology Create & Update Functions
 ################################################################################
 
-def createNewMorphology(data):
+def create_new_morphology(data):
     """Create a new morphology.
 
     :param dict data: the data for the morphology to be created.
@@ -453,10 +459,11 @@ def createNewMorphology(data):
     morphology.datetimeModified = morphology.datetimeEntered = h.now()
     morphology.lexiconCorpus = data['lexiconCorpus']
     morphology.rulesCorpus = data['rulesCorpus']
-    morphology.script = generateMorphologyScript(morphology)
+    morphology.script_type = data['script_type']
+    morphology.extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus']
     return morphology
 
-def updateMorphology(morphology, data):
+def update_morphology(morphology, data):
     """Update a morphology.
 
     :param morphology: the morphology model to be updated.
@@ -470,7 +477,8 @@ def updateMorphology(morphology, data):
     changed = h.setAttr(morphology, 'description', h.normalize(data['description']), changed)
     changed = h.setAttr(morphology, 'lexiconCorpus', data['lexiconCorpus'], changed)
     changed = h.setAttr(morphology, 'rulesCorpus', data['rulesCorpus'], changed)
-    changed = h.setAttr(morphology, 'script', generateMorphologyScript(morphology), changed)
+    changed = h.setAttr(morphology, 'script_type', data['script_type'], changed)
+    changed = h.setAttr(morphology, 'extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']
@@ -478,223 +486,7 @@ def updateMorphology(morphology, data):
         return morphology
     return changed
 
-def saveMorphologyScript(morphology):
-    """Save the foma FST script of the morphology to ``morphology_<id>.script``.
-
-    Also create the morphology compiler shell script, i.e., ``morphology_<id>.sh``
-    which will be used to compile the morphology FST to a binary.
-
-    :param morphology: a morphology model.
-    :returns: the absolute path to the newly created morphology script file.
-
-    """
-    try:
-        createMorphologyDir(morphology)
-        morphologyScriptPath = getMorphologyFilePath(morphology, 'script')
-        morphologyBinaryPath = getMorphologyFilePath(morphology, 'binary')
-        morphologyCompilerPath = getMorphologyFilePath(morphology, 'compiler')
-        with codecs.open(morphologyScriptPath, 'w', 'utf8') as f:
-            f.write(morphology.script)
-        # The compiler shell script loads the foma script and compiles it to binary form.
-        with open(morphologyCompilerPath, 'w') as f:
-            f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphology;" -e "save stack %s" -e "quit"' % (
-                    morphologyScriptPath, morphologyBinaryPath))
-        os.chmod(morphologyCompilerPath, 0744)
-        return morphologyScriptPath
-    except Exception:
-        return None
-
-class MorphologyScriptGenerationError(Exception):
-    pass
-
-def generateMorphologyScript(morphology):
-    try:
-        return _generateMorphologyScript(morphology)
-    except Exception, e:
-        log.warn(e)
-        return u''
-
-def _generateMorphologyScript(morphology):
-    """Generate a foma script representing a morphology.
-
-    :param morphology: an OLD morphology model
-    :returns: a unicode object comprising the foma morphology script
-
-    The lexicon corpus (``morphology.lexiconCorpus``) is used to extract 
-    morphemes and create foma regexes of the form 'define noun = [c h a t"|cat":0|c h i e n"|dog":0];',
-    i.e., mappings from 'chat' to 'chat|cat', etc.
-
-    The rules corpus (``morphology.rulesCorpus``) is used to extract morphological
-    rules in the form of POS templates and implement them all as a single foma regex
-    of the form 'define morphology (noun "-" agr) | (noun);', i.e., an FST that maps,
-    e.g., 'chat-s' to 'chat|cat-s|PL'.
-
-    """
-    unknownCategory = h.unknownCategory
-    # Get a function that will split words into morphemes
-    morphemeSplitter = lambda x: [x]
-    morphemeDelimiters = h.getMorphemeDelimiters()
-    if morphemeDelimiters:
-        morphemeSplitter = re.compile(u'([%s])' % ''.join([h.escREMetaChars(d) for d in morphemeDelimiters])).split
-    # Get the unique morphemes from the lexicon corpus
-    morphemes = {}
-    if (morphology.lexiconCorpus and
-        morphology.lexiconCorpus.id != morphology.rulesCorpus.id):
-        for form in morphology.lexiconCorpus.forms:
-            newMorphemes = extractMorphemesFromForm(form, morphemeSplitter, unknownCategory)
-            for POS, data in newMorphemes:
-                morphemes.setdefault(POS, set()).add(data)
-    # Get the POS strings (and morphemes) from the words in the rules corpus
-    POSSequences = set()
-    for form in morphology.rulesCorpus.forms:
-        newPOSSequences, newMorphemes = extractWordPOSSequences(form, morphemeSplitter, unknownCategory)
-        if newPOSSequences:
-            POSSequences |= newPOSSequences
-            for POS, data in newMorphemes:
-                morphemes.setdefault(POS, set()).add(data)
-    lexiconScript = createLexiconScript(morphemes)
-    rulesScript = createRulesScript(POSSequences)
-    script = u'%s\n\n%s' % (lexiconScript, rulesScript)
-    return script
-
-def extractMorphemesFromForm(form, morphemeSplitter, unknownCategory):
-    """Return the morphemes in the form as a tuple: (POS, (mb, mg)).
-    """
-    morphemes = []
-    scWords = form.syntacticCategoryString.split()
-    mbWords = form.morphemeBreak.split()
-    mgWords = form.morphemeGloss.split()
-    for scWord, mbWord, mgWord in zip(scWords, mbWords, mgWords):
-        POSSequence = morphemeSplitter(scWord)[::2]
-        morphemeSequence = morphemeSplitter(mbWord)[::2]
-        glossSequence = morphemeSplitter(mgWord)[::2]
-        for POS, morpheme, gloss in zip(POSSequence, morphemeSequence, glossSequence):
-            if POS != unknownCategory:
-                morphemes.append((POS, (morpheme, gloss)))
-    return morphemes
-
-def extractWordPOSSequences(form, morphemeSplitter, unknownCategory):
-    """Return the unique word-based POS sequences, as well as the morphemes, implicit in the form.
-
-    :param form: a form model object
-    :param morphemeSplitter: callable that splits a strings into its morphemes and delimiters
-    :param str unknownCategory: the string used in syntactic category strings when a morpheme-gloss pair is unknown
-    :returns: 2-tuple: (set of POS/delimiter sequences, list of morphemes as (POS, (mb, mg)) tuples).
-
-    """
-    if not form.syntacticCategoryString:
-        return None, None
-    POSSequences = set()
-    morphemes = []
-    scWords = form.syntacticCategoryString.split()
-    mbWords = form.morphemeBreak.split()
-    mgWords = form.morphemeGloss.split()
-    for scWord, mbWord, mgWord in zip(scWords, mbWords, mgWords):
-        POSSequence = tuple(morphemeSplitter(scWord))
-        if unknownCategory not in POSSequence:
-            POSSequences.add(POSSequence)
-            morphemeSequence = morphemeSplitter(mbWord)[::2]
-            glossSequence = morphemeSplitter(mgWord)[::2]
-            for POS, morpheme, gloss in zip(POSSequence[::2], morphemeSequence, glossSequence):
-                morphemes.append((POS, (morpheme, gloss)))
-    return POSSequences, morphemes
-
-def createLexiconScript(morphemes):
-    """Return a foma script defining a lexicon. 
-
-    :param morphemes: dict from POSes to sets of (mb, mg) tuples.
-    :returns: a unicode object that is a valid foma script defining a lexicon.
-
-    .. note::
-
-        The presence of a form of category N with a morpheme break value of 'chien' and
-        a morpheme gloss value of 'dog' will result in the regex defined as 'N' having
-        'c h i e n "|dog":0' as one of its disjuncts.  This is a transducer that maps
-        'chien|dog' to 'chien', i.e,. '"|dog"' is a multi-character symbol that is mapped
-        to the null symbol, i.e., '0'.  Note also that the vertical bar '|' character is 
-        not actually used -- the delimiter character is actually that defined in ``utils.rareDelimiter``
-        which, by default, is U+2980 'TRIPLE VERTICAL BAR DELIMITER'.
-
-    .. warning::
-
-        Foma reserved symbols are escaped in morpheme transcriptions (cf. ``h.escapeFomaReservedSymbols``
-        below) and are removed from the names of defined regexes (cf. ``getValidFomaRegexName`` below).
-        If removing reserved symbols from a name reduces it to the empty string, an exception is raised.
-
-    """
-    delimiter =  h.rareDelimiter
-    regexes = []
-    for POS, data in sorted(morphemes.items()):
-        foma_regex_name = getValidFomaRegexName(POS)
-        if foma_regex_name:
-            regex = [u'define %s [' % foma_regex_name]
-            lexicalItems = []
-            for mb, mg in sorted(data):
-                lexicalItems.append(u'    %s "%s%s":0' % (
-                    u' '.join(map(h.escapeFomaReservedSymbols, list(mb))), delimiter, mg))
-            regex.append(u' |\n'.join(lexicalItems))
-            regex.append(u'];\n')
-            regexes.append(u'\n'.join(regex))
-    return u'\n'.join(regexes)
-
-def getValidFomaRegexName(candidate):
-    """Return the candidate foma regex name with all reserved symbols removed and suffixed
-    by "Cat".  This prevents conflicts between regex names and symbols in regexes.
-
-    """
-    name = h.deleteFomaReservedSymbols(candidate)
-    if not name:
-        #raise Exception('The syntactic category name %s cannot be used as the name of a Foma regex since it contains only reserved symbols.' % name)
-        return None
-    return u'%sCat' % name
-
-def posSequenceToFomaDisjunct(POSSequence):
-    """Return a foma disjunct representing a POS sequence.
-
-    :param tuple POSSequence: a tuple where the oddly indexed elements are 
-        delimiters and the evenly indexed ones are POSes.
-    :returns: a unicode object representing a foma disjunct, e.g., u'AGR "-" V'
-
-    """
-    tmp = []
-    for index, element in enumerate(POSSequence):
-        if index % 2 == 0:
-            tmp.append(getValidFomaRegexName(element))
-        else:
-            tmp.append('"%s"' % element)
-    if None in tmp:
-        return None
-    return u' '.join(tmp)
-
-def createRulesScript(POSSequences):
-    """Return a foma script defining morphological rules.
-
-    :param set POSSequences: tuples containing POSes and delimiters
-    :returns: a unicode object that is a valid foma script defining morphological rules
-
-    """
-    regex = [u'define morphology (']
-    disjuncts = []
-    for POSSequence in sorted(POSSequences):
-        foma_disjunct = posSequenceToFomaDisjunct(POSSequence)
-        if foma_disjunct:
-            disjuncts.append(u'    (%s)' % foma_disjunct)
-    regex.append(u' |\n'.join(disjuncts))
-    regex.append(u');\n')
-    return u'\n'.join(regex)
-
-def createMorphologyDir(morphology):
-    """Create the directory to hold the morphology script and auxiliary files.
-    
-    :param morphology: a morphology model object.
-    :returns: an absolute path to the directory for the morphology.
-
-    """
-    morphologyDirPath = getMorphologyDirPath(morphology)
-    h.makeDirectorySafely(morphologyDirPath)
-    return morphologyDirPath
-
-def getMorphologyDirPath(morphology):
+def get_morphology_dir_path(morphology):
     """Return the path to a morphology's directory.
 
     :param morphology: a morphology model object.
@@ -704,7 +496,18 @@ def getMorphologyDirPath(morphology):
     return os.path.join(h.getOLDDirectoryPath('morphologies', config=config),
                         'morphology_%d' % morphology.id)
 
-def getMorphologyFilePath(morphology, fileType='script'):
+def create_morphology_dir(morphology):
+    """Create the directory to hold the morphology script and auxiliary files.
+
+    :param morphology: a morphology model object.
+    :returns: an absolute path to the directory for the morphology.
+
+    """
+    morphology_dir_path = get_morphology_dir_path(morphology)
+    h.makeDirectorySafely(morphology_dir_path)
+    return morphology_dir_path
+
+def get_morphology_file_path(morphology, fileType='script'):
     """Return the path to a morphology's file of the given type.
 
     :param morphology: a morphology model object.
@@ -712,11 +515,37 @@ def getMorphologyFilePath(morphology, fileType='script'):
     :returns: an absolute path to the morphology's script file.
 
     """
-    extMap = {'script': 'script', 'binary': 'foma', 'compiler': 'sh', 'tester': 'tester.sh'}
-    return os.path.join(getMorphologyDirPath(morphology),
-            'morphology_%d.%s' % (morphology.id, extMap.get(fileType, 'script')))
+    ext_map = {
+        'script': 'script',
+        'binary': 'foma',
+        'compiler': 'sh',
+        'log': 'log',
+        'lexicon': 'pickle'
+    }
+    return os.path.join(get_morphology_dir_path(morphology),
+            'morphology_%d.%s' % (morphology.id, ext_map.get(fileType, 'script')))
 
-def removeMorphologyDirectory(morphology):
+def generate_and_compile_morphology(morphology_id, compile_=True):
+    morphology = Session.query(Morphology).get(morphology_id)
+    if not morphology:
+        response.status_int = 404
+        return {'error': 'There is no morphology with id %s' % id}
+    if compile_ and not h.fomaInstalled():
+        response.status_int = 400
+        return {'error': 'Foma and flookup are not installed.'}
+    morphology_dir_path = get_morphology_dir_path(morphology)
+    verification_string = {'lexc': u'Done!', 'regex': u'defined morphology: '}.get(
+        morphology.script_type, u'Done!')
+    foma_worker_q.put({
+        'id': h.generateSalt(),
+        'func': 'generate_and_compile_morphology_script',
+        'args': {'morphology_id': morphology.id, 'compile': compile_,
+            'script_dir_path': morphology_dir_path, 'user_id': session['user'].id,
+            'verification_string': verification_string, 'timeout': h.morphologyCompileTimeout}
+    })
+    return morphology
+
+def remove_morphology_directory(morphology):
     """Remove the directory of the morphology model and everything in it.
     
     :param morphology: a morphology model object.
@@ -724,44 +553,44 @@ def removeMorphologyDirectory(morphology):
 
     """
     try:
-        morphologyDirPath = getMorphologyDirPath(morphology)
-        rmtree(morphologyDirPath)
-        return morphologyDirPath
+        morphology_dir_path = get_morphology_dir_path(morphology)
+        rmtree(morphology_dir_path)
+        return morphology_dir_path
     except Exception:
         return None
 
-def apply(direction, inputs, morphology, morphologyBinaryPath, user):
+def foma_apply(direction, inputs, morphology, morphology_binary_path, user):
     """Foma-apply the inputs in the direction of ``direction`` using the morphology's compiled foma script.
 
     :param str direction: the direction in which to use the transducer
     :param list inputs: a list of morpho-phonemic transcriptions.
     :param morphology: a morphology model.
-    :param str morphologyBinaryPath: an absolute path to a compiled morphology script.
+    :param str morphology_binary_path: an absolute path to a compiled morphology script.
     :param user: a user model.
     :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
 
     """
-    randomString = h.generateSalt()
-    morphologyDirPath = getMorphologyDirPath(morphology)
-    inputsFilePath = os.path.join(morphologyDirPath,
-            'inputs_%s_%s.txt' % (user.username, randomString))
-    outputsFilePath = os.path.join(morphologyDirPath,
-            'outputs_%s_%s.txt' % (user.username, randomString))
-    applyFilePath = os.path.join(morphologyDirPath,
-            'apply_%s_%s.sh' % (user.username, randomString))
-    with codecs.open(inputsFilePath, 'w', 'utf8') as f:
+    random_string = h.generateSalt()
+    morphology_dir_path = get_morphology_dir_path(morphology)
+    inputs_file_path = os.path.join(morphology_dir_path,
+            'inputs_%s_%s.txt' % (user.username, random_string))
+    outputs_file_path = os.path.join(morphology_dir_path,
+            'outputs_%s_%s.txt' % (user.username, random_string))
+    apply_file_path = os.path.join(morphology_dir_path,
+            'apply_%s_%s.sh' % (user.username, random_string))
+    with codecs.open(inputs_file_path, 'w', 'utf8') as f:
         f.write(u'\n'.join(inputs))
-    with codecs.open(applyFilePath, 'w', 'utf8') as f:
+    with codecs.open(apply_file_path, 'w', 'utf8') as f:
         f.write('#!/bin/sh\ncat %s | flookup %s%s' % (
-            inputsFilePath, {'up': '', 'down': '-i '}.get(direction, '-i '), morphologyBinaryPath))
-    os.chmod(applyFilePath, 0744)
+            inputs_file_path, {'up': '', 'down': '-i '}.get(direction, '-i '), morphology_binary_path))
+    os.chmod(apply_file_path, 0744)
     with open(os.devnull, 'w') as devnull:
-        with codecs.open(outputsFilePath, 'w', 'utf8') as outfile:
-            p = Popen(applyFilePath, shell=False, stdout=outfile, stderr=devnull)
+        with codecs.open(outputs_file_path, 'w', 'utf8') as outfile:
+            p = Popen(apply_file_path, shell=False, stdout=outfile, stderr=devnull)
     p.communicate()
-    with codecs.open(outputsFilePath, 'r', 'utf8') as f:
-        result = h.fomaOutputFile2Dict(f)
-    os.remove(inputsFilePath)
-    os.remove(outputsFilePath)
-    os.remove(applyFilePath)
+    with codecs.open(outputs_file_path, 'r', 'utf8') as f:
+        result = h.fomaOutputFile2Dict(f, remove_word_boundaries=False)
+    os.remove(inputs_file_path)
+    os.remove(outputs_file_path)
+    os.remove(apply_file_path)
     return result

@@ -773,7 +773,9 @@ def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
                 formbackup.vivify(form.getDict())
                 formbackup_buffer.append(formbackup)
     if form_buffer:
-        Session.execute('set names utf8;')
+        rdbms_name = h.getRDBMSName(config=config)
+        if rdbms_name == 'mysql':
+            Session.execute('set names utf8;')
         update = form_table.update().where(form_table.c.id==bindparam('id_')).\
                     values(**dict([(k, bindparam(k)) for k in form_buffer[0] if k != 'id_']))
         Session.execute(update, form_buffer)
