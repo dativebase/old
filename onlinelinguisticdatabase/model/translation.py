@@ -31,4 +31,4 @@ class Translation(Base):
     transcription = Column(UnicodeText, nullable=False)
     grammaticality = Column(Unicode(255))
     form_id = Column(Integer, ForeignKey('form.id'))
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)

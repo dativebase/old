@@ -35,14 +35,14 @@ class FormSearch(Base):
     description = Column(UnicodeText)
     enterer_id = Column(Integer, ForeignKey('user.id'))
     enterer = relation('User')
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'search': self.jsonLoads(self.search),
+            'search': self.json_loads(self.search),
             'description': self.description,
-            'enterer': self.getMiniUserDict(self.enterer),
-            'datetimeModified': self.datetimeModified
+            'enterer': self.get_mini_user_dict(self.enterer),
+            'datetime_modified': self.datetime_modified
         }

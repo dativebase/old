@@ -33,9 +33,9 @@ class Source(Base):
     id = Column(Integer, Sequence('source_seq_id', optional=True), primary_key=True)
     file_id = Column(Integer, ForeignKey('file.id'))
     file = relation('File')
-    crossrefSource_id = Column(Integer, ForeignKey('source.id'))
-    crossrefSource = relation('Source', remote_side=[id])
-    datetimeModified = Column(DateTime, default=now)
+    crossref_source_id = Column(Integer, ForeignKey('source.id'))
+    crossref_source = relation('Source', remote_side=[id])
+    datetime_modified = Column(DateTime, default=now)
 
     # BibTeX data structure
     type = Column(Unicode(20))
@@ -53,7 +53,7 @@ class Source(Base):
     howpublished = Column(Unicode(255))
     institution = Column(Unicode(255))
     journal = Column(Unicode(255))
-    keyField = Column(Unicode(255))
+    key_field = Column(Unicode(255))
     month = Column(Unicode(100))
     note = Column(Unicode(1000))
     number = Column(Unicode(100))
@@ -63,7 +63,7 @@ class Source(Base):
     school = Column(Unicode(255))
     series = Column(Unicode(255))
     title = Column(Unicode(255))
-    typeField = Column(Unicode(255))
+    type_field = Column(Unicode(255))
     url = Column(Unicode(1000))
     volume = Column(Unicode(100))
     year = Column(Integer)
@@ -83,14 +83,14 @@ class Source(Base):
     price = Column(Unicode(100))
     size = Column(Unicode(255))
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the Source.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
-        data are truncated, e.g., sourceDict['file'] is a dict with keys for
-        'name', 'size', etc. (cf. getMiniUserDict of the model superclass) and
+        data are truncated, e.g., source_dict['file'] is a dict with keys for
+        'name', 'size', etc. (cf. get_mini_user_dict of the model superclass) and
         lacks keys for some attributes.
         """
-        sourceDict = self.__dict__
-        sourceDict['file'] = self.getMiniFileDict(self.file)
-        sourceDict['crossrefSource'] = self.getMiniSourceDict(self.crossrefSource)
-        return sourceDict
+        source_dict = self.__dict__
+        source_dict['file'] = self.get_mini_file_dict(self.file)
+        source_dict['crossref_source'] = self.get_mini_source_dict(self.crossref_source)
+        return source_dict

@@ -56,7 +56,7 @@ class CorpusbackupsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('CorpusBackup', config=config)
+    query_builder = SQLAQueryBuilder('CorpusBackup', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -68,18 +68,18 @@ class CorpusbackupsController(BaseController):
         :URL: ``SEARCH /corpusbackups`` (or ``POST /corpusbackups/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
 
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            query = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -100,10 +100,10 @@ class CorpusbackupsController(BaseController):
         """Return the data necessary to search the corpus backup resources.
 
         :URL: ``GET /corpusbackups/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -117,8 +117,8 @@ class CorpusbackupsController(BaseController):
         """
         try:
             query = Session.query(CorpusBackup)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -154,15 +154,15 @@ class CorpusbackupsController(BaseController):
         :returns: a corpus backup model object.
 
         """
-        corpusBackup = Session.query(CorpusBackup).get(id)
-        if corpusBackup:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+        corpus_backup = Session.query(CorpusBackup).get(id)
+        if corpus_backup:
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, corpusBackup, unrestrictedUsers):
-                return corpusBackup
+            if h.user_is_authorized_to_access_model(user, corpus_backup, unrestricted_users):
+                return corpus_backup
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no corpus backup with id %s' % id}

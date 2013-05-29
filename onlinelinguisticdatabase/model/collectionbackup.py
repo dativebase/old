@@ -41,12 +41,12 @@ class CollectionBackup(Base):
     type = Column(Unicode(255))
     url = Column(Unicode(255))
     description = Column(UnicodeText)
-    markupLanguage = Column(Unicode(100))
+    markup_language = Column(Unicode(100))
     contents = Column(UnicodeText)
     html = Column(UnicodeText)
-    dateElicited = Column(Date)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
+    date_elicited = Column(Date)
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
     speaker = Column(UnicodeText)
     source = Column(UnicodeText)
     elicitor = Column(UnicodeText)
@@ -56,36 +56,36 @@ class CollectionBackup(Base):
     files = Column(UnicodeText)
     forms = Column(UnicodeText)
 
-    def vivify(self, collectionDict):
+    def vivify(self, collection_dict):
         """The vivify method gives life to CollectionBackup by specifying its
         attributes using the to-be-backed-up collection as represented in
-        ``collectionDict``.  The relational attributes of the backup are
+        ``collection_dict``.  The relational attributes of the backup are
         converted to (truncated) JSON objects.
 
         """
 
-        self.collection_id = collectionDict['id']
-        self.UUID = collectionDict['UUID']
-        self.title = collectionDict['title']
-        self.type = collectionDict['type']
-        self.url = collectionDict['url']
-        self.description = collectionDict['description']
-        self.markupLanguage = collectionDict['markupLanguage']
-        self.contents = collectionDict['contents']
-        self.html = collectionDict['html']
-        self.dateElicited = collectionDict['dateElicited']
-        self.datetimeEntered = collectionDict['datetimeEntered']
-        self.datetimeModified = collectionDict['datetimeModified']
-        self.source = unicode(json.dumps(collectionDict['source']))
-        self.speaker = unicode(json.dumps(collectionDict['speaker']))
-        self.elicitor = unicode(json.dumps(collectionDict['elicitor']))
-        self.enterer = unicode(json.dumps(collectionDict['enterer']))
-        self.modifier = unicode(json.dumps(collectionDict['modifier']))
-        self.tags = unicode(json.dumps(collectionDict['tags']))
-        self.files = unicode(json.dumps(collectionDict['files']))
-        self.forms = unicode(json.dumps([f['id'] for f in collectionDict['forms']]))
+        self.collection_id = collection_dict['id']
+        self.UUID = collection_dict['UUID']
+        self.title = collection_dict['title']
+        self.type = collection_dict['type']
+        self.url = collection_dict['url']
+        self.description = collection_dict['description']
+        self.markup_language = collection_dict['markup_language']
+        self.contents = collection_dict['contents']
+        self.html = collection_dict['html']
+        self.date_elicited = collection_dict['date_elicited']
+        self.datetime_entered = collection_dict['datetime_entered']
+        self.datetime_modified = collection_dict['datetime_modified']
+        self.source = unicode(json.dumps(collection_dict['source']))
+        self.speaker = unicode(json.dumps(collection_dict['speaker']))
+        self.elicitor = unicode(json.dumps(collection_dict['elicitor']))
+        self.enterer = unicode(json.dumps(collection_dict['enterer']))
+        self.modifier = unicode(json.dumps(collection_dict['modifier']))
+        self.tags = unicode(json.dumps(collection_dict['tags']))
+        self.files = unicode(json.dumps(collection_dict['files']))
+        self.forms = unicode(json.dumps([f['id'] for f in collection_dict['forms']]))
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'UUID': self.UUID,
@@ -94,18 +94,18 @@ class CollectionBackup(Base):
             'type': self.type,
             'url': self.url,
             'description': self.description,
-            'markupLanguage': self.markupLanguage,
+            'markup_language': self.markup_language,
             'contents': self.contents,
             'html': self.html,
-            'dateElicited': self.dateElicited,
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'speaker': self.jsonLoads(self.speaker),
-            'source': self.jsonLoads(self.source),
-            'elicitor': self.jsonLoads(self.elicitor),
-            'enterer': self.jsonLoads(self.enterer),
-            'modifier': self.jsonLoads(self.modifier),
-            'tags': self.jsonLoads(self.tags),
-            'files': self.jsonLoads(self.files),
-            'forms': self.jsonLoads(self.forms)
+            'date_elicited': self.date_elicited,
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'speaker': self.json_loads(self.speaker),
+            'source': self.json_loads(self.source),
+            'elicitor': self.json_loads(self.elicitor),
+            'enterer': self.json_loads(self.enterer),
+            'modifier': self.json_loads(self.modifier),
+            'tags': self.json_loads(self.tags),
+            'files': self.json_loads(self.files),
+            'forms': self.json_loads(self.forms)
         }

@@ -30,8 +30,8 @@ import onlinelinguisticdatabase.lib.helpers as h
 # etc. ...
 
 class OLD(object):
-    def __init__(self, configFilename):
-        conf = appconfig('config:%s' % configFilename, relative_to='.')
+    def __init__(self, config_filename):
+        conf = appconfig('config:%s' % config_filename, relative_to='.')
         load_environment(conf.global_conf, conf.local_conf)
         self.config = config
         self.Session = Session

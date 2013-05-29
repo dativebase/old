@@ -56,7 +56,7 @@ class FormbackupsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('FormBackup', config=config)
+    query_builder = SQLAQueryBuilder('FormBackup', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -68,18 +68,18 @@ class FormbackupsController(BaseController):
         :URL: ``SEARCH /formbackups`` (or ``POST /formbackups/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            query = h.filterRestrictedModels('FormBackup', SQLAQuery)
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            SQLAQuery = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            query = h.filter_restricted_models('FormBackup', SQLAQuery)
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -100,10 +100,10 @@ class FormbackupsController(BaseController):
         """Return the data necessary to search the form backup resources.
 
         :URL: ``GET /formbackups/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -117,9 +117,9 @@ class FormbackupsController(BaseController):
         """
         try:
             query = Session.query(FormBackup)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = h.filterRestrictedModels(u'FormBackup', query)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            query = h.filter_restricted_models(u'FormBackup', query)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -157,15 +157,15 @@ class FormbackupsController(BaseController):
         :returns: a form backup model object.
 
         """
-        formBackup = Session.query(FormBackup).get(id)
-        if formBackup:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+        form_backup = Session.query(FormBackup).get(id)
+        if form_backup:
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, formBackup, unrestrictedUsers):
-                return formBackup
+            if h.user_is_authorized_to_access_model(user, form_backup, unrestricted_users):
+                return form_backup
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no form backup with id %s' % id}

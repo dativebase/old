@@ -39,8 +39,6 @@ run the following command instead:
 
 import requests
 import simplejson as json
-import os
-from time import sleep
 
 host = '127.0.0.1'
 port = '5000'
@@ -56,78 +54,78 @@ assert r.json().get('authenticated') == True, 'Authentication failed.'
 
 # Now that we're authenticated, get the default users.
 r = s.get('%s/users' % baseurl)
-rJSON = r.json()
-errorMsg = 'Unable to get users.'
-assert r.headers['Content-Type'] == 'application/json', errorMsg
-assert type(rJSON) == list, errorMsg
-assert len(rJSON) > 0, errorMsg
-assert u'Admin' in [u.get('firstName') for u in rJSON], errorMsg 
+r_JSON = r.json()
+error_msg = 'Unable to get users.'
+assert r.headers['Content-Type'] == 'application/json', error_msg
+assert type(r_JSON) == list, error_msg
+assert len(r_JSON) > 0, error_msg
+assert u'Admin' in [u.get('first_name') for u in r_JSON], error_msg 
 
 # Request GET /forms.
 r = s.get('%s/forms' % baseurl)
 assert type(r.json()) == list, 'Could not GET /forms.'
 
 # Request POST /forms to create a form.
-formCreateParams = {
+form_create_params = {
     'transcription': u'',
-    'phoneticTranscription': u'',
-    'narrowPhoneticTranscription': u'',
-    'morphemeBreak': u'',
+    'phonetic_transcription': u'',
+    'narrow_phonetic_transcription': u'',
+    'morpheme_break': u'',
     'grammaticality': u'',
-    'morphemeGloss': u'',
+    'morpheme_gloss': u'',
     'translations': [],
     'comments': u'',
-    'speakerComments': u'',
-    'elicitationMethod': u'',
+    'speaker_comments': u'',
+    'elicitation_method': u'',
     'tags': [],
-    'syntacticCategory': u'',
+    'syntactic_category': u'',
     'speaker': u'',
     'elicitor': u'',
     'verifier': u'',
     'source': u'',
     'status': u'',
-    'dateElicited': u''     # mm/dd/yyyy
+    'date_elicited': u''     # mm/dd/yyyy
 }
 
 # First attempt to create a form with invalid params.
-payload = formCreateParams.copy()
+payload = form_create_params.copy()
 payload['transcription'] = u'test'
 r = s.post('%s/forms' % baseurl, data=json.dumps(payload))
-rJSON = r.json()
-errorMsg = u'Failed in attempt to request creation of an invalid form.'
-assert r.status_code == 400, errorMsg
-assert rJSON.get('errors', {}).get('translations') == u'Please enter a value', errorMsg
+r_JSON = r.json()
+error_msg = u'Failed in attempt to request creation of an invalid form.'
+assert r.status_code == 400, error_msg
+assert r_JSON.get('errors', {}).get('translations') == u'Please enter a value', error_msg
 
 # Create a valid form.
 payload['translations'].append({'transcription': u'test', 'grammaticality': u''})
 r = s.post('%s/forms' % baseurl, data=json.dumps(payload))
-rJSON = r.json()
-errorMsg = u'Failed in attempt to request creation of a form.'
+r_JSON = r.json()
+error_msg = u'Failed in attempt to request creation of a form.'
 try:
-    formId = rJSON.get('id')
+    form_id = r_JSON.get('id')
 except:
-    print rJSON
-assert r.status_code == 200, errorMsg
-assert rJSON.get('transcription') == u'test'
-assert rJSON.get('translations', {'transcription': None})[0]['transcription'] == u'test'
+    print r_JSON
+assert r.status_code == 200, error_msg
+assert r_JSON.get('transcription') == u'test'
+assert r_JSON.get('translations', {'transcription': None})[0]['transcription'] == u'test'
 
 # Request GET /forms/id and expect to receive the form we just created.
-r = s.get('%s/forms/%s' % (baseurl, formId))
-rJSON = r.json()
-errorMsg = 'Error: unable to retrieve the form just created.'
-assert type(rJSON) == dict, errorMsg
-assert rJSON.get('transcription') == u'test', errorMsg
+r = s.get('%s/forms/%s' % (baseurl, form_id))
+r_JSON = r.json()
+error_msg = 'Error: unable to retrieve the form just created.'
+assert type(r_JSON) == dict, error_msg
+assert r_JSON.get('transcription') == u'test', error_msg
 
 # Ensure that @h.restrict is returning JSON
 r = s.post('%s/forms/history/1' % baseurl)
-errorMsg = '@h.restrict not working as expected.'
-assert r.status_code == 405, errorMsg
-assert r.json().get('error') == u"The POST method is not permitted for this resource; permitted method(s): GET", errorMsg
+error_msg = '@h.restrict not working as expected.'
+assert r.status_code == 405, error_msg
+assert r.json().get('error') == u"The POST method is not permitted for this resource; permitted method(s): GET", error_msg
 
 # Ensure that invalid URLs return JSON also
 r = s.put('%s/files' % baseurl)
-errorMsg = 'Invalid URLs are not returning JSON.'
-assert r.status_code == 404, errorMsg
-assert r.json().get('error') == u'The resource could not be found.', errorMsg
+error_msg = 'Invalid URLs are not returning JSON.'
+assert r.status_code == 404, error_msg
+assert r.json().get('error') == u'The resource could not be found.', error_msg
 
 print 'All requests tests passed.'

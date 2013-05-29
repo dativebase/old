@@ -49,7 +49,7 @@ class RememberedformsController(BaseController):
     
         Remembered forms is a pseudo-REST-ful resource.  Remembered forms are
         stored in the ``userform`` many-to-many table (cf. ``model/user.py``)
-        which defines the contents of a user's ``rememberedForms`` attribute
+        which defines the contents of a user's ``remembered_forms`` attribute
         (as well as the contents of a form's ``memorizers`` attribute). A user's
         remembered forms are not affected by requests to the user resource.
         Instead, the remembered forms resource handles modification, retrieval
@@ -68,7 +68,7 @@ class RememberedformsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder(config=config)
+    query_builder = SQLAQueryBuilder(config=config)
 
     @h.jsonify
     @h.authenticate
@@ -88,18 +88,18 @@ class RememberedformsController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         user = Session.query(User).get(id)
         if user:
             try:
-                query = h.eagerloadForm(Session.query(Form))\
+                query = h.eagerload_form(Session.query(Form))\
                             .filter(Form.memorizers.contains(user))
-                query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-                query = h.filterRestrictedModels('Form', query)
-                return h.addPagination(query, dict(request.GET))
+                query = h.add_order_by(query, dict(request.GET), self.query_builder)
+                query = h.filter_restricted_models('Form', query)
+                return h.add_pagination(query, dict(request.GET))
             except Invalid, e:
                 response.status_int = 400
                 return {'errors': e.unpack_errors()}
@@ -117,9 +117,9 @@ class RememberedformsController(BaseController):
         :URL: ``PUT /rememberedforms/id``
         :Request body: JSON object of the form ``{"forms": [...]}`` where the
             array contains the form ``id`` values that will constitute the
-            user's ``rememberedForms`` collection after update.
+            user's ``remembered_forms`` collection after update.
         :param str id: the ``id`` value of the user model whose
-            ``rememberedForms`` attribute is to be updated.
+            ``remembered_forms`` attribute is to be updated.
         :returns: the list of remembered forms of the user.
 
         .. note::
@@ -128,22 +128,22 @@ class RememberedformsController(BaseController):
             non-administrators can only update their own.
 
         """
-        user = Session.query(User).options(subqueryload(User.rememberedForms)).get(id)
+        user = Session.query(User).options(subqueryload(User.remembered_forms)).get(id)
         if user:
             try:
                 schema = FormIdsSchemaNullable
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
                 forms = [f for f in data['forms'] if f]
-                accessible = h.userIsAuthorizedToAccessModel
-                unrestrictedUsers = h.getUnrestrictedUsers()
-                unrestrictedForms = [f for f in forms
-                                     if accessible(user, f, unrestrictedUsers)]
-                if set(user.rememberedForms) != set(unrestrictedForms):
-                    user.rememberedForms = unrestrictedForms
-                    user.datetimeModified = h.now()
+                accessible = h.user_is_authorized_to_access_model
+                unrestricted_users = h.get_unrestricted_users()
+                unrestricted_forms = [f for f in forms
+                                     if accessible(user, f, unrestricted_users)]
+                if set(user.remembered_forms) != set(unrestricted_forms):
+                    user.remembered_forms = unrestricted_forms
+                    user.datetime_modified = h.now()
                     Session.commit()
-                    return user.rememberedForms
+                    return user.remembered_forms
                 else:
                     response.status_int = 400
                     return {'error':
@@ -168,22 +168,22 @@ class RememberedformsController(BaseController):
         :param str id: the ``id`` value of the user whose remembered forms are searched.
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
         user = Session.query(User).get(id)
         if user:
             try:
-                jsonSearchParams = unicode(request.body, request.charset)
-                pythonSearchParams = json.loads(jsonSearchParams)
-                query = h.eagerloadForm(
-                    self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
+                json_search_params = unicode(request.body, request.charset)
+                python_search_params = json.loads(json_search_params)
+                query = h.eagerload_form(
+                    self.query_builder.get_SQLA_query(python_search_params.get('query')))
                 query = query.filter(Form.memorizers.contains(user))
-                query = h.filterRestrictedModels('Form', query)
-                return h.addPagination(query, pythonSearchParams.get('paginator'))
+                query = h.filter_restricted_models('Form', query)
+                return h.add_pagination(query, python_search_params.get('paginator'))
             except h.JSONDecodeError:
                 response.status_int = 400
                 return h.JSONDecodeErrorResponse

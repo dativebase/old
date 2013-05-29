@@ -27,13 +27,13 @@ class FormFile(Base):
     id = Column(Integer, Sequence('formfile_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     file_id = Column(Integer, ForeignKey('file.id'))
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)
 
 formtag_table = Table('formtag', Base.metadata,
     Column('id', Integer, Sequence('formfile_seq_id', optional=True), primary_key=True),
     Column('form_id', Integer, ForeignKey('form.id')),
     Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -41,7 +41,7 @@ collectionform_table = Table('collectionform', Base.metadata,
     Column('id', Integer, Sequence('collectionform_seq_id', optional=True), primary_key=True),
     Column('collection_id', Integer, ForeignKey('collection.id')),
     Column('form_id', Integer, ForeignKey('form.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -55,20 +55,20 @@ class Form(Base):
     id = Column(Integer, Sequence('form_seq_id', optional=True), primary_key=True)
     UUID = Column(Unicode(36))
     transcription = Column(Unicode(255), nullable=False)
-    phoneticTranscription = Column(Unicode(255))
-    narrowPhoneticTranscription = Column(Unicode(255))
-    morphemeBreak = Column(Unicode(255))
-    morphemeGloss = Column(Unicode(255))
+    phonetic_transcription = Column(Unicode(255))
+    narrow_phonetic_transcription = Column(Unicode(255))
+    morpheme_break = Column(Unicode(255))
+    morpheme_gloss = Column(Unicode(255))
     comments = Column(UnicodeText)
-    speakerComments = Column(UnicodeText)
+    speaker_comments = Column(UnicodeText)
     grammaticality = Column(Unicode(255))
-    dateElicited = Column(Date)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
-    syntacticCategoryString = Column(Unicode(255))
-    morphemeBreakIDs = Column(UnicodeText)
-    morphemeGlossIDs = Column(UnicodeText)
-    breakGlossCategory = Column(Unicode(1023))
+    date_elicited = Column(Date)
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
+    syntactic_category_string = Column(Unicode(255))
+    morpheme_break_ids = Column(UnicodeText)
+    morpheme_gloss_ids = Column(UnicodeText)
+    break_gloss_category = Column(Unicode(1023))
     syntax = Column(Unicode(1023))
     semantics = Column(Unicode(1023))
     status = Column(Unicode(40), default=u'tested')  # u'tested' vs. u'requires testing'
@@ -83,9 +83,9 @@ class Form(Base):
     speaker_id = Column(Integer, ForeignKey('speaker.id'))
     speaker = relation('Speaker')
     elicitationmethod_id = Column(Integer, ForeignKey('elicitationmethod.id'))
-    elicitationMethod = relation('ElicitationMethod')
+    elicitation_method = relation('ElicitationMethod')
     syntacticcategory_id = Column(Integer, ForeignKey('syntacticcategory.id'))
-    syntacticCategory = relation('SyntacticCategory', backref='forms')
+    syntactic_category = relation('SyntacticCategory', backref='forms')
     source_id = Column(Integer, ForeignKey('source.id'))
     source = relation('Source')
     translations = relation('Translation', backref='form', cascade='all, delete, delete-orphan')
@@ -93,44 +93,44 @@ class Form(Base):
     collections = relation('Collection', secondary=collectionform_table, backref='forms')
     tags = relation('Tag', secondary=formtag_table, backref='forms')
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the Form.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
-        data are truncated, e.g., formDict['elicitor'] is a dict with keys for
-        'id', 'firstName' and 'lastName' (cf. getMiniUserDict above) and lacks
-        keys for other attributes such as 'username', 'personalPageContent', etc.
+        data are truncated, e.g., form_dict['elicitor'] is a dict with keys for
+        'id', 'first_name' and 'last_name' (cf. get_mini_user_dict above) and lacks
+        keys for other attributes such as 'username', 'personal_page_content', etc.
         """
 
         return {
             'id': self.id,
             'UUID': self.UUID,
             'transcription': self.transcription,
-            'phoneticTranscription': self.phoneticTranscription,
-            'narrowPhoneticTranscription': self.narrowPhoneticTranscription,
-            'morphemeBreak': self.morphemeBreak,
-            'morphemeGloss': self.morphemeGloss,
+            'phonetic_transcription': self.phonetic_transcription,
+            'narrow_phonetic_transcription': self.narrow_phonetic_transcription,
+            'morpheme_break': self.morpheme_break,
+            'morpheme_gloss': self.morpheme_gloss,
             'comments': self.comments,
-            'speakerComments': self.speakerComments,
+            'speaker_comments': self.speaker_comments,
             'grammaticality': self.grammaticality,
-            'dateElicited': self.dateElicited,
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'syntacticCategoryString': self.syntacticCategoryString,
-            'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
-            'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
-            'breakGlossCategory': self.breakGlossCategory,
+            'date_elicited': self.date_elicited,
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'syntactic_category_string': self.syntactic_category_string,
+            'morpheme_break_ids': self.json_loads(self.morpheme_break_ids),
+            'morpheme_gloss_ids': self.json_loads(self.morpheme_gloss_ids),
+            'break_gloss_category': self.break_gloss_category,
             'syntax': self.syntax,
             'semantics': self.semantics,
             'status': self.status,
-            'elicitor': self.getMiniUserDict(self.elicitor),
-            'enterer': self.getMiniUserDict(self.enterer),
-            'modifier': self.getMiniUserDict(self.modifier),
-            'verifier': self.getMiniUserDict(self.verifier),
-            'speaker': self.getMiniSpeakerDict(self.speaker),
-            'elicitationMethod': self.getMiniElicitationMethodDict(self.elicitationMethod),
-            'syntacticCategory': self.getMiniSyntacticCategoryDict(self.syntacticCategory),
-            'source': self.getMiniSourceDict(self.source),
-            'translations': self.getTranslationsList(self.translations),
-            'tags': self.getTagsList(self.tags),
-            'files': self.getFilesList(self.files)
+            'elicitor': self.get_mini_user_dict(self.elicitor),
+            'enterer': self.get_mini_user_dict(self.enterer),
+            'modifier': self.get_mini_user_dict(self.modifier),
+            'verifier': self.get_mini_user_dict(self.verifier),
+            'speaker': self.get_mini_speaker_dict(self.speaker),
+            'elicitation_method': self.get_mini_elicitation_method_dict(self.elicitation_method),
+            'syntactic_category': self.get_mini_syntactic_category_dict(self.syntactic_category),
+            'source': self.get_mini_source_dict(self.source),
+            'translations': self.get_translations_list(self.translations),
+            'tags': self.get_tags_list(self.tags),
+            'files': self.get_files_list(self.files)
         }

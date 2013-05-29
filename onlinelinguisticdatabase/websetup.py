@@ -34,17 +34,17 @@ def setup_app(command, conf, vars):
 
     # Create the ``store`` directory and those for file, analysis and corpora
     # objects and their subdirectories.  See ``lib.utils.py`` for details.
-    h.createOLDDirectories(config=config)
+    h.create_OLD_directories(config=config)
 
     # ISO-639-3 Language data for the languages table
     log.info("Retrieving ISO-639-3 languages data.")
-    languages = h.getLanguageObjects(filename, config)
+    languages = h.get_language_objects(filename, config)
 
     # Get default users.
     log.info("Creating a default administrator, contributor and viewer.")
-    administrator = h.generateDefaultAdministrator(configFilename=filename)
-    contributor = h.generateDefaultContributor(configFilename=filename)
-    viewer = h.generateDefaultViewer(configFilename=filename)
+    administrator = h.generate_default_administrator(config_filename=filename)
+    contributor = h.generate_default_contributor(config_filename=filename)
+    viewer = h.generate_default_viewer(config_filename=filename)
 
     # If we are running tests, make sure the test db contains only language data.
     if filename == 'test.ini':
@@ -63,9 +63,9 @@ def setup_app(command, conf, vars):
     else:
 
         # Create the _requests_tests.py script
-        requestsTestsPath = os.path.join(config['pylons.paths']['root'], 'tests',
+        requests_tests_path = os.path.join(config['pylons.paths']['root'], 'tests',
                                          'scripts', '_requests_tests.py')
-        copyfile(requestsTestsPath, '_requests_tests.py')
+        copyfile(requests_tests_path, '_requests_tests.py')
 
         # Create the tables if they don't already exist
         Base.metadata.create_all(bind=Session.bind, checkfirst=True)
@@ -73,28 +73,28 @@ def setup_app(command, conf, vars):
 
         # Get default home & help pages.
         log.info("Creating default home and help pages.")
-        homepage = h.generateDefaultHomePage()
-        helppage = h.generateDefaultHelpPage()
+        homepage = h.generate_default_home_page()
+        helppage = h.generate_default_help_page()
     
         # Get default application settings.
         log.info("Generating default application settings.")
-        applicationSettings = h.generateDefaultApplicationSettings()
+        application_settings = h.generate_default_application_settings()
     
         # Get default tags and categories
         log.info("Creating some useful tags and categories.")
-        restrictedTag = h.generateRestrictedTag()
-        foreignWordTag = h.generateForeignWordTag()
-        S = h.generateSSyntacticCategory()
-        N = h.generateNSyntacticCategory()
-        V = h.generateVSyntacticCategory()
+        restricted_tag = h.generate_restricted_tag()
+        foreign_word_tag = h.generate_foreign_word_tag()
+        S = h.generate_s_syntactic_category()
+        N = h.generate_n_syntactic_category()
+        V = h.generate_v_syntactic_category()
     
         # Initialize the database
         log.info("Adding defaults.")
         data = [administrator, contributor, viewer, homepage, helppage,
-                applicationSettings, restrictedTag, foreignWordTag]
-        if config['addLanguageData'] != '0':
+                application_settings, restricted_tag, foreign_word_tag]
+        if config['add_language_data'] != '0':
             data += languages
-        if config['emptyDatabase'] == '0':
+        if config['empty_database'] == '0':
             Session.add_all(data)
             Session.commit()
         log.info("OLD successfully set up.")

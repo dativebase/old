@@ -35,4 +35,4 @@ class Language(Base):
     Type = Column(Unicode(1))
     Ref_Name = Column(Unicode(150))
     Comment = Column(Unicode(150))
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)

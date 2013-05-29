@@ -41,7 +41,7 @@ class TestLanguagesController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 2, 'page': 2}
+        paginator = {'items_per_page': 2, 'page': 2}
         response = self.app.get(url('languages'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -49,22 +49,22 @@ class TestLanguagesController(TestController):
         assert resp['items'][0]['Part2B'] == languages[2].Part2B
         assert response.content_type == 'application/json'
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'Language', 'orderByAttribute': 'Ref_Name',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('languages'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'Language', 'order_by_attribute': 'Ref_Name',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('languages'), order_by_params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = sorted(languages, key=lambda l: l.Ref_Name, reverse=True)
-        assert [l['Id'] for l in resp] == [l.Id for l in resultSet]
+        result_set = sorted(languages, key=lambda l: l.Ref_Name, reverse=True)
+        assert [l['Id'] for l in resp] == [l.Id for l in result_set]
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'Language', 'orderByAttribute': 'Ref_Name',
-                     'orderByDirection': 'desc', 'itemsPerPage': 1, 'page': 3}
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'Language', 'order_by_attribute': 'Ref_Name',
+                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
         response = self.app.get(url('languages'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resultSet[2].Ref_Name == resp['items'][0]['Ref_Name']
+        assert result_set[2].Ref_Name == resp['items'][0]['Ref_Name']
         assert response.content_type == 'application/json'
 
         # Now test the show action:
@@ -83,29 +83,29 @@ class TestLanguagesController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the search action
-        self.addSEARCHToWebTestValidMethods()
+        self._add_SEARCH_to_web_test_valid_methods()
 
         # A search on language transcriptions using POST /languages/search
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
                         ['Language', 'Ref_Name', 'like', u'%m%']}})
-        response = self.app.post(url('/languages/search'), jsonQuery,
+        response = self.app.post(url('/languages/search'), json_query,
                         self.json_headers, self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = [l for l in languages if u'm' in l.Ref_Name]
+        result_set = [l for l in languages if u'm' in l.Ref_Name]
         assert resp
-        assert set([l['Id'] for l in resp]) == set([l.Id for l in resultSet])
+        assert set([l['Id'] for l in resp]) == set([l.Id for l in result_set])
         assert response.content_type == 'application/json'
 
         # A search on language Ref_Name using SEARCH /languages
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
                         ['Language', 'Ref_Name', 'like', u'%l%']}})
-        response = self.app.request(url('languages'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('languages'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = [l for l in languages if u'l' in l.Ref_Name]
+        result_set = [l for l in languages if u'l' in l.Ref_Name]
         assert resp
-        assert len(resp) == len(resultSet)
-        assert set([l['Id'] for l in resp]) == set([l.Id for l in resultSet])
+        assert len(resp) == len(result_set)
+        assert set([l['Id'] for l in resp]) == set([l.Id for l in result_set])
 
         # I'm just going to assume that the order by and pagination functions are
         # working correctly since the implementation is essentially equivalent
@@ -132,8 +132,8 @@ class TestLanguagesController(TestController):
     #@nottest
     def test_new_search(self):
         """Tests that GET /languages/new_search returns the search parameters for searching the languages resource."""
-        queryBuilder = SQLAQueryBuilder('Language')
+        query_builder = SQLAQueryBuilder('Language')
         response = self.app.get(url('/languages/new_search'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)
+        assert resp['search_parameters'] == h.get_search_parameters(query_builder)

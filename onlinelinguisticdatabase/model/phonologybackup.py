@@ -25,7 +25,7 @@ from onlinelinguisticdatabase.model.meta import Base, now
 import simplejson as json
 
 class PhonologyBackup(Base):
-    """Class for creating OLD phonologyBackup models.
+    """Class for creating OLD phonology_backup models.
 
     The vivify method takes a phonology and a user object as input and populates
     a number of phonology-like attributes, converting relational attributes to
@@ -47,34 +47,34 @@ class PhonologyBackup(Base):
     script = Column(UnicodeText)
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
-    compileSucceeded = Column(Boolean, default=False)
-    compileMessage = Column(Unicode(255))
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
+    compile_succeeded = Column(Boolean, default=False)
+    compile_message = Column(Unicode(255))
     compile_attempt = Column(Unicode(36))
 
-    def vivify(self, phonologyDict):
-        """The vivify method gives life to a phonologyBackup by specifying its
-        attributes using the to-be-backed-up phonology (phonologyDict) and the
+    def vivify(self, phonology_dict):
+        """The vivify method gives life to a phonology_backup by specifying its
+        attributes using the to-be-backed-up phonology (phonology_dict) and the
         modifier (current user).  The relational attributes of the
         to-be-backed-up phonology are converted into (truncated) JSON objects.
 
         """
 
-        self.UUID = phonologyDict['UUID']
-        self.phonology_id = phonologyDict['id']
-        self.name = phonologyDict['name']
-        self.description = phonologyDict['description']
-        self.script = phonologyDict['script']
-        self.enterer = unicode(json.dumps(phonologyDict['enterer']))
-        self.modifier = unicode(json.dumps(phonologyDict['modifier']))
-        self.datetimeEntered = phonologyDict['datetimeEntered']
-        self.datetimeModified = phonologyDict['datetimeModified']
-        self.compileSucceeded = phonologyDict['compileSucceeded']
-        self.compileMessage = phonologyDict['compileMessage']
-        self.compile_attempt = phonologyDict['compile_attempt']
+        self.UUID = phonology_dict['UUID']
+        self.phonology_id = phonology_dict['id']
+        self.name = phonology_dict['name']
+        self.description = phonology_dict['description']
+        self.script = phonology_dict['script']
+        self.enterer = unicode(json.dumps(phonology_dict['enterer']))
+        self.modifier = unicode(json.dumps(phonology_dict['modifier']))
+        self.datetime_entered = phonology_dict['datetime_entered']
+        self.datetime_modified = phonology_dict['datetime_modified']
+        self.compile_succeeded = phonology_dict['compile_succeeded']
+        self.compile_message = phonology_dict['compile_message']
+        self.compile_attempt = phonology_dict['compile_attempt']
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'UUID': self.UUID,
@@ -82,11 +82,11 @@ class PhonologyBackup(Base):
             'name': self.name,
             'description': self.description,
             'script': self.script,
-            'enterer': self.jsonLoads(self.enterer),
-            'modifier': self.jsonLoads(self.modifier),
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'compileSucceeded': self.compileSucceeded,
-            'compileMessage': self.compileMessage,
+            'enterer': self.json_loads(self.enterer),
+            'modifier': self.json_loads(self.modifier),
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'compile_succeeded': self.compile_succeeded,
+            'compile_message': self.compile_message,
             'compile_attempt': self.compile_attempt
         }

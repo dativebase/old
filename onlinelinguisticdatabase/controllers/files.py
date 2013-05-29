@@ -40,7 +40,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import File
-from onlinelinguisticdatabase.lib.resize import saveReducedCopy
+from onlinelinguisticdatabase.lib.resize import save_reduced_copy
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class FilesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('File', config=config)
+    query_builder = SQLAQueryBuilder('File', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -67,19 +67,19 @@ class FilesController(BaseController):
         :URL: ``SEARCH /files`` (or ``POST /files/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = h.eagerloadFile(
-                self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
-            query = h.filterRestrictedModels('File', SQLAQuery)
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            SQLAQuery = h.eagerload_file(
+                self.query_builder.get_SQLA_query(python_search_params.get('query')))
+            query = h.filter_restricted_models('File', SQLAQuery)
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -97,10 +97,10 @@ class FilesController(BaseController):
         """Return the data necessary to search the file resources.
 
         :URL: ``GET /files/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -114,15 +114,15 @@ class FilesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
-            query = h.eagerloadFile(Session.query(File))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = h.filterRestrictedModels('File', query)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_file(Session.query(File))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            query = h.filter_restricted_models('File', query)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -156,7 +156,7 @@ class FilesController(BaseController):
             3. **Subinterval-referencing file with** ``application/json`` **content type.**
                All parameters provided in a JSON object.  No file data are
                present; the ``id`` value of an existing *audio/video* parent
-               file must be provided in the ``parentFile`` attribute; values for
+               file must be provided in the ``parent_file`` attribute; values for
                ``start`` and ``end`` attributes are also required.
 
             4. **Externally hosted file with** ``application/json`` **content-type.**
@@ -172,15 +172,15 @@ class FilesController(BaseController):
                     return {'error':
                         u'The request body is too large; use the multipart/form-data Content-Type when uploading files greater than 20MB.'}
                 values = json.loads(unicode(request.body, request.charset))
-                if 'base64EncodedFile' in values:
-                    file = createBase64File(values)
+                if 'base64_encoded_file' in values:
+                    file = create_base64_file(values)
                 elif 'url' in values:
-                    file = createExternallyHostedFile(values)
+                    file = create_externally_hosted_file(values)
                 else:
-                    file = createSubintervalReferencingFile(values)
+                    file = create_subinterval_referencing_file(values)
             else:
-                file = createPlainFile()
-            file.lossyFilename = saveReducedCopy(file, config)
+                file = create_plain_file()
+            file.lossy_filename = save_reduced_copy(file, config)
             Session.add(file)
             Session.commit()
             return file
@@ -206,12 +206,12 @@ class FilesController(BaseController):
 
         .. note::
         
-           See :func:`getNewEditFileData` to understand how the query string
+           See :func:`get_new_edit_file_data` to understand how the query string
            parameters can affect the contents of the lists in the returned
            dictionary.
 
         """
-        return getNewEditFileData(request.GET)
+        return get_new_edit_file_data(request.GET)
 
     @h.jsonify
     @h.restrict('PUT')
@@ -226,18 +226,18 @@ class FilesController(BaseController):
         :returns: the updated file model.
 
         """
-        file = h.eagerloadFile(Session.query(File)).get(int(id))
+        file = h.eagerload_file(Session.query(File)).get(int(id))
         if file:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, file, unrestrictedUsers):
+            if h.user_is_authorized_to_access_model(user, file, unrestricted_users):
                 try:
-                    if getattr(file, 'parentFile', None):
-                        file = updateSubintervalReferencingFile(file)
+                    if getattr(file, 'parent_file', None):
+                        file = update_subinterval_referencing_file(file)
                     elif getattr(file, 'url', None):
-                        file = updateExternallyHostedFile(file)
+                        file = update_externally_hosted_file(file)
                     else:
-                        file = updateFile(file)
+                        file = update_file(file)
                     # file will be False if there are no changes
                     if file:
                         Session.add(file)
@@ -255,7 +255,7 @@ class FilesController(BaseController):
                     return {'errors': e.unpack_errors()}
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
@@ -276,15 +276,15 @@ class FilesController(BaseController):
            Only administrators and a file's enterer can delete it.
 
         """
-        file = h.eagerloadFile(Session.query(File)).get(id)
+        file = h.eagerload_file(Session.query(File)).get(id)
         if file:
             if session['user'].role == u'administrator' or \
             file.enterer is session['user']:
-                deleteFile(file)
+                delete_file(file)
                 return file
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
@@ -300,15 +300,15 @@ class FilesController(BaseController):
         :returns: a file model object.
 
         """
-        file = h.eagerloadFile(Session.query(File)).get(id)
+        file = h.eagerload_file(Session.query(File)).get(id)
         if file:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, file, unrestrictedUsers):
+            if h.user_is_authorized_to_access_model(user, file, unrestricted_users):
                 return file
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
@@ -335,36 +335,36 @@ class FilesController(BaseController):
         
            This action can be thought of as a combination of
            :func:`FilesController.show` and :func:`FilesController.new`.  See
-           :func:`getNewEditFileData` to understand how the query string
+           :func:`get_new_edit_file_data` to understand how the query string
            parameters can affect the contents of the lists in the ``data``
            dictionary.
 
         """
         response.content_type = 'application/json'
-        file = h.eagerloadFile(Session.query(File)).get(id)
+        file = h.eagerload_file(Session.query(File)).get(id)
         if file:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
-                return {'data': getNewEditFileData(request.GET), 'file': file}
+            unrestricted_users = h.get_unrestricted_users()
+            if h.user_is_authorized_to_access_model(session['user'], file, unrestricted_users):
+                return {'data': get_new_edit_file_data(request.GET), 'file': file}
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no file with id %s' % id}
 
     @h.restrict('GET')
-    @h.authenticateWithJSON
+    @h.authenticate_with_JSON
     def serve(self, id):
         """Return the file data (binary stream) of the file.
         
         :param str id: the ``id`` value of the file whose file data are requested.
 
         """
-        return serveFile(id)
+        return serve_file(id)
 
     @h.restrict('GET')
-    @h.authenticateWithJSON
+    @h.authenticate_with_JSON
     def serve_reduced(self, id):
         """Return the reduced-size file data (binary stream) of the file.
         
@@ -372,38 +372,38 @@ class FilesController(BaseController):
             are requested.
 
         """
-        return serveFile(id, True)
+        return serve_file(id, True)
 
 
-def serveFile(id, reduced=False):
+def serve_file(id, reduced=False):
     """Serve the content (binary data) of a file.
     
     :param str id: the ``id`` value of the file whose file data will be served.
     :param bool reduced: toggles serving of file data or reduced-size file data.
 
     """
-    file = Session.query(File).options(subqueryload(File.parentFile)).get(id)
-    if getattr(file, 'parentFile', None):
-        file = file.parentFile
+    file = Session.query(File).options(subqueryload(File.parent_file)).get(id)
+    if getattr(file, 'parent_file', None):
+        file = file.parent_file
     elif getattr(file, 'url', None):
         response.status_int = 400
         return json.dumps({'error': u'The content of file %s is stored elsewhere at %s' % (id, file.url)})
     if file:
-        filesDir = h.getOLDDirectoryPath('files', config=config)
+        files_dir = h.get_OLD_directory_path('files', config=config)
         if reduced:
-            filename = getattr(file, 'lossyFilename', None)
+            filename = getattr(file, 'lossy_filename', None)
             if not filename:
                 response.status_int = 404
                 return json.dumps({'error': u'There is no size-reduced copy of file %s' % id})
-            filePath = os.path.join(filesDir, 'reduced_files', filename)
+            file_path = os.path.join(files_dir, 'reduced_files', filename)
         else:
-            filePath = os.path.join(filesDir, file.filename)
-        unrestrictedUsers = h.getUnrestrictedUsers()
-        if h.userIsAuthorizedToAccessModel(session['user'], file, unrestrictedUsers):
-            return forward(FileApp(filePath))
+            file_path = os.path.join(files_dir, file.filename)
+        unrestricted_users = h.get_unrestricted_users()
+        if h.user_is_authorized_to_access_model(session['user'], file, unrestricted_users):
+            return forward(FileApp(file_path))
         else:
             response.status_int = 403
-            return json.dumps(h.unauthorizedMsg)
+            return json.dumps(h.unauthorized_msg)
     else:
         response.status_int = 404
         return json.dumps({'error': 'There is no file with id %s' % id})
@@ -412,25 +412,25 @@ def serveFile(id, reduced=False):
 # File Create Functionality
 ################################################################################
 
-def getUniqueFilePath(filePath):
+def get_unique_file_path(file_path):
     """Get a unique file path.
     
-    :param str filePath: an absolute file path.
+    :param str file_path: an absolute file path.
     :returns: a tuple whose first element is the open file object and whose
         second is the unique file path as a unicode string.
 
     """
-    filePathParts = os.path.splitext(filePath) # returns ('/path/file', '.ext')
+    file_path_parts = os.path.splitext(file_path) # returns ('/path/file', '.ext')
     while 1:
         try:
-            fileDescriptor = os.open(filePath, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            return os.fdopen(fileDescriptor, 'wb'), unicode(filePath)
+            file_descriptor = os.open(file_path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            return os.fdopen(file_descriptor, 'wb'), unicode(file_path)
         except (OSError, IOError):
             pass
-        filePath = u'%s_%s%s' % (filePathParts[0][:230],
-                    ''.join(sample(digits + letters, 8)), filePathParts[1])
+        file_path = u'%s_%s%s' % (file_path_parts[0][:230],
+                    ''.join(sample(digits + letters, 8)), file_path_parts[1])
 
-def addStandardMetadata(file, data):
+def add_standard_metadata(file, data):
     """Add the standard metadata to the file model using the data dictionary.
     
     :param file: file model object
@@ -439,8 +439,8 @@ def addStandardMetadata(file, data):
     
     """
     file.description = h.normalize(data['description'])
-    file.utteranceType = data['utteranceType']
-    file.dateElicited = data['dateElicited']
+    file.utterance_type = data['utterance_type']
+    file.date_elicited = data['date_elicited']
     if data['elicitor']:
         file.elicitor = data['elicitor']
     if data['speaker']:
@@ -448,12 +448,12 @@ def addStandardMetadata(file, data):
     file.tags = [t for t in data['tags'] if t]
     file.forms = [f for f in data['forms'] if f]
     now = h.now()
-    file.datetimeEntered = now
-    file.datetimeModified = now
+    file.datetime_entered = now
+    file.datetime_modified = now
     file.enterer = session['user']
     return file
 
-def restrictFileByForms(file):
+def restrict_file_by_forms(file):
     """Restrict the entire file if it is associated to restricted forms.
     
     :param file: a file model object.
@@ -461,27 +461,27 @@ def restrictFileByForms(file):
 
     """
     tags = [f.tags for f in file.forms]
-    tags = [tag for tagList in tags for tag in tagList]
-    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-    if restrictedTags:
-        restrictedTag = restrictedTags[0]
-        if restrictedTag not in file.tags:
-            file.tags.append(restrictedTag)
+    tags = [tag for tag_list in tags for tag in tag_list]
+    restricted_tags = [tag for tag in tags if tag.name == u'restricted']
+    if restricted_tags:
+        restricted_tag = restricted_tags[0]
+        if restricted_tag not in file.tags:
+            file.tags.append(restricted_tag)
     return file
 
 class InvalidFieldStorageObjectError(Exception):
     pass
 
-def createBase64File(data):
+def create_base64_file(data):
     """Create a local file using data from a ``Content-Type: application/json`` request.
 
     :param dict data: the data to create the file model.
-    :param str data['base64EncodedFile']: Base64-encoded file data.
+    :param str data['base64_encoded_file']: Base64-encoded file data.
     :returns: an SQLAlchemy model object representing the file.
 
     """
 
-    data['MIMEtype'] = u''  # during validation, the schema will set a proper value based on the base64EncodedFile or filename attribute
+    data['MIME_type'] = u''  # during validation, the schema will set a proper value based on the base64_encoded_file or filename attribute
     schema = FileCreateWithBase64EncodedFiledataSchema()
     state = h.State()
     state.full_dict = data
@@ -489,28 +489,28 @@ def createBase64File(data):
     data = schema.to_python(data, state)
 
     file = File()
-    file.MIMEtype = data['MIMEtype']
+    file.MIME_type = data['MIME_type']
     file.filename = h.normalize(data['filename'])
 
-    file = addStandardMetadata(file, data)
+    file = add_standard_metadata(file, data)
 
     # Write the file to disk (making sure it's unique and thereby potentially)
     # modifying file.filename; and calculate file.size.
-    fileData = data['base64EncodedFile']     # base64-decoded during validation
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    filePath = os.path.join(filesPath, file.filename)
-    fileObject, filePath = getUniqueFilePath(filePath)
-    file.filename = os.path.split(filePath)[-1]
+    file_data = data['base64_encoded_file']     # base64-decoded during validation
+    files_path = h.get_OLD_directory_path('files', config=config)
+    file_path = os.path.join(files_path, file.filename)
+    file_object, file_path = get_unique_file_path(file_path)
+    file.filename = os.path.split(file_path)[-1]
     file.name = file.filename
-    fileObject.write(fileData)
-    fileObject.close()
-    fileData = None
-    file.size = os.path.getsize(filePath)
+    file_object.write(file_data)
+    file_object.close()
+    file_data = None
+    file.size = os.path.getsize(file_path)
 
-    file = restrictFileByForms(file)
+    file = restrict_file_by_forms(file)
     return file
 
-def createExternallyHostedFile(data):
+def create_externally_hosted_file(data):
     """Create an externally hosted file.
 
     :param dict data: the data to create the file model.
@@ -518,7 +518,7 @@ def createExternallyHostedFile(data):
     :returns: an SQLAlchemy model object representing the file.
 
     Optional keys of the data dictionary, not including the standard metadata
-    ones, are ``name``, ``password`` and ``MIMEtype``.
+    ones, are ``name``, ``password`` and ``MIME_type``.
     
     """
     data['password'] = data.get('password') or u''
@@ -529,18 +529,18 @@ def createExternallyHostedFile(data):
     # User-inputted string data
     file.name = h.normalize(data['name'])
     file.password = data['password']
-    file.MIMEtype = data['MIMEtype']
+    file.MIME_type = data['MIME_type']
     file.url = data['url']
 
-    file = addStandardMetadata(file, data)
-    file = restrictFileByForms(file)
+    file = add_standard_metadata(file, data)
+    file = restrict_file_by_forms(file)
     return file
 
-def createSubintervalReferencingFile(data):
+def create_subinterval_referencing_file(data):
     """Create a subinterval-referencing file.
 
     :param dict data: the data to create the file model.
-    :param int data['parentFile']: the ``id`` value of an audio/video file model.
+    :param int data['parent_file']: the ``id`` value of an audio/video file model.
     :param float/int data['start']: the start of the interval in seconds.
     :param float/int data['end']: the end of the interval in seconds.
     :returns: an SQLAlchemy model object representing the file.
@@ -558,18 +558,18 @@ def createSubintervalReferencingFile(data):
     file = File()
 
     # Data unique to referencing subinterval files
-    file.parentFile = data['parentFile']
-    file.name = h.normalize(data['name']) or file.parentFile.filename   # Name defaults to the parent file's filename if nothing provided by user
+    file.parent_file = data['parent_file']
+    file.name = h.normalize(data['name']) or file.parent_file.filename   # Name defaults to the parent file's filename if nothing provided by user
     file.start = data['start']
     file.end = data['end']
-    file.MIMEtype = file.parentFile.MIMEtype
+    file.MIME_type = file.parent_file.MIME_type
 
-    file = addStandardMetadata(file, data)
-    file = restrictFileByForms(file)
+    file = add_standard_metadata(file, data)
+    file = restrict_file_by_forms(file)
 
     return file
 
-def createPlainFile():
+def create_plain_file():
     """Create a local file using data from a ``Content-Type: multipart/form-data`` request.
 
     :param request.POST['filedata']: a ``cgi.FieldStorage`` object containing
@@ -591,25 +591,25 @@ def createPlainFile():
         raise InvalidFieldStorageObjectError
     if not values.get('filename'):
         values['filename'] = os.path.split(filedata.filename)[-1]
-    values['filedataFirstKB'] = filedata.value[:1024]
+    values['filedata_first_KB'] = filedata.value[:1024]
     schema = FileCreateWithFiledataSchema()
     data = schema.to_python(values)
 
     file = File()
     file.filename = h.normalize(data['filename'])
-    file.MIMEtype = data['MIMEtype']
+    file.MIME_type = data['MIME_type']
 
-    filesPath = h.getOLDDirectoryPath('files', config=config)
-    filePath = os.path.join(filesPath, file.filename)
-    fileObject, filePath = getUniqueFilePath(filePath)
-    file.filename = os.path.split(filePath)[-1]
+    files_path = h.get_OLD_directory_path('files', config=config)
+    file_path = os.path.join(files_path, file.filename)
+    file_object, file_path = get_unique_file_path(file_path)
+    file.filename = os.path.split(file_path)[-1]
     file.name = file.filename
-    shutil.copyfileobj(filedata.file, fileObject)
+    shutil.copyfileobj(filedata.file, file_object)
     filedata.file.close()
-    fileObject.close()
-    file.size = os.path.getsize(filePath)
+    file_object.close()
+    file.size = os.path.getsize(file_path)
 
-    file = addStandardMetadata(file, data)
+    file = add_standard_metadata(file, data)
 
     return file
 
@@ -617,7 +617,7 @@ def createPlainFile():
 # File Update Functionality
 ################################################################################
 
-def updateStandardMetadata(file, data, changed):
+def update_standard_metadata(file, data, changed):
     """Update the standard metadata attributes of the input file.
     
     :param file: a file model object to be updated.
@@ -627,38 +627,38 @@ def updateStandardMetadata(file, data, changed):
         the boolean ``changed``.
 
     """
-    changed = h.setAttr(file, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(file, 'utteranceType', h.normalize(data['utteranceType']), changed)
-    changed = h.setAttr(file, 'dateElicited', data['dateElicited'], changed)
-    changed = h.setAttr(file, 'elicitor', data['elicitor'], changed)
-    changed = h.setAttr(file, 'speaker', data['speaker'], changed)
+    changed = h.set_attr(file, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(file, 'utterance_type', h.normalize(data['utterance_type']), changed)
+    changed = h.set_attr(file, 'date_elicited', data['date_elicited'], changed)
+    changed = h.set_attr(file, 'elicitor', data['elicitor'], changed)
+    changed = h.set_attr(file, 'speaker', data['speaker'], changed)
 
     # Many-to-Many Data: tags & forms
     # Update only if the user has made changes.
-    formsToAdd = [f for f in data['forms'] if f]
-    tagsToAdd = [t for t in data['tags'] if t]
+    forms_to_add = [f for f in data['forms'] if f]
+    tags_to_add = [t for t in data['tags'] if t]
 
-    if set(formsToAdd) != set(file.forms):
-        file.forms = formsToAdd
+    if set(forms_to_add) != set(file.forms):
+        file.forms = forms_to_add
         changed = True
 
         # Cause the entire file to be tagged as restricted if any one of its
         # forms are so tagged.
         tags = [f.tags for f in file.forms]
-        tags = [tag for tagList in tags for tag in tagList]
-        restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-        if restrictedTags:
-            restrictedTag = restrictedTags[0]
-            if restrictedTag not in tagsToAdd:
-                tagsToAdd.append(restrictedTag)
+        tags = [tag for tag_list in tags for tag in tag_list]
+        restricted_tags = [tag for tag in tags if tag.name == u'restricted']
+        if restricted_tags:
+            restricted_tag = restricted_tags[0]
+            if restricted_tag not in tags_to_add:
+                tags_to_add.append(restricted_tag)
 
-    if set(tagsToAdd) != set(file.tags):
-        file.tags = tagsToAdd
+    if set(tags_to_add) != set(file.tags):
+        file.tags = tags_to_add
         changed = True
 
     return file, changed
 
-def updateFile(file):
+def update_file(file):
     """Update a local file model.
     
     :param file: a file model object to update.
@@ -673,13 +673,13 @@ def updateFile(file):
     state.full_dict = data
     state.user = session['user']
     data = schema.to_python(data, state)
-    file, changed = updateStandardMetadata(file, data, changed)
+    file, changed = update_standard_metadata(file, data, changed)
     if changed:
-        file.datetimeModified = datetime.datetime.utcnow()
+        file.datetime_modified = datetime.datetime.utcnow()
         return file
     return changed
 
-def updateSubintervalReferencingFile(file):
+def update_subinterval_referencing_file(file):
     """Update a subinterval-referencing file model.
 
     :param file: a file model object to update.
@@ -697,19 +697,19 @@ def updateSubintervalReferencingFile(file):
     data = schema.to_python(data, state)
 
     # Data unique to referencing subinterval files
-    changed = h.setAttr(file, 'parentFile', data['parentFile'], changed)
-    changed = h.setAttr(file, 'name', (h.normalize(data['name']) or file.parentFile.filename), changed)
-    changed = h.setAttr(file, 'start', data['start'], changed)
-    changed = h.setAttr(file, 'end', data['end'], changed)
+    changed = h.set_attr(file, 'parent_file', data['parent_file'], changed)
+    changed = h.set_attr(file, 'name', (h.normalize(data['name']) or file.parent_file.filename), changed)
+    changed = h.set_attr(file, 'start', data['start'], changed)
+    changed = h.set_attr(file, 'end', data['end'], changed)
 
-    file, changed = updateStandardMetadata(file, data, changed)
+    file, changed = update_standard_metadata(file, data, changed)
 
     if changed:
-        file.datetimeModified = datetime.datetime.utcnow()
+        file.datetime_modified = datetime.datetime.utcnow()
         return file
     return changed
 
-def updateExternallyHostedFile(file):
+def update_externally_hosted_file(file):
     """Update an externally hosted file model.
 
     :param file: a file model object to update.
@@ -723,15 +723,15 @@ def updateExternallyHostedFile(file):
     data = FileExternallyHostedSchema().to_python(data)
 
     # Data unique to referencing subinterval files
-    changed = h.setAttr(file, 'url', data['url'], changed)
-    changed = h.setAttr(file, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(file, 'password', data['password'], changed)
-    changed = h.setAttr(file, 'MIMEtype', data['MIMEtype'], changed)
+    changed = h.set_attr(file, 'url', data['url'], changed)
+    changed = h.set_attr(file, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(file, 'password', data['password'], changed)
+    changed = h.set_attr(file, 'MIME_type', data['MIME_type'], changed)
 
-    file, changed = updateStandardMetadata(file, data, changed)
+    file, changed = update_standard_metadata(file, data, changed)
 
     if changed:
-        file.datetimeModified = datetime.datetime.utcnow()
+        file.datetime_modified = datetime.datetime.utcnow()
         return file
     return changed
 
@@ -740,7 +740,7 @@ def updateExternallyHostedFile(file):
 # Delete File Functionality
 ################################################################################
 
-def deleteFile(file):
+def delete_file(file):
     """Delete a file model.
 
     :param file: a file model object to delete.
@@ -751,13 +751,13 @@ def deleteFile(file):
 
     """
     if getattr(file, 'filename', None):
-        filePath = os.path.join(h.getOLDDirectoryPath('files', config=config),
+        file_path = os.path.join(h.get_OLD_directory_path('files', config=config),
                                 file.filename)
-        os.remove(filePath)
-    if getattr(file, 'lossyFilename', None):
-        filePath = os.path.join(h.getOLDDirectoryPath('reduced_files', config=config),
-                                file.lossyFilename)
-        os.remove(filePath)
+        os.remove(file_path)
+    if getattr(file, 'lossy_filename', None):
+        file_path = os.path.join(h.get_OLD_directory_path('reduced_files', config=config),
+                                file.lossy_filename)
+        os.remove(file_path)
     Session.delete(file)
     Session.commit()
 
@@ -766,7 +766,7 @@ def deleteFile(file):
 # New/Edit File Functionality
 ################################################################################
 
-def getNewEditFileData(GET_params):
+def get_new_edit_file_data(GET_params):
     """Return the data necessary to create a new OLD file or update an existing one.
     
     :param GET_params: the ``request.GET`` dictionary-like object generated by
@@ -779,13 +779,13 @@ def getNewEditFileData(GET_params):
     string (and not a valid ISO 8601 datetime) add the appropriate list of
     objects to the return dictionary.  If the value of a key is a valid ISO 8601
     datetime string, add the corresponding list of objects *only* if the
-    datetime does *not* match the most recent ``datetimeModified`` value of the
+    datetime does *not* match the most recent ``datetime_modified`` value of the
     resource.  That is, a non-matching datetime indicates that the requester has
     out-of-date data.
 
     """
     # Map param names to the OLD model objects from which they are derived.
-    paramName2ModelName = {
+    param_name2model_name = {
         'tags': 'Tag',
         'speakers': 'Speaker',
         'users': 'User'
@@ -794,15 +794,15 @@ def getNewEditFileData(GET_params):
     # map_ maps param names to functions that retrieve the appropriate data
     # from the db.
     map_ = {
-        'tags': h.getMiniDictsGetter('Tag'),
-        'speakers': h.getMiniDictsGetter('Speaker'),
-        'users': h.getMiniDictsGetter('User')
+        'tags': h.get_mini_dicts_getter('Tag'),
+        'speakers': h.get_mini_dicts_getter('Speaker'),
+        'users': h.get_mini_dicts_getter('User')
     }
 
     # result is initialized as a dict with empty list values.
     result = dict([(key, []) for key in map_])
-    result['utteranceTypes'] = h.utteranceTypes
-    result['allowedFileTypes'] = h.allowedFileTypes
+    result['utterance_types'] = h.utterance_types
+    result['allowed_file_types'] = h.allowed_file_types
 
     # There are GET params, so we are selective in what we return.
     if GET_params:
@@ -810,16 +810,16 @@ def getNewEditFileData(GET_params):
             val = GET_params.get(key)
             # Proceed so long as val is not an empty string.
             if val:
-                valAsDatetimeObj = h.datetimeString2datetime(val)
-                if valAsDatetimeObj:
+                val_as_datetime_obj = h.datetime_string2datetime(val)
+                if val_as_datetime_obj:
                     # Value of param is an ISO 8601 datetime string that
-                    # does not match the most recent datetimeModified of the
+                    # does not match the most recent datetime_modified of the
                     # relevant model in the db: therefore we return a list
                     # of objects/dicts.  If the datetimes do match, this
                     # indicates that the requester's own stores are
                     # up-to-date so we return nothing.
-                    if valAsDatetimeObj != h.getMostRecentModificationDatetime(
-                    paramName2ModelName[key]):
+                    if val_as_datetime_obj != h.get_most_recent_modification_datetime(
+                    param_name2model_name[key]):
                         result[key] = map_[key]()
                 else:
                     result[key] = map_[key]()

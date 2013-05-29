@@ -52,14 +52,14 @@ class BaseController(WSGIController):
         authentication and authorization. See https://groups.google.com/forum/?fromgroups=#!searchin/pylons-discuss/test$20session/pylons-discuss/wiwOQBIxDw8/0yR3z3YiYzYJ
         for the origin of this hack.
 
-        If present, setting environ['test.applicationSettings'] to a truthy
-        value will result in app_globals.applicationSettings being set to an
+        If present, setting environ['test.application_settings'] to a truthy
+        value will result in app_globals.application_settings being set to an
         ApplicationSettings instance.  This permits simulation of the
         application settings cache in app_globals which is used for
         inventory-based validation.  One issue with this approach is that the
-        app_globals.applicationSettings attribute is not unset after the test is
+        app_globals.application_settings attribute is not unset after the test is
         run.  Therefore, the __after__ method (see below) deletes the attribute
-        when environ['test.applicationSettings'] is truthy.
+        when environ['test.application_settings'] is truthy.
 
         WARNING: overwriting __before__ (or __after__) in a controller class
         (without calling their super methods) will cause nosetests to fail en
@@ -76,10 +76,10 @@ class BaseController(WSGIController):
                 request.environ['test.authentication.id'])
             if user:
                 session['user'] = user
-        if request.environ.get('test.applicationSettings'):
-            app_globals.applicationSettings = h.ApplicationSettings()
+        if request.environ.get('test.application_settings'):
+            app_globals.application_settings = h.ApplicationSettings()
 
     def __after__(self):
-        if request.environ.get('test.applicationSettings') and \
-        not request.environ.get('test.retainApplicationSettings'):
-            del app_globals.applicationSettings
+        if request.environ.get('test.application_settings') and \
+        not request.environ.get('test.retain_application_settings'):
+            del app_globals.application_settings

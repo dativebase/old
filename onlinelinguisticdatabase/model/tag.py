@@ -30,12 +30,12 @@ class Tag(Base):
     id = Column(Integer, Sequence('tag_seq_id', optional=True), primary_key=True)
     name = Column(Unicode(255), unique=True)
     description = Column(UnicodeText)
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'datetimeModified': self.datetimeModified
+            'datetime_modified': self.datetime_modified
         }

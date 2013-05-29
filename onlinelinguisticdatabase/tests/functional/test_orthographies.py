@@ -33,33 +33,33 @@ class TestOrthographiesController(TestController):
 
     #@nottest
     def test_index(self):
-        """Tests that GET /orthographies returns an array of all orthographies and that orderBy and pagination parameters work correctly."""
+        """Tests that GET /orthographies returns an array of all orthographies and that order_by and pagination parameters work correctly."""
 
         # Add 100 orthographies.
-        def createOrthographyFromIndex(index):
+        def create_orthography_from_index(index):
             orthography = model.Orthography()
             orthography.name = u'orthography%d' % index
             orthography.orthography = u'a, b, c, %d' % index
-            orthography.initialGlottalStops = False
+            orthography.initial_glottal_stops = False
             orthography.lowercase = True
             return orthography
-        orthographies = [createOrthographyFromIndex(i) for i in range(1, 101)]
+        orthographies = [create_orthography_from_index(i) for i in range(1, 101)]
         Session.add_all(orthographies)
         Session.commit()
-        orthographies = h.getOrthographies(True)
-        orthographiesCount = len(orthographies)
+        orthographies = h.get_orthographies(True)
+        orthographies_count = len(orthographies)
 
         # Test that GET /orthographies gives us all of the orthographies.
         response = self.app.get(url('orthographies'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == orthographiesCount
+        assert len(resp) == orthographies_count
         assert resp[0]['name'] == u'orthography1'
         assert resp[0]['id'] == orthographies[0].id
         assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 23, 'page': 3}
+        paginator = {'items_per_page': 23, 'page': 3}
         response = self.app.get(url('orthographies'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -67,56 +67,56 @@ class TestOrthographiesController(TestController):
         assert resp['items'][0]['name'] == orthographies[46].name
         assert response.content_type == 'application/json'
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'Orthography', 'orderByAttribute': 'name',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('orthographies'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'Orthography', 'order_by_attribute': 'name',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('orthographies'), order_by_params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = sorted([o.name for o in orthographies], reverse=True)
-        assert resultSet == [o['name'] for o in resp]
+        result_set = sorted([o.name for o in orthographies], reverse=True)
+        assert result_set == [o['name'] for o in resp]
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'Orthography', 'orderByAttribute': 'name',
-                     'orderByDirection': 'desc', 'itemsPerPage': 23, 'page': 3}
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'Orthography', 'order_by_attribute': 'name',
+                     'order_by_direction': 'desc', 'items_per_page': 23, 'page': 3}
         response = self.app.get(url('orthographies'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resultSet[46] == resp['items'][0]['name']
+        assert result_set[46] == resp['items'][0]['name']
         assert response.content_type == 'application/json'
 
-        # Expect a 400 error when the orderByDirection param is invalid
-        orderByParams = {'orderByModel': 'Orthography', 'orderByAttribute': 'name',
-                     'orderByDirection': 'descending'}
-        response = self.app.get(url('orthographies'), orderByParams, status=400,
+        # Expect a 400 error when the order_by_direction param is invalid
+        order_by_params = {'order_by_model': 'Orthography', 'order_by_attribute': 'name',
+                     'order_by_direction': 'descending'}
+        response = self.app.get(url('orthographies'), order_by_params, status=400,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-        # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
+        # Expect the default BY id ASCENDING ordering when the order_by_model/Attribute
         # param is invalid.
-        orderByParams = {'orderByModel': 'Orthographyist', 'orderByAttribute': 'nominal',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('orthographies'), orderByParams,
+        order_by_params = {'order_by_model': 'Orthographyist', 'order_by_attribute': 'nominal',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('orthographies'), order_by_params,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp[0]['id'] == orthographies[0].id
 
         # Expect a 400 error when the paginator GET params are empty
         # or are integers less than 1
-        paginator = {'itemsPerPage': u'a', 'page': u''}
+        paginator = {'items_per_page': u'a', 'page': u''}
         response = self.app.get(url('orthographies'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
+        assert resp['errors']['items_per_page'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
 
-        paginator = {'itemsPerPage': 0, 'page': -1}
+        paginator = {'items_per_page': 0, 'page': -1}
         response = self.app.get(url('orthographies'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
+        assert resp['errors']['items_per_page'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
@@ -126,24 +126,24 @@ class TestOrthographiesController(TestController):
         or returns an appropriate error if the input is invalid.
         """
 
-        originalOrthographyCount = Session.query(Orthography).count()
+        original_orthography_count = Session.query(Orthography).count()
 
         # Create a valid one
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography 1', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        newOrthographyCount = Session.query(Orthography).count()
-        assert newOrthographyCount == originalOrthographyCount + 1
+        new_orthography_count = Session.query(Orthography).count()
+        assert new_orthography_count == original_orthography_count + 1
         assert resp['name'] == u'orthography 1'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
-        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
+        assert resp['initial_glottal_stops'] == True    # default value from model/orthography.py
         assert response.content_type == 'application/json'
 
         # Invalid because name and orthography are empty
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'', 'orthography': u''})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin, status=400)
@@ -153,7 +153,7 @@ class TestOrthographiesController(TestController):
         assert response.content_type == 'application/json'
 
         # Invalid because name is too long
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography' * 200, 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin, status=400)
@@ -161,23 +161,23 @@ class TestOrthographiesController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
 
         # Boolean cols
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({
             'name': u'orthography 2',
             'orthography': u'a, b, c',
-            'initialGlottalStops': False,
+            'initial_glottal_stops': False,
             'lowercase': True
         })
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        orthographyCount = newOrthographyCount
-        newOrthographyCount = Session.query(Orthography).count()
-        assert newOrthographyCount == orthographyCount + 1
+        orthography_count = new_orthography_count
+        new_orthography_count = Session.query(Orthography).count()
+        assert new_orthography_count == orthography_count + 1
         assert resp['name'] == u'orthography 2'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == True
-        assert resp['initialGlottalStops'] == False
+        assert resp['initial_glottal_stops'] == False
 
         # Boolean cols with string values.  Formencode.StringBoolean will convert
         # any non-zero numeral or float to True (otherwise False) and will convert
@@ -185,36 +185,36 @@ class TestOrthographiesController(TestController):
         # false_values = ['false', 'f', 'no', 'n', 'off', '0']
         # true_values = ['true', 't', 'yes', 'y', 'on', '1']
         # Any other string values will cause an Invalid error to be raised.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({
             'name': u'orthography 3',
             'orthography': u'a, b, c',
-            'initialGlottalStops': u'FALSE',
+            'initial_glottal_stops': u'FALSE',
             'lowercase': u'truE'
         })
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        orthographyCount = newOrthographyCount
-        newOrthographyCount = Session.query(Orthography).count()
-        assert newOrthographyCount == orthographyCount + 1
+        orthography_count = new_orthography_count
+        new_orthography_count = Session.query(Orthography).count()
+        assert new_orthography_count == orthography_count + 1
         assert resp['name'] == u'orthography 3'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == True
-        assert resp['initialGlottalStops'] == False
+        assert resp['initial_glottal_stops'] == False
 
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({
             'name': u'orthography 4',
             'orthography': u'a, b, c',
-            'initialGlottalStops': u'negative',
+            'initial_glottal_stops': u'negative',
             'lowercase': u'althaea'
         })
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['lowercase'] == u"Value should be 'true' or 'false'"
-        assert resp['errors']['initialGlottalStops'] == u"Value should be 'true' or 'false'"
+        assert resp['errors']['initial_glottal_stops'] == u"Value should be 'true' or 'false'"
 
     #@nottest
     def test_new(self):
@@ -230,70 +230,70 @@ class TestOrthographiesController(TestController):
         """Tests that PUT /orthographies/id updates the orthography with id=id."""
 
         # Create an orthography to update.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        orthographyCount = Session.query(Orthography).count()
+        orthography_count = Session.query(Orthography).count()
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
-        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
+        assert resp['initial_glottal_stops'] == True    # default value from model/orthography.py
         assert response.content_type == 'application/json'
-        orthographyId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
+        orthography_id = resp['id']
+        original_datetime_modified = resp['datetime_modified']
 
         # Update the orthography
-        sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.orthographyCreateParams.copy()
+        sleep(1)    # sleep for a second to ensure that MySQL registers a different datetime_modified for the update
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c, d'})
         params = json.dumps(params)
-        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+        response = self.app.put(url('orthography', id=orthography_id), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeModified = resp['datetimeModified']
-        newOrthographyCount = Session.query(Orthography).count()
-        assert orthographyCount == newOrthographyCount
-        assert datetimeModified != originalDatetimeModified
+        datetime_modified = resp['datetime_modified']
+        new_orthography_count = Session.query(Orthography).count()
+        assert orthography_count == new_orthography_count
+        assert datetime_modified != original_datetime_modified
         assert resp['orthography'] == u'a, b, c, d'
         assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        response = self.app.put(url('orthography', id=orthography_id), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        orthographyCount = newOrthographyCount
-        newOrthographyCount = Session.query(Orthography).count()
-        ourOrthographyDatetimeModified = Session.query(Orthography).get(orthographyId).datetimeModified
-        assert ourOrthographyDatetimeModified.isoformat() == datetimeModified
-        assert orthographyCount == newOrthographyCount
+        orthography_count = new_orthography_count
+        new_orthography_count = Session.query(Orthography).count()
+        our_orthography_datetime_modified = Session.query(Orthography).get(orthography_id).datetime_modified
+        assert our_orthography_datetime_modified.isoformat() == datetime_modified
+        assert orthography_count == new_orthography_count
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
         # Observe how updates are restricted when an orthography is part of an
         # active application settings ...
-        appSet = h.generateDefaultApplicationSettings()
-        appSet.storageOrthography = Session.query(Orthography).get(orthographyId)
-        Session.add(appSet)
+        app_set = h.generate_default_application_settings()
+        app_set.storage_orthography = Session.query(Orthography).get(orthography_id)
+        Session.add(app_set)
         Session.commit()
 
         # Now attempting a valid update as a contributor should fail
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c, d, e'})
         params = json.dumps(params)
-        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+        response = self.app.put(url('orthography', id=orthography_id), params, self.json_headers,
                                  self.extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'Only administrators are permitted to update orthographies that are used in the active application settings.'
         assert response.content_type == 'application/json'
 
         # The same update as an admin should succeed.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c, d, e'})
         params = json.dumps(params)
-        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+        response = self.app.put(url('orthography', id=orthography_id), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['name'] == u'orthography'
@@ -302,13 +302,13 @@ class TestOrthographiesController(TestController):
 
         # If we now remove the orthography from the application settings, the
         # contributor will be able to edit it.
-        appSet = h.getApplicationSettings()
-        appSet.storageOrthography = None
+        app_set = h.get_application_settings()
+        app_set.storage_orthography = None
         Session.commit()
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c, d, e, f'})
         params = json.dumps(params)
-        response = self.app.put(url('orthography', id=orthographyId), params, self.json_headers,
+        response = self.app.put(url('orthography', id=orthography_id), params, self.json_headers,
                                  self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
@@ -320,31 +320,31 @@ class TestOrthographiesController(TestController):
         """Tests that DELETE /orthographies/id deletes the orthography with id=id."""
 
         # Create an orthography to delete.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        orthographyCount = Session.query(Orthography).count()
+        orthography_count = Session.query(Orthography).count()
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
-        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
-        orthographyId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
+        assert resp['initial_glottal_stops'] == True    # default value from model/orthography.py
+        orthography_id = resp['id']
+        original_datetime_modified = resp['datetime_modified']
 
         # Now delete the orthography
-        response = self.app.delete(url('orthography', id=orthographyId), headers=self.json_headers,
+        response = self.app.delete(url('orthography', id=orthography_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        newOrthographyCount = Session.query(Orthography).count()
-        assert newOrthographyCount == orthographyCount - 1
-        assert resp['id'] == orthographyId
+        new_orthography_count = Session.query(Orthography).count()
+        assert new_orthography_count == orthography_count - 1
+        assert resp['id'] == orthography_id
         assert response.content_type == 'application/json'
 
         # Trying to get the deleted orthography from the db should return None
-        deletedOrthography = Session.query(Orthography).get(orthographyId)
-        assert deletedOrthography == None
+        deleted_orthography = Session.query(Orthography).get(orthography_id)
+        assert deleted_orthography == None
 
         # Delete with an invalid id
         id = 9999999999999
@@ -364,26 +364,26 @@ class TestOrthographiesController(TestController):
         # active application settings ...
 
         # Create an orthography to demonstrate.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        orthographyCount = Session.query(Orthography).count()
+        orthography_count = Session.query(Orthography).count()
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
-        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
-        orthographyId = resp['id']
+        assert resp['initial_glottal_stops'] == True    # default value from model/orthography.py
+        orthography_id = resp['id']
 
         # Create an application settings with the above orthography as the storage orthography
-        appSet = h.generateDefaultApplicationSettings()
-        appSet.storageOrthography = Session.query(Orthography).get(orthographyId)
-        Session.add(appSet)
+        app_set = h.generate_default_application_settings()
+        app_set.storage_orthography = Session.query(Orthography).get(orthography_id)
+        Session.add(app_set)
         Session.commit()
 
         # Now attempting to delete as a contributor should fail
-        response = self.app.delete(url('orthography', id=orthographyId),
+        response = self.app.delete(url('orthography', id=orthography_id),
                     headers=self.json_headers, extra_environ=self.extra_environ_contrib, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'Only administrators are permitted to delete orthographies that are used in the active application settings.'
@@ -391,10 +391,10 @@ class TestOrthographiesController(TestController):
 
         # If we now remove the orthography from the application settings, the
         # contributor will be able to delete it.
-        appSet = h.getApplicationSettings()
-        appSet.storageOrthography = None
+        app_set = h.get_application_settings()
+        app_set.storage_orthography = None
         Session.commit()
-        response = self.app.delete(url('orthography', id=orthographyId),
+        response = self.app.delete(url('orthography', id=orthography_id),
                     headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
@@ -405,7 +405,7 @@ class TestOrthographiesController(TestController):
         """Tests that GET /orthographies/id returns the orthography with id=id or an appropriate error."""
 
         # Create an orthography to show.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
@@ -413,8 +413,8 @@ class TestOrthographiesController(TestController):
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
-        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
-        orthographyId = resp['id']
+        assert resp['initial_glottal_stops'] == True    # default value from model/orthography.py
+        orthography_id = resp['id']
 
         # Try to get an orthography using an invalid id
         id = 100000000000
@@ -432,7 +432,7 @@ class TestOrthographiesController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid id
-        response = self.app.get(url('orthography', id=orthographyId), headers=self.json_headers,
+        response = self.app.get(url('orthography', id=orthography_id), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['name'] == u'orthography'
@@ -449,7 +449,7 @@ class TestOrthographiesController(TestController):
         """
 
         # Create an orthography to edit.
-        params = self.orthographyCreateParams.copy()
+        params = self.orthography_create_params.copy()
         params.update({'name': u'orthography', 'orthography': u'a, b, c'})
         params = json.dumps(params)
         response = self.app.post(url('orthographies'), params, self.json_headers, self.extra_environ_admin)
@@ -457,11 +457,11 @@ class TestOrthographiesController(TestController):
         assert resp['name'] == u'orthography'
         assert resp['orthography'] == u'a, b, c'
         assert resp['lowercase'] == False   # default value from model/orthography.py
-        assert resp['initialGlottalStops'] == True    # default value from model/orthography.py
-        orthographyId = resp['id']
+        assert resp['initial_glottal_stops'] == True    # default value from model/orthography.py
+        orthography_id = resp['id']
 
         # Not logged in: expect 401 Unauthorized
-        response = self.app.get(url('edit_orthography', id=orthographyId), status=401)
+        response = self.app.get(url('edit_orthography', id=orthography_id), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
         assert response.content_type == 'application/json'
@@ -480,7 +480,7 @@ class TestOrthographiesController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
 
         # Valid id
-        response = self.app.get(url('edit_orthography', id=orthographyId),
+        response = self.app.get(url('edit_orthography', id=orthography_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['orthography']['name'] == u'orthography'

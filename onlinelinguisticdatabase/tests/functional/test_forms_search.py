@@ -20,7 +20,7 @@ using the request method of TestController().app and specifying values for the
 method, body, headers, and environ kwarg parameters.  WebTest prints a
 WSGIWarning when unknown HTTP methods (e.g., SEARCH) are used.  To prevent this,
 I altered the global valid_methods tuple of webtest.lint at runtime by adding a
-'SEARCH' method (see addSEARCHToWebTestValidMethods() below).
+'SEARCH' method (see _add_SEARCH_to_web_test_valid_methods() below).
 """
 
 import re
@@ -37,9 +37,9 @@ log = logging.getLogger(__name__)
 
 # Global temporal objects -- useful for creating the data upon which to search
 # and for formulating assertions about the results of those searches.
-todayTimestamp = datetime.now()
-dayDelta = timedelta(1)
-yesterdayTimestamp = todayTimestamp - dayDelta
+today_timestamp = datetime.now()
+day_delta = timedelta(1)
+yesterday_timestamp = today_timestamp - day_delta
 jan1 = date(2012, 01, 01)
 jan2 = date(2012, 01, 02)
 jan3 = date(2012, 01, 03)
@@ -48,39 +48,39 @@ jan4 = date(2012, 01, 04)
 ################################################################################
 # Functions for creating & retrieving test data
 ################################################################################
-def createTestModels(n=100):
-    addTestModelsToSession('Tag', n, ['name'])
-    addTestModelsToSession('Speaker', n, ['firstName', 'lastName', 'dialect'])
-    addTestModelsToSession('Source', n, ['authorFirstName', 'authorLastName',
+def _create_test_models(n=100):
+    _add_test_models_to_session('Tag', n, ['name'])
+    _add_test_models_to_session('Speaker', n, ['first_name', 'last_name', 'dialect'])
+    _add_test_models_to_session('Source', n, ['author_first_name', 'author_last_name',
                                             'title'])
-    addTestModelsToSession('ElicitationMethod', n, ['name'])
-    addTestModelsToSession('SyntacticCategory', n, ['name'])
-    addTestModelsToSession('File', n, ['name'])
+    _add_test_models_to_session('ElicitationMethod', n, ['name'])
+    _add_test_models_to_session('SyntacticCategory', n, ['name'])
+    _add_test_models_to_session('File', n, ['name'])
     Session.commit()
 
-def addTestModelsToSession(modelName, n, attrs):
+def _add_test_models_to_session(model_name, n, attrs):
     for i in range(1, n + 1):
-        m = getattr(model, modelName)()
+        m = getattr(model, model_name)()
         for attr in attrs:
             setattr(m, attr, u'%s %s' % (attr, i))
         Session.add(m)
 
-def getTestModels():
-    defaultModels = {
-        'tags': h.getTags(),
-        'speakers': h.getSpeakers(),
-        'sources': h.getSources(),
-        'elicitationMethods': h.getElicitationMethods(),
-        'syntacticCategories': h.getSyntacticCategories(),
-        'files': h.getFiles()
+def _get_test_models():
+    default_models = {
+        'tags': h.get_tags(),
+        'speakers': h.get_speakers(),
+        'sources': h.get_sources(),
+        'elicitation_methods': h.get_elicitation_methods(),
+        'syntactic_categories': h.get_syntactic_categories(),
+        'files': h.get_files()
     }
-    return defaultModels
+    return default_models
 
-def createTestForms(n=100):
+def _create_test_forms(n=100):
     """Create n forms with various properties.  A testing ground for searches!
     """
-    testModels = getTestModels()
-    users = h.getUsers()
+    test_models = _get_test_models()
+    users = h.get_users()
     viewer = [u for u in users if u.role == u'viewer'][0]
     contributor = [u for u in users if u.role == u'contributor'][0]
     administrator = [u for u in users if u.role == u'administrator'][0]
@@ -89,70 +89,70 @@ def createTestForms(n=100):
         f.transcription = u'transcription %d' % i
         if i > 50:
             f.transcription = f.transcription.upper()
-            administrator.rememberedForms.append(f)
-        f.morphemeBreak = u'morphemeBreak %d' % i
-        f.morphemeGloss = u'morphemeGloss %d' % i
+            administrator.remembered_forms.append(f)
+        f.morpheme_break = u'morpheme_break %d' % i
+        f.morpheme_gloss = u'morpheme_gloss %d' % i
         f.comments = u'comments %d' % i
-        f.speakerComments = u'speakerComments %d' % i
-        f.morphemeBreakIDs = u'[[[]]]'
-        f.morphemeGlossIDs = u'[[[]]]'
+        f.speaker_comments = u'speaker_comments %d' % i
+        f.morpheme_break_ids = u'[[[]]]'
+        f.morpheme_gloss_ids = u'[[[]]]'
         tl = model.Translation()
         tl.transcription = u'translation %d' % i
         f.enterer = contributor
-        f.syntacticCategory = testModels['syntacticCategories'][i - 1]
+        f.syntactic_category = test_models['syntactic_categories'][i - 1]
         if i > 75:
-            f.phoneticTranscription = u'phoneticTranscription %d' % i
-            f.narrowPhoneticTranscription = u'narrowPhoneticTranscription %d' % i
-            t = testModels['tags'][i - 1]
+            f.phonetic_transcription = u'phonetic_transcription %d' % i
+            f.narrow_phonetic_transcription = u'narrow_phonetic_transcription %d' % i
+            t = test_models['tags'][i - 1]
             f.tags.append(t)
             tl.grammaticality = u'*'
-            viewer.rememberedForms.append(f)
+            viewer.remembered_forms.append(f)
         if i > 65 and i < 86:
-            fi = testModels['files'][i - 1]
+            fi = test_models['files'][i - 1]
             f.files.append(fi)
-            contributor.rememberedForms.append(f)
+            contributor.remembered_forms.append(f)
         #if (i -1) == 73:
-        #    f.files.append(testModels['files'][70])
+        #    f.files.append(test_models['files'][70])
         if i > 50:
             f.elicitor = contributor
             if i != 100:
-                f.speaker = testModels['speakers'][0]
-                f.datetimeModified = todayTimestamp
-                f.datetimeEntered = todayTimestamp
+                f.speaker = test_models['speakers'][0]
+                f.datetime_modified = today_timestamp
+                f.datetime_entered = today_timestamp
         else:
             f.elicitor = administrator
-            f.speaker = testModels['speakers'][-1]
-            f.datetimeModified = yesterdayTimestamp
-            f.datetimeEntered = yesterdayTimestamp
+            f.speaker = test_models['speakers'][-1]
+            f.datetime_modified = yesterday_timestamp
+            f.datetime_entered = yesterday_timestamp
         if i < 26:
-            f.elicitationMethod = testModels['elicitationMethods'][0]
-            f.dateElicited = jan1
+            f.elicitation_method = test_models['elicitation_methods'][0]
+            f.date_elicited = jan1
         elif i < 51:
-            f.elicitationMethod = testModels['elicitationMethods'][24]
-            f.dateElicited = jan2
+            f.elicitation_method = test_models['elicitation_methods'][24]
+            f.date_elicited = jan2
         elif i < 76:
-            f.elicitationMethod = testModels['elicitationMethods'][49]
-            f.dateElicited = jan3
+            f.elicitation_method = test_models['elicitation_methods'][49]
+            f.date_elicited = jan3
         else:
-            f.elicitationMethod = testModels['elicitationMethods'][74]
+            f.elicitation_method = test_models['elicitation_methods'][74]
             if i < 99:
-                f.dateElicited = jan4
+                f.date_elicited = jan4
         if (i > 41 and i < 53) or i in [86, 92, 3]:
-            f.source = testModels['sources'][i]
+            f.source = test_models['sources'][i]
         if i != 87:
             f.translations.append(tl)
         if i == 79:
             tl = model.Translation()
             tl.transcription = u'translation %d the second' % i
             f.translations.append(tl)
-            t = testModels['tags'][i - 2]
+            t = test_models['tags'][i - 2]
             f.tags.append(t)
         Session.add(f)
     Session.commit()
 
-def createTestData(n=100):
-    createTestModels(n)
-    createTestForms(n)
+def _create_test_data(n=100):
+    _create_test_models(n)
+    _create_test_forms(n)
 
 
 class TestFormsSearchController(TestController):
@@ -169,16 +169,16 @@ class TestFormsSearchController(TestController):
     def test_a_initialize(self):
         """Tests POST /forms/search: initialize database."""
         # Add a bunch of data to the db.
-        createTestData(self.n)
-        self.addSEARCHToWebTestValidMethods()
+        _create_test_data(self.n)
+        self._add_SEARCH_to_web_test_valid_methods()
 
     #@nottest
     def test_search_b_equals(self):
         """Tests POST /forms/search: equals."""
         # Simple == search on transcriptions
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', '=', 'transcription 10']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
@@ -188,10 +188,10 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_c_not_equals(self):
         """Tests SEARCH /forms: not equals."""
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['not', ['Form', 'transcription', '=', u'transcription 10']]}})
         response = self.app.request(url('forms'), method='SEARCH',
-            body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
+            body=json_query, headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == self.n - 1
         assert u'transcription 10' not in [f['transcription'] for f in resp]
@@ -199,35 +199,35 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_d_like(self):
         """Tests POST /forms/search: like."""
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'like', u'%1%']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20  # 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 31, 41, 51, 61, 71, 81, 91, 100
 
-        # Case-sensitive like.  This shows that _collateAttribute is working
+        # Case-sensitive like.  This shows that _collate_attribute is working
         # as expected in SQLAQueryBuilder.
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'like', u'%T%']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['or', [
                 ['Form', 'transcription', 'like', u'T%'],
                 ['Form', 'transcription', 'like', u't%']]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
 
         # Testing the "_" wildcard
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'like', u'T_A%']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
@@ -235,70 +235,70 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_e_not_like(self):
         """Tests SEARCH /forms: not like."""
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['not', ['Form', 'transcription', 'like', u'%1%']]}})
         response = self.app.request(url('forms'), method='SEARCH',
-            body=jsonQuery, headers=self.json_headers, environ=self.extra_environ_admin)
+            body=json_query, headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 80
 
     #@nottest
     def test_search_f_regexp(self):
         """Tests POST /forms/search: regular expression."""
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'[345]2']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert sorted([f['transcription'] for f in resp]) == \
             [u'TRANSCRIPTION 52', u'transcription 32', u'transcription 42']
         assert len(resp) == 3  # 32, 42, 52
 
-        # Case-sensitive regexp.  This shows that _collateAttribute is working
+        # Case-sensitive regexp.  This shows that _collate_attribute is working
         # as expected in SQLAQueryBuilder.
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'^T']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'^[Tt]']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
 
         # Beginning and end of string anchors
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'^[Tt]ranscription 1.$']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 10
         assert response.content_type == 'application/json'
 
         # Quantifiers
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'2{2,}']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # Quantifiers
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'[123]{2,}']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 9
 
         # Bad regex
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'regex', u'[123]{3,2}']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
@@ -306,9 +306,9 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_g_not_regexp(self):
         """Tests SEARCH /forms: not regular expression."""
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['not', ['Form', 'transcription', 'regexp', u'[345]2']]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 97
@@ -316,17 +316,17 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_h_empty(self):
         """Tests POST /forms/search: is NULL."""
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'narrowPhoneticTranscription', '=', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'narrow_phonetic_transcription', '=', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 75
 
         # Same as above but with a double negative
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['Form', 'narrowPhoneticTranscription', '!=', None]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['not', ['Form', 'narrow_phonetic_transcription', '!=', None]]}})
+        response = self.app.post(url('/forms/search'), json_query,
                                  self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 75
@@ -334,17 +334,17 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_i_not_empty(self):
         """Tests SEARCH /forms: is not NULL."""
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['Form', 'narrowPhoneticTranscription', '=', None]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['not', ['Form', 'narrow_phonetic_transcription', '=', None]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 25
 
         # Same as above, but with !=, i.e., __ne__
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'narrowPhoneticTranscription', '!=', None]}})
-        response = self.app.request(url('forms'), body=jsonQuery, method='SEARCH',
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'narrow_phonetic_transcription', '!=', None]}})
+        response = self.app.request(url('forms'), body=json_query, method='SEARCH',
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 25
@@ -352,10 +352,10 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_j_invalid_json(self):
         """Tests POST /forms/search: invalid JSON params."""
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['not', ['Form', 'narrowPhoneticTranscription', '=', None]]}})
-        jsonQuery = jsonQuery[:-1]  # Cut off the end to make it bad!
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['not', ['Form', 'narrow_phonetic_transcription', '=', None]]}})
+        json_query = json_query[:-1]  # Cut off the end to make it bad!
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == \
@@ -366,62 +366,62 @@ class TestFormsSearchController(TestController):
         """Tests SEARCH /forms: malformed query."""
 
         # TypeError - bad num args: 'NOT' will be treated as the first arg to
-        # _getSimpleFilterExpression and ['Form', 'transcription', '=', 10] will be passed
+        # _get_simple_filter_expression and ['Form', 'transcription', '=', 10] will be passed
         # as the second -- two more are required.
-        jsonQuery = json.dumps({'query': {'filter': ['NOT', ['Form', 'id', '=', 10]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['NOT', ['Form', 'id', '=', 10]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
         # After recognizing 'not', the query builder will look at only the next
         # list and ignore all the rest.
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter':
                 ['not',
                     ['Form', 'transcription', '=', 'transcription 10'], 
                     ['Form', 'transcription', '=', 'transcription 10'],
                     ['Form', 'transcription', '=', 'transcription 10']]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
         assert 'transcription 10' not in [f['transcription'] for f in resp]
 
         # IndexError will be raised when python[1] is called.
-        jsonQuery = json.dumps({'query': {'filter': ['not']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['not']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
         # IndexError will be raised when python[0] is called.
-        jsonQuery = json.dumps({'query': {'filter': []}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': []}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
         # IndexError will be raised when python[1] is called.
-        jsonQuery = json.dumps({'query': {'filter': ['and']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['and']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
         assert resp['errors']['IndexError'] == u'list index out of range'
 
-        # TypeError bad num args will be triggered when _getSimpleFilterExpression is
+        # TypeError bad num args will be triggered when _get_simple_filter_expression is
         # called on a string whose len is not 4, i.e., 'id' or '='.
-        jsonQuery = json.dumps({'query': {'filter': ['and', ['Form', 'id', '=', '1099']]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['and', ['Form', 'id', '=', '1099']]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert 'TypeError' in resp['errors']
         assert resp['errors']['Malformed OLD query error'] == u'The submitted query was malformed'
 
         # TypeError when asking whether [] is in a dict (lists are unhashable)
-        jsonQuery = json.dumps({'query': {'filter': [[], 'a', 'a', 'a']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': [[], 'a', 'a', 'a']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['TypeError'] == u"unhashable type: 'list'"
@@ -429,16 +429,16 @@ class TestFormsSearchController(TestController):
 
         # With no 'query' attribute, the SQLAQueryBuilder will be passed None
         # will immediately raise an AttributeError.
-        jsonQuery = json.dumps({'filter': ['Form', 'id', '=', 2]})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'filter': ['Form', 'id', '=', 2]})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
 
         # With no 'filter' attribute, the SQLAQueryBuilder will be passed a list
         # will immediately raise an AttributeError when it tries to call [...].get('filter').
-        jsonQuery = json.dumps({'query': ['Form', 'id', '=', 2]})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': ['Form', 'id', '=', 2]})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['error'] == u'The specified search parameters generated an invalid database query'
@@ -452,41 +452,41 @@ class TestFormsSearchController(TestController):
         given attribute.
         """
 
-        # searchParser.py does not allow the contains relation (OLDSearchParseError)
-        jsonQuery = json.dumps(
+        # search_parser.py does not allow the contains relation (OLDSearchParseError)
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'transcription', 'contains', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert 'Form.transcription.contains' in resp['errors']
 
         # model.Form.translations.__eq__('abcdefg') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'translations', '=', u'abcdefg']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
         # model.Form.tags.regexp('xyz') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'tags', 'regex', u'xyz']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'tags', 'regex', u'xyz']}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.tags.regex'] == u'The relation regex is not permitted for Form.tags'
 
         # model.Form.translations.like('transcription') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'translations', 'like', u'abc']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'translations', 'like', u'abc']}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.translations.like'] == \
             u'The relation like is not permitted for Form.translations'
 
         # model.Form.tags.__eq__('tag') will raise a custom OLDSearchParseError
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'tags', '__eq__', u'tag']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'tags', '__eq__', u'tag']}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert u'InvalidRequestError' in resp['errors']
@@ -494,9 +494,9 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_m_conjunction(self):
         """Tests SEARCH /forms: conjunction."""
-        users = h.getUsers()
+        users = h.get_users()
         contributor = [u for u in users if u.role == u'contributor'][0]
-        models = getTestModels()
+        models = _get_test_models()
 
         # 1 conjunct -- pointless, but it works...
         query = {'query': {'filter': [
@@ -504,8 +504,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'transcription', 'like', u'%2%']
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 19
@@ -517,8 +517,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'transcription', 'like', u'%1%']
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
@@ -529,11 +529,11 @@ class TestFormsSearchController(TestController):
             'and', [
                 ['Form', 'transcription', 'like', u'%1%'],
                 ['Form', 'elicitor', 'id', '=', contributor.id],
-                ['Form', 'elicitationMethod', 'id', '=', models['elicitationMethods'][49].id]
+                ['Form', 'elicitation_method', 'id', '=', models['elicitation_methods'][49].id]
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 3
@@ -551,8 +551,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'transcription', 'like', u'%1%'],
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20
@@ -560,7 +560,7 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_n_disjunction(self):
         """Tests POST /forms/search: disjunction."""
-        users = h.getUsers()
+        users = h.get_users()
         contributor = [u for u in users if u.role == u'contributor'][0]
 
         # 1 disjunct -- pointless, but it works...
@@ -569,8 +569,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'transcription', 'like', u'%2%']   # 19 total
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 19
@@ -582,8 +582,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'transcription', 'like', u'%1%']     # 18 (20 but '12' and '21' shared with '2'); Total: 37
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 37
@@ -596,8 +596,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'elicitor', 'id', '=', contributor.id]   # 39 (50 but 11 shared with '2' and '1'); Total: 76
             ]
         ]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(query)
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 76
@@ -607,53 +607,53 @@ class TestFormsSearchController(TestController):
     def test_search_o_int(self):
         """Tests SEARCH /forms: integer searches."""
 
-        forms = h.getForms()
-        formIds = [f.id for f in forms]
+        forms = h.get_forms()
+        form_ids = [f.id for f in forms]
 
         # = int
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', '=', formIds[1]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'id', '=', form_ids[1]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
-        assert resp[0]['id'] == formIds[1]
+        assert resp[0]['id'] == form_ids[1]
 
         # < int (str)
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'id', '<', str(formIds[16])]}}) # Thanks to SQLAlchemy, a string will work here too
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'id', '<', str(form_ids[16])]}}) # Thanks to SQLAlchemy, a string will work here too
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 16
 
         # >= int
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', '>=', formIds[97]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'id', '>=', form_ids[97]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 3
 
         # in array
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter':
-                ['Form', 'id', 'in', [formIds[12], formIds[36], formIds[28], formIds[94]]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+                ['Form', 'id', 'in', [form_ids[12], form_ids[36], form_ids[28], form_ids[94]]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 4
-        assert sorted([f['id'] for f in resp]) == [formIds[12], formIds[28], formIds[36], formIds[94]]
+        assert sorted([f['id'] for f in resp]) == [form_ids[12], form_ids[28], form_ids[36], form_ids[94]]
 
         # in None -- Error
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', 'in', None]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'id', 'in', None]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.id.in_'] == u"Invalid filter expression: Form.id.in_(None)"
         assert response.content_type == 'application/json'
 
         # in int -- Error
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', 'in', 2]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'id', 'in', 2]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.id.in_'] == u"Invalid filter expression: Form.id.in_(2)"
@@ -663,121 +663,121 @@ class TestFormsSearchController(TestController):
         # automatically convert a non-string field value to a string before doing
         # the regexp comparison.  I believe that this parallels MySQL's regexp
         # behaviour accurately.
-        strPatt = u'[13][58]'
-        patt = re.compile(strPatt)
-        expectedIdMatches = [f.id for f in forms if patt.search(str(f.id))]        
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', 'regex', u'[13][58]']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        str_patt = u'[13][58]'
+        patt = re.compile(str_patt)
+        expected_id_matches = [f.id for f in forms if patt.search(str(f.id))]        
+        json_query = json.dumps({'query': {'filter': ['Form', 'id', 'regex', u'[13][58]']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(expectedIdMatches)
-        assert sorted([f['id'] for f in resp]) == sorted(expectedIdMatches)
+        assert len(resp) == len(expected_id_matches)
+        assert sorted([f['id'] for f in resp]) == sorted(expected_id_matches)
 
         # like int - RDBMS treats ints as strings for LIKE search
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'id', 'like', u'%2%']}})
-        expectedMatches = [i for i in formIds if u'2' in str(i)]
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'id', 'like', u'%2%']}})
+        expected_matches = [i for i in form_ids if u'2' in str(i)]
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(expectedMatches)
+        assert len(resp) == len(expected_matches)
 
     #@nottest
     def test_search_p_date(self):
         """Tests POST /forms/search: date searches."""
 
         # = date
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '=', jan1.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '=', jan1.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 25
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '=', jan4.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '=', jan4.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 23
 
-        # != date -- *NOTE:* the NULL dateElicited values will not be counted.
+        # != date -- *NOTE:* the NULL date_elicited values will not be counted.
         # The implicit query is 'is not null and != 2012-01-01'
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '!=', jan1.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '!=', jan1.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 73
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '!=', jan4.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '!=', jan4.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 75
 
         # To get what one really wants (perhaps), test for NULL too:
         query = {'query': {'filter': [
-            'or', [['Form', 'dateElicited', '!=', jan1.isoformat()],
-                ['Form', 'dateElicited', '=', None]]]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.post(url('/forms/search'), jsonQuery,
+            'or', [['Form', 'date_elicited', '!=', jan1.isoformat()],
+                ['Form', 'date_elicited', '=', None]]]}}
+        json_query = json.dumps(query)
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 75
 
         # < date
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '<', jan1.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '<', jan1.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 0
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '<', jan3.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '<', jan3.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
 
         # <= date
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '<=', jan3.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '<=', jan3.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 75
 
         # > date
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '>', jan2.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '>', jan2.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 48
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '>', '0001-01-01']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '>', '0001-01-01']}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 98
 
         # >= date
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '>=', jan2.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '>=', jan2.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 73
 
         # =/!= None
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'dateElicited', '=', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'date_elicited', '=', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
 
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '__ne__', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '__ne__', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 98
@@ -787,17 +787,17 @@ class TestFormsSearchController(TestController):
         """Tests SEARCH /forms: invalid date searches."""
 
         # = invalid date
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '=', '12-01-01']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '=', '12-01-01']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['date 12-01-01'] == \
             u'Date search parameters must be valid ISO 8601 date strings.'
 
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', '=', '2012-01-32']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', '=', '2012-01-32']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['date 2012-01-32'] == \
@@ -805,43 +805,43 @@ class TestFormsSearchController(TestController):
 
         # regex on invalid date will fail because SQLA only allows Python datetime
         # objects as input on queries (though None is also allowed to test for nullness)
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', 'regex', '01']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', 'regex', '01']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['date 01'] == \
             u'Date search parameters must be valid ISO 8601 date strings.'
 
         # regex on valid date will work and will act just like = -- no point
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', 'regex', '2012-01-01']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', 'regex', '2012-01-01']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 25
 
         # Same thing for like, it works like = but what's the point?
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', 'like', '2012-01-01']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', 'like', '2012-01-01']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 25
 
         # in_ on a date.  This will raise a TypeError ('datetime.date' object is
-        # not iterable) that is caught in _getFilterExpression
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', 'in', '2012-01-02']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        # not iterable) that is caught in _get_filter_expression
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', 'in', '2012-01-02']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Form.dateElicited.in_'] == u'Invalid filter expression: Form.dateElicited.in_(datetime.date(2012, 1, 2))'
+        assert resp['errors']['Form.date_elicited.in_'] == u'Invalid filter expression: Form.date_elicited.in_(datetime.date(2012, 1, 2))'
 
         # in_ on a list of dates works (SQLAQueryBuilder generates a list of date objects)
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'dateElicited', 'in', ['2012-01-01', '2012-01-02']]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'date_elicited', 'in', ['2012-01-01', '2012-01-02']]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
@@ -851,106 +851,106 @@ class TestFormsSearchController(TestController):
         """Tests POST /forms/search: datetime searches."""
 
         # = datetime
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '=', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '=', today_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '=', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '=', yesterday_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
 
-        # != datetime -- *NOTE:* the NULL datetimeEntered values will not be counted.
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '!=', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        # != datetime -- *NOTE:* the NULL datetime_entered values will not be counted.
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '!=', today_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '!=', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '!=', yesterday_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
 
         # To get what one really wants (perhaps), test for NULL too:
         query = {'query': {'filter':
-            ['or', [['Form', 'datetimeEntered', '!=', todayTimestamp.isoformat()],
-                ['Form', 'datetimeEntered', '=', None]]]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.post(url('/forms/search'), jsonQuery,
+            ['or', [['Form', 'datetime_entered', '!=', today_timestamp.isoformat()],
+                ['Form', 'datetime_entered', '=', None]]]}}
+        json_query = json.dumps(query)
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 51
 
         # < datetime
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '<', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '<', today_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
 
         # <= datetime
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeModified', '<=', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_modified', '<=', today_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # > datetime
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '>', todayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '>', today_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 0
         # Note: Python2.6/Debian(?) bug: using a year before 1900 will cause problems: 
         # ValueError: year=1 is before 1900; the datetime strftime() methods require year >= 1900
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '>', '1901-01-01T09:08:07']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '>', '1901-01-01T09:08:07']}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # >= datetime
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '>=', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '>=', yesterday_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # =/!= None
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '=', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '=', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeEntered', '__ne__', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_entered', '__ne__', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # datetime in today
-        midnightToday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        midnightTomorrow = midnightToday + dayDelta
+        midnight_today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        midnight_tomorrow = midnight_today + day_delta
         query = {'query': {'filter':
-            ['and', [['Form', 'datetimeEntered', '>', midnightToday.isoformat()],
-                         ['Form', 'datetimeEntered', '<', midnightTomorrow.isoformat()]]]}}
-        jsonQuery = json.dumps(query)
-        response = self.app.post(url('/forms/search'), jsonQuery,
+            ['and', [['Form', 'datetime_entered', '>', midnight_today.isoformat()],
+                         ['Form', 'datetime_entered', '<', midnight_tomorrow.isoformat()]]]}}
+        json_query = json.dumps(query)
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
@@ -960,76 +960,76 @@ class TestFormsSearchController(TestController):
         """Tests SEARCH /forms: invalid datetime searches."""
 
         # = invalid datetime
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeModified', '=', '12-01-01T09']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_modified', '=', '12-01-01T09']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['datetime 12-01-01T09'] == \
             u'Datetime search parameters must be valid ISO 8601 datetime strings.'
 
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeModified', '=', '2012-01-30T09:08:61']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_modified', '=', '2012-01-30T09:08:61']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['datetime 2012-01-30T09:08:61'] == \
             u'Datetime search parameters must be valid ISO 8601 datetime strings.'
 
         # Trailing period and too many microseconds will both succeed.
-        jsonQuery = json.dumps({'query': {'filter':
-                ['Form', 'datetimeModified', '=', '2012-01-30T09:08:59.123456789123456789123456789']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+                ['Form', 'datetime_modified', '=', '2012-01-30T09:08:59.123456789123456789123456789']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'datetimeModified', '=', '2012-01-30T09:08:59.']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'datetime_modified', '=', '2012-01-30T09:08:59.']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
 
         # regex on invalid datetime will fail because SQLA only allows Python datetime
         # objects as input on queries (though None is also allowed to test for nullness)
-        jsonQuery = json.dumps(
-            {'query': {'filter': ['Form', 'datetimeModified', 'regex', '01']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps(
+            {'query': {'filter': ['Form', 'datetime_modified', 'regex', '01']}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['datetime 01'] == \
             u'Datetime search parameters must be valid ISO 8601 datetime strings.'
 
         # regex on valid datetime will work and will similarly to equality test.
-        todayString = todayTimestamp.isoformat()
-        if h.getRDBMSName(configFilename='test.ini') == 'mysql':
-            todayString = todayString.split('.')[0]
-        jsonQuery = json.dumps({'query': {'filter':
-                ['Form', 'datetimeModified', 'regex', todayString]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        today_string = today_timestamp.isoformat()
+        if h.get_RDBMS_name(config_filename='test.ini') == 'mysql':
+            today_string = today_string.split('.')[0]
+        json_query = json.dumps({'query': {'filter':
+                ['Form', 'datetime_modified', 'regex', today_string]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
 
         # Same thing for like, it works like = but what's the point?
-        jsonQuery = json.dumps({'query': {'filter':
-                ['Form', 'datetimeModified', 'like', todayString]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+                ['Form', 'datetime_modified', 'like', today_string]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
 
         # in_ on a datetime.  This will raise a TypeError ('datetime.datetime' object is
-        # not iterable) that is caught in _getFilterExpression
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'datetimeModified', 'in', todayTimestamp.isoformat()]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        # not iterable) that is caught in _get_filter_expression
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'datetime_modified', 'in', today_timestamp.isoformat()]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Form.datetimeModified.in_'] == \
-            u'Invalid filter expression: Form.datetimeModified.in_(%s)' % repr(todayTimestamp)
+        assert resp['errors']['Form.datetime_modified.in_'] == \
+            u'Invalid filter expression: Form.datetime_modified.in_(%s)' % repr(today_timestamp)
 
         # in_ on a list of datetimes works (SQLAQueryBuilder generates a list of datetime objects)
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'datetimeModified', 'in',
-                [todayTimestamp.isoformat(), yesterdayTimestamp.isoformat()]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'datetime_modified', 'in',
+                [today_timestamp.isoformat(), yesterday_timestamp.isoformat()]]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
@@ -1038,231 +1038,231 @@ class TestFormsSearchController(TestController):
     def test_search_t_many_to_one(self):
         """Tests POST /forms/search: searches on many-to-one attributes."""
 
-        testModels = getTestModels()
-        users = h.getUsers()
-        forms = h.getForms()
+        test_models = _get_test_models()
+        users = h.get_users()
+        forms = h.get_forms()
         contributor = [u for u in users if u.role == u'contributor'][0]
 
         # = int
-        jsonQuery = json.dumps(
+        json_query = json.dumps(
             {'query': {'filter': ['Form', 'enterer', 'id', '=', contributor.id]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
 
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'speaker', 'id', '=', testModels['speakers'][0].id]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'speaker', 'id', '=', test_models['speakers'][0].id]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
 
         # in array of ints
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'speaker', 'id', 'in', [s.id for s in testModels['speakers']]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'speaker', 'id', 'in', [s.id for s in test_models['speakers']]]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # <
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'elicitationMethod', 'id', '<', 56]}})
-        expectedForms = [f for f in forms if f.elicitationmethod_id < 56]
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'elicitation_method', 'id', '<', 56]}})
+        expected_forms = [f for f in forms if f.elicitationmethod_id < 56]
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(expectedForms)
+        assert len(resp) == len(expected_forms)
 
         # regex
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'elicitationMethod', 'name', 'regex', '5']}})
-        expectedForms = [f for f in forms if '5' in f.elicitationMethod.name]
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'elicitation_method', 'name', 'regex', '5']}})
+        expected_forms = [f for f in forms if '5' in f.elicitation_method.name]
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(expectedForms)
+        assert len(resp) == len(expected_forms)
 
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'elicitationMethod', 'id', 'regex', '[56]']}})
-        expectedForms = [f for f in forms 
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'elicitation_method', 'id', 'regex', '[56]']}})
+        expected_forms = [f for f in forms 
             if '5' in str(f.elicitationmethod_id) or '6' in str(f.elicitationmethod_id)] 
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(expectedForms)
+        assert len(resp) == len(expected_forms)
 
         # like
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'syntacticCategory', 'name', 'like', '%5%']}})
-        expectedForms = [f for f in forms if '5' in f.syntacticCategory.name]
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'syntactic_category', 'name', 'like', '%5%']}})
+        expected_forms = [f for f in forms if '5' in f.syntactic_category.name]
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == len(expectedForms)
+        assert len(resp) == len(expected_forms)
 
         # Show how we can search things other than ids
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Form', 'syntacticCategory', 'name', 'like', '%5%']}})
-        expectedForms = [f for f in forms if '5' in f.syntacticCategory.name]
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['Form', 'syntactic_category', 'name', 'like', '%5%']}})
+        expected_forms = [f for f in forms if '5' in f.syntactic_category.name]
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp
-        assert len(resp) == len(expectedForms)
+        assert len(resp) == len(expected_forms)
         assert response.content_type == 'application/json'
 
         # Searching for the presence/absence of a many-to-one relation
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'source', '!=', None]}})
-        expectedForms = [f for f in forms if f.source]
-        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        json_query = json.dumps({'query': {'filter': ['Form', 'source', '!=', None]}})
+        expected_forms = [f for f in forms if f.source]
+        response = self.app.post(url('/forms/search'), json_query, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp
-        assert len(resp) == len(expectedForms)
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'source', '=', None]}})
-        expectedForms = [f for f in forms if not f.source]
-        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        assert len(resp) == len(expected_forms)
+        json_query = json.dumps({'query': {'filter': ['Form', 'source', '=', None]}})
+        expected_forms = [f for f in forms if not f.source]
+        response = self.app.post(url('/forms/search'), json_query, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp
-        assert len(resp) == len(expectedForms)
+        assert len(resp) == len(expected_forms)
 
     #@nottest
     def test_search_u_one_to_many(self):
         """Tests SEARCH /forms: searches on one-to-many attributes, viz. Translation."""
 
         # translation.transcription =
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Translation', 'transcription', '=', 'translation 1']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # translation.transcription = (with any())
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'translations', 'transcription', '=', 'translation 1']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
-        # translation.transcriptionGrammaticality
-        jsonQuery = json.dumps({'query': {'filter':
+        # translation.transcription_grammaticality
+        json_query = json.dumps({'query': {'filter':
             ['Translation', 'grammaticality', '=', '*']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 24
 
         # translation.transcription like
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Translation', 'transcription', 'like', '%1%']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20
 
         # translation.transcription regexp
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Translation', 'transcription', 'regex', '[13][25]']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 4
 
         # translation.transcription in_
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Translation', 'transcription', 'in_', [u'translation 1', u'translation 2']]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
 
         # translation.transcription <
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Translation', 'transcription', '<', u'z']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
-        # translation.datetimeModified
-        jsonQuery = json.dumps({'query': {'filter':
-            ['Translation', 'datetimeModified', '>', yesterdayTimestamp.isoformat()]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        # translation.datetime_modified
+        json_query = json.dumps({'query': {'filter':
+            ['Translation', 'datetime_modified', '>', yesterday_timestamp.isoformat()]}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # To search for the presence/absence of translations, one must use the
         # translations attribute of the Form model, =/!= and None.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'translations', '=', None]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # Using an empty list to test for presence of translations fails too.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'translations', '=', []]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'translations', '!=', None]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 99
 
         # Using anything other than =/!= on Form.translations will raise an error.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'translations', 'like', None]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.translations.like'] == u'The relation like is not permitted for Form.translations'
 
         # Using a value other than None on Form.translations will also raise an error
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'translations', '=', 'translation 1']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
         # Search based on two distinct translations (only Form #79 has two) ...
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['and', [
                 ['Translation', 'transcription', '=', 'translation 79'],
                 ['Translation', 'transcription', '=', 'translation 79 the second']]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # ... one is ungrammatical, the other is unspecified
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['and', [
                 ['Translation', 'grammaticality', '=', '*'],
                 ['Translation', 'grammaticality', '=', None]]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # Same search as above but using has()
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['and', [
                 ['Form', 'translations', 'grammaticality', '=', '*'],
                 ['Form', 'translations', 'grammaticality', '=', None]]]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
@@ -1272,128 +1272,128 @@ class TestFormsSearchController(TestController):
         """Tests POST /forms/search: searches on many-to-many attributes, i.e., Tag, File, Collection, User."""
 
         # tag.name =
-        jsonQuery = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name 76']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name 76']}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # file.name like
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['File', 'name', 'like', '%name 6%']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 4
 
         # file.name regexp
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['File', 'name', 'regex', 'name [67]']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 14
 
         # Same regexp on file.name as above exceupt using the SQLA ORM's any()
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'files', 'name', 'regex', 'name [67]']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 14
 
         # tag.name in_
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Tag', 'name', 'in_', [u'name 77', u'name 79', u'name 99']]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 3
 
         # tag.name <
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Tag', 'name', '<', u'name 8']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 5   # 76, 77, 78, 79, 100
 
-        # file.datetimeModified
-        jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'datetimeModified', '>', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        # file.datetime_modified
+        json_query = json.dumps({'query': {'filter':
+            ['File', 'datetime_modified', '>', yesterday_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20  # All forms with a file attached
 
-        jsonQuery = json.dumps({'query': {'filter':
-            ['File', 'datetimeModified', '<', yesterdayTimestamp.isoformat()]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter':
+            ['File', 'datetime_modified', '<', yesterday_timestamp.isoformat()]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 0
 
         # To search for the presence/absence of tags/files/collections, one must use the
         # tags/files/collections attributes of the Form model.
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'tags', '=', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'tags', '=', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 75
 
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'files', '!=', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'files', '!=', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20
 
         # Using anything other than =/!= on Form.tags/files/collections will raise an error.
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'tags', 'like', None]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'tags', 'like', None]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.tags.like'] == u'The relation like is not permitted for Form.tags'
 
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'files', '=', 'file 80']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['InvalidRequestError'] == \
             u"Can't compare a collection to an object or collection; use contains() to test for membership."
 
         # tag.name in_ with double matches (Form #79 has Tags #78 and #79)
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Tag', 'name', 'in_', [u'name 78', u'name 79']]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
 
         # Form #79 has Tags #78 and #79
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['and', [
                 ['Tag', 'name', '=', u'name 78'],
                 ['Tag', 'name', '=', u'name 79']]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # Form #79 has Tags #78 and #79, Form #78 has Tag #78
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Tag', 'name', '=', u'name 78']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 2
 
         # Form #79 has Tags #78 and #79
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['and', [
                 ['Tag', 'name', '=', u'name 78'],
                 ['Tag', 'name', '=', u'name 79']]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
@@ -1401,65 +1401,65 @@ class TestFormsSearchController(TestController):
         # Search forms by memorizer
 
         # Get some pertinent data
-        forms = h.getForms()
-        users = h.getUsers()
-        viewerRememberedForms = [f for f in forms
+        forms = h.get_forms()
+        users = h.get_users()
+        viewer_remembered_forms = [f for f in forms
                                  if int(f.transcription.split(' ')[-1]) > 75]
 
         contributor = [u for u in users if u.role == u'contributor'][0] # i > 65, i < 86
-        contributorRememberedForms = [f for f in forms
+        contributor_remembered_forms = [f for f in forms
                                  if int(f.transcription.split(' ')[-1]) > 65 and
                                  int(f.transcription.split(' ')[-1]) < 86]
-        contributorId = contributor.id
-        administratorRememberedForms = [f for f in forms
+        contributor_id = contributor.id
+        administrator_remembered_forms = [f for f in forms
                                  if int(f.transcription.split(' ')[-1]) > 50]
 
         # Everything memorized by admins and viewers
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Memorizer', 'role', 'in', [u'administrator', u'viewer']]}})
-        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        response = self.app.post(url('/forms/search'), json_query, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = list(set(viewerRememberedForms) | set(administratorRememberedForms))
-        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+        result_set = list(set(viewer_remembered_forms) | set(administrator_remembered_forms))
+        assert set([f['id'] for f in resp]) == set([f.id for f in result_set])
 
         # Try the same query as above except use the "memorizers" attribute
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'memorizers', 'role', 'in', [u'administrator', u'viewer']]}})
-        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        response = self.app.post(url('/forms/search'), json_query, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+        assert set([f['id'] for f in resp]) == set([f.id for f in result_set])
 
         # Everything memorized by the contributor matching a regex
-        jsonQuery = json.dumps({'query': {'filter':
-            ['and', [['Memorizer', 'id', '=', contributorId],
+        json_query = json.dumps({'query': {'filter':
+            ['and', [['Memorizer', 'id', '=', contributor_id],
                      ['Form', 'transcription', 'regex', '[13580]']]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        response = self.app.post(url('/forms/search'), json_query, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in contributorRememberedForms
+        result_set = [f for f in contributor_remembered_forms
                      if re.search('[13580]', f.transcription)]
-        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+        assert set([f['id'] for f in resp]) == set([f.id for f in result_set])
         assert response.content_type == 'application/json'
 
         # The same query as above except use the "memorizers" attribute
-        jsonQuery = json.dumps({'query': {'filter':
-            ['and', [['Form', 'memorizers', 'id', '=', contributorId],
+        json_query = json.dumps({'query': {'filter':
+            ['and', [['Form', 'memorizers', 'id', '=', contributor_id],
                      ['Form', 'transcription', 'regex', '[13580]']]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery, self.json_headers, self.extra_environ_admin)
+        response = self.app.post(url('/forms/search'), json_query, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert set([f['id'] for f in resp]) == set([f.id for f in resultSet])
+        assert set([f['id'] for f in resp]) == set([f.id for f in result_set])
         assert response.content_type == 'application/json'
 
         # Invalid memorizer search
-        jsonQuery = json.dumps({'query': {'filter': ['Memorizer', 'username', 'like', u'%e%']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Memorizer', 'username', 'like', u'%e%']}})
+        response = self.app.post(url('/forms/search'), json_query,
                 self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['errors']['Memorizer.username'] == u'Searching on Memorizer.username is not permitted'
 
         # Invalid memorizer search using the "memorizers" attribute
-        jsonQuery = json.dumps({'query': {'filter': ['Form', 'memorizers', 'username', 'like', u'%e%']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        json_query = json.dumps({'query': {'filter': ['Form', 'memorizers', 'username', 'like', u'%e%']}})
+        response = self.app.post(url('/forms/search'), json_query,
                 self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
@@ -1470,17 +1470,17 @@ class TestFormsSearchController(TestController):
         """Tests SEARCH /forms: searches using the in_ relation."""
 
         # Array value -- all good.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'in', ['transcription 1']]}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
 
         # String value -- no error because strings are iterable; but no results
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'in', 'transcription 1']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 0
@@ -1488,39 +1488,39 @@ class TestFormsSearchController(TestController):
     #@nottest
     def test_search_x_complex(self):
         """Tests POST /forms/search: complex searches."""
-        forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
+        forms = json.loads(json.dumps(h.get_forms(), cls=h.JSONOLDEncoder))
 
         # A fairly complex search
-        jsonQuery = json.dumps({'query': {'filter': [
+        json_query = json.dumps({'query': {'filter': [
             'and', [
                 ['Translation', 'transcription', 'like', '%1%'],
-                ['not', ['Form', 'morphemeBreak', 'regex', '[18][5-7]']],
+                ['not', ['Form', 'morpheme_break', 'regex', '[18][5-7]']],
                 ['or', [
-                    ['Form', 'datetimeModified', '=', todayTimestamp.isoformat()],
-                    ['Form', 'dateElicited', '=', jan1.isoformat()]]]]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                    ['Form', 'datetime_modified', '=', today_timestamp.isoformat()],
+                    ['Form', 'date_elicited', '=', jan1.isoformat()]]]]]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
         # Emulate the search Pythonically
-        resultSet = [f for f in forms if
+        result_set = [f for f in forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) and
-            not re.search('[18][5-7]', f['morphemeBreak']) and
-            (todayTimestamp.isoformat().split('.')[0] == f['datetimeModified'].split('.')[0] or
-             (f['dateElicited'] and jan1.isoformat() == f['dateElicited']))]
-        assert len(resp) == len(resultSet)
+            not re.search('[18][5-7]', f['morpheme_break']) and
+            (today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
+        assert len(resp) == len(result_set)
 
         # A complex search entailing multiple joins
-        tagNames = ['name 2', 'name 4', 'name 88']
+        tag_names = ['name 2', 'name 4', 'name 88']
         patt = '([13579][02468])|([02468][13579])'
-        jsonQuery = json.dumps({'query': {'filter': [
+        json_query = json.dumps({'query': {'filter': [
             'or', [
                 ['Translation', 'transcription', 'like', '%1%'],
                 ['Tag', 'name', 'in', ['name 2', 'name 4', 'name 88']],
                 ['and', [
                     ['not', ['File', 'name', 'regex', patt]],
-                    ['Form', 'dateElicited', '!=', None]]]]]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                    ['Form', 'date_elicited', '!=', None]]]]]}})
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
@@ -1528,26 +1528,26 @@ class TestFormsSearchController(TestController):
         # Note that the Python-based regexp for SQLite requires that the attribute
         # being searched be Python-truthy in order for the pattern to match.  I doubt
         # that this is the behaviour of MySQL's regexp...
-        resultSet = [f for f in forms if
+        result_set = [f for f in forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) or
-            set([t['name'] for t in f['tags']]) & set(tagNames) or
+            set([t['name'] for t in f['tags']]) & set(tag_names) or
             (f['files'] and
              not re.search(patt, ', '.join([fi['name'] for fi in f['files']])) and
-             f['dateElicited'] is not None)]
-        assert len(resp) == len(resultSet)
+             f['date_elicited'] is not None)]
+        assert len(resp) == len(result_set)
 
         # A super complex search ...  The implicit assertion is that a 200 status
         # code is returned.  At this point I am not going to bother attempting to
         # emulate this query in Python ...
-        jsonQuery = json.dumps({'query': {'filter': [
+        json_query = json.dumps({'query': {'filter': [
             'and', [
                 ['Form', 'transcription', 'like', '%5%'],
-                ['Form', 'morphemeBreak', 'like', '%9%'],
+                ['Form', 'morpheme_break', 'like', '%9%'],
                 ['not', ['Translation', 'transcription', 'like', '%6%']],
                 ['or', [
-                    ['Form', 'datetimeEntered', '<', todayTimestamp.isoformat()],
-                    ['Form', 'datetimeModified', '>', yesterdayTimestamp.isoformat()],
-                    ['not', ['Form', 'dateElicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
+                    ['Form', 'datetime_entered', '<', today_timestamp.isoformat()],
+                    ['Form', 'datetime_modified', '>', yesterday_timestamp.isoformat()],
+                    ['not', ['Form', 'date_elicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
                     ['and', [
                         ['Form', 'enterer', 'id', 'regex', '[135680]'],
                         ['Form', 'id', '<', 90]
@@ -1556,35 +1556,35 @@ class TestFormsSearchController(TestController):
                 ['not', ['not', ['not', ['Tag', 'name', '=', 'name 7']]]]
             ]
         ]}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+        response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
     #@nottest
     def test_search_y_paginator(self):
         """Tests SEARCH /forms: paginator."""
-        forms = json.loads(json.dumps(h.getForms(), cls=h.JSONOLDEncoder))
+        forms = json.loads(json.dumps(h.get_forms(), cls=h.JSONOLDEncoder))
 
         # A basic search with a paginator provided.
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'like', '%T%']},
-            'paginator': {'page': 2, 'itemsPerPage': 10}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            'paginator': {'page': 2, 'items_per_page': 10}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        resultSet = [f for f in forms if 'T' in f['transcription']]
-        assert resp['paginator']['count'] == len(resultSet)
+        result_set = [f for f in forms if 'T' in f['transcription']]
+        assert resp['paginator']['count'] == len(result_set)
         assert len(resp['items']) == 10
-        assert resp['items'][0]['id'] == resultSet[10]['id']
-        assert resp['items'][-1]['id'] == resultSet[19]['id']
+        assert resp['items'][0]['id'] == result_set[10]['id']
+        assert resp['items'][-1]['id'] == result_set[19]['id']
 
         # An invalid paginator (here 'page' is less than 1) will result in formencode.Invalid
         # being raised resulting in a response with a 400 status code and a JSON error msg.
-        jsonQuery = json.dumps({
+        json_query = json.dumps({
             'query': {
                 'filter': ['Form', 'transcription', 'like', '%T%']},
-            'paginator': {'page': 0, 'itemsPerPage': 10}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            'paginator': {'page': 0, 'items_per_page': 10}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
@@ -1592,11 +1592,11 @@ class TestFormsSearchController(TestController):
         # Some "invalid" paginators will silently fail.  For example, if there is
         # no 'pages' key, then GET /forms will just assume there is no paginator
         # and all of the results will be returned.
-        jsonQuery = json.dumps({
+        json_query = json.dumps({
             'query': {
                 'filter': ['Form', 'transcription', 'like', '%T%']},
-            'paginator': {'pages': 0, 'itemsPerPage': 10}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            'paginator': {'pages': 0, 'items_per_page': 10}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == len([f for f in forms if 'T' in f['transcription']])
@@ -1606,25 +1606,25 @@ class TestFormsSearchController(TestController):
         # attempt to verify the count (since that would defeat the purpose) but
         # will simply pass it back.  The server trusts that the client is passing
         # in a factual count.  Here we pass in an inaccurate count for demonstration.
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'like', '%T%']},
-            'paginator': {'page': 2, 'itemsPerPage': 16, 'count': 750}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            'paginator': {'page': 2, 'items_per_page': 16, 'count': 750}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['paginator']['count'] == 750
         assert len(resp['items']) == 16
-        assert resp['items'][0]['id'] == resultSet[16]['id']
-        assert resp['items'][-1]['id'] == resultSet[31]['id']
+        assert resp['items'][0]['id'] == result_set[16]['id']
+        assert resp['items'][-1]['id'] == result_set[31]['id']
 
     #@nottest
     def test_search_z_order_by(self):
         """Tests POST /forms/search: order by."""
         # order by transcription ascending
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Form', 'transcription', 'asc']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Form', 'transcription', 'asc']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
@@ -1632,10 +1632,10 @@ class TestFormsSearchController(TestController):
         assert resp[0]['transcription'] == u'transcription 1'
 
         # order by transcription descending
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Form', 'transcription', 'desc']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Form', 'transcription', 'desc']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
@@ -1643,10 +1643,10 @@ class TestFormsSearchController(TestController):
         assert resp[0]['transcription'] == u'TRANSCRIPTION 99'
 
         # order by translation ascending
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Translation', 'transcription', 'asc']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Translation', 'transcription', 'asc']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
@@ -1655,10 +1655,10 @@ class TestFormsSearchController(TestController):
         assert resp[-1]['translations'][0]['transcription'] == u'translation 99'
 
         # order by with missing direction defaults to 'asc'
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Translation', 'transcription']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Translation', 'transcription']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
@@ -1667,10 +1667,10 @@ class TestFormsSearchController(TestController):
         assert resp[-1]['translations'][0]['transcription'] == u'translation 99'
 
         # order by with unknown direction defaults to 'asc'
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Translation', 'transcription', 'descending']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Translation', 'transcription', 'descending']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 100
@@ -1679,28 +1679,28 @@ class TestFormsSearchController(TestController):
         assert resp[-1]['translations'][0]['transcription'] == u'translation 99'
 
         # syntactically malformed order by
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Translation']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Translation']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
         # searches with lexically malformed order bys
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Form', 'foo', 'desc']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Form', 'foo', 'desc']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Form.foo'] == u'Searching on Form.foo is not permitted'
         assert resp['errors']['OrderByError'] == u'The provided order by expression was invalid.'
 
-        jsonQuery = json.dumps({'query': {
+        json_query = json.dumps({'query': {
                 'filter': ['Form', 'transcription', 'regex', '[tT]'],
-                'orderBy': ['Foo', 'id', 'desc']}})
-        response = self.app.post(url('/forms/search'), jsonQuery,
+                'order_by': ['Foo', 'id', 'desc']}})
+        response = self.app.post(url('/forms/search'), json_query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         assert resp['errors']['Foo'] == u'Searching the Form model by joining on the Foo model is not possible'
@@ -1712,52 +1712,52 @@ class TestFormsSearchController(TestController):
         """Tests SEARCH /forms: restricted forms."""
 
         # First restrict the even-numbered forms
-        restrictedTag = h.generateRestrictedTag()
-        Session.add(restrictedTag)
+        restricted_tag = h.generate_restricted_tag()
+        Session.add(restricted_tag)
         Session.commit()
-        restrictedTag = h.getRestrictedTag()
-        forms = h.getForms()
-        formCount = len(forms)
+        restricted_tag = h.get_restricted_tag()
+        forms = h.get_forms()
+        form_count = len(forms)
         for form in forms:
             if int(form.transcription.split(' ')[-1]) % 2 == 0:
-                form.tags.append(restrictedTag)
+                form.tags.append(restricted_tag)
         Session.commit()
-        restrictedForms = Session.query(model.Form).filter(
+        restricted_forms = Session.query(model.Form).filter(
             model.Tag.name==u'restricted').outerjoin(model.Form.tags).all()
-        restrictedFormCount = len(restrictedForms)
+        restricted_form_count = len(restricted_forms)
 
         # A viewer will only be able to see the unrestricted forms
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regex', '[tT]']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == restrictedFormCount
+        assert len(resp) == restricted_form_count
         assert 'restricted' not in [
             x['name'] for x in reduce(list.__add__, [f['tags'] for f in resp])]
 
         # An administrator will be able to access all forms
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regex', '[tT]']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == formCount
+        assert len(resp) == form_count
         assert 'restricted' in [
             x['name'] for x in reduce(list.__add__, [f['tags'] for f in resp])]
 
         # Filter out restricted forms and do pagination
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regex', '[tT]']},
-            'paginator': {'page': 3, 'itemsPerPage': 7}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+            'paginator': {'page': 3, 'items_per_page': 7}})
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = [f for f in forms
+        result_set = [f for f in forms
                         if int(f.transcription.split(' ')[-1]) % 2 != 0]
-        assert resp['paginator']['count'] == restrictedFormCount
+        assert resp['paginator']['count'] == restricted_form_count
         assert len(resp['items']) == 7
-        assert resp['items'][0]['id'] == resultSet[14].id
+        assert resp['items'][0]['id'] == result_set[14].id
 
     #@nottest
     def test_search_zb_like_escaping(self):
@@ -1771,11 +1771,11 @@ class TestFormsSearchController(TestController):
         or "%" in LIKE queries (regexp will do the trick though...).
         """
 
-        createParams = self.formCreateParams
-        RDBMSName = h.getRDBMSName(configFilename='test.ini')
+        create_params = self.form_create_params
+        RDBMSName = h.get_RDBMS_name(config_filename='test.ini')
 
         # Create a form with an underscore and a percent sign in it.
-        params = createParams.copy()
+        params = create_params.copy()
         params.update({
             'transcription': u'_%',
             'translations': [{'transcription': u'LIKE, test or some junk',
@@ -1785,23 +1785,23 @@ class TestFormsSearchController(TestController):
         response = self.app.post(url('forms'), params, self.json_headers, self.extra_environ_admin)
 
         forms = Session.query(model.Form).all()
-        formsCount = len(forms)
+        forms_count = len(forms)
 
         # Show how the underscore is a wildcard when unescaped: all forms will
         # be returned.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'like', '%_%']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == formsCount
+        assert len(resp) == forms_count
         assert response.content_type == 'application/json'
 
         # Show how the underscore can be escaped and we can use it to match the
         # one underscore-containing form in the db (*in MySQL only*).
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'like', '%\_%']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         if RDBMSName == u'mysql':
@@ -1812,9 +1812,9 @@ class TestFormsSearchController(TestController):
 
         # Show how we can use a regexp search to match the underscore in SQLite
         # (and MySQL).
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regexp', '_']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
@@ -1822,19 +1822,19 @@ class TestFormsSearchController(TestController):
 
         # Show how the percent sign is a zero-or-more-anything quantifier when
         # unescaped: all forms will be returned.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'like', '%']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == formsCount
+        assert len(resp) == forms_count
         assert response.content_type == 'application/json'
 
         # Show how the percent sign can be escaped and we can use it to match the
         # one percent sign-containing form in the db (*in MySQL only*).
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'like', '%\%%']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         if RDBMSName == u'mysql':
@@ -1845,9 +1845,9 @@ class TestFormsSearchController(TestController):
 
         # Show how we can use a regexp search to match the percent sign in both
         # RDBMSs.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regexp', '%']}})
-        response = self.app.request(url('forms'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 1
@@ -1858,25 +1858,25 @@ class TestFormsSearchController(TestController):
         """Tests POST /forms/search: clean up the database."""
 
         # Clear the remembered forms of all the users
-        users = h.getUsers()
+        users = h.get_users()
         viewer = [u for u in users if u.role == u'viewer'][0]
         contributor = [u for u in users if u.role == u'contributor'][0]
         administrator = [u for u in users if u.role == u'administrator'][0]
-        viewer.rememberedForms = []
-        contributor.rememberedForms = []
-        administrator.rememberedForms = []
+        viewer.remembered_forms = []
+        contributor.remembered_forms = []
+        administrator.remembered_forms = []
         Session.commit()
 
         # Remove all models and recreate the users
-        h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
+        h.clear_all_models()
+        administrator = h.generate_default_administrator()
+        contributor = h.generate_default_contributor()
+        viewer = h.generate_default_viewer()
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-        # Perform a vacuous GET just to delete app_globals.applicationSettings
+        # Perform a vacuous GET just to delete app_globals.application_settings
         # to clean up for subsequent tests.
         extra_environ = self.extra_environ_admin.copy()
-        extra_environ['test.applicationSettings'] = True
+        extra_environ['test.application_settings'] = True
         self.app.get(url('forms'), extra_environ=extra_environ)

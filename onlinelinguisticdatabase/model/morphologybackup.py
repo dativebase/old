@@ -28,7 +28,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class MorphologyBackup(Base):
-    """Class for creating OLD morphologyBackup models.
+    """Class for creating OLD morphology_backup models.
 
     The vivify method takes a morphology and a user object as input and populates
     a number of morphology-like attributes, converting relational attributes to
@@ -48,43 +48,43 @@ class MorphologyBackup(Base):
     name = Column(Unicode(255))
     description = Column(UnicodeText)
     script_type = Column(Unicode(5))
-    lexiconCorpus = Column(UnicodeText)
-    rulesCorpus = Column(UnicodeText)
+    lexicon_corpus = Column(UnicodeText)
+    rules_corpus = Column(UnicodeText)
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
-    compileSucceeded = Column(Boolean, default=False)
-    compileMessage = Column(Unicode(255))
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
+    compile_succeeded = Column(Boolean, default=False)
+    compile_message = Column(Unicode(255))
     compile_attempt = Column(Unicode(36))
     generate_attempt = Column(Unicode(36))
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
 
-    def vivify(self, morphologyDict):
-        """The vivify method gives life to a morphologyBackup by specifying its
-        attributes using the to-be-backed-up morphology (morphologyDict) and the
+    def vivify(self, morphology_dict):
+        """The vivify method gives life to a morphology_backup by specifying its
+        attributes using the to-be-backed-up morphology (morphology_dict) and the
         modifier (current user).  The relational attributes of the
         to-be-backed-up morphology are converted into (truncated) JSON objects.
 
         """
-        self.UUID = morphologyDict['UUID']
-        self.morphology_id = morphologyDict['id']
-        self.name = morphologyDict['name']
-        self.description = morphologyDict['description']
-        self.script_type = morphologyDict['script_type']
-        self.rulesCorpus = unicode(json.dumps(morphologyDict['rulesCorpus']))
-        self.lexiconCorpus = unicode(json.dumps(morphologyDict['lexiconCorpus']))
-        self.enterer = unicode(json.dumps(morphologyDict['enterer']))
-        self.modifier = unicode(json.dumps(morphologyDict['modifier']))
-        self.datetimeEntered = morphologyDict['datetimeEntered']
-        self.datetimeModified = morphologyDict['datetimeModified']
-        self.compileSucceeded = morphologyDict['compileSucceeded']
-        self.compileMessage = morphologyDict['compileMessage']
-        self.compile_attempt = morphologyDict['compile_attempt']
-        self.generate_attempt = morphologyDict['generate_attempt']
-        self.extract_morphemes_from_rules_corpus = morphologyDict['extract_morphemes_from_rules_corpus']
+        self.UUID = morphology_dict['UUID']
+        self.morphology_id = morphology_dict['id']
+        self.name = morphology_dict['name']
+        self.description = morphology_dict['description']
+        self.script_type = morphology_dict['script_type']
+        self.rules_corpus = unicode(json.dumps(morphology_dict['rules_corpus']))
+        self.lexicon_corpus = unicode(json.dumps(morphology_dict['lexicon_corpus']))
+        self.enterer = unicode(json.dumps(morphology_dict['enterer']))
+        self.modifier = unicode(json.dumps(morphology_dict['modifier']))
+        self.datetime_entered = morphology_dict['datetime_entered']
+        self.datetime_modified = morphology_dict['datetime_modified']
+        self.compile_succeeded = morphology_dict['compile_succeeded']
+        self.compile_message = morphology_dict['compile_message']
+        self.compile_attempt = morphology_dict['compile_attempt']
+        self.generate_attempt = morphology_dict['generate_attempt']
+        self.extract_morphemes_from_rules_corpus = morphology_dict['extract_morphemes_from_rules_corpus']
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'UUID': self.UUID,
@@ -92,14 +92,14 @@ class MorphologyBackup(Base):
             'name': self.name,
             'description': self.description,
             'script_type': self.script_type,
-            'rulesCorpus': self.jsonLoads(self.rulesCorpus),
-            'lexiconCorpus': self.jsonLoads(self.lexiconCorpus),
-            'enterer': self.jsonLoads(self.enterer),
-            'modifier': self.jsonLoads(self.modifier),
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'compileSucceeded': self.compileSucceeded,
-            'compileMessage': self.compileMessage,
+            'rules_corpus': self.json_loads(self.rules_corpus),
+            'lexicon_corpus': self.json_loads(self.lexicon_corpus),
+            'enterer': self.json_loads(self.enterer),
+            'modifier': self.json_loads(self.modifier),
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'compile_succeeded': self.compile_succeeded,
+            'compile_message': self.compile_message,
             'compile_attempt': self.compile_attempt,
             'generate_attempt': self.generate_attempt,
             'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus

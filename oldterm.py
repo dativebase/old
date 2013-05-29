@@ -14,8 +14,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Defines a *very* simple OLD class that connects to a live OLD application This script uses the Python Requests library to run some basic tests on a
-live OLD web service.
+"""oldterm helps you interact with an OLD application via the command line (terminal).
 
 Usage:
 
@@ -25,15 +24,14 @@ Usage:
     $ paster setup-app development.ini
     $ paster serve development.ini
 
-2. Run the requests script and expect not to see (assertion) errors:
+2. Enter a Python prompt and import oldterm:
 
-    $ ./onlinelinguisticdatabase/tests/requests_tests.py
-
-Note that the above command will only work if the requests module is installed
-in the Python referenced at /usr/bin.  If you are using a virtual environment,
-run the following command instead:
-
-    $ env/bin/python onlinelinguisticdatabase/tests/requests_tests.py
+    $ python
+    >>> import oldterm
+    >>> old = oldterm.OLD('127.0.0.1', '5000')
+    >>> old.login('username', 'password')
+    True
+    >>> forms = old.get('forms')
 
 """
 
@@ -41,6 +39,7 @@ import requests
 import simplejson as json
 
 class OLD(object):
+    """Create an OLD instance to connect to a live OLD application."""
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -79,43 +78,46 @@ class OLD(object):
         except Exception:
             return response
 
-    formCreateParams = {
+    form_create_params = {
         'transcription': u'',
-        'phoneticTranscription': u'',
-        'narrowPhoneticTranscription': u'',
-        'morphemeBreak': u'',
+        'phonetic_transcription': u'',
+        'narrow_phonetic_transcription': u'',
+        'morpheme_break': u'',
         'grammaticality': u'',
-        'morphemeGloss': u'',
+        'morpheme_gloss': u'',
         'translations': [],
         'comments': u'',
-        'speakerComments': u'',
-        'elicitationMethod': u'',
+        'speaker_comments': u'',
+        'elicitation_method': u'',
         'tags': [],
-        'syntacticCategory': u'',
+        'syntactic_category': u'',
         'speaker': u'',
         'elicitor': u'',
         'verifier': u'',
         'source': u'',
         'status': u'tested',
-        'dateElicited': u'',     # mm/dd/yyyy
+        'date_elicited': u'',     # mm/dd/yyyy
         'syntax': u'',
         'semantics': u''
     }
 
 def printform(form):
+    """Print an OLD form to the terminal"""
     tmp = [('id', form['id'])]
-    if form.get('narrowPhoneticTranscription', None): tmp.append(('NP', form['narrowPhoneticTranscription']))
-    if form.get('phoneticTranscription', None): tmp.append(('BP', form['phoneticTranscription']))
+    if form.get('narrow_phonetic_transcription', None): tmp.append(('NP', form['narrow_phonetic_transcription']))
+    if form.get('phonetic_transcription', None): tmp.append(('BP', form['phonetic_transcription']))
     tmp.append(('TR', '%s%s' % (form['grammaticality'], form['transcription'])))
-    if form.get('morphemeBreak', None): tmp.append(('MB', form['morphemeBreak']))
-    if form.get('morphemeGloss', None): tmp.append(('MG', form['morphemeGloss']))
+    if form.get('morpheme_break', None): tmp.append(('MB', form['morpheme_break']))
+    if form.get('morpheme_gloss', None): tmp.append(('MG', form['morpheme_gloss']))
     tmp.append(('TL', ', '.join([u'\u2018%s\u2019' % tl['transcription'] for tl in form['translations']])))
-    if form.get('syntacticCategoryString', None): tmp.append(('SCS', form['syntacticCategoryString']))
-    if form.get('breakGlossCategory', None): tmp.append(('BGC', form['breakGlossCategory']))
-    if form.get('syntacticCategory', None): tmp.append(('SC', form['syntacticCategory']['name']))
+    if form.get('syntactic_category_string', None): tmp.append(('SCS', form['syntactic_category_string']))
+    if form.get('break_gloss_category', None): tmp.append(('BGC', form['break_gloss_category']))
+    if form.get('syntactic_category', None): tmp.append(('SC', form['syntactic_category']['name']))
     print u'\n'.join([u'%-5s%s' % (u'%s:' % t[0], t[1]) for t in tmp])
 
 class NTKOLD(OLD):
+    """Subclass of the OLD that provides some Nata (NTK)-specific attributes.
+    """
     orthography = [u'mb', u'nd', u'ng', u't', u'ch', u'h', u'k', u'm', u'n', u'ny',
         u"ng'", u'r', u'bh', u's', u'sh', u'gh', u'w', u'y', u'i', u'i\u0301', u'u',
         u'u\u0301', u'e', u'e\u0301', u'o', u'o\u0301', u'e\u0323', u'e\u0323\u0301',

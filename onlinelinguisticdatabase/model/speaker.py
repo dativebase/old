@@ -28,22 +28,22 @@ class Speaker(Base):
         return '<Speaker (%s)>' % self.id
 
     id = Column(Integer, Sequence('speaker_seq_id', optional=True), primary_key=True)
-    firstName = Column(Unicode(255))
-    lastName = Column(Unicode(255))
+    first_name = Column(Unicode(255))
+    last_name = Column(Unicode(255))
     dialect = Column(Unicode(255))
-    markupLanguage = Column(Unicode(100))
-    pageContent = Column(UnicodeText)
+    markup_language = Column(Unicode(100))
+    page_content = Column(UnicodeText)
     html = Column(UnicodeText)
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
-            'firstName': self.firstName,
-            'lastName': self.lastName,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
             'dialect': self.dialect,
-            'markupLanguage': self.markupLanguage,
-            'pageContent': self.pageContent,
+            'markup_language': self.markup_language,
+            'page_content': self.page_content,
             'html': self.html,
-            'datetimeModified': self.datetimeModified
+            'datetime_modified': self.datetime_modified
         }

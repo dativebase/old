@@ -16,10 +16,10 @@
 instance is used to build an SQLAlchemy query object from a Python data
 structure (nested lists).
 
-The two public methods are getSQLAQuery and getSQLAFilter.  Both take a list
-representing a filter expression as input.  getSQLAQuery returns an SQLAlchemy
-query object, including joins and filters.  getSQLAFilter returns an SQLAlchemy
-filter expression and is called by getSQLAQuery.  Errors in the Python filter
+The two public methods are get_SQLA_query and get_SQLA_filter.  Both take a list
+representing a filter expression as input.  get_SQLA_query returns an SQLAlchemy
+query object, including joins and filters.  get_SQLA_filter returns an SQLAlchemy
+filter expression and is called by get_SQLA_query.  Errors in the Python filter
 expression will cause custom OLDSearchParseErrors to be raised.
 
 The searchable models and their attributes (scalars & collections) are defined
@@ -29,7 +29,7 @@ Simple filter expressions are lists with four or five items.  Complex filter
 expressions are constructed via lists whose first element is one of the boolean
 keywords 'and', 'or', 'not' and whose second element is a filter expression or
 a list thereof (in the case of 'and' and 'or').  The examples below show a
-filter expression accepted by SQLAQueryBuilder('Form').getSQLAQuery on the
+filter expression accepted by SQLAQueryBuilder('Form').get_SQLA_query on the
 second line followed by the equivalent SQLAlchemy ORM expression.  Note that the
 target model of the SQLAQueryBuilder is set to 'Form' so all queries will be
 against the Form model.
@@ -41,8 +41,8 @@ against the Form model.
 
 2. Scalar relations::
 
-        ['Form', 'enterer', 'firstName', 'regex', '^[JS]']
-        Session.query(Form).filter(Form.enterer.has(User.firstName.op('regexp')(u'^[JS]')))
+        ['Form', 'enterer', 'first_name', 'regex', '^[JS]']
+        Session.query(Form).filter(Form.enterer.has(User.first_name.op('regexp')(u'^[JS]')))
 
 3. Scalar relations presence/absence::
 
@@ -57,8 +57,8 @@ against the Form model.
 5. Collection relations (w/ joins; should return the same results as (4)):
 
         ['File', 'id', 'in', [1, 2, 33, 5]]
-        fileAlias = aliased(File)
-        Session.query(Form).filter(fileAlias.id.in_([1, 2, 33, 5])).outerjoin(fileAlias, Form.files)
+        file_alias = aliased(File)
+        Session.query(Form).filter(file_alias.id.in_([1, 2, 33, 5])).outerjoin(file_alias, Form.files)
 
 6. Collection relations presence/absence::
 
@@ -80,25 +80,25 @@ against the Form model.
 9. Disjunction::
 
         ['or', [['Form', 'transcription', 'like', '%a%'],
-                ['Form', 'dateElicited', '<', '2012-01-01']]]
+                ['Form', 'date_elicited', '<', '2012-01-01']]]
         Session.query(Form).filter(or_(Form.transcription.like(u'%a%'),
-                                       Form.dateElicited < datetime.date(2012, 1, 1)))
+                                       Form.date_elicited < datetime.date(2012, 1, 1)))
 
 10. Complex::
 
         ['and', [['Translation', 'transcription', 'like', '%1%'],
-                 ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
-                 ['or', [['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
-                         ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]
-        translationAlias = aliased(Translation)
+                 ['not', ['Form', 'morpheme_break', 'regex', '[28][5-7]']],
+                 ['or', [['Form', 'datetime_modified', '<', '2012-03-01T00:00:00'],
+                         ['Form', 'datetime_modified', '>', '2012-01-01T00:00:00']]]]]
+        translation_alias = aliased(Translation)
         Session.query(Form).filter(and_(
-            translationAlias.transcription.like(u'%1%'),
-            not_(Form.morphemeBreak.op('regexp')(u'[28][5-7]')),
+            translation_alias.transcription.like(u'%1%'),
+            not_(Form.morpheme_break.op('regexp')(u'[28][5-7]')),
             or_(
-                Form.datetimeModified < ...,
-                Form.datetimeModified > ...
+                Form.datetime_modified < ...,
+                Form.datetime_modified > ...
             )
-        )).outerjoin(translationAlias, Form.translations)
+        )).outerjoin(translation_alias, Form.translations)
 
 Note also that SQLAQueryBuilder detects the RDBMS and issues collate commands
 where necessary to ensure that pattern matches are case-sensitive while ordering
@@ -109,8 +109,8 @@ return all forms whose enterer has remembered a form with a transcription like '
 
 11. Scalar's collection relations::
 
-        ['Form', 'enterer', 'rememberedForms', 'transcription', 'like', '%a%']
-        Session.query(Form).filter(Form.enterer.has(User.rememberedForms.any(
+        ['Form', 'enterer', 'remembered_forms', 'transcription', 'like', '%a%']
+        Session.query(Form).filter(Form.enterer.has(User.remembered_forms.any(
             Form.transcription.like('%1%'))))
 
 """
@@ -139,34 +139,34 @@ except ImportError:
     pass
 
 try:
-    from onlinelinguisticdatabase.lib.utils import getRDBMSName
+    from onlinelinguisticdatabase.lib.utils import get_RDBMS_name
 except ImportError:
-    def getRDBMSName():
+    def get_RDBMS_name():
         return 'sqlite'
 
 try:
-    from utils import datetimeString2datetime, dateString2date
+    from utils import datetime_string2datetime, date_string2date
 except ImportError:
     # ImportError will be raised in utils if the Pylons environment is not
     # running, e.g., if we are debugging.  In this case, we need to define our
     # own date/datetime parseing functions.
-    def datetimeString2datetime(datetimeString):
+    def datetime_string2datetime(datetime_string):
         try:
-            parts = datetimeString.split('.')
-            yearsToSecondsString = parts[0]
-            datetimeObject = datetime.datetime.strptime(yearsToSecondsString,
+            parts = datetime_string.split('.')
+            years_to_seconds_string = parts[0]
+            datetime_object = datetime.datetime.strptime(years_to_seconds_string,
                                                         "%Y-%m-%dT%H:%M:%S")
         except ValueError:
             return None
         try:
             microseconds = int(parts[1])
-            return datetimeObject.replace(microsecond=microseconds)
+            return datetime_object.replace(microsecond=microseconds)
         except (IndexError, ValueError, OverflowError):
-            return datetimeObject
+            return datetime_object
 
-    def dateString2date(dateString):
+    def date_string2date(date_string):
         try:
-            return datetime.datetime.strptime(dateString, "%Y-%m-%d").date()
+            return datetime.datetime.strptime(date_string, "%Y-%m-%d").date()
         except ValueError:
             return None
 
@@ -187,90 +187,90 @@ class SQLAQueryBuilder(object):
     Builds SQLAlchemy queries from Python data structures representing
     arbitrarily complex filter expressions.  Joins are inferred from the filter
     expression.  The public method most likely to be used is
-    :func:`getSQLAQuery`.  Example usage::
+    :func:`get_SQLA_query`.  Example usage::
 
-        queryBuilder = SQLAlchemyQueryBuilder()
-        pythonQuery = {'filter': [
+        query_builder = SQLAlchemyQueryBuilder()
+        python_query = {'filter': [
             'and', [
                 ['Translation', 'transcription', 'like', '1'],
-                ['not', ['Form', 'morphemeBreak', 'regex', '[28][5-7]']],
+                ['not', ['Form', 'morpheme_break', 'regex', '[28][5-7]']],
                 ['or', [
-                    ['Form', 'datetimeModified', '<', '2012-03-01T00:00:00'],
-                    ['Form', 'datetimeModified', '>', '2012-01-01T00:00:00']]]]]}
-        query = queryBuilder.getSQLAQuery(pythonQuery)
+                    ['Form', 'datetime_modified', '<', '2012-03-01T00:00:00'],
+                    ['Form', 'datetime_modified', '>', '2012-01-01T00:00:00']]]]]}
+        query = query_builder.get_SQLA_query(python_query)
         forms = query.all()
 
     """
 
-    def __init__(self, modelName='Form', primaryKey='id', **kwargs):
+    def __init__(self, model_name='Form', primary_key='id', **kwargs):
         self.errors = {}
         self.joins = []
-        self.modelName = modelName  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
-        self.primaryKey = primaryKey    # Some models have a primary key other than 'id' ...
-        self.RDBMSName = getRDBMSName(**kwargs) # i.e., mysql or sqlite
+        self.model_name = model_name  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
+        self.primary_key = primary_key    # Some models have a primary key other than 'id' ...
+        self.RDBMSName = get_RDBMS_name(**kwargs) # i.e., mysql or sqlite
 
-    def getSQLAQuery(self, python):
-        self.clearErrors()
-        filterExpression = self.getSQLAFilter(python.get('filter'))
-        orderByExpression = self._getSQLAOrderBy(python.get('orderBy'), self.primaryKey)
-        self._raiseSearchParseErrorIfNecessary()
-        query = self._getBaseQuery()
-        query = query.filter(filterExpression)
-        query = query.order_by(orderByExpression)
-        query = self._addJoinsToQuery(query)
+    def get_SQLA_query(self, python):
+        self.clear_errors()
+        filter_expression = self.get_SQLA_filter(python.get('filter'))
+        order_by_expression = self._get_SQLA_order_by(python.get('order_by'), self.primary_key)
+        self._raise_search_parse_error_if_necessary()
+        query = self._get_base_query()
+        query = query.filter(filter_expression)
+        query = query.order_by(order_by_expression)
+        query = self._add_joins_to_query(query)
         return query
 
-    def getSQLAFilter(self, python):
+    def get_SQLA_filter(self, python):
         """Return the SQLAlchemy filter expression generable by the input Python
         data structure or raise an OLDSearchParseError if the data structure is
         invalid.
         """
         return self._python2sqla(python)
 
-    def getSQLAOrderBy(self, orderBy, primaryKey='id'):
+    def get_SQLA_order_by(self, order_by, primary_key='id'):
         """The public method clears the errors and then calls the private method.
-        This prevents interference from errors generated by previous orderBy calls.
+        This prevents interference from errors generated by previous order_by calls.
         """
-        self.clearErrors()
-        return self._getSQLAOrderBy(orderBy, primaryKey)
+        self.clear_errors()
+        return self._get_SQLA_order_by(order_by, primary_key)
 
-    def _getSQLAOrderBy(self, orderBy, primaryKey='id'):
+    def _get_SQLA_order_by(self, order_by, primary_key='id'):
         """Input is an array of the form [<model>, <attribute>, <direction>];
         output is an SQLA order_by expression.
         """
-        defaultOrderBy = asc(getattr(getattr(old_model, self.modelName), primaryKey))
-        if orderBy is None:
-            return defaultOrderBy
+        default_order_by = asc(getattr(getattr(old_model, self.model_name), primary_key))
+        if order_by is None:
+            return default_order_by
         try:
-            modelName = self._getModelName(orderBy[0])
-            attributeName = self._getAttributeName(orderBy[1], modelName)
-            model = self._getModel(modelName)
-            attribute = getattr(model, attributeName)
+            model_name = self._get_model_name(order_by[0])
+            attribute_name = self._get_attribute_name(order_by[1], model_name)
+            model = self._get_model(model_name)
+            attribute = getattr(model, attribute_name)
             if self.RDBMSName == 'sqlite' and attribute is not None and \
             isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes):
                 attribute = collate(attribute, 'NOCASE')    # Force SQLite to order case-insensitively
             try:
-                return {'asc': asc, 'desc': desc}.get(orderBy[2], asc)(attribute)
+                return {'asc': asc, 'desc': desc}.get(order_by[2], asc)(attribute)
             except IndexError:
                 return asc(attribute)
         except (IndexError, AttributeError):
-            self._addToErrors('OrderByError', 'The provided order by expression was invalid.')
-            return defaultOrderBy
+            self._add_to_errors('OrderByError', 'The provided order by expression was invalid.')
+            return default_order_by
 
-    def clearErrors(self):
+    def clear_errors(self):
         self.errors = {}
 
-    def _raiseSearchParseErrorIfNecessary(self):
+    def _raise_search_parse_error_if_necessary(self):
         if self.errors:
             errors = self.errors.copy()
-            self.clearErrors()    # Clear the errors so the instance can be reused to build further queries
+            self.clear_errors()    # Clear the errors so the instance can be reused to build further queries
             raise OLDSearchParseError(errors)
 
-    def _getBaseQuery(self):
-        queryModel = getattr(old_model, self.modelName)
-        return Session.query(queryModel)
+    def _get_base_query(self):
+        query_model = getattr(old_model, self.model_name)
+        return Session.query(query_model)
 
-    def _addJoinsToQuery(self, query):
+    def _add_joins_to_query(self, query):
         for join in self.joins:
             query = query.outerjoin(join[0], join[1])
         self.joins = []
@@ -287,7 +287,7 @@ class SQLAQueryBuilder(object):
             elif python[0] == 'not':
                 return not_(self._python2sqla(python[1]))
             else:
-                return self._getSimpleFilterExpression(*python)
+                return self._get_simple_filter_expression(*python)
         except TypeError, e:
             self.errors['Malformed OLD query error'] = u'The submitted query was malformed'
             self.errors['TypeError'] = e.__unicode__()
@@ -300,30 +300,30 @@ class SQLAQueryBuilder(object):
 
     SQLAlchemyStringTypes = (Unicode, UnicodeText)
 
-    def _addToErrors(self, key, msg):
+    def _add_to_errors(self, key, msg):
         self.errors[str(key)] = msg
 
     ############################################################################
     # Value converters
     ############################################################################
 
-    def _getDateValue(self, dateString):
+    def _get_date_value(self, date_string):
         """Converts ISO 8601 date strings to Python datetime.date objects."""
-        if dateString is None:
-            return dateString   # None can be used on date comparisons so assume this is what was intended
-        date = dateString2date(dateString)
+        if date_string is None:
+            return date_string   # None can be used on date comparisons so assume this is what was intended
+        date = date_string2date(date_string)
         if date is None:
-            self._addToErrors('date %s' % str(dateString),
+            self._add_to_errors('date %s' % str(date_string),
                 u'Date search parameters must be valid ISO 8601 date strings.')
         return date
 
-    def _getDatetimeValue(self, datetimeString):
+    def _get_datetime_value(self, datetime_string):
         """Converts ISO 8601 datetime strings to Python datetime.datetime objects."""
-        if datetimeString is None:
-            return datetimeString   # None can be used on datetime comparisons so assume this is what was intended
-        datetime = datetimeString2datetime(datetimeString)
+        if datetime_string is None:
+            return datetime_string   # None can be used on datetime comparisons so assume this is what was intended
+        datetime = datetime_string2datetime(datetime_string)
         if datetime is None:
-            self._addToErrors('datetime %s' % str(datetimeString),
+            self._add_to_errors('datetime %s' % str(datetime_string),
                 u'Datetime search parameters must be valid ISO 8601 datetime strings.')
         return datetime
 
@@ -356,7 +356,7 @@ class SQLAQueryBuilder(object):
         'in': {'alias': 'in_'}
     }
 
-    equalityRelations = {
+    equality_relations = {
         '__eq__': {},
         '=': {'alias': '__eq__'},
         '__ne__': {},
@@ -382,19 +382,19 @@ class SQLAQueryBuilder(object):
             'type': {},
             'url': {},
             'description': {},
-            'markupLanguage': {},
+            'markup_language': {},
             'contents': {},
             'html': {},
-            'speaker': {'foreignModel': 'Speaker', 'type': 'scalar'},
-            'source': {'foreignModel': 'Source', 'type': 'scalar'},
-            'elicitor': {'foreignModel': 'User', 'type': 'scalar'},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
-            'dateElicited': {'valueConverter': '_getDateValue'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'tags': {'foreignModel': 'Tag', 'type': 'collection'},
-            'forms': {'foreignModel': 'Form', 'type': 'collection'},
-            'files': {'foreignModel': 'File', 'type': 'collection'}
+            'speaker': {'foreign_model': 'Speaker', 'type': 'scalar'},
+            'source': {'foreign_model': 'Source', 'type': 'scalar'},
+            'elicitor': {'foreign_model': 'User', 'type': 'scalar'},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'date_elicited': {'value_converter': '_get_date_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'tags': {'foreign_model': 'Tag', 'type': 'collection'},
+            'forms': {'foreign_model': 'Form', 'type': 'collection'},
+            'files': {'foreign_model': 'File', 'type': 'collection'}
         },
         'CollectionBackup': {
             'id': {},
@@ -404,16 +404,16 @@ class SQLAQueryBuilder(object):
             'type': {},
             'url': {},
             'description': {},
-            'markupLanguage': {},
+            'markup_language': {},
             'contents': {},
             'html': {},
             'speaker': {},
             'source': {},
             'elicitor': {},
             'enterer': {},
-            'dateElicited': {'valueConverter': '_getDateValue'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'date_elicited': {'value_converter': '_get_date_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
             'tags': {},
             'forms': {},
             'files': {}
@@ -425,12 +425,12 @@ class SQLAQueryBuilder(object):
             'type': {},
             'description': {},
             'content': {},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
-            'modifier': {'foreignModel': 'User', 'type': 'scalar'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'tags': {'foreignModel': 'Tag', 'type': 'collection'},
-            'forms': {'foreignModel': 'Form', 'type': 'collection'}
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'modifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'tags': {'foreign_model': 'Tag', 'type': 'collection'},
+            'forms': {'foreign_model': 'Form', 'type': 'collection'}
         },
         'CorpusBackup': {
             'id': {},
@@ -441,8 +441,8 @@ class SQLAQueryBuilder(object):
             'content': {},
             'enterer': {},
             'modifier': {},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
             'tags': {},
             'forms': {}
         },
@@ -450,69 +450,69 @@ class SQLAQueryBuilder(object):
             'id': {},
             'name': {},
             'description': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
         },
         'Form': {
             'id': {},
             'UUID': {},
             'transcription': {},
-            'phoneticTranscription': {},
-            'narrowPhoneticTranscription': {},
-            'morphemeBreak': {},
-            'morphemeGloss': {},
+            'phonetic_transcription': {},
+            'narrow_phonetic_transcription': {},
+            'morpheme_break': {},
+            'morpheme_gloss': {},
             'comments': {},
-            'speakerComments': {},
+            'speaker_comments': {},
             'grammaticality': {},
-            'dateElicited': {'valueConverter': '_getDateValue'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'syntacticCategoryString': {},
-            'morphemeBreakIDs': {},
-            'morphemeGlossIDs': {},
-            'breakGlossCategory': {},
+            'date_elicited': {'value_converter': '_get_date_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'syntactic_category_string': {},
+            'morpheme_break_ids': {},
+            'morpheme_gloss_ids': {},
+            'break_gloss_category': {},
             'syntax': {},
             'semantics': {},
-            'elicitor': {'foreignModel': 'User', 'type': 'scalar'},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
-            'verifier': {'foreignModel': 'User', 'type': 'scalar'},
-            'speaker': {'foreignModel': 'Speaker', 'type': 'scalar'},
-            'elicitationMethod': {'foreignModel': 'ElicitationMethod', 'type': 'scalar'},
-            'syntacticCategory': {'foreignModel': 'SyntacticCategory', 'type': 'scalar'},
-            'source': {'foreignModel': 'Source', 'type': 'scalar'},
-            'translations': {'foreignModel': 'Translation', 'type': 'collection'},
-            'tags': {'foreignModel': 'Tag', 'type': 'collection'},
-            'files': {'foreignModel': 'File', 'type': 'collection'},
-            'collections': {'foreignModel': 'Collection', 'type': 'collection'},
-            'memorizers': {'foreignModel': 'User', 'type': 'collection'},
-            'corpora': {'foreignModel': 'Corpus', 'type': 'collection'}
+            'elicitor': {'foreign_model': 'User', 'type': 'scalar'},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'verifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'speaker': {'foreign_model': 'Speaker', 'type': 'scalar'},
+            'elicitation_method': {'foreign_model': 'ElicitationMethod', 'type': 'scalar'},
+            'syntactic_category': {'foreign_model': 'SyntacticCategory', 'type': 'scalar'},
+            'source': {'foreign_model': 'Source', 'type': 'scalar'},
+            'translations': {'foreign_model': 'Translation', 'type': 'collection'},
+            'tags': {'foreign_model': 'Tag', 'type': 'collection'},
+            'files': {'foreign_model': 'File', 'type': 'collection'},
+            'collections': {'foreign_model': 'Collection', 'type': 'collection'},
+            'memorizers': {'foreign_model': 'User', 'type': 'collection'},
+            'corpora': {'foreign_model': 'Corpus', 'type': 'collection'}
         },
         'FormBackup': {
             'id': {},
             'UUID': {},
             'form_id': {},
             'transcription': {},
-            'phoneticTranscription': {},
-            'narrowPhoneticTranscription': {},
-            'morphemeBreak': {},
-            'morphemeGloss': {},
+            'phonetic_transcription': {},
+            'narrow_phonetic_transcription': {},
+            'morpheme_break': {},
+            'morpheme_gloss': {},
             'comments': {},
-            'speakerComments': {},
+            'speaker_comments': {},
             'grammaticality': {},
-            'dateElicited': {'valueConverter': '_getDateValue'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'syntacticCategoryString': {},
-            'morphemeBreakIDs': {},
-            'morphemeGlossIDs': {},
-            'breakGlossCategory': {},
+            'date_elicited': {'value_converter': '_get_date_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'syntactic_category_string': {},
+            'morpheme_break_ids': {},
+            'morpheme_gloss_ids': {},
+            'break_gloss_category': {},
             'syntax': {},
             'semantics': {},
             'elicitor': {},
             'enterer': {},
             'verifier': {},
             'speaker': {},
-            'elicitationMethod': {},
-            'syntacticCategory': {},
+            'elicitation_method': {},
+            'syntactic_category': {},
             'source': {},
             'translations': {},
             'tags': {},
@@ -524,37 +524,37 @@ class SQLAQueryBuilder(object):
             'name': {},
             'search': {},
             'description': {},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'File': {
             'id': {},
             'filename': {},
             'name': {},
-            'MIMEtype': {},
+            'MIME_type': {},
             'size': {},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
             'description': {},
-            'dateElicited': {'valueConverter': '_getDateValue'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'elicitor': {'foreignModel': 'User', 'type': 'scalar'},
-            'speaker': {'foreignModel': 'Speaker', 'type': 'scalar'},
-            'parentFile': {'foreignModel': 'File', 'type': 'scalar'},
-            'utteranceType': {},
+            'date_elicited': {'value_converter': '_get_date_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'elicitor': {'foreign_model': 'User', 'type': 'scalar'},
+            'speaker': {'foreign_model': 'Speaker', 'type': 'scalar'},
+            'parent_file': {'foreign_model': 'File', 'type': 'scalar'},
+            'utterance_type': {},
             'start': {},
             'end': {},
             'url': {},
             'password': {},
-            'tags': {'foreignModel': 'Tag', 'type': 'collection'},
-            'forms': {'foreignModel': 'Collection', 'type': 'collection'},
-            'collections': {'foreignModel': 'Collection', 'type': 'collection'}
+            'tags': {'foreign_model': 'Tag', 'type': 'collection'},
+            'forms': {'foreign_model': 'Collection', 'type': 'collection'},
+            'collections': {'foreign_model': 'Collection', 'type': 'collection'}
         },
         'Translation': {
             'id': {},
             'transcription': {},
             'grammaticality': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'Language': {
             'Id': {},
@@ -565,12 +565,12 @@ class SQLAQueryBuilder(object):
             'Type': {},
             'Ref_Name': {},
             'Comment': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'Memorizer': {
             'id': {},
-            'firstName': {},
-            'lastName': {},
+            'first_name': {},
+            'last_name': {},
             'role': {}
         },
         'Morphology': {
@@ -578,13 +578,13 @@ class SQLAQueryBuilder(object):
             'UUID': {},
             'name': {},
             'description': {},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
-            'modifier': {'foreignModel': 'User', 'type': 'scalar'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'datetimeCompiled': {'valueConverter': '_getDatetimeValue'},
-            'compileSucceeded': {},
-            'compileMessage': {},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'modifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'datetime_compiled': {'value_converter': '_get_datetime_value'},
+            'compile_succeeded': {},
+            'compile_message': {},
         },
         'MorphologyBackup': {
             'id': {},
@@ -594,19 +594,19 @@ class SQLAQueryBuilder(object):
             'description': {},
             'enterer': {},
             'modifier': {},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'datetimeCompiled': {'valueConverter': '_getDatetimeValue'},
-            'compileSucceeded': {},
-            'compileMessage': {},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'datetime_compiled': {'value_converter': '_get_datetime_value'},
+            'compile_succeeded': {},
+            'compile_message': {},
         },
         'Orthography': {
             'id': {},
             'name': {},
             'orthography': {},
             'lowercase': {},
-            'initialGlottalStops': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'initial_glottal_stops': {},
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'Phonology': {
             'id': {},
@@ -614,13 +614,13 @@ class SQLAQueryBuilder(object):
             'name': {},
             'description': {},
             'script': {},
-            'enterer': {'foreignModel': 'User', 'type': 'scalar'},
-            'modifier': {'foreignModel': 'User', 'type': 'scalar'},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'datetimeCompiled': {'valueConverter': '_getDatetimeValue'},
-            'compileSucceeded': {},
-            'compileMessage': {},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'modifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'datetime_compiled': {'value_converter': '_get_datetime_value'},
+            'compile_succeeded': {},
+            'compile_message': {},
         },
         'PhonologyBackup': {
             'id': {},
@@ -631,17 +631,17 @@ class SQLAQueryBuilder(object):
             'script': {},
             'enterer': {},
             'modifier': {},
-            'datetimeEntered': {'valueConverter': '_getDatetimeValue'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'datetimeCompiled': {'valueConverter': '_getDatetimeValue'},
-            'compileSucceeded': {},
-            'compileMessage': {},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'datetime_compiled': {'value_converter': '_get_datetime_value'},
+            'compile_succeeded': {},
+            'compile_message': {},
         },
         'Source': {
             'id': {},
             'file_id': {},
-            'file': {'foreignModel': 'File', 'type': 'scalar'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
+            'file': {'foreign_model': 'File', 'type': 'scalar'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
             'type': {},
             'key': {},
             'address': {},
@@ -655,7 +655,7 @@ class SQLAQueryBuilder(object):
             'howpublished': {},
             'institution': {},
             'journal': {},
-            'keyField': {},
+            'key_field': {},
             'month': {},
             'note': {},
             'number': {},
@@ -665,7 +665,7 @@ class SQLAQueryBuilder(object):
             'school': {},
             'series': {},
             'title': {},
-            'typeField': {},
+            'type_field': {},
             'url': {},
             'volume': {},
             'year': {},
@@ -685,45 +685,45 @@ class SQLAQueryBuilder(object):
         },
         'Speaker': {
             'id': {},
-            'firstName': {},
-            'lastName': {},
+            'first_name': {},
+            'last_name': {},
             'dialect': {},
-            'pageContent': {},
-            'markupLanguage': {},
+            'page_content': {},
+            'markup_language': {},
             'html': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'SyntacticCategory': {
             'id': {},
             'name': {},
             'type': {},
             'description': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'User': {
             'id': {},
-            'firstName': {},
-            'lastName': {},
+            'first_name': {},
+            'last_name': {},
             'email': {},
             'affiliation': {},
             'role': {},
-            'markupLanguage': {},
-            'pageContent': {},
+            'markup_language': {},
+            'page_content': {},
             'html': {},
-            'inputOrthography': {'foreignModel': 'Orthography', 'type': 'scalar'},
-            'outputOrthography': {'foreignModel': 'Orthography', 'type': 'scalar'},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'},
-            'rememberedForms': {'foreignModel': 'Form', 'type': 'collection'}
+            'input_orthography': {'foreign_model': 'Orthography', 'type': 'scalar'},
+            'output_orthography': {'foreign_model': 'Orthography', 'type': 'scalar'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'remembered_forms': {'foreign_model': 'Form', 'type': 'collection'}
         },
         'Tag': {
             'id': {},
             'name': {},
             'description': {},
-            'datetimeModified': {'valueConverter': '_getDatetimeValue'}
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
         }
     }
 
-    modelAliases = {
+    model_aliases = {
         'Memorizer': 'User'
     }
 
@@ -754,101 +754,101 @@ class SQLAQueryBuilder(object):
     # Model getters
     ############################################################################
 
-    def _getModelName(self, modelName):
-        """Always return modelName; store an error if modelName is invalid."""
-        if modelName not in self.schema:
-            self._addToErrors(modelName, u'Searching on the %s model is not permitted' % modelName)
-        return modelName
+    def _get_model_name(self, model_name):
+        """Always return model_name; store an error if model_name is invalid."""
+        if model_name not in self.schema:
+            self._add_to_errors(model_name, u'Searching on the %s model is not permitted' % model_name)
+        return model_name
 
-    def _getModel(self, modelName, addToJoins=True):
+    def _get_model(self, model_name, add_to_joins=True):
         try:
-            model = getattr(old_model, self.modelAliases.get(modelName, modelName))
+            model = getattr(old_model, self.model_aliases.get(model_name, model_name))
         except AttributeError:
             model = None
-            self._addToErrors(modelName, u"The OLD has no model %s" % modelName)
+            self._add_to_errors(model_name, u"The OLD has no model %s" % model_name)
 
         # Store any implicit joins in self.joins to await addition to the query
-        # in self._addJoinsToQuery.  Using sqlalchemy.orm's aliased to alias
+        # in self._add_joins_to_query.  Using sqlalchemy.orm's aliased to alias
         # models/tables is what permits filters on multiple -to-many relations.
         # Aliasing File while searching Form.files, for example, permits us to
         # retrieve all forms that are associated to file 71 and file 74.
-        if addToJoins and modelName != self.modelName:
-            joinModels = self.models2joins.get(self.modelName, {})
-            if modelName in joinModels:
-                joinCollectionName = joinModels[modelName]
-                joinCollection = getattr(getattr(old_model, self.modelName),
-                                        joinCollectionName)
+        if add_to_joins and model_name != self.model_name:
+            join_models = self.models2joins.get(self.model_name, {})
+            if model_name in join_models:
+                join_collection_name = join_models[model_name]
+                join_collection = getattr(getattr(old_model, self.model_name),
+                                        join_collection_name)
                 model = aliased(model)
-                self.joins.append((model, joinCollection))
+                self.joins.append((model, join_collection))
             else:
-                self._addToErrors(modelName,
+                self._add_to_errors(model_name,
                     u"Searching the %s model by joining on the %s model is not possible" % (
-                        self.modelName, modelName))
+                        self.model_name, model_name))
         return model
 
-    def _getAttributeModelName(self, attributeName, modelName):
+    def _get_attribute_model_name(self, attribute_name, model_name):
         """Returns the name of the model X that stores the data for the attribute
-        A of model M, e.g., the attributeModelName for modelName='Form' and
-        attributeName='enterer' is 'User'.
+        A of model M, e.g., the attribute_model_name for model_name='Form' and
+        attribute_name='enterer' is 'User'.
         """
-        attributeDict = self._getAttributeDict(attributeName, modelName)
+        attribute_dict = self._get_attribute_dict(attribute_name, model_name)
         try:
-            return attributeDict['foreignModel']
+            return attribute_dict['foreign_model']
         except KeyError:
-            self._addToErrors(u'%s.%s' % (modelName, attributeName),
+            self._add_to_errors(u'%s.%s' % (model_name, attribute_name),
                 u'The %s attribute of the %s model does not represent a many-to-one relation.' % (
-                    attributeName, modelName))
+                    attribute_name, model_name))
         except:
-            pass    # probably a TypeError, meaning modelName.attributeName is invalid; would have already been caught
+            pass    # probably a TypeError, meaning model_name.attribute_name is invalid; would have already been caught
 
     ############################################################################
     # Attribute getters
     ############################################################################
 
-    def _getAttributeName(self, attributeName, modelName):
-        """Return attributeName or cache an error if attributeName is not in
-        self.schema[modelName].
+    def _get_attribute_name(self, attribute_name, model_name):
+        """Return attribute_name or cache an error if attribute_name is not in
+        self.schema[model_name].
         """
-        attributeDict = self._getAttributeDict(attributeName, modelName, True)
-        return attributeName
+        attribute_dict = self._get_attribute_dict(attribute_name, model_name, True)
+        return attribute_name
 
-    def _getAttributeDict(self, attributeName, modelName, reportError=False):
+    def _get_attribute_dict(self, attribute_name, model_name, report_error=False):
         """Return the dict needed to validate a given attribute of a given model,
-        or return None.  Propagate an error (optionally) if the attributeName is
+        or return None.  Propagate an error (optionally) if the attribute_name is
         invalid.
         """
-        attributeDict = self.schema.get(modelName, {}).get(
-            attributeName, None)
-        if attributeDict is None and reportError:
-            self._addToErrors('%s.%s' % (modelName, attributeName),
-                u'Searching on %s.%s is not permitted' % (modelName, attributeName))
-        return attributeDict
+        attribute_dict = self.schema.get(model_name, {}).get(
+            attribute_name, None)
+        if attribute_dict is None and report_error:
+            self._add_to_errors('%s.%s' % (model_name, attribute_name),
+                u'Searching on %s.%s is not permitted' % (model_name, attribute_name))
+        return attribute_dict
 
-    def _getAttribute(self, attributeName, model, modelName):
+    def _get_attribute(self, attribute_name, model, model_name):
         try:
-            attribute = self._collateAttribute(getattr(model, attributeName))
+            attribute = self._collate_attribute(getattr(model, attribute_name))
         except AttributeError:  # model can be None
             attribute = None
-            self._addToErrors('%s.%s' % (modelName, attributeName),
-                u"There is no attribute %s of %s" % (attributeName, modelName))
+            self._add_to_errors('%s.%s' % (model_name, attribute_name),
+                u"There is no attribute %s of %s" % (attribute_name, model_name))
         return attribute
 
-    def _collateAttribute(self, attribute):
+    def _collate_attribute(self, attribute):
         """Append a MySQL COLLATE utf8_bin expression after the column name, if
         appropriate.  This allows regexp and like searches to be case-sensitive.
         An example SQLA query would be Session.query(model.Form).filter(
         collate(model.Form.transcription, 'utf8_bin').like(u'a%'))
         
-        Previously there was a condition on collation that the relationName be in
+        Previously there was a condition on collation that the relation_name be in
         ('like', 'regexp').  This condition was removed because MySQL does case-
         insensitive equality searches too!
         """
         if self.RDBMSName == 'mysql' and attribute is not None:
             try:
-                attributeType = attribute.property.columns[0].type
+                attribute_type = attribute.property.columns[0].type
             except AttributeError:
-                attributeType = None
-            if isinstance(attributeType, self.SQLAlchemyStringTypes):
+                attribute_type = None
+            if isinstance(attribute_type, self.SQLAlchemyStringTypes):
                 attribute = collate(attribute, 'utf8_bin')
         return attribute
 
@@ -856,49 +856,49 @@ class SQLAQueryBuilder(object):
     # Relation getters
     ############################################################################
 
-    def _getRelationName(self, relationName, modelName, attributeName):
-        """Return relationName or its alias; propagate an error if relationName is invalid."""
-        relationDict = self._getRelationDict(relationName, modelName, attributeName, True)
+    def _get_relation_name(self, relation_name, model_name, attribute_name):
+        """Return relation_name or its alias; propagate an error if relation_name is invalid."""
+        relation_dict = self._get_relation_dict(relation_name, model_name, attribute_name, True)
         try:
-            return relationDict.get('alias', relationName)
-        except AttributeError:  # relationDict can be None
+            return relation_dict.get('alias', relation_name)
+        except AttributeError:  # relation_dict can be None
             return None
 
-    def _getRelationDict(self, relationName, modelName, attributeName, reportError=False):
-        attributeRelations = self._getAttributeRelations(attributeName, modelName)
+    def _get_relation_dict(self, relation_name, model_name, attribute_name, report_error=False):
+        attribute_relations = self._get_attribute_relations(attribute_name, model_name)
         try:
-            relationDict = attributeRelations.get(relationName, None)
+            relation_dict = attribute_relations.get(relation_name, None)
         except AttributeError:
-            relationDict = None
-        if relationDict is None and reportError:
-            self._addToErrors('%s.%s.%s' % (modelName, attributeName, relationName),
-                u"The relation %s is not permitted for %s.%s" % (relationName, modelName, attributeName))
-        return relationDict
+            relation_dict = None
+        if relation_dict is None and report_error:
+            self._add_to_errors('%s.%s.%s' % (model_name, attribute_name, relation_name),
+                u"The relation %s is not permitted for %s.%s" % (relation_name, model_name, attribute_name))
+        return relation_dict
 
-    def _getAttributeRelations(self, attributeName, modelName):
+    def _get_attribute_relations(self, attribute_name, model_name):
         """Return the data structure encoding what relations are valid for the
         input attribute name.
         """
-        attributeDict = self._getAttributeDict(attributeName, modelName)
+        attribute_dict = self._get_attribute_dict(attribute_name, model_name)
         try:
-            if attributeDict.get('foreignModel'):
-                return self.equalityRelations
+            if attribute_dict.get('foreign_model'):
+                return self.equality_relations
             else:
                 return self.relations
-        except AttributeError:  # attributeDict can be None
+        except AttributeError:  # attribute_dict can be None
             return None
 
-    def _getRelation(self, relationName, attribute, attributeName, modelName):
+    def _get_relation(self, relation_name, attribute, attribute_name, model_name):
         try:
-            if relationName == 'regexp':
+            if relation_name == 'regexp':
                 op = getattr(attribute, 'op')
                 relation = op('regexp')
             else:
-                relation = getattr(attribute, relationName)
+                relation = getattr(attribute, relation_name)
         except AttributeError:  # attribute can be None
             relation = None
-            self._addToErrors('%s.%s.%s' % (modelName, attributeName, relationName),
-                u"There is no relation '%s' of '%s.%s'" % (relationName, modelName, attributeName))
+            self._add_to_errors('%s.%s.%s' % (model_name, attribute_name, relation_name),
+                u"There is no relation '%s' of '%s.%s'" % (relation_name, model_name, attribute_name))
         return relation
 
     ############################################################################
@@ -906,152 +906,152 @@ class SQLAQueryBuilder(object):
     ############################################################################
 
     def _normalize(self, value):
-        def normalizeIfString(value):
+        def normalize_if_string(value):
             if type(value) in (str, unicode):
                 return normalize(value)
             return value
-        value = normalizeIfString(value)
+        value = normalize_if_string(value)
         if type(value) is list:
-            value = [normalizeIfString(i) for i in value]
+            value = [normalize_if_string(i) for i in value]
         return value
 
-    def _getValueConverter(self, attributeName, modelName):
-        attributeDict = self._getAttributeDict(attributeName, modelName)
+    def _get_value_converter(self, attribute_name, model_name):
+        attribute_dict = self._get_attribute_dict(attribute_name, model_name)
         try:
-            valueConverterName = attributeDict.get('valueConverter', '')
-            return getattr(self, valueConverterName, None)
-        except AttributeError:  # attributeDict can be None
+            value_converter_name = attribute_dict.get('value_converter', '')
+            return getattr(self, value_converter_name, None)
+        except AttributeError:  # attribute_dict can be None
             return None
 
-    def _getValue(self, value, modelName, attributeName, relationName):
-        """Unicode normalize & modify the value using a valueConverter (if necessary)."""
+    def _get_value(self, value, model_name, attribute_name, relation_name):
+        """Unicode normalize & modify the value using a value_converter (if necessary)."""
         value = self._normalize(value)    # unicode normalize (NFD) search patterns; we might want to parameterize this
-        valueConverter = self._getValueConverter(attributeName, modelName)
-        if valueConverter is not None:
+        value_converter = self._get_value_converter(attribute_name, model_name)
+        if value_converter is not None:
             if type(value) is type([]):
-                value = [valueConverter(li) for li in value]
+                value = [value_converter(li) for li in value]
             else:
-                value = valueConverter(value)
+                value = value_converter(value)
         return value
 
     ############################################################################
     # Filter expression getters
     ############################################################################
 
-    def _getInvalidFilterExpressionMessage(self, modelName, attributeName,
-                                          relationName, value):
-        return u"Invalid filter expression: %s.%s.%s(%s)" % (modelName,
-                                            attributeName, relationName, repr(value))
+    def _get_invalid_filter_expression_message(self, model_name, attribute_name,
+                                          relation_name, value):
+        return u"Invalid filter expression: %s.%s.%s(%s)" % (model_name,
+                                            attribute_name, relation_name, repr(value))
 
-    def _getInvalidModelAttributeErrors(self, relation, value, modelName,
-            attributeName, relationName, attribute, attributeModelName, attributeModelAttributeName):
-        """Avoid catching a (costly) RuntimeError by preventing _getFilterExpression
+    def _get_invalid_model_attribute_errors(self, relation, value, model_name,
+            attribute_name, relation_name, attribute, attribute_model_name, attribute_model_attribute_name):
+        """Avoid catching a (costly) RuntimeError by preventing _get_filter_expression
         from attempting to build relation(value) or attribute.has(relation(value)).
         We do this by returning a non-empty list of error tuples if Model.attribute
         errors are present in self.errors.
         """
         e = []
-        if attributeModelName:
-            errorKey = '%s.%s' % (attributeModelName, attributeModelAttributeName)
-            if self.errors.get(errorKey) == u'Searching on the %s is not permitted' % errorKey:
-                e.append(('%s.%s.%s' % (attributeModelName, attributeModelAttributeName, relationName),
-                    self._getInvalidFilterExpressionMessage(attributeModelName,
-                            attributeModelAttributeName, relationName, value)))
-        errorKey = '%s.%s' % (modelName, attributeName)
-        if self.errors.get(errorKey) == u'Searching on %s is not permitted' % errorKey:
-            e.append(('%s.%s.%s' % (modelName, attributeName, relationName),
-                self._getInvalidFilterExpressionMessage(modelName, attributeName,
-                                                        relationName, value)))
+        if attribute_model_name:
+            error_key = '%s.%s' % (attribute_model_name, attribute_model_attribute_name)
+            if self.errors.get(error_key) == u'Searching on the %s is not permitted' % error_key:
+                e.append(('%s.%s.%s' % (attribute_model_name, attribute_model_attribute_name, relation_name),
+                    self._get_invalid_filter_expression_message(attribute_model_name,
+                            attribute_model_attribute_name, relation_name, value)))
+        error_key = '%s.%s' % (model_name, attribute_name)
+        if self.errors.get(error_key) == u'Searching on %s is not permitted' % error_key:
+            e.append(('%s.%s.%s' % (model_name, attribute_name, relation_name),
+                self._get_invalid_filter_expression_message(model_name, attribute_name,
+                                                        relation_name, value)))
         return e
 
-    def _getMetaRelation(self, attribute, modelName, attributeName):
+    def _get_meta_relation(self, attribute, model_name, attribute_name):
         """Return the has() or the any() method of the input attribute, depending
-        on the value of schema[modelName][attributeName]['type'].
+        on the value of schema[model_name][attribute_name]['type'].
         """
         return getattr(attribute, {'scalar': 'has', 'collection': 'any'}[
-            self.schema[modelName][attributeName]['type']])
+            self.schema[model_name][attribute_name]['type']])
 
-    def _getFilterExpression(self, relation, value, modelName, attributeName,
-                             relationName, attribute=None, attributeModelName=None,
-                             attributeModelAttributeName=None):
+    def _get_filter_expression(self, relation, value, model_name, attribute_name,
+                             relation_name, attribute=None, attribute_model_name=None,
+                             attribute_model_attribute_name=None):
         """Attempt to return relation(value), catching and storing errors as
         needed.  If 5 args are provided, we are doing a [mod, attr, rel, val]
-        search; if all 8 are provided, it's a [mod, attr, attrModAttr, rel, val]
+        search; if all 8 are provided, it's a [mod, attr, attr_mod_attr, rel, val]
         one.
         """
-        invalidModelAttributeErrors = self._getInvalidModelAttributeErrors(
-            relation, value, modelName, attributeName, relationName, attribute,
-            attributeModelName, attributeModelAttributeName)
-        if invalidModelAttributeErrors:
-            filterExpression = None
-            for e in invalidModelAttributeErrors:
-                self._addToErrors(e[0], e[1])
+        invalid_model_attribute_errors = self._get_invalid_model_attribute_errors(
+            relation, value, model_name, attribute_name, relation_name, attribute,
+            attribute_model_name, attribute_model_attribute_name)
+        if invalid_model_attribute_errors:
+            filter_expression = None
+            for e in invalid_model_attribute_errors:
+                self._add_to_errors(e[0], e[1])
         else:
             try:
-                if attributeModelName:
-                    metaRelation = self._getMetaRelation(attribute, modelName, attributeName)
-                    filterExpression = metaRelation(relation(value))
+                if attribute_model_name:
+                    meta_relation = self._get_meta_relation(attribute, model_name, attribute_name)
+                    filter_expression = meta_relation(relation(value))
                 else:
-                    filterExpression = relation(value)
+                    filter_expression = relation(value)
             except AttributeError:
-                filterExpression = None
-                self._addToErrors('%s.%s' % (modelName, attributeName),
+                filter_expression = None
+                self._add_to_errors('%s.%s' % (model_name, attribute_name),
                     u'The %s.%s attribute does not represent a many-to-one relation.' % (
-                        modelName, attributeName))
+                        model_name, attribute_name))
             except TypeError:
-                filterExpression = None
-                self._addToErrors('%s.%s.%s' % (modelName, attributeName, relationName),
-                    self._getInvalidFilterExpressionMessage(modelName,
-                                            attributeName, relationName, value))
+                filter_expression = None
+                self._add_to_errors('%s.%s.%s' % (model_name, attribute_name, relation_name),
+                    self._get_invalid_filter_expression_message(model_name,
+                                            attribute_name, relation_name, value))
             except InvalidRequestError, e:
-                filterExpression = None
+                filter_expression = None
                 self.errors['InvalidRequestError'] = e.__unicode__()
             except OperationalError, e:
-                filterExpression = None
+                filter_expression = None
                 self.errors['OperationalError'] = e.__unicode__()
             except RuntimeError, e:
-                filterExpression = None
+                filter_expression = None
                 self.errors['RuntimeError'] = e.__unicode__()
-        return filterExpression
+        return filter_expression
 
-    def _getSimpleFilterExpression(self, *args):
+    def _get_simple_filter_expression(self, *args):
         """Build an SQLAlchemy filter expression.  Examples:
 
         1. ['Form', 'transcription', '=', 'abc'] =>
            model.Form.transcription.__eq__('abc')
 
-        2. ['Form', 'enterer', 'firstName', 'like', 'J%'] =>
+        2. ['Form', 'enterer', 'first_name', 'like', 'J%'] =>
            Session.query(model.Form)\
-                .filter(model.Form.enterer.has(model.User.firstName.like(u'J%')))
+                .filter(model.Form.enterer.has(model.User.first_name.like(u'J%')))
 
         3. ['Tag', 'name', 'like', '%abc%'] (when searching the Form model) =>
-           aliasedTag = aliased(model.Tag)
+           aliased_tag = aliased(model.Tag)
            Session.query(model.Form)\
-                .filter(aliasedTag.name.like(u'%abc%'))\
-                .outerjoin(aliasedTag, model.Form.tags)
+                .filter(aliased_tag.name.like(u'%abc%'))\
+                .outerjoin(aliased_tag, model.Form.tags)
 
         4. ['Form', 'tags', 'name', 'like', '%abc%'] =>
            Session.query(model.Form)\
                 .filter(model.Form.tags.any(model.Tag.name.like(u'%abc%')))
         """
-        modelName = self._getModelName(args[0])
-        attributeName = self._getAttributeName(args[1], modelName)
+        model_name = self._get_model_name(args[0])
+        attribute_name = self._get_attribute_name(args[1], model_name)
         if len(args) == 4:
-            model = self._getModel(modelName)
-            relationName = self._getRelationName(args[2], modelName, attributeName)
-            value = self._getValue(args[3], modelName, attributeName, relationName)
-            attribute = self._getAttribute(attributeName, model, modelName)
-            relation = self._getRelation(relationName, attribute, attributeName, modelName)
-            return self._getFilterExpression(relation, value, modelName, attributeName, relationName)
+            model = self._get_model(model_name)
+            relation_name = self._get_relation_name(args[2], model_name, attribute_name)
+            value = self._get_value(args[3], model_name, attribute_name, relation_name)
+            attribute = self._get_attribute(attribute_name, model, model_name)
+            relation = self._get_relation(relation_name, attribute, attribute_name, model_name)
+            return self._get_filter_expression(relation, value, model_name, attribute_name, relation_name)
         else:
-            attributeModelName = self._getAttributeModelName(attributeName, modelName)
-            attributeModelAttributeName = self._getAttributeName(args[2], attributeModelName)
-            relationName = self._getRelationName(args[3], attributeModelName, attributeModelAttributeName)
-            value = self._getValue(args[4], attributeModelName, attributeModelAttributeName, relationName)
-            model = self._getModel(modelName, False)
-            attribute = self._getAttribute(attributeName, model, modelName)
-            attributeModel = self._getModel(attributeModelName, False)
-            attributeModelAttribute = self._getAttribute(attributeModelAttributeName, attributeModel, attributeModelName)
-            relation = self._getRelation(relationName, attributeModelAttribute, attributeModelAttributeName, attributeModelName)
-            return self._getFilterExpression(relation, value, modelName, attributeName, relationName,
-                                             attribute, attributeModelName, attributeModelAttributeName)
+            attribute_model_name = self._get_attribute_model_name(attribute_name, model_name)
+            attribute_model_attribute_name = self._get_attribute_name(args[2], attribute_model_name)
+            relation_name = self._get_relation_name(args[3], attribute_model_name, attribute_model_attribute_name)
+            value = self._get_value(args[4], attribute_model_name, attribute_model_attribute_name, relation_name)
+            model = self._get_model(model_name, False)
+            attribute = self._get_attribute(attribute_name, model, model_name)
+            attribute_model = self._get_model(attribute_model_name, False)
+            attribute_model_attribute = self._get_attribute(attribute_model_attribute_name, attribute_model, attribute_model_name)
+            relation = self._get_relation(relation_name, attribute_model_attribute, attribute_model_attribute_name, attribute_model_name)
+            return self._get_filter_expression(relation, value, model_name, attribute_name, relation_name,
+                                             attribute, attribute_model_name, attribute_model_attribute_name)

@@ -34,7 +34,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import SyntacticCategory
-from forms import updateFormsContainingThisFormAsMorpheme
+from forms import update_forms_containing_this_form_as_morpheme
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class SyntacticcategoriesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('SyntacticCategory', config=config)
+    query_builder = SQLAQueryBuilder('SyntacticCategory', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -64,14 +64,14 @@ class SyntacticcategoriesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(SyntacticCategory)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -92,10 +92,10 @@ class SyntacticcategoriesController(BaseController):
             schema = SyntacticCategorySchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            syntacticCategory = createNewSyntacticCategory(data)
-            Session.add(syntacticCategory)
+            syntactic_category = create_new_syntactic_category(data)
+            Session.add(syntactic_category)
             Session.commit()
-            return syntacticCategory
+            return syntactic_category
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -115,7 +115,7 @@ class SyntacticcategoriesController(BaseController):
             defined in :mod:`onlinelinguisticdatabase.lib.utils`.
 
         """
-        return {'syntacticCategoryTypes': h.syntacticCategoryTypes}
+        return {'syntactic_category_types': h.syntactic_category_types}
 
     @h.jsonify
     @h.restrict('PUT')
@@ -130,23 +130,23 @@ class SyntacticcategoriesController(BaseController):
         :returns: the updated syntactic category model.
 
         """
-        syntacticCategory = Session.query(SyntacticCategory).get(int(id))
-        if syntacticCategory:
+        syntactic_category = Session.query(SyntacticCategory).get(int(id))
+        if syntactic_category:
             try:
-                oldName = syntacticCategory.name
+                old_name = syntactic_category.name
                 schema = SyntacticCategorySchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 data = schema.to_python(values, state)
-                syntacticCategory = updateSyntacticCategory(syntacticCategory, data)
-                # syntacticCategory will be False if there are no changes (cf. updateSyntacticCategory).
-                if syntacticCategory:
-                    Session.add(syntacticCategory)
+                syntactic_category = update_syntactic_category(syntactic_category, data)
+                # syntactic_category will be False if there are no changes (cf. update_syntactic_category).
+                if syntactic_category:
+                    Session.add(syntactic_category)
                     Session.commit()
-                    if syntacticCategory.name != oldName:
-                        updateFormsReferencingThisCategory(syntacticCategory)
-                    return syntacticCategory
+                    if syntactic_category.name != old_name:
+                        update_forms_referencing_this_category(syntactic_category)
+                    return syntactic_category
                 else:
                     response.status_int = 400
                     return {'error':
@@ -173,12 +173,12 @@ class SyntacticcategoriesController(BaseController):
         :returns: the deleted syntactic category model.
 
         """
-        syntacticCategory = Session.query(SyntacticCategory).get(id)
-        if syntacticCategory:
-            Session.delete(syntacticCategory)
+        syntactic_category = Session.query(SyntacticCategory).get(id)
+        if syntactic_category:
+            Session.delete(syntactic_category)
             Session.commit()
-            updateFormsReferencingThisCategory(syntacticCategory)
-            return syntacticCategory
+            update_forms_referencing_this_category(syntactic_category)
+            return syntactic_category
         else:
             response.status_int = 404
             return {'error': 'There is no syntactic category with id %s' % id}
@@ -194,9 +194,9 @@ class SyntacticcategoriesController(BaseController):
         :returns: a syntactic category model object.
 
         """
-        syntacticCategory = Session.query(SyntacticCategory).get(id)
-        if syntacticCategory:
-            return syntacticCategory
+        syntactic_category = Session.query(SyntacticCategory).get(id)
+        if syntactic_category:
+            return syntactic_category
         else:
             response.status_int = 404
             return {'error': 'There is no syntactic category with id %s' % id}
@@ -212,19 +212,19 @@ class SyntacticcategoriesController(BaseController):
         :param str id: the ``id`` value of the syntactic category that will be updated.
         :returns: a dictionary of the form::
 
-                {"syntacticCategory": {...}, "data": {...}}
+                {"syntactic_category": {...}, "data": {...}}
 
-            where the value of the ``syntacticCategory`` key is a dictionary
+            where the value of the ``syntactic_category`` key is a dictionary
             representation of the syntactic category and the value of the
             ``data`` key is a dictionary of valid syntactic category types as
             defined in :mod:`onlinelinguisticdatabase.lib.utils`.
 
         """
-        syntacticCategory = Session.query(SyntacticCategory).get(id)
-        if syntacticCategory:
+        syntactic_category = Session.query(SyntacticCategory).get(id)
+        if syntactic_category:
             return {
-                'data': {'syntacticCategoryTypes': h.syntacticCategoryTypes},
-                'syntacticCategory': syntacticCategory
+                'data': {'syntactic_category_types': h.syntactic_category_types},
+                'syntactic_category': syntactic_category
             }
         else:
             response.status_int = 404
@@ -235,25 +235,25 @@ class SyntacticcategoriesController(BaseController):
 # SyntacticCategory Create & Update Functions
 ################################################################################
 
-def createNewSyntacticCategory(data):
+def create_new_syntactic_category(data):
     """Create a new syntactic category.
 
     :param dict data: the data for the syntactic category to be created.
     :returns: an SQLAlchemy model object representing the syntactic category.
 
     """
-    syntacticCategory = SyntacticCategory()
-    syntacticCategory.name = h.normalize(data['name'])
-    syntacticCategory.type = data['type']
-    syntacticCategory.description = h.normalize(data['description'])
-    syntacticCategory.datetimeModified = datetime.datetime.utcnow()
-    return syntacticCategory
+    syntactic_category = SyntacticCategory()
+    syntactic_category.name = h.normalize(data['name'])
+    syntactic_category.type = data['type']
+    syntactic_category.description = h.normalize(data['description'])
+    syntactic_category.datetime_modified = datetime.datetime.utcnow()
+    return syntactic_category
 
 
-def updateSyntacticCategory(syntacticCategory, data):
+def update_syntactic_category(syntactic_category, data):
     """Update a syntactic category.
 
-    :param syntacticCategory: the syntactic category model to be updated.
+    :param syntactic_category: the syntactic category model to be updated.
     :param dict data: representation of the updated syntactic category.
     :returns: the updated syntactic category model or, if ``changed`` has not
         been set to ``True``, ``False``.
@@ -261,20 +261,20 @@ def updateSyntacticCategory(syntacticCategory, data):
     """
     changed = False
     # Unicode Data
-    changed = h.setAttr(syntacticCategory, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(syntacticCategory, 'type', h.normalize(data['type']), changed)
-    changed = h.setAttr(syntacticCategory, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(syntactic_category, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(syntactic_category, 'type', h.normalize(data['type']), changed)
+    changed = h.set_attr(syntactic_category, 'description', h.normalize(data['description']), changed)
 
     if changed:
-        syntacticCategory.datetimeModified = datetime.datetime.utcnow()
-        return syntacticCategory
+        syntactic_category.datetime_modified = datetime.datetime.utcnow()
+        return syntactic_category
     return changed
 
 
-def updateFormsReferencingThisCategory(syntacticCategory):
+def update_forms_referencing_this_category(syntactic_category):
     """Update all forms that reference a syntactic category.
 
-    :param syntacticCategory: a syntactic category model object.
+    :param syntactic_category: a syntactic category model object.
     :returns: ``None``
     
     .. note::
@@ -283,6 +283,6 @@ def updateFormsReferencingThisCategory(syntacticCategory):
         when its name is changed.
 
     """
-    formsOfThisCategory = syntacticCategory.forms
-    for form in formsOfThisCategory:
-        updateFormsContainingThisFormAsMorpheme(form)
+    forms_of_this_category = syntactic_category.forms
+    for form in forms_of_this_category:
+        update_forms_containing_this_form_as_morpheme(form)

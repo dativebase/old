@@ -84,13 +84,13 @@ class TestLoginController(TestController):
         """
 
         # Create an application settings so that there is an object language id
-        applicationSettings = h.generateDefaultApplicationSettings()
-        Session.add(applicationSettings)
+        application_settings = h.generate_default_application_settings()
+        Session.add(application_settings)
         Session.commit()
 
         # Get the contributor
         contributor = Session.query(model.User).filter(model.User.username==u'contributor').first()
-        contributorEmail = contributor.email
+        contributor_email = contributor.email
 
         # Ensure that we can authenticate the contributor
         params = json.dumps({'username': 'contributor', 'password': 'contributorC_1'})
@@ -102,17 +102,17 @@ class TestLoginController(TestController):
         # Now request a password change.  Depending on whether the mail server is
         # set up correctly and whether we have an internet connection, we will
         # receive a 200 OK or a 500 Server Error:
-        config = h.getConfig(configFilename='test.ini')
+        config = h.get_config(config_filename='test.ini')
         password_reset_smtp_server = config.get('password_reset_smtp_server')
         test_email_to = config.get('test_email_to')
-        to_address = test_email_to or contributorEmail
+        to_address = test_email_to or contributor_email
         params = json.dumps({'username': 'contributor'})
         response = self.app.post(url(controller='login', action='email_reset_password'),
                                  params, self.json_headers, status=[200, 500])
         resp = json.loads(response.body)
         assert (response.status_int == 200 and
-                resp['validUsername'] == True and
-                resp['passwordReset'] == True) or (
+                resp['valid_username'] == True and
+                resp['password_reset'] == True) or (
                 response.status_int == 500 and
                 resp['error'] == u'The server is unable to send email.')
         assert response.content_type == 'application/json'
@@ -121,7 +121,7 @@ class TestLoginController(TestController):
         # the password was sent back to us in the JSON response.  In a production
         # or development environment, this would not be the case.
         if response.status_int == 200:
-            newPassword = resp['newPassword']
+            new_password = resp['new_password']
             if password_reset_smtp_server == 'smtp.gmail.com':
                 log.info('A new password was emailed via Gmail to %s.' % to_address)
             else:
@@ -136,7 +136,7 @@ class TestLoginController(TestController):
             assert response.content_type == 'application/json'
 
             # Make sure that the new password works.
-            params = json.dumps({'username': 'contributor', 'password': newPassword})
+            params = json.dumps({'username': 'contributor', 'password': new_password})
             response = self.app.post(url(controller='login', action='authenticate'),
                                      params, self.json_headers)
             resp = json.loads(response.body)

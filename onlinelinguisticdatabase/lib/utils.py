@@ -61,20 +61,20 @@ log = logging.getLogger(__name__)
 # Get data for 'new' action
 ################################################################################
 
-def getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes=[]):
+def get_data_for_new_action(GET_params, getter_map, model_name_map, mandatory_attributes=[]):
     """Return the data needed to create a new model or edit an existing one.
     
     :param GET_params: the Pylons dict-like object containing the query string
         parameters of the request.
-    :param dict getterMap: maps attribute names to functions that get the
+    :param dict getter_map: maps attribute names to functions that get the
         relevant resources.
-    :param dict modelNameMap: maps attribute names to the relevant model name.
-    :param list mandatoryAttributes: names of attributes whose values are always
+    :param dict model_name_map: maps attribute names to the relevant model name.
+    :param list mandatory_attributes: names of attributes whose values are always
         included in the result
     :returns: a dictionary from plural resource names to lists of resources.
 
     If no GET parameters are provided (i.e., GET_params is empty), then retrieve
-    all data (using getterMap) return them.
+    all data (using getter_map) return them.
 
     If GET parameters are specified, then for each parameter whose value is a
     non-empty string (and is not a valid ISO 8601 datetime), retrieve and
@@ -82,29 +82,29 @@ def getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes
 
     If the value of a GET parameter is a valid ISO 8601 datetime string,
     retrieve and return the appropriate list of objects *only* if the
-    datetime param does *not* match the most recent datetimeModified value
+    datetime param does *not* match the most recent datetime_modified value
     of the relevant data store (i.e., model object).  This makes sense because a
     non-match indicates that the requester has out-of-date data.
 
     """
-    result = dict([(key, []) for key in getterMap])
+    result = dict([(key, []) for key in getter_map])
     if GET_params:
-        for key in getterMap:
-            if key in mandatoryAttributes:
-                result[key] = getterMap[key]()
+        for key in getter_map:
+            if key in mandatory_attributes:
+                result[key] = getter_map[key]()
             else:
                 val = GET_params.get(key)
                 if val:
-                    valAsDatetimeObj = datetimeString2datetime(val)
-                    if valAsDatetimeObj:
-                        if valAsDatetimeObj != getMostRecentModificationDatetime(
-                        modelNameMap[key]):
-                            result[key] = getterMap[key]()
+                    val_as_datetime_obj = datetime_string2datetime(val)
+                    if val_as_datetime_obj:
+                        if val_as_datetime_obj != get_most_recent_modification_datetime(
+                        model_name_map[key]):
+                            result[key] = getter_map[key]()
                     else:
-                        result[key] = getterMap[key]()
+                        result[key] = getter_map[key]()
     else:
-        for key in getterMap:
-            result[key] = getterMap[key]()
+        for key in getter_map:
+            result[key] = getter_map[key]()
     return result
 
 
@@ -113,7 +113,7 @@ def getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes
 ################################################################################
 
 
-def deleteKey(dict_, key_):
+def delete_key(dict_, key_):
     """Try to delete the key_ from the dict_; then return the dict_."""
     try:
         del dict_[key_]
@@ -125,7 +125,7 @@ def deleteKey(dict_, key_):
 class JSONOLDEncoder(json.JSONEncoder):
     """Permits the jsonification of an OLD class instance obj via
 
-        jsonString = json.dumps(obj, cls=JSONOLDEncoder)
+        json_string = json.dumps(obj, cls=JSONOLDEncoder)
 
     Note: support for additional OLD classes will be implemented as needed ...
     """
@@ -138,7 +138,7 @@ class JSONOLDEncoder(json.JSONEncoder):
                 return obj.isoformat()
             elif isinstance(obj, Model):
                 try:
-                    return obj.getDict()
+                    return obj.get_dict()
                 except AttributeError:
                     return obj.__dict__
             else:
@@ -186,10 +186,10 @@ def restrict(*methods):
 # File system functions
 ################################################################################
 
-def getOLDDirectoryPath(directoryName, **kwargs):
+def get_OLD_directory_path(directory_name, **kwargs):
     """Return the absolute path to an OLD directory."""
     try:
-        config = getConfig(**kwargs)
+        config = get_config(**kwargs)
         store = config['permanent_store']
         map_ = {
             u'files': u'files',
@@ -199,22 +199,22 @@ def getOLDDirectoryPath(directoryName, **kwargs):
             u'phonologies': u'phonologies',
             u'morphologies': u'morphologies'
         }
-        return os.path.join(store, map_[directoryName])
+        return os.path.join(store, map_[directory_name])
     except Exception:
         return None
 
-def createOLDDirectories(**kwargs):
+def create_OLD_directories(**kwargs):
     """Make all of the required OLD directories.
     
     :param kwargs['config']: a Pylons config object.
-    :param kwargs['configFilename']: the name of a config file, e.g., "test.ini"
+    :param kwargs['config_filename']: the name of a config file, e.g., "test.ini"
 
     """
-    for directoryName in ('files', 'reduced_files', 'users', 'corpora', 'phonologies', 'morphologies'):
-        makeDirectorySafely(getOLDDirectoryPath(directoryName, **kwargs))
+    for directory_name in ('files', 'reduced_files', 'users', 'corpora', 'phonologies', 'morphologies'):
+        make_directory_safely(get_OLD_directory_path(directory_name, **kwargs))
 
 
-def getModificationTime(path):
+def get_modification_time(path):
     """Return the modification time of the file or directory with ``path``.
 
     Return None if path doesn't exist.
@@ -225,18 +225,18 @@ def getModificationTime(path):
     except Exception:
         return None
 
-getFileModificationTime = getModificationTime
+get_file_modification_time = get_modification_time
 
-def getConfig(**kwargs):
+def get_config(**kwargs):
     """Try desperately to get a Pylons config object.  The best thing is if a
     config object is passed in kwargs['config'].
     """
     config = kwargs.get('config')
-    configFilename = kwargs.get('configFilename')
+    config_filename = kwargs.get('config_filename')
     if config:
         return config
-    elif configFilename:
-        return appconfig('config:%s' % configFilename, relative_to='.')
+    elif config_filename:
+        return appconfig('config:%s' % config_filename, relative_to='.')
     else:
         try:
             return appconfig('config:production.ini', relative_to='.')
@@ -250,45 +250,45 @@ def getConfig(**kwargs):
                     from pylons import config
                     return config
 
-def createUserDirectory(user, **kwargs):
+def create_user_directory(user, **kwargs):
     """Create a directory named ``user.username`` in ``<permanent_store>/users/``."""
     try:
-        makeDirectorySafely(os.path.join(getOLDDirectoryPath('users', **kwargs),
+        make_directory_safely(os.path.join(get_OLD_directory_path('users', **kwargs),
                             user.username))
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def destroyUserDirectory(user, **kwargs):
+def destroy_user_directory(user, **kwargs):
     """Destroys a directory named ``user.username`` in ``<permanent_store>/users/``."""
     try:
-        rmtree(os.path.join(getOLDDirectoryPath('users', **kwargs),
+        rmtree(os.path.join(get_OLD_directory_path('users', **kwargs),
                             user.username))
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def renameUserDirectory(oldName, newName, **kwargs):
+def rename_user_directory(old_name, new_name, **kwargs):
     try:
-        oldPath = os.path.join(getOLDDirectoryPath('users', **kwargs), oldName)
-        newPath = os.path.join(getOLDDirectoryPath('users', **kwargs), newName)
+        old_path = os.path.join(get_OLD_directory_path('users', **kwargs), old_name)
+        new_path = os.path.join(get_OLD_directory_path('users', **kwargs), new_name)
         try:
-            os.rename(oldPath, newPath)
+            os.rename(old_path, new_path)
         except OSError:
-            makeDirectorySafely(newPath)
+            make_directory_safely(new_path)
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
 
-def destroyAllDirectories(directoryName, configFilename='test.ini'):
-    """Remove all subdirectories from ``<permanent_store>/directoryName``, e.g., all in /store/corpora/."""
+def destroy_all_directories(directory_name, config_filename='test.ini'):
+    """Remove all subdirectories from ``<permanent_store>/directory_name``, e.g., all in /store/corpora/."""
     try:
-        dirPath = getOLDDirectoryPath(directoryName, configFilename=configFilename)
-        for name in os.listdir(dirPath):
-            path = os.path.join(dirPath, name)
+        dir_path = get_OLD_directory_path(directory_name, config_filename=config_filename)
+        for name in os.listdir(dir_path):
+            path = os.path.join(dir_path, name)
             if os.path.isdir(path):
                 rmtree(path)
     except (TypeError, KeyError), e:
         raise Exception('The config object was inadequate (%s).' % e)
 
-def makeDirectorySafely(path):
+def make_directory_safely(path):
     """Create a directory and avoid race conditions.
     
     Taken from 
@@ -301,7 +301,7 @@ def makeDirectorySafely(path):
         if exception.errno != errno.EEXIST:
             raise
 
-def secureFilename(path):
+def secure_filename(path):
     """Removes null bytes, path.sep and path.altsep from a path.
     From http://lucumr.pocoo.org/2010/12/24/common-mistakes-as-web-developer/
     """
@@ -309,15 +309,15 @@ def secureFilename(path):
         [os.path.sep, os.path.altsep or ''])))
     return patt.sub('', path)
 
-def cleanAndSecureFilename(path):
-    return secureFilename(path).replace("'", "").replace('"', '').replace(' ', '_')
+def clean_and_secure_filename(path):
+    return secure_filename(path).replace("'", "").replace('"', '').replace(' ', '_')
 
 
 ################################################################################
 # String functions
 ################################################################################
 
-def toSingleSpace(string):
+def to_single_space(string):
     """Remove leading and trailing whitespace and replace newlines, tabs and
     sequences of 2 or more space to one space.
     """
@@ -326,17 +326,17 @@ def toSingleSpace(string):
     return patt.sub(' ', string.strip().replace('\n', ' ').replace('\t', ' '))
 
 
-def removeAllWhiteSpace(string):
+def remove_all_white_space(string):
     """Remove all spaces, newlines and tabs."""
     return string.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-def escREMetaChars(string):
+def esc_RE_meta_chars(string):
     """Escapes regex metacharacters so that we can formulate an SQL regular
     expression based on an arbitrary, user-specified inventory of
     graphemes/polygraphs.
 
-        >>> escREMetaChars(u'-')
+        >>> esc_RE_meta_chars(u'-')
         u'\\\-'
 
     """
@@ -348,7 +348,7 @@ def escREMetaChars(string):
     return ''.join([esc(c) for c in string])
 
 
-def camelCase2lowerSpace(name):
+def camel_case2lower_space(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1 \2', s1).lower()
 
@@ -369,7 +369,7 @@ def normalize(unistr):
         return unistr
 
 
-def getUnicodeNames(string):
+def get_unicode_names(string):
     """Returns a string of comma-delimited unicode character names corresponding
     to the characters in the input string.
 
@@ -384,7 +384,7 @@ def getUnicodeNames(string):
         return string
 
 
-def getUnicodeCodePoints(string):
+def get_unicode_code_points(string):
     """Returns a string of comma-delimited unicode code points corresponding
     to the characters in the input string.
 
@@ -394,7 +394,7 @@ def getUnicodeCodePoints(string):
 
 
 
-def normalizeDict(dict_):
+def normalize_dict(dict_):
     """NFD normalize all unicode values in dict_.
     
     """
@@ -415,66 +415,66 @@ class ApplicationSettings(object):
     """ApplicationSettings is a class that adds functionality to a
     ApplicationSettings object.
 
-    The value of the applicationSettings attribute is the most recently added
-    ApplicationSettings model.  Other values, e.g., storageOrthography or
-    morphemeBreakInventory, are class instances or other data structures built
+    The value of the application_settings attribute is the most recently added
+    ApplicationSettings model.  Other values, e.g., storage_orthography or
+    morpheme_break_inventory, are class instances or other data structures built
     upon the application settings properties.
     """
 
     def __init__(self):
-        self.applicationSettings = getApplicationSettings()
-        if self.applicationSettings:
-            self.getAttributes()
+        self.application_settings = get_application_settings()
+        if self.application_settings:
+            self.get_attributes()
 
-    def getAttributes(self):
+    def get_attributes(self):
         """Generate some higher-level data structures for the application
         settings model, providing sensible defaults where appropriate.
         """
-        self.morphemeDelimiters = []
-        if self.applicationSettings.morphemeDelimiters:
-            self.morphemeDelimiters = \
-                        self.applicationSettings.morphemeDelimiters.split(u',')
+        self.morpheme_delimiters = []
+        if self.application_settings.morpheme_delimiters:
+            self.morpheme_delimiters = \
+                        self.application_settings.morpheme_delimiters.split(u',')
 
         self.punctuation = []
-        if self.applicationSettings.punctuation:
-            self.punctuation = list(self.applicationSettings.punctuation)
+        if self.application_settings.punctuation:
+            self.punctuation = list(self.application_settings.punctuation)
 
         self.grammaticalities = [u'']
-        if self.applicationSettings.grammaticalities:
+        if self.application_settings.grammaticalities:
             self.grammaticalities = [u''] + \
-                        self.applicationSettings.grammaticalities.split(u',')
+                        self.application_settings.grammaticalities.split(u',')
 
-        foreignWordNarrowPhoneticTranscriptions, \
-        foreignWordBroadPhoneticTranscriptions, \
-        foreignWordOrthographicTranscriptions, \
-        foreignWordMorphemicTranscriptions = getForeignWordTranscriptions()
+        foreign_word_narrow_phonetic_transcriptions, \
+        foreign_word_broad_phonetic_transcriptions, \
+        foreign_word_orthographic_transcriptions, \
+        foreign_word_morphemic_transcriptions = get_foreign_word_transcriptions()
 
-        self.storageOrthography = []
-        if self.applicationSettings.storageOrthography and \
-        self.applicationSettings.storageOrthography.orthography:
-            self.storageOrthography = \
-                self.applicationSettings.storageOrthography.orthography.split(',')
+        self.storage_orthography = []
+        if self.application_settings.storage_orthography and \
+        self.application_settings.storage_orthography.orthography:
+            self.storage_orthography = \
+                self.application_settings.storage_orthography.orthography.split(',')
 
-        self.punctuationInventory = Inventory(self.punctuation)
-        self.morphemeDelimitersInventory = Inventory(self.morphemeDelimiters)
-        self.narrowPhoneticInventory = Inventory(
-            foreignWordNarrowPhoneticTranscriptions + [u' '] + 
-            self.applicationSettings.narrowPhoneticInventory.split(','))
-        self.broadPhoneticInventory = Inventory(
-            foreignWordBroadPhoneticTranscriptions + [u' '] + 
-            self.applicationSettings.broadPhoneticInventory.split(','))
-        self.orthographicInventory = Inventory(
-            foreignWordOrthographicTranscriptions + 
-            self.punctuation + [u' '] + self.storageOrthography)
-        if self.applicationSettings.morphemeBreakIsOrthographic:
-            self.morphemeBreakInventory = Inventory(
-                foreignWordMorphemicTranscriptions +
-                self.morphemeDelimiters + [u' '] + self.storageOrthography)
+        self.punctuation_inventory = Inventory(self.punctuation)
+        self.morpheme_delimiters_inventory = Inventory(self.morpheme_delimiters)
+        self.narrow_phonetic_inventory = Inventory(
+            foreign_word_narrow_phonetic_transcriptions + [u' '] + 
+            self.application_settings.narrow_phonetic_inventory.split(','))
+        self.broad_phonetic_inventory = Inventory(
+            foreign_word_broad_phonetic_transcriptions + [u' '] + 
+            self.application_settings.broad_phonetic_inventory.split(','))
+        self.orthographic_inventory = Inventory(
+            foreign_word_orthographic_transcriptions + 
+            self.punctuation + [u' '] + self.storage_orthography)
+        if self.application_settings.morpheme_break_is_orthographic:
+            self.morpheme_break_inventory = Inventory(
+                foreign_word_morphemic_transcriptions +
+                self.morpheme_delimiters + [u' '] + self.storage_orthography)
         else:
-            self.morphemeBreakInventory = Inventory(
-                foreignWordMorphemicTranscriptions + 
-                self.morphemeDelimiters + [u' '] +
-                self.applicationSettings.phonemicInventory.split(','))
+            self.morpheme_break_inventory = Inventory(
+                foreign_word_morphemic_transcriptions + 
+                self.morpheme_delimiters + [u' '] +
+                self.application_settings.phonemic_inventory.split(','))
 
 
 ################################################################################
@@ -489,54 +489,54 @@ class Inventory:
     inherits but I don't have time to implement that right now.
     """
 
-    def __init__(self, inputList):
-        self.inputList = inputList
-        self._getUnicodeMetadata(inputList)
-        self._setRegexValidator(inputList)
-        self._compileRegexValidator(self.regexValidator)
+    def __init__(self, input_list):
+        self.input_list = input_list
+        self._get_unicode_metadata(input_list)
+        self._set_regex_validator(input_list)
+        self._compile_regex_validator(self.regex_validator)
 
-    def _getUnicodeMetadata(self, inputList):
-        self.inventoryWithUnicodeMetadata = [self._getNamesAndCodePoints(g)
-                                             for g in inputList]
+    def _get_unicode_metadata(self, input_list):
+        self.inventory_with_unicode_metadata = [self._get_names_and_code_points(g)
+                                             for g in input_list]
 
-    def _getNamesAndCodePoints(self, graph):
-        return (graph, getUnicodeNames(graph), getUnicodeCodePoints(graph))
+    def _get_names_and_code_points(self, graph):
+        return (graph, get_unicode_names(graph), get_unicode_code_points(graph))
 
-    def _setRegexValidator(self, inputList):
-        disjPatt = u'|'.join([escREMetaChars(g) for g in inputList])
-        self.regexValidator = u'^(%s)*$' % disjPatt
+    def _set_regex_validator(self, input_list):
+        disj_patt = u'|'.join([esc_RE_meta_chars(g) for g in input_list])
+        self.regex_validator = u'^(%s)*$' % disj_patt
 
-    def _compileRegexValidator(self, regexValidator):
-        self.compiledRegexValidator = re.compile(regexValidator)
+    def _compile_regex_validator(self, regex_validator):
+        self.compiled_regex_validator = re.compile(regex_validator)
 
-    def getInputList(self):
-        return self.inputList
+    def get_input_list(self):
+        return self.input_list
 
-    def getRegexValidator(self, substr=False):
+    def get_regex_validator(self, substr=False):
         """Returns a regex that matches only strings composed of zero or more
         of the graphemes in the inventory (plus the space character).
         """
 
-        return self.regexValidator
+        return self.regex_validator
 
-    def getNonMatchingSubstrings(self, string):
+    def get_non_matching_substrings(self, string):
         """Return a list of substrings of string that are not constructable
         using the inventory.  This is useful for showing invalid substrings.
         """
 
-        regex = u'|'.join([escREMetaChars(g) for g in self.inputList])
+        regex = u'|'.join([esc_RE_meta_chars(g) for g in self.input_list])
         regex = u'(%s)+' % regex
         patt = re.compile(regex)
         list_ = patt.split(string)
-        nonMatchingSubstrings = [escREMetaChars(x) for x in list_[::2] if x]
-        return nonMatchingSubstrings
+        non_matching_substrings = [esc_RE_meta_chars(x) for x in list_[::2] if x]
+        return non_matching_substrings
 
-    def stringIsValid(self, string):
+    def string_is_valid(self, string):
         """Return False if string cannot be generated by concatenating the
         elements of the orthography; otherwise, return True.
         """
 
-        if self.compiledRegexValidator.match(string):
+        if self.compiled_regex_validator.match(string):
             return True
         return False
 
@@ -569,10 +569,10 @@ class EventHook(object):
         for handler in self.__handlers:
             handler(*args, **keywargs)
 
-    def clearObjectHandlers(self, inObject):
-        for theHandler in self.__handlers:
-            if theHandler.im_self == inObject:
-                self -= theHandler
+    def clear_object_handlers(self, in_object):
+        for the_handler in self.__handlers:
+            if the_handler.im_self == in_object:
+                self -= the_handler
 
 
 
@@ -582,176 +582,176 @@ class EventHook(object):
 ################################################################################
 
 
-def getForeignWords():
+def get_foreign_words():
     """Return the forms that are tagged with a 'foreign word' tag.  This is
     useful for input validation as foreign words may contain otherwise illicit
     characters/graphemes.
     """
 
-    foreignWordTag = getForeignWordTag()
-    if foreignWordTag:
+    foreign_word_tag = get_foreign_word_tag()
+    if foreign_word_tag:
         return Session.query(Form).filter(
-            Form.tags.contains(foreignWordTag)).all()
+            Form.tags.contains(foreign_word_tag)).all()
     else:
-        return getForms()
+        return get_forms()
 
 
-def getForeignWordTranscriptions():
-    """Returns a 4-tuple (fWNarrPhonTranscrs, fWBroadPhonTranscrs,
-    fWOrthTranscrs, fWMorphTranscrs) where each element is a list of
+def get_foreign_word_transcriptions():
+    """Returns a 4-tuple (foreign_word_narrow_phonetic_transcriptions, foreign_word_broad_phonetic_transcriptions,
+    foreign_word_orthographic_transcriptions, foreign_word_morphemic_transcriptions) where each element is a list of
     transcriptions (narrow phonetic, broad phonetic, orthographic, morphemic)
     of foreign words.
 
     """
 
-    foreignWords = getForeignWords()
-    fWNarrPhonTranscrs = []
-    fWBroadPhonTranscrs = []
-    fWOrthTranscrs = []
-    fWMorphTranscrs = []
-    for fw in foreignWords:
-        if fw.narrowPhoneticTranscription:
-            fWNarrPhonTranscrs.append(fw.narrowPhoneticTranscription)
-        if fw.phoneticTranscription:
-            fWBroadPhonTranscrs.append(fw.phoneticTranscription)
-        if fw.morphemeBreak:
-            fWMorphTranscrs.append(fw.morphemeBreak)
-        fWOrthTranscrs.append(fw.transcription)
-    return (fWNarrPhonTranscrs, fWBroadPhonTranscrs, fWOrthTranscrs, fWMorphTranscrs)
+    foreign_words = get_foreign_words()
+    foreign_word_narrow_phonetic_transcriptions = []
+    foreign_word_broad_phonetic_transcriptions = []
+    foreign_word_orthographic_transcriptions = []
+    foreign_word_morphemic_transcriptions = []
+    for fw in foreign_words:
+        if fw.narrow_phonetic_transcription:
+            foreign_word_narrow_phonetic_transcriptions.append(fw.narrow_phonetic_transcription)
+        if fw.phonetic_transcription:
+            foreign_word_broad_phonetic_transcriptions.append(fw.phonetic_transcription)
+        if fw.morpheme_break:
+            foreign_word_morphemic_transcriptions.append(fw.morpheme_break)
+        foreign_word_orthographic_transcriptions.append(fw.transcription)
+    return (foreign_word_narrow_phonetic_transcriptions, foreign_word_broad_phonetic_transcriptions, foreign_word_orthographic_transcriptions, foreign_word_morphemic_transcriptions)
 
 
 
-def formIsForeignWord(form):
-    foreignWordTag = getForeignWordTag()
-    if foreignWordTag in form.tags:
+def form_is_foreign_word(form):
+    foreign_word_tag = get_foreign_word_tag()
+    if foreign_word_tag in form.tags:
         return True
     return False
 
 
-def getForeignWordTagId():
-    return getForeignWordTag().id
+def get_foreign_word_tag_id():
+    return get_foreign_word_tag().id
 
 
 ################################################################################
 # Query Convenience Functions
 ################################################################################
 
-def getGrammaticalities():
+def get_grammaticalities():
     try:
-        return getApplicationSettings().grammaticalities.replace(
+        return get_application_settings().grammaticalities.replace(
                                                             ' ', '').split(',')
     except AttributeError:
         return []
 
-def getMorphemeDelimiters():
+def get_morpheme_delimiters():
     """Return the morpheme delimiters from app settings as a list."""
-    applicationSettings = getApplicationSettings()
+    application_settings = get_application_settings()
     try:
-        morphemeDelimiters = applicationSettings.morphemeDelimiters
+        morpheme_delimiters = application_settings.morpheme_delimiters
     except AttributeError:
         return []
     try:
-        return morphemeDelimiters and morphemeDelimiters.split(',') or []
+        return morpheme_delimiters and morpheme_delimiters.split(',') or []
     except AttributeError:
         return []
 
-def isLexical(form):
+def is_lexical(form):
     """Return True if the input form is lexical, i.e, if neither its morpheme
     break nor its morpheme gloss lines contain the space character or any of the
     morpheme delimiters.  Note: designed to work on dict representations of forms
     also.
     """
-    delimiters = getMorphemeDelimiters() + [' ']
+    delimiters = get_morpheme_delimiters() + [' ']
     try:
-        return bool(form.morphemeBreak) and bool(form.morphemeGloss) and not (
-                    set(delimiters) & set(form.morphemeBreak) and
-                    set(delimiters) & set(form.morphemeGloss))
+        return bool(form.morpheme_break) and bool(form.morpheme_gloss) and not (
+                    set(delimiters) & set(form.morpheme_break) and
+                    set(delimiters) & set(form.morpheme_gloss))
     except AttributeError:
-        return bool(form['morphemeBreak']) and bool(form['morphemeGloss']) and not (
-                    set(delimiters) & set(form['morphemeBreak']) and
-                    set(delimiters) & set(form['morphemeGloss']))
+        return bool(form['morpheme_break']) and bool(form['morpheme_gloss']) and not (
+                    set(delimiters) & set(form['morpheme_break']) and
+                    set(delimiters) & set(form['morpheme_gloss']))
     except:
         return False
 
-def getApplicationSettings():
+def get_application_settings():
     return Session.query(model.ApplicationSettings).order_by(
         desc(model.ApplicationSettings.id)).first()
 
-def getOrthographies(sortByIdAsc=False):
-    return getModelsByName('Orthography', sortByIdAsc)
+def get_orthographies(sort_by_id_asc=False):
+    return get_models_by_name('Orthography', sort_by_id_asc)
 
-def getFormSearches(sortByIdAsc=False):
-    return getModelsByName('FormSearch', sortByIdAsc)
+def get_form_searches(sort_by_id_asc=False):
+    return get_models_by_name('FormSearch', sort_by_id_asc)
 
-def getPages(sortByIdAsc=False):
-    return getModelsByName('Page', sortByIdAsc)
+def get_pages(sort_by_id_asc=False):
+    return get_models_by_name('Page', sort_by_id_asc)
 
-def getPhonologies(sortByIdAsc=False):
-    return getModelsByName('Phonology', sortByIdAsc)
+def get_phonologies(sort_by_id_asc=False):
+    return get_models_by_name('Phonology', sort_by_id_asc)
 
-def getCorpora(sortByIdAsc=False):
-    return getModelsByName('Corpus', sortByIdAsc)
+def get_corpora(sort_by_id_asc=False):
+    return get_models_by_name('Corpus', sort_by_id_asc)
 
-def getLanguages(sortByIdAsc=False):
-    return getModelsByName('Language', sortByIdAsc)
+def get_languages(sort_by_id_asc=False):
+    return get_models_by_name('Language', sort_by_id_asc)
 
-def getElicitationMethods(sortByIdAsc=False):
-    return getModelsByName('ElicitationMethod', sortByIdAsc)
+def get_elicitation_methods(sort_by_id_asc=False):
+    return get_models_by_name('ElicitationMethod', sort_by_id_asc)
 
-def getStartAndEndFromPaginator(paginator):
-    start = (paginator['page'] - 1) * paginator['itemsPerPage']
-    return (start, start + paginator['itemsPerPage'])
+def get_start_and_end_from_paginator(paginator):
+    start = (paginator['page'] - 1) * paginator['items_per_page']
+    return (start, start + paginator['items_per_page'])
 
-def filterRestrictedModels(modelName, query, user=None):
+def filter_restricted_models(model_name, query, user=None):
     user = user or session['user']
-    unrestrictedUsers = getUnrestrictedUsers()
-    userIsUnrestricted_ = userIsUnrestricted(user, unrestrictedUsers)
+    unrestricted_users = get_unrestricted_users()
+    userIsUnrestricted_ = user_is_unrestricted(user, unrestricted_users)
     if userIsUnrestricted_:
         return query
     else:
-        return filterRestrictedModelsFromQuery(modelName, query, user)
+        return filter_restricted_models_from_query(model_name, query, user)
 
-def filterRestrictedModelsFromQuery(modelName, query, user):
-    model_ = getattr(model, modelName)
-    if modelName in (u'FormBackup', u'CollectionBackup'):
-        entererCondition = model_.enterer.like(u'%' + u'"id": %d' % user.id + u'%')
-        unrestrictedCondition = not_(model_.tags.like(u'%"name": "restricted"%'))
+def filter_restricted_models_from_query(model_name, query, user):
+    model_ = getattr(model, model_name)
+    if model_name in (u'FormBackup', u'CollectionBackup'):
+        enterer_condition = model_.enterer.like(u'%' + u'"id": %d' % user.id + u'%')
+        unrestricted_condition = not_(model_.tags.like(u'%"name": "restricted"%'))
     else:
-        entererCondition = model_.enterer == user
-        unrestrictedCondition = not_(model_.tags.any(model.Tag.name==u'restricted'))
-    return query.filter(or_(entererCondition, unrestrictedCondition))
+        enterer_condition = model_.enterer == user
+        unrestricted_condition = not_(model_.tags.any(model.Tag.name==u'restricted'))
+    return query.filter(or_(enterer_condition, unrestricted_condition))
 
-def getFormsUserCanAccess(user, paginator=None):
-    query = filterRestrictedModelsFromQuery(Session.query(Form), user).order_by(
+def get_forms_user_can_access(user, paginator=None):
+    query = filter_restricted_models_from_query(Session.query(Form), user).order_by(
         asc(Form.id))
     if paginator:
-        start, end = getStartAndEndFromPaginator(paginator)
+        start, end = get_start_and_end_from_paginator(paginator)
         return query.slice(start, end).all()
     return query.all()
 
-def getForms(paginator=None, eagerload=False):
-    formQuery = Session.query(Form).order_by(asc(Form.id))
+def get_forms(paginator=None, eagerload=False):
+    form_query = Session.query(Form).order_by(asc(Form.id))
     if eagerload:
-        formQuery = eagerloadForm(formQuery)
+        form_query = eagerload_form(form_query)
     if paginator:
-        start, end = getStartAndEndFromPaginator(paginator)
-        return formQuery.slice(start, end).all()
-    return formQuery.all()
+        start, end = get_start_and_end_from_paginator(paginator)
+        return form_query.slice(start, end).all()
+    return form_query.all()
 
-def getModelByUUID(modelName, UUID):
-    """Return the first (and only, hopefully) only model of type ``modelName`` with ``UUID``."""
-    return getEagerloader(modelName)(Session.query(getattr(model, modelName)))\
-        .filter(getattr(model, modelName).UUID==UUID).first()
+def get_model_by_UUID(model_name, UUID):
+    """Return the first (and only, hopefully) only model of type ``model_name`` with ``UUID``."""
+    return get_eagerloader(model_name)(Session.query(getattr(model, model_name)))\
+        .filter(getattr(model, model_name).UUID==UUID).first()
 
-def getBackupsByUUID(modelName, UUID):
-    """Return all backup models of the model with ``modelName`` using the ``UUID`` value."""
-    backupModel = getattr(model, modelName + 'Backup')
-    return Session.query(backupModel).\
-            filter(backupModel.UUID==UUID).\
-            order_by(desc(backupModel.id)).all()
+def get_backups_by_UUID(model_name, UUID):
+    """Return all backup models of the model with ``model_name`` using the ``UUID`` value."""
+    backup_model = getattr(model, model_name + 'Backup')
+    return Session.query(backup_model).\
+            filter(backup_model.UUID==UUID).\
+            order_by(desc(backup_model.id)).all()
 
-def getBackupsByModelId(modelName, modelId):
-    """Return all backup models of the model with ``modelName`` using the ``id`` value of the model.
+def get_backups_by_model_id(model_name, model_id):
+    """Return all backup models of the model with ``model_name`` using the ``id`` value of the model.
 
     .. warning::
     
@@ -759,15 +759,15 @@ def getBackupsByModelId(modelName, modelId):
         key ids of deleted models are recycled.
 
     """
-    backupModel = getattr(model, modelName + 'Backup')
-    return Session.query(backupModel).\
-        filter(getattr(backupModel, modelName.lower() + '_id')==modelId).\
-        order_by(desc(backupModel.id)).all()
+    backup_model = getattr(model, model_name + 'Backup')
+    return Session.query(backup_model).\
+        filter(getattr(backup_model, model_name.lower() + '_id')==model_id).\
+        order_by(desc(backup_model.id)).all()
 
-def getModelAndPreviousVersions(modelName, id):
+def get_model_and_previous_versions(model_name, id):
     """Return a model and its previous versions.
 
-    :param str modelName: a model name, e.g., 'Form'
+    :param str model_name: a model name, e.g., 'Form'
     :param str id: the ``id`` or ``UUID`` value of the model whose history
         is requested.
     :returns: a tuple whose first element is the model and whose second element
@@ -775,179 +775,179 @@ def getModelAndPreviousVersions(modelName, id):
 
     """
     model_ = None
-    previousVersions = []
+    previous_versions = []
     try:
         id = int(id)
         # add eagerload function ...
-        model_ = getEagerloader(modelName)(
-            Session.query(getattr(model, modelName))).get(id)
+        model_ = get_eagerloader(model_name)(
+            Session.query(getattr(model, model_name))).get(id)
         if model_:
-            previousVersions = getBackupsByUUID(modelName, model_.UUID)
+            previous_versions = get_backups_by_UUID(model_name, model_.UUID)
         else:
-            previousVersions = getBackupsByModelId(modelName, id)
+            previous_versions = get_backups_by_model_id(model_name, id)
     except ValueError:
         try:
-            modelUUID = unicode(UUID(id))
-            model_ = getModelByUUID(modelName, modelUUID)
-            previousVersions = getBackupsByUUID(modelName, modelUUID)
+            model_UUID = unicode(UUID(id))
+            model_ = get_model_by_UUID(model_name, model_UUID)
+            previous_versions = get_backups_by_UUID(model_name, model_UUID)
         except (AttributeError, ValueError):
             pass    # id is neither an integer nor a UUID
-    return model_, previousVersions
+    return model_, previous_versions
 
 
-def getCollections():
-    return getModelsByName('Collection', True)
+def get_collections():
+    return get_models_by_name('Collection', True)
 
-def getTags(sortByIdAsc=False):
-    return getModelsByName('Tag', sortByIdAsc)
+def get_tags(sort_by_id_asc=False):
+    return get_models_by_name('Tag', sort_by_id_asc)
 
-def getFiles():
-    return getModelsByName('File', True)
+def get_files():
+    return get_models_by_name('File', True)
 
-def getForeignWordTag():
+def get_foreign_word_tag():
     return Session.query(model.Tag).filter(
         model.Tag.name == u'foreign word').first()
 
-def getRestrictedTag():
+def get_restricted_tag():
     return Session.query(model.Tag).filter(
         model.Tag.name == u'restricted').first()
 
-def getSyntacticCategories(sortByIdAsc=False):
-    return getModelsByName('SyntacticCategory', sortByIdAsc)
+def get_syntactic_categories(sort_by_id_asc=False):
+    return get_models_by_name('SyntacticCategory', sort_by_id_asc)
 
-def getSpeakers(sortByIdAsc=False):
-    return getModelsByName('Speaker', sortByIdAsc)
+def get_speakers(sort_by_id_asc=False):
+    return get_models_by_name('Speaker', sort_by_id_asc)
 
-def getUsers(sortByIdAsc=False):
-    return getModelsByName('User', sortByIdAsc)
+def get_users(sort_by_id_asc=False):
+    return get_models_by_name('User', sort_by_id_asc)
 
-def getMiniDictsGetter(modelName, sortByIdAsc=False):
+def get_mini_dicts_getter(model_name, sort_by_id_asc=False):
     def func():
-        models = getModelsByName(modelName, sortByIdAsc)
-        return [m.getMiniDict() for m in models]
+        models = get_models_by_name(model_name, sort_by_id_asc)
+        return [m.get_mini_dict() for m in models]
     return func
 
-def getSources(sortByIdAsc=False):
-    return getModelsByName('Source', sortByIdAsc)
+def get_sources(sort_by_id_asc=False):
+    return get_models_by_name('Source', sort_by_id_asc)
 
-def getModelNames():
+def get_model_names():
     return [mn for mn in dir(model) if mn[0].isupper()
             and mn not in ('Model', 'Base', 'Session')]
 
-def getModelsByName(modelName, sortByIdAsc=False):
-    return getQueryByModelName(modelName, sortByIdAsc).all()
+def get_models_by_name(model_name, sort_by_id_asc=False):
+    return get_query_by_model_name(model_name, sort_by_id_asc).all()
 
-def getQueryByModelName(modelName, sortByIdAsc=False):
-    model_ = getattr(model, modelName)
-    if sortByIdAsc:
+def get_query_by_model_name(model_name, sort_by_id_asc=False):
+    model_ = getattr(model, model_name)
+    if sort_by_id_asc:
         return Session.query(model_).order_by(asc(getattr(model_, 'id')))
     return Session.query(model_)
 
-def clearAllModels(retain=['Language']):
+def clear_all_models(retain=['Language']):
     """Convenience function for removing all OLD models from the database.
     The retain parameter is a list of model names that should not be cleared.
     """
-    for modelName in getModelNames():
-        if modelName not in retain:
-            models = getModelsByName(modelName)
+    for model_name in get_model_names():
+        if model_name not in retain:
+            models = get_models_by_name(model_name)
             for model in models:
                 Session.delete(model)
     Session.commit()
 
-def clearAllTables(retain=[]):
-    """Like ``clearAllModels`` above, except **much** faster."""
+def clear_all_tables(retain=[]):
+    """Like ``clear_all_models`` above, except **much** faster."""
     for table in reversed(Base.metadata.sorted_tables):
         if table.name not in retain:
             Session.execute(table.delete())
             Session.commit()
 
-def getAllModels():
-    return dict([(mn, getModelsByName(mn)) for mn in getModelNames()])
+def get_all_models():
+    return dict([(mn, get_models_by_name(mn)) for mn in get_model_names()])
 
-def getPaginatedQueryResults(query, paginator):
+def get_paginated_query_results(query, paginator):
     if 'count' not in paginator:
         paginator['count'] = query.count()
-    start, end = getStartAndEndFromPaginator(paginator)
+    start, end = get_start_and_end_from_paginator(paginator)
     return {
         'paginator': paginator,
         'items': query.slice(start, end).all()
     }
 
-def addPagination(query, paginator):
+def add_pagination(query, paginator):
     if (paginator and paginator.get('page') is not None and
-        paginator.get('itemsPerPage') is not None):
+        paginator.get('items_per_page') is not None):
         paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
-        return getPaginatedQueryResults(query, paginator)
+        return get_paginated_query_results(query, paginator)
     else:
         return query.all()
 
-def addOrderBy(query, orderByParams, queryBuilder, primaryKey='id'):
-    """Add an ORDER BY clause to the query using the getSQLAOrderBy method of
-    the supplied queryBuilder (if possible) or using a default ORDER BY <primaryKey> ASC.
+def add_order_by(query, order_by_params, query_builder, primary_key='id'):
+    """Add an ORDER BY clause to the query using the get_SQLA_order_by method of
+    the supplied query_builder (if possible) or using a default ORDER BY <primary_key> ASC.
     """
-    if orderByParams and orderByParams.get('orderByModel') and \
-    orderByParams.get('orderByAttribute') and orderByParams.get('orderByDirection'):
-        orderByParams = OrderBySchema.to_python(orderByParams)
-        orderByParams = [orderByParams['orderByModel'],
-            orderByParams['orderByAttribute'], orderByParams['orderByDirection']]
-        orderByExpression = queryBuilder.getSQLAOrderBy(orderByParams, primaryKey)
-        queryBuilder.clearErrors()
-        return query.order_by(orderByExpression)
+    if order_by_params and order_by_params.get('order_by_model') and \
+    order_by_params.get('order_by_attribute') and order_by_params.get('order_by_direction'):
+        order_by_params = OrderBySchema.to_python(order_by_params)
+        order_by_params = [order_by_params['order_by_model'],
+            order_by_params['order_by_attribute'], order_by_params['order_by_direction']]
+        order_by_expression = query_builder.get_SQLA_order_by(order_by_params, primary_key)
+        query_builder.clear_errors()
+        return query.order_by(order_by_expression)
     else:
-        model_ = getattr(model, queryBuilder.modelName)
-        return query.order_by(asc(getattr(model_, primaryKey)))
+        model_ = getattr(model, query_builder.model_name)
+        return query.order_by(asc(getattr(model_, primary_key)))
 
 
 ################################################################################
 # OLD model objects getters: for defaults and testing
 ################################################################################
 
-def generateDefaultAdministrator(**kwargs):
+def generate_default_administrator(**kwargs):
     admin = model.User()
-    admin.firstName = u'Admin'
-    admin.lastName = u'Admin'
+    admin.first_name = u'Admin'
+    admin.last_name = u'Admin'
     admin.username = u'admin'
     admin.email = u'admin@example.com'
-    admin.salt = generateSalt()
-    admin.password = unicode(encryptPassword(u'adminA_1', str(admin.salt)))
+    admin.salt = generate_salt()
+    admin.password = unicode(encrypt_password(u'adminA_1', str(admin.salt)))
     admin.role = u'administrator'
-    admin.inputOrthography = None
-    admin.outputOrthography = None
-    admin.pageContent = u''
-    createUserDirectory(admin, **kwargs)
+    admin.input_orthography = None
+    admin.output_orthography = None
+    admin.page_content = u''
+    create_user_directory(admin, **kwargs)
     return admin
 
-def generateDefaultContributor(**kwargs):
+def generate_default_contributor(**kwargs):
     contributor = model.User()
-    contributor.firstName = u'Contributor'
-    contributor.lastName = u'Contributor'
+    contributor.first_name = u'Contributor'
+    contributor.last_name = u'Contributor'
     contributor.username = u'contributor'
     contributor.email = u'contributor@example.com'
-    contributor.salt = generateSalt()
-    contributor.password = unicode(encryptPassword(u'contributorC_1', str(contributor.salt)))
+    contributor.salt = generate_salt()
+    contributor.password = unicode(encrypt_password(u'contributorC_1', str(contributor.salt)))
     contributor.role = u'contributor'
-    contributor.inputOrthography = None
-    contributor.outputOrthography = None
-    contributor.pageContent = u''
-    createUserDirectory(contributor, **kwargs)
+    contributor.input_orthography = None
+    contributor.output_orthography = None
+    contributor.page_content = u''
+    create_user_directory(contributor, **kwargs)
     return contributor
 
-def generateDefaultViewer(**kwargs):
+def generate_default_viewer(**kwargs):
     viewer = model.User()
-    viewer.firstName = u'Viewer'
-    viewer.lastName = u'Viewer'
+    viewer.first_name = u'Viewer'
+    viewer.last_name = u'Viewer'
     viewer.username = u'viewer'
     viewer.email = u'viewer@example.com'
-    viewer.salt = generateSalt()
-    viewer.password = unicode(encryptPassword(u'viewerV_1', str(viewer.salt)))
+    viewer.salt = generate_salt()
+    viewer.password = unicode(encrypt_password(u'viewerV_1', str(viewer.salt)))
     viewer.role = u'viewer'
-    viewer.inputOrthography = None
-    viewer.outputOrthography = None
-    viewer.pageContent = u''
-    createUserDirectory(viewer, **kwargs)
+    viewer.input_orthography = None
+    viewer.output_orthography = None
+    viewer.page_content = u''
+    create_user_directory(viewer, **kwargs)
     return viewer
 
-def generateDefaultHomePage():
+def generate_default_home_page():
     homepage = model.Page()
     homepage.name = u'home'
     homepage.heading = u'Welcome to the OLD'
@@ -959,7 +959,7 @@ document, study and learn a language.
     homepage.markup = u'restructuredtext'
     return homepage
 
-def generateDefaultHelpPage():
+def generate_default_help_page():
     helppage = model.Page()
     helppage.name = u'help'
     helppage.heading = u'OLD Application Help'
@@ -972,64 +972,64 @@ This page should contain content entered by your administrator.
     helppage.markup = u'restructuredtext'
     return helppage
 
-def generateDefaultOrthography1():
+def generate_default_orthography1():
     orthography1 = model.Orthography()
     orthography1.name = u'Sample Orthography 1'
     orthography1.orthography = u'p,t,k,m,s,[i,i_],[a,a_],[o,o_]'
     orthography1.lowercase = True
-    orthography1.initialGlottalStops = True
+    orthography1.initial_glottal_stops = True
     return orthography1
 
-def generateDefaultOrthography2():
+def generate_default_orthography2():
     orthography2 = model.Orthography()
     orthography2.name = u'Sample Orthography 2'
     orthography2.orthography = u'b,d,g,m,s,[i,i\u0301],[a,a\u0301],[o,o\u0301]'
     orthography2.lowercase = True
-    orthography2.initialGlottalStops = True
+    orthography2.initial_glottal_stops = True
     return orthography2
 
-def generateDefaultApplicationSettings(orthographies=[], unrestrictedUsers=[]):
-    englishOrthography = u', '.join(list(string.ascii_lowercase))
-    applicationSettings = model.ApplicationSettings()
-    applicationSettings.objectLanguageName = u'Unspecified'
-    applicationSettings.objectLanguageId = u'uns'
-    applicationSettings.metalanguageName = u'English'
-    applicationSettings.metalanguageId = u'eng'
-    applicationSettings.metalanguageInventory = englishOrthography
-    applicationSettings.orthographicValidation = u'None'
-    applicationSettings.narrowPhoneticInventory = u''
-    applicationSettings.narrowPhoneticValidation = u'None'
-    applicationSettings.broadPhoneticInventory = u''
-    applicationSettings.broadPhoneticValidation = u'None'
-    applicationSettings.narrowPhoneticInventory = u''
-    applicationSettings.narrowPhoneticValidation = u'None'
-    applicationSettings.morphemeBreakIsOrthographic = False
-    applicationSettings.morphemeBreakValidation = u'None'
-    applicationSettings.phonemicInventory = u''
-    applicationSettings.morphemeDelimiters = u'-,='
-    applicationSettings.punctuation = u""".,;:!?'"\u2018\u2019\u201C\u201D[]{}()-"""
-    applicationSettings.grammaticalities = u'*,#,?'
-    applicationSettings.storageOrthography = orthographies[1] if 1 < len(orthographies) else None
-    applicationSettings.inputOrthography = orthographies[0] if 0 < len(orthographies) else None
-    applicationSettings.outputOrthography = orthographies[0] if 0 < len(orthographies) else None
-    applicationSettings.unrestrictedUsers = unrestrictedUsers
-    return applicationSettings
+def generate_default_application_settings(orthographies=[], unrestricted_users=[]):
+    english_orthography = u', '.join(list(string.ascii_lowercase))
+    application_settings = model.ApplicationSettings()
+    application_settings.object_language_name = u'Unspecified'
+    application_settings.object_language_id = u'uns'
+    application_settings.metalanguage_name = u'English'
+    application_settings.metalanguage_id = u'eng'
+    application_settings.metalanguage_inventory = english_orthography
+    application_settings.orthographic_validation = u'None'
+    application_settings.narrow_phonetic_inventory = u''
+    application_settings.narrow_phonetic_validation = u'None'
+    application_settings.broad_phonetic_inventory = u''
+    application_settings.broad_phonetic_validation = u'None'
+    application_settings.narrow_phonetic_inventory = u''
+    application_settings.narrow_phonetic_validation = u'None'
+    application_settings.morpheme_break_is_orthographic = False
+    application_settings.morpheme_break_validation = u'None'
+    application_settings.phonemic_inventory = u''
+    application_settings.morpheme_delimiters = u'-,='
+    application_settings.punctuation = u""".,;:!?'"\u2018\u2019\u201C\u201D[]{}()-"""
+    application_settings.grammaticalities = u'*,#,?'
+    application_settings.storage_orthography = orthographies[1] if 1 < len(orthographies) else None
+    application_settings.input_orthography = orthographies[0] if 0 < len(orthographies) else None
+    application_settings.output_orthography = orthographies[0] if 0 < len(orthographies) else None
+    application_settings.unrestricted_users = unrestricted_users
+    return application_settings
 
-def generateRestrictedTag():
-    restrictedTag = model.Tag()
-    restrictedTag.name = u'restricted'
-    restrictedTag.description = u'''Forms tagged with the tag 'restricted'
+def generate_restricted_tag():
+    restricted_tag = model.Tag()
+    restricted_tag.name = u'restricted'
+    restricted_tag.description = u'''Forms tagged with the tag 'restricted'
 can only be viewed by administrators, unrestricted users and the users they were
 entered by.
 
 Note: the restricted tag cannot be deleted and its name cannot be changed.
 '''
-    return restrictedTag
+    return restricted_tag
 
-def generateForeignWordTag():
-    foreignWordTag = model.Tag()
-    foreignWordTag.name = u'foreign word'
-    foreignWordTag.description = u'''Use this tag for lexical entries that are
+def generate_foreign_word_tag():
+    foreign_word_tag = model.Tag()
+    foreign_word_tag.name = u'foreign word'
+    foreign_word_tag.description = u'''Use this tag for lexical entries that are
 not from the object language. For example, it might be desirable to create a
 form as lexical entry for a proper noun like "John".  Such a form should be
 tagged as a "foreign word". This will allow forms containing "John" to have
@@ -1039,85 +1039,85 @@ phonetic and phonemic inventories.
 
 Note: the foreign word tag cannot be deleted and its name cannot be changed.
 '''
-    return foreignWordTag
+    return foreign_word_tag
 
-def generateDefaultForm():
+def generate_default_form():
     form = Form()
     form.UUID = unicode(uuid4())
     form.transcription = u'test transcription'
-    form.morphemeBreakIDs = u'null'
-    form.morphemeGlossIDs = u'null'
-    form.datetimeEntered = now()
+    form.morpheme_break_ids = u'null'
+    form.morpheme_gloss_ids = u'null'
+    form.datetime_entered = now()
     translation = model.Translation()
     translation.transcription = u'test translation'
     form.translations.append(translation)
     return form
 
-def generateDefaultFile():
+def generate_default_file():
     file = model.File()
     file.name = u'test_file_name' # VARCHAR 255, UNIQUE
-    file.MIMEtype = u'image/jpeg' # VARCHAR 255
+    file.MIME_type = u'image/jpeg' # VARCHAR 255
     file.size = 1024 # INT
     file.description = u'An image of the land.' # TEXT
-    #dateElicited # DATE
+    #date_elicited # DATE
     #elicitor # INT, FOREIGN KEY: USER ID
     #enterer # INT, FOREIGN KEY: USER ID
     #speaker # INT, FOREIGN KEY: SPEAKER ID
-    #utteranceType # VARCHAR 255
-    #embeddedFileMarkup # TEXT
-    #embeddedFilePassword # VARCHAR 255
+    #utterance_type # VARCHAR 255
+    #embedded_file_markup # TEXT
+    #embedded_file_password # VARCHAR 255
     return file
 
-def generateDefaultElicitationMethod():
-    elicitationMethod = model.ElicitationMethod()
-    elicitationMethod.name = u'test elicitation method'
-    elicitationMethod.description = u'test elicitation method description'
-    return elicitationMethod
+def generate_default_elicitation_method():
+    elicitation_method = model.ElicitationMethod()
+    elicitation_method.name = u'test elicitation method'
+    elicitation_method.description = u'test elicitation method description'
+    return elicitation_method
 
-def generateSSyntacticCategory():
-    syntacticCategory = model.SyntacticCategory()
-    syntacticCategory.name = u'S'
-    syntacticCategory.description = u'Tag sentences with S.'
-    return syntacticCategory
+def generate_s_syntactic_category():
+    syntactic_category = model.SyntacticCategory()
+    syntactic_category.name = u'S'
+    syntactic_category.description = u'Tag sentences with S.'
+    return syntactic_category
 
-def generateNSyntacticCategory():
-    syntacticCategory = model.SyntacticCategory()
-    syntacticCategory.name = u'N'
-    syntacticCategory.description = u'Tag nouns with N.'
-    return syntacticCategory
+def generate_n_syntactic_category():
+    syntactic_category = model.SyntacticCategory()
+    syntactic_category.name = u'N'
+    syntactic_category.description = u'Tag nouns with N.'
+    return syntactic_category
 
-def generateVSyntacticCategory():
-    syntacticCategory = model.SyntacticCategory()
-    syntacticCategory.name = u'V'
-    syntacticCategory.description = u'Tag verbs with V.'
-    return syntacticCategory
+def generate_v_syntactic_category():
+    syntactic_category = model.SyntacticCategory()
+    syntactic_category.name = u'V'
+    syntactic_category.description = u'Tag verbs with V.'
+    return syntactic_category
 
-def generateNumSyntacticCategory():
-    syntacticCategory = model.SyntacticCategory()
-    syntacticCategory.name = u'Num'
-    syntacticCategory.description = u'Tag number morphology with Num.'
-    return syntacticCategory
+def generate_num_syntactic_category():
+    syntactic_category = model.SyntacticCategory()
+    syntactic_category.name = u'Num'
+    syntactic_category.description = u'Tag number morphology with Num.'
+    return syntactic_category
 
-def generateDefaultSpeaker():
+def generate_default_speaker():
     speaker = model.Speaker()
-    speaker.firstName = u'test speaker first name'
-    speaker.lastName = u'test speaker last name'
+    speaker.first_name = u'test speaker first name'
+    speaker.last_name = u'test speaker last name'
     speaker.dialect = u'test speaker dialect'
-    speaker.pageContent = u'test speaker page content'
+    speaker.page_content = u'test speaker page content'
     return speaker
 
-def generateDefaultUser():
+def generate_default_user():
     user = model.User()
     user.username = u'test user username'
-    user.firstName = u'test user first name'
-    user.lastName = u'test user last name'
+    user.first_name = u'test user first name'
+    user.last_name = u'test user last name'
     user.email = u'test user email'
     user.affiliation = u'test user affiliation'
     user.role = u'contributor'
-    user.pageContent = u'test user page content'
+    user.page_content = u'test user page content'
     return user
 
-def generateDefaultSource():
+def generate_default_source():
     source = model.Source()
     source.type = u'book'
     source.key = unicode(uuid4())
@@ -1137,42 +1137,42 @@ def now():
     return datetime.datetime.utcnow()
 
 
-def getMostRecentModificationDatetime(modelName):
-    """Return the most recent datetimeModified attribute for the model with the
-    provided modelName.  If the modelName is not recognized, return None.
+def get_most_recent_modification_datetime(model_name):
+    """Return the most recent datetime_modified attribute for the model with the
+    provided model_name.  If the model_name is not recognized, return None.
     """
 
-    OLDModel = getattr(model, modelName, None)
+    OLDModel = getattr(model, model_name, None)
     if OLDModel:
         return Session.query(OLDModel).order_by(
-            desc(OLDModel.datetimeModified)).first().datetimeModified
+            desc(OLDModel.datetime_modified)).first().datetime_modified
     return OLDModel
 
 
-def datetimeString2datetime(datetimeString):
+def datetime_string2datetime(datetime_string):
     """Parse an ISO 8601-formatted datetime into a Python datetime object.
     Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds
 
     Previously called ISO8601Str2datetime.
     """
     try:
-        parts = datetimeString.split('.')
-        yearsToSecondsString = parts[0]
-        datetimeObject = datetime.datetime.strptime(yearsToSecondsString,
+        parts = datetime_string.split('.')
+        years_to_seconds_string = parts[0]
+        datetime_object = datetime.datetime.strptime(years_to_seconds_string,
                                                     "%Y-%m-%dT%H:%M:%S")
     except ValueError:
         return None
     try:
         microseconds = int(parts[1])
-        return datetimeObject.replace(microsecond=microseconds)
+        return datetime_object.replace(microsecond=microseconds)
     except (IndexError, ValueError, OverflowError):
-        return datetimeObject
+        return datetime_object
 
 
-def dateString2date(dateString):
+def date_string2date(date_string):
     """Parse an ISO 8601-formatted date into a Python date object."""
     try:
-        return datetime.datetime.strptime(dateString, "%Y-%m-%d").date()
+        return datetime.datetime.strptime(date_string, "%Y-%m-%d").date()
     except ValueError:
         return None
 
@@ -1181,7 +1181,7 @@ def dateString2date(dateString):
 # Miscellaneous Functions & Classes
 ################################################################################
 
-def getInt(input_):
+def get_int(input_):
     try:
         return int(input_)
     except Exception:
@@ -1199,7 +1199,7 @@ class State(object):
     """
     pass
 
-def getStateObject(values):
+def get_state_object(values):
     """Return a State instance with some special attributes needed in the forms
     and oldcollections controllers.
     """
@@ -1212,50 +1212,50 @@ def getStateObject(values):
 # Authorization Functions
 ################################################################################
 
-def userIsAuthorizedToAccessModel(user, modelObject, unrestrictedUsers):
+def user_is_authorized_to_access_model(user, model_object, unrestricted_users):
     """Return True if the user is authorized to access the model object.  Models
     tagged with the 'restricted' tag are only accessible to administrators, their
     enterers and unrestricted users.
     """
     if user.role == u'administrator':
         return True
-    if isinstance(modelObject, (Form, File, Collection)):
-        tags = modelObject.tags
-        tagNames = [t.name for t in tags]
-        entererId = modelObject.enterer_id
+    if isinstance(model_object, (Form, File, Collection)):
+        tags = model_object.tags
+        tag_names = [t.name for t in tags]
+        enterer_id = model_object.enterer_id
     else:
-        modelBackupDict = modelObject.getDict()
-        tags = modelBackupDict['tags']
-        tagNames = [t['name'] for t in tags]
-        entererId = modelBackupDict['enterer'].get('id', None)
+        model_backup_dict = model_object.get_dict()
+        tags = model_backup_dict['tags']
+        tag_names = [t['name'] for t in tags]
+        enterer_id = model_backup_dict['enterer'].get('id', None)
     return not tags or \
-        'restricted' not in tagNames or \
-        user in unrestrictedUsers or \
-        user.id == entererId
+        'restricted' not in tag_names or \
+        user in unrestricted_users or \
+        user.id == enterer_id
 
 
-def userIsUnrestricted(user, unrestrictedUsers):
+def user_is_unrestricted(user, unrestricted_users):
     """Return True if the user is an administrator, unrestricted or there is no
     restricted tag.
     """
-    restrictedTag = getRestrictedTag()
-    return not restrictedTag or user.role == u'administrator' or \
-                                           user in unrestrictedUsers
+    restricted_tag = get_restricted_tag()
+    return not restricted_tag or user.role == u'administrator' or \
+                                           user in unrestricted_users
 
 
-def getUnrestrictedUsers():
+def get_unrestricted_users():
     """Return the list of unrestricted users in
-    app_globals.applicationSettings.applicationSettings.unrestrictedUsers.
+    app_globals.application_settings.application_settings.unrestricted_users.
     """
-    return getattr(getattr(getattr(app_globals, 'applicationSettings', None),
-                   'applicationSettings', None), 'unrestrictedUsers', [])
+    return getattr(getattr(getattr(app_globals, 'application_settings', None),
+                   'application_settings', None), 'unrestricted_users', [])
 
 
-unauthorizedMsg = {'error': 'You are not authorized to access this resource.'}
+unauthorized_msg = {'error': 'You are not authorized to access this resource.'}
 
 
-def getRDBMSName(**kwargs):
-    config = getConfig(**kwargs)
+def get_RDBMS_name(**kwargs):
+    config = get_config(**kwargs)
     try:
         SQLAlchemyURL = config['sqlalchemy.url']
         return SQLAlchemyURL.split(':')[0]
@@ -1274,21 +1274,21 @@ def getRDBMSName(**kwargs):
 class PaginatorSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = False
-    itemsPerPage = Int(not_empty=True, min=1)
+    items_per_page = Int(not_empty=True, min=1)
     page = Int(not_empty=True, min=1)
 
 class OrderBySchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = False
-    orderByModel = UnicodeString()
-    orderByAttribute = UnicodeString()
-    orderByDirection = OneOf([u'asc', u'desc'])
+    order_by_model = UnicodeString()
+    order_by_attribute = UnicodeString()
+    order_by_direction = OneOf([u'asc', u'desc'])
 
 ################################################################################
 # File-specific data & functionality
 ################################################################################
 
-allowedFileTypes = (
+allowed_file_types = (
     #u'text/plain',
     #u'application/x-latex',
     #u'application/msword',
@@ -1309,10 +1309,10 @@ allowedFileTypes = (
     u'video/x-ms-wmv'
 )
 
-def isAudioVideoFile(file_):
-    return u'audio' in file_.MIMEtype or u'video' in file_.MIMEtype
+def is_audio_video_file(file_):
+    return u'audio' in file_.MIME_type or u'video' in file_.MIME_type
 
-utteranceTypes = (
+utterance_types = (
     u'None',
     u'Object Language Utterance',
     u'Metalanguage Utterance',
@@ -1321,18 +1321,18 @@ utteranceTypes = (
 
 guess_type = guess_type
 
-def clearDirectoryOfFiles(directoryPath):
+def clear_directory_of_files(directory_path):
     """Removes all files from the directory path but leaves the directory."""
-    for fileName in os.listdir(directoryPath):
-        if os.path.isfile(os.path.join(directoryPath, fileName)):
-            os.remove(os.path.join(directoryPath, fileName))
+    for filename in os.listdir(directory_path):
+        if os.path.isfile(os.path.join(directory_path, filename)):
+            os.remove(os.path.join(directory_path, filename))
 
 
 ################################################################################
 # Collection-specific data & functionality
 ################################################################################
 
-collectionTypes = (
+collection_types = (
     u'story',
     u'elicitation',
     u'paper',
@@ -1344,7 +1344,7 @@ collectionTypes = (
 # treebank will output a file containing representations of phrase structure for
 # each form in the corpus and the file will be called ``corpus_1.tbk`` ...
 
-corpusFormats = {
+corpus_formats = {
     'treebank': {
         'extension': 'tbk',
         'suffix': '',
@@ -1359,15 +1359,15 @@ corpusFormats = {
 
 
 # This is the regex for finding form references in the contents of collections.
-formReferencePattern = re.compile('[Ff]orm\[([0-9]+)\]')
+form_reference_pattern = re.compile('[Ff]orm\[([0-9]+)\]')
 
 # This is the regex for finding collection references in the contents of collections.
-#collectionReferencePattern = re.compile('[cC]ollection[\(\[](\d+)[\)\]]')
-collectionReferencePattern = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
+#collection_reference_pattern = re.compile('[cC]ollection[\(\[](\d+)[\)\]]')
+collection_reference_pattern = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
 
-def getIdsOfFormsReferenced(referencingString):
-    """Return a list of form ids corresponding to the form references in ``referencingString``."""
-    return [int(id) for id in formReferencePattern.findall(referencingString)]
+def get_ids_of_forms_referenced(referencing_string):
+    """Return a list of form ids corresponding to the form references in ``referencing_string``."""
+    return [int(id) for id in form_reference_pattern.findall(referencing_string)]
 
 def rst2html(string):
     try:
@@ -1381,62 +1381,62 @@ def md2html(string):
     except:
         return string
 
-markupLanguageToFunc = {
+markup_language_to_func = {
     'Markdown': md2html,
     'reStructuredText': rst2html
 }
 
-markupLanguages = markupLanguageToFunc.keys()
+markup_languages = markup_language_to_func.keys()
 
-def getHTMLFromContents(contents, markupLanguage):
-    return markupLanguageToFunc.get(markupLanguage, rst2html)(contents)
+def get_HTML_from_contents(contents, markup_language):
+    return markup_language_to_func.get(markup_language, rst2html)(contents)
 
 
 # Subject to change!  Or maybe these should be user-definable ...
-syntacticCategoryTypes = (
+syntactic_category_types = (
     u'lexical',
     u'phrasal',
     u'sentential'
 )
 
-formStatuses = (u'tested', u'requires testing')
+form_statuses = (u'tested', u'requires testing')
 
-userRoles = (
+user_roles = (
     u'viewer',
     u'contributor',
     u'administrator'
 )
 
-def generateSalt():
+def generate_salt():
     return unicode(uuid4().hex)
 
-def encryptPassword(password, salt):
+def encrypt_password(password, salt):
     """Use PassLib's pbkdf2 implementation to generate a hash from a password.
     Cf. http://packages.python.org/passlib/lib/passlib.hash.pbkdf2_digest.html#passlib.hash.pbkdf2_sha512
     """
     return pbkdf2_sha512.encrypt(password, salt=salt)
 
-def generatePassword(length=12):
-    lcLetters = string.letters[:26]
-    ucLetters = string.letters[26:]
+def generate_password(length=12):
+    lc_letters = string.letters[:26]
+    uc_letters = string.letters[26:]
     digits = string.digits
     symbols = string.punctuation.replace('\\', '')
-    password = [choice(lcLetters) for i in range(3)] + \
-               [choice(ucLetters) for i in range(3)] + \
+    password = [choice(lc_letters) for i in range(3)] + \
+               [choice(uc_letters) for i in range(3)] + \
                [choice(digits) for i in range(3)] + \
                [choice(symbols) for i in range(3)]
     shuffle(password)
     return u''.join(password)
 
 
-def getSearchParameters(queryBuilder):
+def get_search_parameters(query_builder):
     """Given an SQLAQueryBuilder instance, return (relative to the model being
     searched) the list of attributes and their aliases and licit relations
     relevant to searching.
     """
     return {
-        'attributes': queryBuilder.schema[queryBuilder.modelName],
-        'relations': queryBuilder.relations
+        'attributes': query_builder.schema[query_builder.model_name],
+        'relations': query_builder.relations
     }
 
 
@@ -1444,33 +1444,33 @@ def getSearchParameters(queryBuilder):
 # Email Functionality
 ################################################################################
 
-def getValueFromGmailConfig(gmailConfig, key, default=None):
+def get_value_from_gmail_config(gmail_config, key, default=None):
     try:
-        return gmailConfig.get('DEFAULT', key)
+        return gmail_config.get('DEFAULT', key)
     except:
         return default
 
-def getGmailConfig(**kwargs):
-    config = getConfig(**kwargs)
+def get_gmail_config(**kwargs):
+    config = get_config(**kwargs)
     try:
         here = config['here']
     except (TypeError, KeyError):
         raise Exception('The config object was inadequate.')
-    gmailConfigPath = os.path.join(here, 'gmail.ini')
-    gmailConfig = ConfigParser.ConfigParser()
+    gmail_config_path = os.path.join(here, 'gmail.ini')
+    gmail_config = ConfigParser.ConfigParser()
     try:
-        gmailConfig.read(gmailConfigPath)
-        return gmailConfig
+        gmail_config.read(gmail_config_path)
+        return gmail_config
     except ConfigParser.Error:
         return None
 
-def getObjectLanguageId():
-    return getattr(getApplicationSettings(), 'objectLanguageId', 'old')
+def get_object_language_id():
+    return getattr(get_application_settings(), 'object_language_id', 'old')
 
-def sendPasswordResetEmailTo(user, newPassword, **kwargs):
+def send_password_reset_email_to(user, new_password, **kwargs):
     """Send the "password reset" email to the user.  **kwargs should contain a
     config object (with 'config' as key) or a config file name (e.g.,
-    'production.ini' with 'configFilename' as key).  If
+    'production.ini' with 'config_filename' as key).  If
     password_reset_smtp_server is set to smtp.gmail.com in the config file, then
     the email will be sent using smtp.gmail.com and the system will expect a
     gmail.ini file with valid gmail_from_address and gmail_from_password values.
@@ -1480,18 +1480,18 @@ def sendPasswordResetEmailTo(user, newPassword, **kwargs):
     """
 
     to_address = user.email
-    config = getConfig(**kwargs)
+    config = get_config(**kwargs)
     if os.path.split(config['__file__'])[-1] == u'test.ini' and config.get('test_email_to'):
         to_address = config.get('test_email_to')
     password_reset_smtp_server = config.get('password_reset_smtp_server')
-    languageId = getObjectLanguageId()
-    from_address = '%s@old.org' % languageId
-    appName = languageId.upper() + ' OLD' if languageId != 'old' else 'OLD'
-    appURL = url('/', qualified=True)
+    language_id = get_object_language_id()
+    from_address = '%s@old.org' % language_id
+    app_name = language_id.upper() + ' OLD' if language_id != 'old' else 'OLD'
+    app_URL = url('/', qualified=True)
     if password_reset_smtp_server == 'smtp.gmail.com':
-        gmailConfig = getGmailConfig(config=config)
-        from_address = getValueFromGmailConfig(gmailConfig, 'gmail_from_address')
-        from_password = getValueFromGmailConfig(gmailConfig, 'gmail_from_password')
+        gmail_config = get_gmail_config(config=config)
+        from_address = get_value_from_gmail_config(gmail_config, 'gmail_from_address')
+        from_password = get_value_from_gmail_config(gmail_config, 'gmail_from_password')
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
@@ -1500,10 +1500,10 @@ def sendPasswordResetEmailTo(user, newPassword, **kwargs):
         server = smtplib.SMTP('localhost')
     to_addresses = [to_address]
     message = u''.join([
-        'From: %s <%s>\n' % (appName, from_address),
-        'To: %s %s <%s>\n' % (user.firstName, user.lastName, to_address),
-        'Subject: %s Password Reset\n\n' % appName,
-        'Your password at %s has been reset to:\n\n    %s\n\n' % (appURL, newPassword),
+        'From: %s <%s>\n' % (app_name, from_address),
+        'To: %s %s <%s>\n' % (user.first_name, user.last_name, to_address),
+        'Subject: %s Password Reset\n\n' % app_name,
+        'Your password at %s has been reset to:\n\n    %s\n\n' % (app_URL, new_password),
         'Please change it once you have logged in.\n\n',
         '(Do not reply to this email.)'
     ])
@@ -1517,7 +1517,7 @@ def compile_query(query, **kwargs):
     http://stackoverflow.com/questions/4617291/how-do-i-get-a-raw-compiled-sql-query-from-a-sqlalchemy-expression.
     """
 
-    RDBMSName = getRDBMSName(**kwargs)
+    RDBMSName = get_RDBMS_name(**kwargs)
     if RDBMSName == 'mysql':
         from sqlalchemy.sql import compiler
         from MySQLdb.converters import conversions, escape
@@ -1540,7 +1540,7 @@ def compile_query(query, **kwargs):
 # Command-line processes
 ################################################################################
 
-def getSubprocess(command):
+def get_subprocess(command):
     """Return a subprocess process.  The command argument is a list.  See
     http://docs.python.org/2/library/subprocess.html
     """
@@ -1549,57 +1549,57 @@ def getSubprocess(command):
     except OSError:
         return None
 
-def commandLineProgramInstalled(command):
+def command_line_program_installed(command):
     """Command is the list representing the command-line utility."""
     try:
-        return bool(getSubprocess(command))
+        return bool(get_subprocess(command))
     except:
         return False
 
-def ffmpegInstalled():
+def ffmpeg_installed():
     """Check if the ffmpeg command-line utility is installed on the host.
 
     Check first if the answer to this question is cached in app_globals.
 
     """
     try:
-        return app_globals.ffmpegInstalled
+        return app_globals.ffmpeg_installed
     except AttributeError:
-        ffmpegInstalled = commandLineProgramInstalled(['ffmpeg'])
-        app_globals.ffmpegInstalled = ffmpegInstalled
-        return ffmpegInstalled
+        ffmpeg_installed = command_line_program_installed(['ffmpeg'])
+        app_globals.ffmpeg_installed = ffmpeg_installed
+        return ffmpeg_installed
 
-def fomaInstalled(forceCheck=False):
+def foma_installed(force_check=False):
     """Check if the foma and flookup command-line utilities are installed on the host.
 
     Check first if the answer to this question is cached in app_globals.
 
     """
-    if forceCheck:
-        return commandLineProgramInstalled(['foma']) and \
-            commandLineProgramInstalled(['flookup'])
+    if force_check:
+        return command_line_program_installed(['foma']) and \
+            command_line_program_installed(['flookup'])
     try:
-        return app_globals.fomaInstalled
+        return app_globals.foma_installed
     except AttributeError:
-        fomaInstalled = commandLineProgramInstalled(['foma']) and \
-                        commandLineProgramInstalled(['flookup'])
-        app_globals.fomaInstalled = fomaInstalled
-        return fomaInstalled
+        foma_installed = command_line_program_installed(['foma']) and \
+                        command_line_program_installed(['flookup'])
+        app_globals.foma_installed = foma_installed
+        return foma_installed
 
-def ffmpegEncodes(format_):
+def ffmpeg_encodes(format_):
     """Check if ffmpeg encodes the input format.  First check if it's installed."""
-    if ffmpegInstalled():
+    if ffmpeg_installed():
         try:
-            return app_globals.ffmpegEncodes[format_]
+            return app_globals.ffmpeg_encodes[format_]
         except (AttributeError, KeyError):
             process = Popen(['ffmpeg', '-formats'], stderr=PIPE, stdout=PIPE)
             stdout, stderr = process.communicate()
-            encodesFormat = 'E %s' % format_ in stdout
+            encodes_format = 'E %s' % format_ in stdout
             try:
-                app_globals.ffmpegEncodes[format_] = encodesFormat
+                app_globals.ffmpeg_encodes[format_] = encodes_format
             except AttributeError:
-                app_globals.ffmpegEncodes = {format_: encodesFormat}
-            return encodesFormat
+                app_globals.ffmpeg_encodes = {format_: encodes_format}
+            return encodes_format
     return False
 
 
@@ -1612,31 +1612,31 @@ def ffmpegEncodes(format_):
 # scalars is pointless if not wasteful.  However, collections that will always be
 # accessed should always be eager loaded.
 
-def getEagerloader(modelName):
-    return globals().get('eagerload' + modelName, lambda x: x)
+def get_eagerloader(model_name):
+    return globals().get('eagerload' + model_name, lambda x: x)
 
-def eagerloadForm(query):
+def eagerload_form(query):
     return query.options(
         #subqueryload(model.Form.elicitor),
         subqueryload(model.Form.enterer),   # All forms *should* have enterers
         subqueryload(model.Form.modifier),
         #subqueryload(model.Form.verifier),
         #subqueryload(model.Form.speaker),
-        #subqueryload(model.Form.elicitationMethod),
-        #subqueryload(model.Form.syntacticCategory),
+        #subqueryload(model.Form.elicitation_method),
+        #subqueryload(model.Form.syntactic_category),
         #subqueryload(model.Form.source),
         joinedload(model.Form.translations),
         joinedload(model.Form.files),
         joinedload(model.Form.tags))
 
-def eagerloadApplicationSettings(query):
+def eagerload_application_settings(query):
     return query.options(
-        #subqueryload(model.ApplicationSettings.inputOrthography),
-        #subqueryload(model.ApplicationSettings.outputOrthography),
-        #subqueryload(model.ApplicationSettings.storageOrthography)
+        #subqueryload(model.ApplicationSettings.input_orthography),
+        #subqueryload(model.ApplicationSettings.output_orthography),
+        #subqueryload(model.ApplicationSettings.storage_orthography)
     )
 
-def eagerloadCollection(query, eagerloadForms=False):
+def eagerload_collection(query, eagerload_forms=False):
     """Eagerload the relational attributes of collections most likely to have values.
 
     subqueryload(model.Collection.speaker),
@@ -1644,7 +1644,7 @@ def eagerloadCollection(query, eagerloadForms=False):
     subqueryload(model.Collection.source),
 
     """
-    if eagerloadForms:
+    if eagerload_forms:
         return query.options(
             subqueryload(model.Collection.enterer),
             subqueryload(model.Collection.modifier),
@@ -1658,9 +1658,9 @@ def eagerloadCollection(query, eagerloadForms=False):
             joinedload(model.Collection.tags),
             joinedload(model.Collection.files))
 
-def eagerloadCorpus(query, eagerloadForms=False):
+def eagerload_corpus(query, eagerload_forms=False):
     """Eagerload the relational attributes of corpora most likely to have values."""
-    if eagerloadForms:
+    if eagerload_forms:
         return query.options(
             subqueryload(model.Corpus.enterer),
             subqueryload(model.Corpus.modifier),
@@ -1672,7 +1672,7 @@ def eagerloadCorpus(query, eagerloadForms=False):
             subqueryload(model.Corpus.modifier),
             joinedload(model.Corpus.tags))
 
-def eagerloadFile(query):
+def eagerload_file(query):
     return query.options(
         subqueryload(model.File.enterer),
         #subqueryload(model.File.elicitor),
@@ -1680,34 +1680,34 @@ def eagerloadFile(query):
         joinedload(model.File.tags),
         joinedload(model.File.forms))
 
-def eagerloadFormSearch(query):
+def eagerload_form_search(query):
     #return query.options(subqueryload(model.FormSearch.enterer))
     return query
 
-def eagerloadPhonology(query):
+def eagerload_phonology(query):
     return query.options(
         subqueryload(model.Phonology.enterer),
         subqueryload(model.Phonology.modifier))
 
-def eagerloadMorphology(query):
+def eagerload_morphology(query):
     return query.options(
         subqueryload(model.Morphology.enterer),
         subqueryload(model.Morphology.modifier))
 
-def eagerloadUser(query):
+def eagerload_user(query):
     return query.options(
-        #subqueryload(model.User.inputOrthography),
-        #subqueryload(model.User.outputOrthography)
+        #subqueryload(model.User.input_orthography),
+        #subqueryload(model.User.output_orthography)
     )
 
-def getUserFullName(user):
-    return '%s %s' % (user.firstName, user.lastName)
+def get_user_full_name(user):
+    return '%s %s' % (user.first_name, user.last_name)
 
 
-def setAttr(obj, name, value, changed):
+def set_attr(obj, name, value, changed):
     """Set the value of obj.name to value only if obj.name != value.  Set changed
     to True if obj.name has changed as a result.  Return changed.  Useful in the
-    updateModel function of the controllers.
+    update_model function of the controllers.
     """
     if getattr(obj, name) != value:
         setattr(obj, name, value)
@@ -1715,19 +1715,19 @@ def setAttr(obj, name, value, changed):
     return changed
 
 
-validationValues = (u'None', u'Warning', u'Error')
+validation_values = (u'None', u'Warning', u'Error')
 
 # How long to wait (in seconds) before terminating a process that is trying to
 # compile a foma script.
-phonologyCompileTimeout = 30
-morphologyCompileTimeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile!
+phonology_compile_timeout = 30
+morphology_compile_timeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile!
 
 # The word boundary symbol is used in foma FST scripts to denote the beginning or end of a word,
 # i.e., it can be referred to in phonological rules, e.g., define semivowelDrop glides -> 0 || "#" _;$
 # The system will wrap inputs in this symbol when applying a phonology against them.
 word_boundary_symbol = u'#'
 
-def fomaOutputFile2Dict(file_, remove_word_boundaries=True):
+def foma_output_file2dict(file_, remove_word_boundaries=True):
     """Return the output of a foma apply request as a dictionary.
 
     :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
@@ -1755,7 +1755,7 @@ def fomaOutputFile2Dict(file_, remove_word_boundaries=True):
     return result
 
 # Cf. http://code.google.com/p/foma/wiki/RegularExpressionReference#Reserved_symbols
-fomaReservedSymbols = [u'\u0021', u'\u0022', u'\u0023', u'\u0024', u'\u0025',
+foma_reserved_symbols = [u'\u0021', u'\u0022', u'\u0023', u'\u0024', u'\u0025',
     u'\u0026', u'\u0028', u'\u0029', u'\u002A', u'\u002B', u'\u002C', u'\u002D',
     u'\u002E', u'\u002F', u'\u0030', u'\u003A', u'\u003B', u'\u003C', u'\u003E',
     u'\u003F', u'\u005B', u'\u005C', u'\u005D', u'\u005E', u'\u005F', u'\u0060',
@@ -1764,48 +1764,48 @@ fomaReservedSymbols = [u'\u0021', u'\u0022', u'\u0023', u'\u0024', u'\u0025',
     u'\u2200', u'\u2203', u'\u2205', u'\u2208', u'\u2218', u'\u2225', u'\u2227',
     u'\u2228', u'\u2229', u'\u222A', u'\u2264', u'\u2265', u'\u227A', u'\u227B']
 
-fomaReservedSymbolsPatt = re.compile(u'[%s]' % u''.join(fomaReservedSymbols))
+foma_reserved_symbols_patt = re.compile(u'[%s]' % u''.join(foma_reserved_symbols))
 
-def escapeFomaReservedSymbols(string):
+def escape_foma_reserved_symbols(string):
     """Prepend foma reserved symbols with % to escape them."""
-    return fomaReservedSymbolsPatt.sub(lambda m: u'%' + m.group(0), string)
+    return foma_reserved_symbols_patt.sub(lambda m: u'%' + m.group(0), string)
 
-def deleteFomaReservedSymbols(string):
+def delete_foma_reserved_symbols(string):
     """Delete foma reserved symbols -- good for names of defined regexes."""
-    return fomaReservedSymbolsPatt.sub(u'', string)
+    return foma_reserved_symbols_patt.sub(u'', string)
 
 morphology_script_types = ('regex', 'lexc')
 
-def getFileLength(filePath):
+def get_file_length(file_path):
     """Return the number of lines in a file.
     
     cf. http://stackoverflow.com/questions/845058/how-to-get-line-count-cheaply-in-python
 
     """
-    with open(filePath) as f:
+    with open(file_path) as f:
         i = -1
         for i, l in enumerate(f):
             pass
     return i + 1
 
-def compressFile(filePath):
-    """Compress the file at ``filePath`` using ``gzip``.
+def compress_file(file_path):
+    """Compress the file at ``file_path`` using ``gzip``.
 
     Save it in the same directory with a ".gz" extension.
 
     """
-    with open(filePath, 'rb') as fi:
-        gzipPath = '%s.gz' % filePath
-        fo = gzip.open(gzipPath, 'wb')
+    with open(file_path, 'rb') as fi:
+        gzip_path = '%s.gz' % file_path
+        fo = gzip.open(gzip_path, 'wb')
         fo.writelines(fi)
         fo.close()
-        return gzipPath
+        return gzip_path
 
 
-def prettyPrintBytes(numBytes):
+def pretty_print_bytes(num_bytes):
     """Print an integer byte count to human-readable form.
     """
-    if numBytes is None:
+    if num_bytes is None:
         return 'File size unavailable.'
     KiB = 1024
     MiB = KiB * KiB
@@ -1815,25 +1815,25 @@ def prettyPrintBytes(numBytes):
     EiB = KiB * PiB
     ZiB = KiB * EiB
     YiB = KiB * ZiB
-    if numBytes > YiB:
-        return '%.3g YiB' % (numBytes / YiB)
-    elif numBytes > ZiB:
-        return '%.3g ZiB' % (numBytes / ZiB)
-    elif numBytes > EiB:
-        return '%.3g EiB' % (numBytes / EiB)
-    elif numBytes > PiB:
-        return '%.3g PiB' % (numBytes / PiB)
-    elif numBytes > TiB:
-        return '%.3g TiB' % (numBytes / TiB)
-    elif numBytes > GiB:
-        return '%.3g GiB' % (numBytes / GiB)
-    elif numBytes > MiB:
-        return '%.3g MiB' % (numBytes / MiB)
-    elif numBytes > KiB:
-        return '%.3g KiB' % (numBytes / KiB)
+    if num_bytes > YiB:
+        return '%.3g YiB' % (num_bytes / YiB)
+    elif num_bytes > ZiB:
+        return '%.3g ZiB' % (num_bytes / ZiB)
+    elif num_bytes > EiB:
+        return '%.3g EiB' % (num_bytes / EiB)
+    elif num_bytes > PiB:
+        return '%.3g PiB' % (num_bytes / PiB)
+    elif num_bytes > TiB:
+        return '%.3g TiB' % (num_bytes / TiB)
+    elif num_bytes > GiB:
+        return '%.3g GiB' % (num_bytes / GiB)
+    elif num_bytes > MiB:
+        return '%.3g MiB' % (num_bytes / MiB)
+    elif num_bytes > KiB:
+        return '%.3g KiB' % (num_bytes / KiB)
 
 
-def getLanguageObjects(filename, config):
+def get_language_objects(filename, config):
     """Return a list of language models generated from a text file in ``public/iso_639_3_languages_data``.
     """
     try:
@@ -1843,28 +1843,28 @@ def getLanguageObjects(filename, config):
             here = os.path.join(config['here'], 'onlinelinguisticdatabase')
         except Exception:
             return []
-    languagesPath = os.path.join(here, 'public', 'iso_639_3_languages_data')
+    languages_path = os.path.join(here, 'public', 'iso_639_3_languages_data')
     # Use the truncated languages file if we are running tests
     if filename == 'test.ini':
-        iso_639_3FilePath = os.path.join(languagesPath, 'iso_639_3_trunc.tab')
+        iso_639_3FilePath = os.path.join(languages_path, 'iso_639_3_trunc.tab')
     else:
-        iso_639_3FilePath = os.path.join(languagesPath, 'iso_639_3.tab')
+        iso_639_3FilePath = os.path.join(languages_path, 'iso_639_3.tab')
     iso_639_3File = codecs.open(iso_639_3FilePath, 'r', 'utf-8')
-    languageList = [l.split('\t') for l in iso_639_3File]
-    return [getLanguageObject(language) for language in languageList
-            if len(languageList) == 8]
+    language_list = [l.split('\t') for l in iso_639_3File]
+    return [get_language_object(language) for language in language_list
+            if len(language_list) == 8]
 
-def getLanguageObject(languageList):
+def get_language_object(language_list):
     """Given a list of ISO-639-3 language data, return an OLD language model."""
     language = model.Language()
-    language.Id = languageList[0]
-    language.Part2B = languageList[1]
-    language.Part2T = languageList[2]
-    language.Part1 = languageList[3]
-    language.Scope = languageList[4]
-    language.Type = languageList[5]
-    language.Ref_Name = languageList[6]
-    language.Comment = languageList[7]
+    language.Id = language_list[0]
+    language.Part2B = language_list[1]
+    language.Part2T = language_list[2]
+    language.Part1 = language_list[3]
+    language.Scope = language_list[4]
+    language.Type = language_list[5]
+    language.Ref_Name = language_list[6]
+    language.Comment = language_list[7]
     return language
 
 
@@ -1881,19 +1881,24 @@ class Keeper(object):
         return unicode(s).translate(self)
 makefilter = Keeper
 
-def getFormReferences(content):
-    """Similar to ``getIdsOfFormsReferenced`` except that references are
+def get_form_references(content):
+    """Similar to ``get_ids_of_forms_referenced`` except that references are
     assumed to be comma-delimited strings of digits -- all other text is
     filtered out.
     """
     digits_comma_only = makefilter('1234567890,')
-    return filter(None, map(getInt, digits_comma_only(content).split(',')))
+    return filter(None, map(get_int, digits_comma_only(content).split(',')))
 
 # String to use when a morpheme's category cannot be determined
-unknownCategory = u'?'
+unknown_category = u'?'
 
-# Default delimiter: used to delimit break-gloss-category strings in the ``breakGlossCategory`` attribute.
-defaultDelimiter = u'|'
+# Default delimiter: used to delimit break-gloss-category strings in the ``break_gloss_category`` attribute.
+default_delimiter = u'|'
 
 # Rare delimiter: used to delimit morphemes shapes from glosses in foma lexica.
-rareDelimiter = u'\u2980'
+rare_delimiter = u'\u2980'
+
+
+def chunker(sequence, size):
+    """Convert a sequence to a generator that yields subsequences of the sequence of size ``size``."""
+    return (sequence[position:position + size] for position in xrange(0, len(sequence), size))

@@ -27,7 +27,7 @@ class TestCollectionbackupsController(TestController):
 
     def __init__(self, *args, **kwargs):
         TestController.__init__(self, *args, **kwargs)
-        self.addSEARCHToWebTestValidMethods()
+        self._add_SEARCH_to_web_test_valid_methods()
 
     #@nottest
     def test_index(self):
@@ -35,81 +35,81 @@ class TestCollectionbackupsController(TestController):
         """
 
         # Add some test data to the database.
-        applicationSettings = h.generateDefaultApplicationSettings()
-        source = h.generateDefaultSource()
-        restrictedTag = h.generateRestrictedTag()
-        file1 = h.generateDefaultFile()
+        application_settings = h.generate_default_application_settings()
+        source = h.generate_default_source()
+        restricted_tag = h.generate_restricted_tag()
+        file1 = h.generate_default_file()
         file1.name = u'file1'
-        file2 = h.generateDefaultFile()
+        file2 = h.generate_default_file()
         file2.name = u'file2'
-        speaker = h.generateDefaultSpeaker()
-        Session.add_all([applicationSettings, source, restrictedTag, file1,
+        speaker = h.generate_default_speaker()
+        Session.add_all([application_settings, source, restricted_tag, file1,
                          file2, speaker])
         Session.commit()
-        speakerId = speaker.id
-        restrictedTagId = restrictedTag.id
-        tagIds = [restrictedTagId]
-        file1Id = file1.id
-        file2Id = file2.id
-        fileIds = [file1Id, file2Id]
+        speaker_id = speaker.id
+        restricted_tag_id = restricted_tag.id
+        tag_ids = [restricted_tag_id]
+        file1_id = file1.id
+        file2_id = file2.id
+        file_ids = [file1_id, file2_id]
 
         # Create a restricted collection (via request) as the default contributor
-        users = h.getUsers()
-        contributorId = [u for u in users if u.role==u'contributor'][0].id
-        administratorId = [u for u in users if u.role==u'administrator'][0].id
+        users = h.get_users()
+        contributor_id = [u for u in users if u.role==u'contributor'][0].id
+        administrator_id = [u for u in users if u.role==u'administrator'][0].id
 
         # Define some extra_environs
-        view = {'test.authentication.role': u'viewer', 'test.applicationSettings': True}
-        contrib = {'test.authentication.role': u'contributor', 'test.applicationSettings': True}
-        admin = {'test.authentication.role': u'administrator', 'test.applicationSettings': True}
+        view = {'test.authentication.role': u'viewer', 'test.application_settings': True}
+        contrib = {'test.authentication.role': u'contributor', 'test.application_settings': True}
+        admin = {'test.authentication.role': u'administrator', 'test.application_settings': True}
 
-        params = self.collectionCreateParams.copy()
+        params = self.collection_create_params.copy()
         params.update({
             'title': u'Created by the Contributor',
-            'elicitor': contributorId,
-            'tags': [restrictedTagId]
+            'elicitor': contributor_id,
+            'tags': [restricted_tag_id]
         })
         params = json.dumps(params)
         response = self.app.post(url('collections'), params, self.json_headers, contrib)
-        collectionCount = Session.query(model.Collection).count()
+        collection_count = Session.query(model.Collection).count()
         resp = json.loads(response.body)
-        collectionId = resp['id']
+        collection_id = resp['id']
         assert response.content_type == 'application/json'
-        assert collectionCount == 1
+        assert collection_count == 1
 
         # Update our collection (via request) as the default administrator; this
         # will create one collection backup.
-        params = self.collectionCreateParams.copy()
+        params = self.collection_create_params.copy()
         params.update({
             'url': u'find/me/here',
             'title': u'Updated by the Administrator',
-            'speaker': speakerId,
-            'tags': tagIds + [None, u''], # None and u'' ('') will be ignored by collections.updateCollection
-            'enterer': administratorId  # This should change nothing.
+            'speaker': speaker_id,
+            'tags': tag_ids + [None, u''], # None and u'' ('') will be ignored by collections.update_collection
+            'enterer': administrator_id  # This should change nothing.
         })
         params = json.dumps(params)
-        response = self.app.put(url('collection', id=collectionId), params,
+        response = self.app.put(url('collection', id=collection_id), params,
                         self.json_headers, admin)
         resp = json.loads(response.body)
-        collectionCount = Session.query(model.Collection).count()
+        collection_count = Session.query(model.Collection).count()
         assert response.content_type == 'application/json'
-        assert collectionCount == 1
+        assert collection_count == 1
 
         # Finally, update our collection (via request) as the default contributor.
         # Now we will have two collection backups.
-        params = self.collectionCreateParams.copy()
+        params = self.collection_create_params.copy()
         params.update({
             'title': u'Updated by the Contributor',
-            'speaker': speakerId,
-            'tags': tagIds,
-            'files': fileIds
+            'speaker': speaker_id,
+            'tags': tag_ids,
+            'files': file_ids
         })
         params = json.dumps(params)
-        response = self.app.put(url('collection', id=collectionId), params,
+        response = self.app.put(url('collection', id=collection_id), params,
                         self.json_headers, contrib)
         resp = json.loads(response.body)
-        collectionCount = Session.query(model.Collection).count()
-        assert collectionCount == 1
+        collection_count = Session.query(model.Collection).count()
+        assert collection_count == 1
 
         # Now GET the collection backups as the restricted enterer of the original
         # collection and expect to get them all.
@@ -129,19 +129,19 @@ class TestCollectionbackupsController(TestController):
         assert len(resp) == 0
 
         # Now update the collection and de-restrict it.
-        params = self.collectionCreateParams.copy()
+        params = self.collection_create_params.copy()
         params.update({
             'title': u'Updated and de-restricted by the Contributor',
-            'speaker': speakerId,
+            'speaker': speaker_id,
             'tags': [],
-            'files': fileIds
+            'files': file_ids
         })
         params = json.dumps(params)
-        response = self.app.put(url('collection', id=collectionId), params,
+        response = self.app.put(url('collection', id=collection_id), params,
                         self.json_headers, contrib)
         resp = json.loads(response.body)
-        collectionCount = Session.query(model.Collection).count()
-        assert collectionCount == 1
+        collection_count = Session.query(model.Collection).count()
+        assert collection_count == 1
 
         # Now GET the collection backups.  Admin and contrib should see 3 but the
         # viewer should still see none.
@@ -157,19 +157,19 @@ class TestCollectionbackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Finally, update our collection in some trivial way.
-        params = self.collectionCreateParams.copy()
+        params = self.collection_create_params.copy()
         params.update({
             'title': u'Updated by the Contributor *again*',
-            'speaker': speakerId,
+            'speaker': speaker_id,
             'tags': [],
-            'files': fileIds
+            'files': file_ids
         })
         params = json.dumps(params)
-        response = self.app.put(url('collection', id=collectionId), params,
+        response = self.app.put(url('collection', id=collection_id), params,
                         self.json_headers, contrib)
         resp = json.loads(response.body)
-        collectionCount = Session.query(model.Collection).count()
-        assert collectionCount == 1
+        collection_count = Session.query(model.Collection).count()
+        assert collection_count == 1
 
         # Now GET the collection backups.  Admin and contrib should see 4 and the
         # viewer should see 1
@@ -178,64 +178,64 @@ class TestCollectionbackupsController(TestController):
         assert len(resp) == 4
         response = self.app.get(url('collectionbackups'), headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        allCollectionBackups = resp
+        all_collection_backups = resp
         assert len(resp) == 4
         response = self.app.get(url('collectionbackups'), headers=self.json_headers, extra_environ=view)
         resp = json.loads(response.body)
-        unrestrictedCollectionBackup = resp[0]
+        unrestricted_collection_backup = resp[0]
         assert len(resp) == 1
         assert resp[0]['title'] == u'Updated and de-restricted by the Contributor'
-        restrictedCollectionBackups = [cb for cb in allCollectionBackups
-                                       if cb != unrestrictedCollectionBackup]
-        assert len(restrictedCollectionBackups) == 3
+        restricted_collection_backups = [cb for cb in all_collection_backups
+                                       if cb != unrestricted_collection_backup]
+        assert len(restricted_collection_backups) == 3
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 1, 'page': 2}
+        paginator = {'items_per_page': 1, 'page': 2}
         response = self.app.get(url('collectionbackups'), paginator, headers=self.json_headers,
                                 extra_environ=admin)
         resp = json.loads(response.body)
         assert len(resp['items']) == 1
-        assert resp['items'][0]['title'] == allCollectionBackups[1]['title']
+        assert resp['items'][0]['title'] == all_collection_backups[1]['title']
         assert response.content_type == 'application/json'
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'CollectionBackup',
-            'orderByAttribute': 'id', 'orderByDirection': 'desc'}
-        response = self.app.get(url('collectionbackups'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'CollectionBackup',
+            'order_by_attribute': 'id', 'order_by_direction': 'desc'}
+        response = self.app.get(url('collectionbackups'), order_by_params,
                         headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        resultSet = sorted(allCollectionBackups, key=lambda cb: cb['id'], reverse=True)
-        assert [cb['id'] for cb in resp] == [cb['id'] for cb in resultSet] 
+        result_set = sorted(all_collection_backups, key=lambda cb: cb['id'], reverse=True)
+        assert [cb['id'] for cb in resp] == [cb['id'] for cb in result_set] 
 
-        # Test the orderBy *with* paginator.  
-        params = {'orderByModel': 'CollectionBackup', 'orderByAttribute': 'id',
-                     'orderByDirection': 'desc', 'itemsPerPage': 1, 'page': 3}
+        # Test the order_by *with* paginator.  
+        params = {'order_by_model': 'CollectionBackup', 'order_by_attribute': 'id',
+                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
         response = self.app.get(url('collectionbackups'), params,
                         headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        assert resultSet[2]['title'] == resp['items'][0]['title']
+        assert result_set[2]['title'] == resp['items'][0]['title']
 
         # Now test the show action:
 
         # Admin should be able to GET a particular restricted collection backup
-        response = self.app.get(url('collectionbackup', id=restrictedCollectionBackups[0]['id']),
+        response = self.app.get(url('collectionbackup', id=restricted_collection_backups[0]['id']),
                                 headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        assert resp['title'] == restrictedCollectionBackups[0]['title']
+        assert resp['title'] == restricted_collection_backups[0]['title']
         assert response.content_type == 'application/json'
 
         # Viewer should receive a 403 error when attempting to do so.
-        response = self.app.get(url('collectionbackup', id=restrictedCollectionBackups[0]['id']),
+        response = self.app.get(url('collectionbackup', id=restricted_collection_backups[0]['id']),
                                 headers=self.json_headers, extra_environ=view, status=403)
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
         assert response.content_type == 'application/json'
 
         # Viewer should be able to GET the unrestricted collection backup
-        response = self.app.get(url('collectionbackup', id=unrestrictedCollectionBackup['id']),
+        response = self.app.get(url('collectionbackup', id=unrestricted_collection_backup['id']),
                                 headers=self.json_headers, extra_environ=view)
         resp = json.loads(response.body)
-        assert resp['title'] == unrestrictedCollectionBackup['title']
+        assert resp['title'] == unrestricted_collection_backup['title']
 
         # A nonexistent cb id will return a 404 error
         response = self.app.get(url('collectionbackup', id=100987),
@@ -245,49 +245,49 @@ class TestCollectionbackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Test the search action
-        self.addSEARCHToWebTestValidMethods()
+        self._add_SEARCH_to_web_test_valid_methods()
 
         # A search on collection backup titles using POST /collectionbackups/search
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
                         ['CollectionBackup', 'title', 'like', u'%Contributor%']}})
-        response = self.app.post(url('/collectionbackups/search'), jsonQuery,
+        response = self.app.post(url('/collectionbackups/search'), json_query,
                         self.json_headers, admin)
         resp = json.loads(response.body)
-        resultSet = [cb for cb in allCollectionBackups if u'Contributor' in cb['title']]
-        assert len(resp) == len(resultSet) == 3
-        assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in resultSet])
+        result_set = [cb for cb in all_collection_backups if u'Contributor' in cb['title']]
+        assert len(resp) == len(result_set) == 3
+        assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in result_set])
         assert response.content_type == 'application/json'
 
         # A search on collection backup titles using SEARCH /collectionbackups
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
                         ['CollectionBackup', 'title', 'like', u'%Administrator%']}})
-        response = self.app.request(url('collectionbackups'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collectionbackups'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=admin)
         resp = json.loads(response.body)
-        resultSet = [cb for cb in allCollectionBackups if u'Administrator' in cb['title']]
-        assert len(resp) == len(resultSet) == 1
-        assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in resultSet])
+        result_set = [cb for cb in all_collection_backups if u'Administrator' in cb['title']]
+        assert len(resp) == len(result_set) == 1
+        assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in result_set])
 
         # Perform the two previous searches as a restricted viewer to show that
         # the restricted tag is working correctly.
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
                         ['CollectionBackup', 'title', 'like', u'%Contributor%']}})
-        response = self.app.post(url('/collectionbackups/search'), jsonQuery,
+        response = self.app.post(url('/collectionbackups/search'), json_query,
                         self.json_headers, view)
         resp = json.loads(response.body)
-        resultSet = [cb for cb in [unrestrictedCollectionBackup]
+        result_set = [cb for cb in [unrestricted_collection_backup]
                      if u'Contributor' in cb['title']]
-        assert len(resp) == len(resultSet) == 1
-        assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in resultSet])
+        assert len(resp) == len(result_set) == 1
+        assert set([cb['id'] for cb in resp]) == set([cb['id'] for cb in result_set])
 
-        jsonQuery = json.dumps({'query': {'filter':
+        json_query = json.dumps({'query': {'filter':
                         ['CollectionBackup', 'title', 'like', u'%Administrator%']}})
-        response = self.app.request(url('collectionbackups'), method='SEARCH', body=jsonQuery,
+        response = self.app.request(url('collectionbackups'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=view)
         resp = json.loads(response.body)
-        resultSet = [cb for cb in [unrestrictedCollectionBackup]
+        result_set = [cb for cb in [unrestricted_collection_backup]
                      if u'Administrator' in cb['title']]
-        assert len(resp) == len(resultSet) == 0
+        assert len(resp) == len(result_set) == 0
 
         # I'm just going to assume that the order by and pagination functions are
         # working correctly since the implementation is essentially equivalent
@@ -310,8 +310,8 @@ class TestCollectionbackupsController(TestController):
     #@nottest
     def test_new_search(self):
         """Tests that GET /collectionbackups/new_search returns the search parameters for searching the collection backups resource."""
-        queryBuilder = SQLAQueryBuilder('CollectionBackup')
+        query_builder = SQLAQueryBuilder('CollectionBackup')
         response = self.app.get(url('/collectionbackups/new_search'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resp['searchParameters'] == h.getSearchParameters(queryBuilder)
+        assert resp['search_parameters'] == h.get_search_parameters(query_builder)

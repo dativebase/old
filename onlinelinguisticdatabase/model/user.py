@@ -14,9 +14,9 @@
 
 """User model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class UserForm(Base):
@@ -27,7 +27,7 @@ class UserForm(Base):
     id = Column(Integer, Sequence('userform_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     user_id = Column(Integer, ForeignKey('user.id'))
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)
 
 class User(Base):
 
@@ -41,40 +41,40 @@ class User(Base):
     username = Column(Unicode(255), unique=True)
     password = Column(Unicode(255))
     salt = Column(Unicode(255))
-    firstName = Column(Unicode(255))
-    lastName = Column(Unicode(255))
+    first_name = Column(Unicode(255))
+    last_name = Column(Unicode(255))
     email = Column(Unicode(255))
     affiliation = Column(Unicode(255))
     role = Column(Unicode(100))
-    markupLanguage = Column(Unicode(100))
-    pageContent = Column(UnicodeText)
+    markup_language = Column(Unicode(100))
+    page_content = Column(UnicodeText)
     html = Column(UnicodeText)
-    inputOrthography_id = Column(Integer, ForeignKey('orthography.id'))
-    inputOrthography = relation('Orthography',
-        primaryjoin='User.inputOrthography_id==Orthography.id')
-    outputOrthography_id = Column(Integer, ForeignKey('orthography.id'))
-    outputOrthography = relation('Orthography',
-        primaryjoin='User.outputOrthography_id==Orthography.id')
-    datetimeModified = Column(DateTime, default=now)
-    rememberedForms = relation('Form', secondary=UserForm.__table__, backref='memorizers')
+    input_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    input_orthography = relation('Orthography',
+        primaryjoin='User.input_orthography_id==Orthography.id')
+    output_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    output_orthography = relation('Orthography',
+        primaryjoin='User.output_orthography_id==Orthography.id')
+    datetime_modified = Column(DateTime, default=now)
+    remembered_forms = relation('Form', secondary=UserForm.__table__, backref='memorizers')
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
-            'firstName': self.firstName,
-            'lastName': self.lastName,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
             'email': self.email,
             'affiliation': self.affiliation,
             'role': self.role,
-            'markupLanguage': self.markupLanguage,
-            'pageContent': self.pageContent,
+            'markup_language': self.markup_language,
+            'page_content': self.page_content,
             'html': self.html,
-            'inputOrthography': self.getMiniOrthographyDict(self.inputOrthography),
-            'outputOrthography': self.getMiniOrthographyDict(self.outputOrthography),
-            'datetimeModified': self.datetimeModified
+            'input_orthography': self.get_mini_orthography_dict(self.input_orthography),
+            'output_orthography': self.get_mini_orthography_dict(self.output_orthography),
+            'datetime_modified': self.datetime_modified
         }
 
-    def getFullDict(self):
-        userDict = self.getDict()
-        userDict['username'] = self.username
-        return userDict
+    def get_full_dict(self):
+        user_dict = self.get_dict()
+        user_dict['username'] = self.username
+        return user_dict

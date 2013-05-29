@@ -24,11 +24,11 @@ Example usage::
 
     from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
     foma_worker_q.put({
-        'id': h.generateSalt(),
+        'id': h.generate_salt(),
         'func': 'compile_foma_script',
-        'args': {'modelName': u'Phonology', 'modelId': phonology.id,
-            'scriptDirPath': phonologyDirPath, 'userId': session['user'].id,
-            'verificationString': u'defined phonology: ', 'timeout': h.phonologyCompileTimeout}
+        'args': {'model_name': u'Phonology', 'model_id': phonology.id,
+            'script_dir_path': phonology_dir_path, 'user_id': session['user'].id,
+            'verification_string': u'defined phonology: ', 'timeout': h.phonology_compile_timeout}
     })
 
 Cf. http://www.chrismoos.com/2009/03/04/pylons-worker-threads.
@@ -83,25 +83,25 @@ def start_foma_worker():
 # Foma Compile Functions
 ################################################################################
 
-def get_file_path(modelObject, scriptDirPath, fileType='script'):
+def get_file_path(model_object, script_dir_path, file_type='script'):
     """Return the path to a foma-based model's file of the given type.
 
-    :param modelObject: a phonology or morphology model object.
-    :param str scriptDirPath: the absolute path to the directory that houses the foma 
+    :param model_object: a phonology or morphology model object.
+    :param str script_dir_path: the absolute path to the directory that houses the foma 
         script of the phonology or morphology
-    :param str fileType: one of 'script', 'binary', 'compiler' or 'log'.
+    :param str file_type: one of 'script', 'binary', 'compiler' or 'log'.
     :returns: an absolute path to the file of the supplied type for the model object given.
 
     """
-    extMap = {
+    ext_map = {
         'script': 'script',
         'binary': 'foma',
         'compiler': 'sh',
         'log': 'log',
         'lexicon': 'pickle'
     }
-    return os.path.join(scriptDirPath,
-                '%s_%d.%s' % (modelObject.__tablename__, modelObject.id, extMap.get(fileType, 'script')))
+    return os.path.join(script_dir_path,
+                '%s_%d.%s' % (model_object.__tablename__, model_object.id, ext_map.get(file_type, 'script')))
 
 class Command(object):
     """Runs the input command ``cmd`` as a subprocess within a thread.
@@ -133,7 +133,7 @@ class Command(object):
         thread.start()
         thread.join(timeout)
         if thread.is_alive():
-            self.killProcess(self.process)
+            self.kill_process(self.process)
             thread.join()
         try:
             stdout = open(self.logpath).read()
@@ -141,17 +141,17 @@ class Command(object):
             stdout = ''
         return self.process.returncode, stdout
 
-    def killProcess(self, process):
+    def kill_process(self, process):
         pid = process.pid
         pids = [pid]
-        pids.extend(self.getProcessChildren(pid))
+        pids.extend(self.get_process_children(pid))
         for pid in pids:
             try: 
                 os.kill(pid, SIGKILL)
             except OSError:
                 pass
 
-    def getProcessChildren(self, pid):
+    def get_process_children(self, pid):
         p = Popen('ps --no-headers -o pid --ppid %d' % pid, shell=True,
                   stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
@@ -163,7 +163,7 @@ def compile_phonology_script(**kwargs):
     phonology = Session.query(model.Phonology).get(phonology_id)
     kwargs['model_object'] = phonology
     phonology = compile_foma_script(**kwargs)
-    phonology.datetimeModified = h.now()
+    phonology.datetime_modified = h.now()
     phonology.modifier_id = kwargs['user_id']
     phonology.compile_attempt = unicode(uuid4())
     Session.commit()
@@ -178,8 +178,8 @@ def compile_foma_script(**kwargs):
     :param str kwargs['script_dir_path']: the absolute path to the model's script directory.
     :param int kwargs['user_id']: a user model's ``id`` value.
     :param float/int kwargs['timeout']: how long to wait before terminating the compile process.
-    :returns: the model object with new values for its compile_attempt, compileSucceeded, compileMessage,
-        modifier and datetimeModified attributes.
+    :returns: the model object with new values for its compile_attempt, compile_succeeded, compile_message,
+        modifier and datetime_modified attributes.
 
     """
     model_object = kwargs.get('model_object')
@@ -189,29 +189,29 @@ def compile_foma_script(**kwargs):
     compiler_path = kwargs.get('compiler_path', get_file_path(model_object, script_dir_path, 'compiler'))
     binary_path = kwargs.get('binary_path', get_file_path(model_object, script_dir_path, 'binary'))
     log_path = kwargs.get('log_path', get_file_path(model_object, script_dir_path, 'log'))
-    binary_mod_time = h.getModificationTime(binary_path)
+    binary_mod_time = h.get_modification_time(binary_path)
     try:
         command = Command([compiler_path], log_path)
         returncode, output = command.run(timeout=timeout)
         if verification_string in output:
             if returncode == 0:
                 if (os.path.isfile(binary_path) and
-                    binary_mod_time != h.getModificationTime(binary_path)):
-                    model_object.compileSucceeded = True
-                    model_object.compileMessage = u'Compilation process terminated successfully and new binary file was written.'
+                    binary_mod_time != h.get_modification_time(binary_path)):
+                    model_object.compile_succeeded = True
+                    model_object.compile_message = u'Compilation process terminated successfully and new binary file was written.'
                 else:
-                    model_object.compileSucceeded = False
-                    model_object.compileMessage = u'Compilation process terminated successfully yet no new binary file was written.'
+                    model_object.compile_succeeded = False
+                    model_object.compile_message = u'Compilation process terminated successfully yet no new binary file was written.'
             else:
-                model_object.compileSucceeded = False
-                model_object.compileMessage = u'Compilation process failed.'
+                model_object.compile_succeeded = False
+                model_object.compile_message = u'Compilation process failed.'
         else:
-            model_object.compileSucceeded = False
-            model_object.compileMessage = u'Foma script is not a well-formed %s.' % model_object.__tablename__
+            model_object.compile_succeeded = False
+            model_object.compile_message = u'Foma script is not a well-formed %s.' % model_object.__tablename__
     except Exception:
-        model_object.compileSucceeded = False
-        model_object.compileMessage = u'Compilation attempt raised an error.'
-    if model_object.compileSucceeded:
+        model_object.compile_succeeded = False
+        model_object.compile_message = u'Compilation attempt raised an error.'
+    if model_object.compile_succeeded:
         os.chmod(binary_path, 0744)
     else:
         try:
@@ -234,7 +234,7 @@ def generate_and_compile_morphology_script(**kwargs):
     morphology_id = kwargs.get('morphology_id')
     script_dir_path = kwargs.get('script_dir_path')
     morphology = Session.query(model.Morphology).get(morphology_id)
-    morpheme_delimiters = h.getMorphemeDelimiters()
+    morpheme_delimiters = h.get_morpheme_delimiters()
     rules, lexicon = get_rules_and_lexicon(morphology, morpheme_delimiters)
     kwargs.update({
         'model_object': morphology,
@@ -257,7 +257,7 @@ def generate_and_compile_morphology_script(**kwargs):
         morphology.compile_attempt = unicode(uuid4())
     morphology.generate_attempt = unicode(uuid4())
     morphology.modifier_id = kwargs['user_id']
-    morphology.datetimeModified = h.now()
+    morphology.datetime_modified = h.now()
     Session.commit()
 
 def get_rules_and_lexicon(morphology, morpheme_delimiters):
@@ -273,11 +273,11 @@ def _get_rules_and_lexicon(morphology, morpheme_delimiters):
     def extract_morphemes_from_form(form, morpheme_splitter, unknown_category):
         """Return the morphemes in the form as a tuple: (pos, (mb, mg))."""
         morphemes = []
-        if not form.syntacticCategoryString:
+        if not form.syntactic_category_string:
             return morphemes
-        sc_words = form.syntacticCategoryString.split()
-        mb_words = form.morphemeBreak.split()
-        mg_words = form.morphemeGloss.split()
+        sc_words = form.syntactic_category_string.split()
+        mb_words = form.morpheme_break.split()
+        mg_words = form.morpheme_gloss.split()
         for sc_word, mb_word, mg_word in zip(sc_words, mb_words, mg_words):
             pos_sequence = morpheme_splitter(sc_word)[::2]
             morpheme_sequence = morpheme_splitter(mb_word)[::2]
@@ -298,13 +298,13 @@ def _get_rules_and_lexicon(morphology, morpheme_delimiters):
         :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes as (pos, (mb, mg)) tuples).
 
         """
-        if not form.syntacticCategoryString:
+        if not form.syntactic_category_string:
             return None, None
         pos_sequences = set()
         morphemes = []
-        sc_words = form.syntacticCategoryString.split()
-        mb_words = form.morphemeBreak.split()
-        mg_words = form.morphemeGloss.split()
+        sc_words = form.syntactic_category_string.split()
+        mb_words = form.morpheme_break.split()
+        mg_words = form.morpheme_gloss.split()
         for sc_word, mb_word, mg_word in zip(sc_words, mb_words, mg_words):
             pos_sequence = tuple(morpheme_splitter(sc_word))
             if unknown_category not in pos_sequence:
@@ -318,7 +318,7 @@ def _get_rules_and_lexicon(morphology, morpheme_delimiters):
 
     def filter_invalid_sequences(pos_sequences, morphemes, morphology, morpheme_delimiters):
         """Remove category sequences from pos_sequences if they contain categories not listed as 
-        keys of the morphemes dict or if they contain delimiters not listed in morphemeDelimiters.
+        keys of the morphemes dict or if they contain delimiters not listed in morpheme_delimiters.
         """
         if not morphemes:
             return pos_sequences
@@ -332,22 +332,22 @@ def _get_rules_and_lexicon(morphology, morpheme_delimiters):
                 new_pos_sequences.add(pos_sequence)
         return new_pos_sequences
 
-    unknown_category = h.unknownCategory
+    unknown_category = h.unknown_category
     # Get a function that will split words into morphemes
     morpheme_splitter = lambda x: [x] # default, word is morpheme
     if morpheme_delimiters:
-        morpheme_splitter = re.compile(u'([%s])' % ''.join([h.escREMetaChars(d) for d in morpheme_delimiters])).split
+        morpheme_splitter = re.compile(u'([%s])' % ''.join([h.esc_RE_meta_chars(d) for d in morpheme_delimiters])).split
     # Get the unique morphemes from the lexicon corpus
     morphemes = {}
-    if (morphology.lexiconCorpus and
-        morphology.lexiconCorpus.id != morphology.rulesCorpus.id):
-        for form in morphology.lexiconCorpus.forms:
+    if (morphology.lexicon_corpus and
+        morphology.lexicon_corpus.id != morphology.rules_corpus.id):
+        for form in morphology.lexicon_corpus.forms:
             new_morphemes = extract_morphemes_from_form(form, morpheme_splitter, unknown_category)
             for pos, data in new_morphemes:
                 morphemes.setdefault(pos, set()).add(data)
     # Get the pos strings (and morphemes) from the words in the rules corpus
     pos_sequences = set()
-    for form in morphology.rulesCorpus.forms:
+    for form in morphology.rules_corpus.forms:
         new_pos_sequences, new_morphemes = extract_word_pos_sequences(form, morpheme_splitter, unknown_category, morphology)
         if new_pos_sequences:
             pos_sequences |= new_pos_sequences
@@ -422,7 +422,7 @@ def get_morphology_generator(morphology, pos_sequences, morphemes, morpheme_deli
     else:
         return get_regex_morphology_generator(morphemes, pos_sequences)
 
-def get_lexc_morphology_generator(morphemes, pos_sequences, morphemeDelimiters):
+def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters):
     """Return a generator that yields lines of a foma script representing the morphology using the lexc formalism,
     cf. https://code.google.com/p/foma/wiki/MorphologicalAnalysisTutorial.
 
@@ -436,39 +436,39 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morphemeDelimiters):
     as the following continuation classes MD5('-V-Agr') MD5('V-Agr') MD5('-Agr') MD5('Agr')
 
     """
-    def pos_sequence_2_lexicon_name(pos_sequence, morphemeDelimiters):
+    def pos_sequence_2_lexicon_name(pos_sequence, morpheme_delimiters):
         """Return a foma lexc lexicon name for the tuple of categories and delimiters; output is an MD5 hash."""
         return hashlib.md5(u''.join(pos_sequence).encode('utf8')).hexdigest()
 
-    def get_lexicon_entries_generator(pos_sequence, morphemes, morphemeDelimiters):
+    def get_lexicon_entries_generator(pos_sequence, morphemes, morpheme_delimiters):
         """Return a generator that yields a line for each entry in a lexc LEXICON based on a POS sequence.
 
         :param tuple pos_sequence: something like ('N', '-', 'Ninf') or ('-', 'Ninf').
         :param dict morphemes: {'N': [(u'chien', u'dog'), (u'chat', u'cat'), ...], 'V': ...}
-        :param list morphemeDelimiters: the morpheme delimiters defined in the application settings.
+        :param list morpheme_delimiters: the morpheme delimiters defined in the application settings.
         :yields: lines that compries the entries in a foma lexc LEXICON declaration.
 
         """
         if len(pos_sequence) == 1:
             next_class = u'#'
         else:
-            next_class = pos_sequence_2_lexicon_name(pos_sequence[1:], morphemeDelimiters)
+            next_class = pos_sequence_2_lexicon_name(pos_sequence[1:], morpheme_delimiters)
         first_element = pos_sequence[0]
-        if first_element in morphemeDelimiters:
+        if first_element in morpheme_delimiters:
             yield u'%s %s;\n' % (first_element, next_class)
         else:
             our_morphemes = morphemes.get(first_element, [])
             for form, gloss in our_morphemes:
-                form = h.escapeFomaReservedSymbols(form)
-                gloss = h.escapeFomaReservedSymbols(gloss)
-                yield u'%s%s%s:%s %s;\n' % (form, h.rareDelimiter, gloss, form, next_class)
+                form = h.escape_foma_reserved_symbols(form)
+                gloss = h.escape_foma_reserved_symbols(gloss)
+                yield u'%s%s%s:%s %s;\n' % (form, h.rare_delimiter, gloss, form, next_class)
         yield u'\n\n'
 
     glosses = set()
     for morphemes_list in morphemes.values():
         for form, gloss in morphemes_list:
             glosses.add(gloss)
-    glosses = map(h.escapeFomaReservedSymbols, glosses)
+    glosses = map(h.escape_foma_reserved_symbols, glosses)
     yield u'Multichar_Symbols %s\n' % glosses[0]
     for gloss in glosses[1:]:
         yield u'  %s\n' % gloss
@@ -476,7 +476,7 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morphemeDelimiters):
     roots = []
     continuation_classes = set()
     for sequence in pos_sequences:
-        roots.append(pos_sequence_2_lexicon_name(sequence, morphemeDelimiters))
+        roots.append(pos_sequence_2_lexicon_name(sequence, morpheme_delimiters))
         for index in range(len(sequence)):
             continuation_classes.add(sequence[index:])
     continuation_classes = sorted(continuation_classes, key=len, reverse=True)
@@ -485,8 +485,8 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morphemeDelimiters):
         yield '%s ;\n' % root
     yield u'\n\n'
     for continuation_class in continuation_classes:
-        yield u'LEXICON %s\n\n' % pos_sequence_2_lexicon_name(continuation_class, morphemeDelimiters)
-        for line in get_lexicon_entries_generator(continuation_class, morphemes, morphemeDelimiters):
+        yield u'LEXICON %s\n\n' % pos_sequence_2_lexicon_name(continuation_class, morpheme_delimiters)
+        for line in get_lexicon_entries_generator(continuation_class, morphemes, morpheme_delimiters):
             yield line
 
 def get_regex_morphology_generator(morphemes, pos_sequences):
@@ -511,11 +511,11 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
             'c h i e n "|dog":0' as one of its disjuncts.  This is a transducer that maps
             'chien|dog' to 'chien', i.e,. '"|dog"' is a multi-character symbol that is mapped
             to the null symbol, i.e., '0'.  Note also that the vertical bar '|' character is 
-            not actually used -- the delimiter character is actually that defined in ``utils.rareDelimiter``
+            not actually used -- the delimiter character is actually that defined in ``utils.rare_delimiter``
             which, by default, is U+2980 'TRIPLE VERTICAL BAR DELIMITER'.
 
         """
-        delimiter =  h.rareDelimiter
+        delimiter =  h.rare_delimiter
         for pos, data in sorted(morphemes.items()):
             foma_regex_name = get_valid_foma_regex_name(pos)
             if foma_regex_name:
@@ -523,9 +523,9 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
                 if data:
                     for mb, mg in data[:-1]:
                         yield u'    %s "%s%s":0 |\n' % (
-                            u' '.join(map(h.escapeFomaReservedSymbols, list(mb))), delimiter, mg)
+                            u' '.join(map(h.escape_foma_reserved_symbols, list(mb))), delimiter, mg)
                     yield u'    %s "%s%s":0 \n' % (
-                        u' '.join(map(h.escapeFomaReservedSymbols, list(data[-1][0]))), delimiter, data[-1][1])
+                        u' '.join(map(h.escape_foma_reserved_symbols, list(data[-1][0]))), delimiter, data[-1][1])
                 yield u'];\n\n'
 
     def get_valid_foma_regex_name(candidate):
@@ -533,7 +533,7 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
         by "Cat".  This prevents conflicts between regex names and symbols in regexes.
 
         """
-        name = h.deleteFomaReservedSymbols(candidate)
+        name = h.delete_foma_reserved_symbols(candidate)
         if not name:
             return None
         return u'%sCat' % name

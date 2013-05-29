@@ -48,37 +48,37 @@ class CorpusBackup(Base):
     content = Column(UnicodeText(length=2**31))
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
-    formSearch = Column(UnicodeText)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
+    form_search = Column(UnicodeText)
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
     tags = Column(UnicodeText)
 
-    def vivify(self, corpusDict):
-        """The vivify method gives life to a corpusBackup by specifying its
+    def vivify(self, corpus_dict):
+        """The vivify method gives life to a corpus_backup by specifying its
         attributes using the to-be-backed-up corpus as represented in
-        ``corpusDict``.  The relational attributes of the backup are converted
+        ``corpus_dict``.  The relational attributes of the backup are converted
         to (truncated) JSON objects.
 
         """
-        self.UUID = corpusDict['UUID']
-        self.corpus_id = corpusDict['id']
-        self.name = corpusDict['name']
-        self.description = corpusDict['description']
-        self.content = corpusDict['content']
-        self.enterer = unicode(json.dumps(corpusDict['enterer']))
-        self.modifier = unicode(json.dumps(corpusDict['modifier']))
-        self.formSearch = unicode(json.dumps(corpusDict['formSearch']))
-        self.datetimeEntered = corpusDict['datetimeEntered']
-        self.datetimeModified = corpusDict['datetimeModified']
-        self.tags = unicode(json.dumps(corpusDict['tags']))
+        self.UUID = corpus_dict['UUID']
+        self.corpus_id = corpus_dict['id']
+        self.name = corpus_dict['name']
+        self.description = corpus_dict['description']
+        self.content = corpus_dict['content']
+        self.enterer = unicode(json.dumps(corpus_dict['enterer']))
+        self.modifier = unicode(json.dumps(corpus_dict['modifier']))
+        self.form_search = unicode(json.dumps(corpus_dict['form_search']))
+        self.datetime_entered = corpus_dict['datetime_entered']
+        self.datetime_modified = corpus_dict['datetime_modified']
+        self.tags = unicode(json.dumps(corpus_dict['tags']))
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the Corpus.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
-        data are truncated, e.g., corpusDict['enterer'] is a dict with keys
-        for 'id', 'firstName' and 'lastName' (cf. getMiniUserDict) and
+        data are truncated, e.g., corpus_dict['enterer'] is a dict with keys
+        for 'id', 'first_name' and 'last_name' (cf. get_mini_user_dict) and
         lacks keys for other attributes such as 'username',
-        'personalPageContent', etc.
+        'personal_page_content', etc.
 
         """
 
@@ -90,10 +90,10 @@ class CorpusBackup(Base):
             'type': self.type,
             'description': self.description,
             'content': self.content,
-            'enterer': self.jsonLoads(self.enterer),
-            'modifier': self.jsonLoads(self.modifier),
-            'formSearch': self.jsonLoads(self.formSearch),
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'tags': self.jsonLoads(self.tags)
+            'enterer': self.json_loads(self.enterer),
+            'modifier': self.json_loads(self.modifier),
+            'form_search': self.json_loads(self.form_search),
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'tags': self.json_loads(self.tags)
         }

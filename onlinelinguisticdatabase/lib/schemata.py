@@ -73,9 +73,9 @@ class ValidTranslations(FancyValidator):
     }
 
     def _to_python(self, value, state):
-        def createTranslation(dict_):
+        def create_translation(dict_):
             translation = model.Translation()
-            translation.transcription = h.toSingleSpace(h.normalize(dict_['transcription']))
+            translation.transcription = h.to_single_space(h.normalize(dict_['transcription']))
             translation.grammaticality = dict_['grammaticality']
             return translation
         try:
@@ -85,14 +85,14 @@ class ValidTranslations(FancyValidator):
         except (AttributeError, KeyError, TypeError):
             translations = []
             grammaticalities = []
-        validGrammaticalities = getGrammaticalities()
-        badTranslationGrammaticalities = [g for g in grammaticalities
-                                    if g not in validGrammaticalities]
+        valid_grammaticalities = get_grammaticalities()
+        bad_translation_grammaticalities = [g for g in grammaticalities
+                                    if g not in valid_grammaticalities]
         if not translations:
             raise Invalid(self.message("one_translation", state), value, state)
-        if badTranslationGrammaticalities:
+        if bad_translation_grammaticalities:
             raise Invalid(self.message("invalid_grammaticality", state), value, state)
-        return [createTranslation(t) for t in translations]
+        return [create_translation(t) for t in translations]
 
 
 class ValidOrthographicTranscription(UnicodeString):
@@ -109,10 +109,10 @@ class ValidOrthographicTranscription(UnicodeString):
                           u'the space character are permitted.'])}
 
     def validate_python(self, value, state):
-        transcription = h.toSingleSpace(h.normalize(value))
-        if not formIsForeignWord(state.full_dict) and \
-        not transcriptionIsValid(transcription, 'orthographicValidation',
-                                 'orthographicInventory'):
+        transcription = h.to_single_space(h.normalize(value))
+        if not form_is_foreign_word(state.full_dict) and \
+        not transcription_is_valid(transcription, 'orthographic_validation',
+                                 'orthographic_inventory'):
             raise Invalid(self.message("invalid_transcription", state),
                           value, state)
 
@@ -131,10 +131,10 @@ class ValidNarrowPhoneticTranscription(UnicodeString):
                           u'the space character are permitted.'])}
 
     def validate_python(self, value, state):
-        transcription = h.toSingleSpace(h.normalize(value))
-        if not formIsForeignWord(state.full_dict) and \
-        not transcriptionIsValid(transcription, 'narrowPhoneticValidation',
-                                 'narrowPhoneticInventory'):
+        transcription = h.to_single_space(h.normalize(value))
+        if not form_is_foreign_word(state.full_dict) and \
+        not transcription_is_valid(transcription, 'narrow_phonetic_validation',
+                                 'narrow_phonetic_inventory'):
             raise Invalid(self.message("invalid_transcription", state),
                           value, state)
 
@@ -153,10 +153,10 @@ class ValidBroadPhoneticTranscription(UnicodeString):
                           u'the space character are permitted.'])}
 
     def validate_python(self, value, state):
-        transcription = h.toSingleSpace(h.normalize(value))
-        if not formIsForeignWord(state.full_dict) and \
-        not transcriptionIsValid(transcription, 'broadPhoneticValidation',
-                                 'broadPhoneticInventory'):
+        transcription = h.to_single_space(h.normalize(value))
+        if not form_is_foreign_word(state.full_dict) and \
+        not transcription_is_valid(transcription, 'broad_phonetic_validation',
+                                 'broad_phonetic_inventory'):
             raise Invalid(self.message("invalid_transcription", state),
                           value, state)
 
@@ -176,54 +176,54 @@ class ValidMorphemeBreakTranscription(UnicodeString):
                           u'and the space character are permitted.'])}
 
     def validate_python(self, value, state):
-        transcription = h.toSingleSpace(h.normalize(value))
+        transcription = h.to_single_space(h.normalize(value))
         try:
-            morphemeBreakIsOrthographic = getattr(getattr(getattr(
-                app_globals, 'applicationSettings', None),
-                'applicationSettings', None),
-                'morphemeBreakIsOrthographic', False)
+            morpheme_break_is_orthographic = getattr(getattr(getattr(
+                app_globals, 'application_settings', None),
+                'application_settings', None),
+                'morpheme_break_is_orthographic', False)
         except TypeError:
-            morphemeBreakIsOrthographic = False
+            morpheme_break_is_orthographic = False
         inventory = u'phonemic inventory'
-        if morphemeBreakIsOrthographic:
+        if morpheme_break_is_orthographic:
             inventory = u'storage orthography'
-        if not formIsForeignWord(state.full_dict) and \
-        not transcriptionIsValid(transcription, 'morphemeBreakValidation',
-                                 'morphemeBreakInventory'):
+        if not form_is_foreign_word(state.full_dict) and \
+        not transcription_is_valid(transcription, 'morpheme_break_validation',
+                                 'morpheme_break_inventory'):
             raise Invalid(self.message("invalid_transcription", state,
                 inventory=inventory), value, state)
 
 
-def formIsForeignWord(formDict):
-    """Returns False if the form being entered (as represented by the formDict)
+def form_is_foreign_word(form_dict):
+    """Returns False if the form being entered (as represented by the form_dict)
     is tagged as a foreign word; otherwise return True.
     """
 
-    tagIds = [h.getInt(id) for id in formDict.get('tags', [])]
-    tagIds = [id for id in tagIds if id]
+    tag_ids = [h.get_int(id) for id in form_dict.get('tags', [])]
+    tag_ids = [id for id in tag_ids if id]
     try:
-        foreignWordTagId = h.getForeignWordTag().id
+        foreign_word_tag_id = h.get_foreign_word_tag().id
     except AttributeError:
-        foreignWordTagId = None
-    if foreignWordTagId in tagIds:
+        foreign_word_tag_id = None
+    if foreign_word_tag_id in tag_ids:
         return True
     return False
 
 
-def transcriptionIsValid(transcription, validationName, inventoryName):
+def transcription_is_valid(transcription, validation_name, inventory_name):
     """Returns a boolean indicating whether the transcription is valid according
     to the appropriate Inventory object in the Application Settings meta object.
-    The validationName parameter is the name of the appropriate validation
+    The validation_name parameter is the name of the appropriate validation
     attribute of the application settings model object, e.g.,
-    'orthographicValidation'.  The inventoryName parameter is the name of an
+    'orthographic_validation'.  The inventory_name parameter is the name of an
     attribute of the Application Settings meta object whose value is the
     appropriate Inventory object for the transcription.
     """
 
-    if getattr(getattr(getattr(app_globals, 'applicationSettings', None),
-    'applicationSettings', None), validationName, None) == u'Error':
-        return getattr(getattr(app_globals, 'applicationSettings', None),
-            inventoryName, None).stringIsValid(transcription)
+    if getattr(getattr(getattr(app_globals, 'application_settings', None),
+    'application_settings', None), validation_name, None) == u'Error':
+        return getattr(getattr(app_globals, 'application_settings', None),
+            inventory_name, None).string_is_valid(transcription)
     return True
 
 
@@ -233,16 +233,16 @@ class ValidGrammaticality(FancyValidator):
         u'The grammaticality submitted does not match any of the available options.'}
 
     def validate_python(self, value, state):
-        validGrammaticalities = getGrammaticalities()
-        if value not in validGrammaticalities:
+        valid_grammaticalities = get_grammaticalities()
+        if value not in valid_grammaticalities:
             raise Invalid(self.message("invalid_grammaticality", state),
                           value, state)
 
 
-def getGrammaticalities():
+def get_grammaticalities():
     try:
         grammaticalities = getattr(getattr(
-            app_globals, 'applicationSettings', None), 'grammaticalities', [u''])
+            app_globals, 'application_settings', None), 'grammaticalities', [u''])
     except TypeError, e:
         # During testing, app_globals may not be present.
         grammaticalities = [u'']
@@ -252,14 +252,14 @@ def getGrammaticalities():
 class ValidOLDModelObject(FancyValidator):
     """Validator for input values that are integer ids (i.e., primary keys) of
     OLD model objects.  Value must be int-able as well as the id of an existing
-    OLD of the type specified in the modelName kwarg.  If valid, the model
-    object is returned.  Example usage: ValidOLDModelObject(modelName='User').
+    OLD of the type specified in the model_name kwarg.  If valid, the model
+    object is returned.  Example usage: ValidOLDModelObject(model_name='User').
     """
 
     messages = {
-        'invalid_model': u'There is no %(modelNameEng)s with id %(id)d.',
+        'invalid_model': u'There is no %(model_name_eng)s with id %(id)d.',
         'restricted_model':
-            u'You are not authorized to access the %(modelNameEng)s with id %(id)d.'
+            u'You are not authorized to access the %(model_name_eng)s with id %(id)d.'
     }
 
     def _to_python(self, value, state):
@@ -267,23 +267,23 @@ class ValidOLDModelObject(FancyValidator):
             return None
         else:
             id = Int().to_python(value, state)
-            modelObject = Session.query(getattr(model, self.modelName)).get(id)
-            if modelObject is None:
+            model_object = Session.query(getattr(model, self.model_name)).get(id)
+            if model_object is None:
                 raise Invalid(self.message("invalid_model", state, id=id,
-                    modelNameEng=h.camelCase2lowerSpace(self.modelName)),
+                    model_name_eng=h.camel_case2lower_space(self.model_name)),
                     value, state)
             else:
-                if self.modelName in ('Form', 'File', 'Collection') and \
+                if self.model_name in ('Form', 'File', 'Collection') and \
                 getattr(state, 'user', None):
-                    unrestrictedUsers = h.getUnrestrictedUsers()
-                    if h.userIsAuthorizedToAccessModel(state.user, modelObject, unrestrictedUsers):
-                        return modelObject
+                    unrestricted_users = h.get_unrestricted_users()
+                    if h.user_is_authorized_to_access_model(state.user, model_object, unrestricted_users):
+                        return model_object
                     else:
                         raise Invalid(self.message("restricted_model", state, id=id,
-                            modelNameEng=h.camelCase2lowerSpace(self.modelName)),
+                            model_name_eng=h.camel_case2lower_space(self.model_name)),
                             value, state)
                 else:
-                    return modelObject
+                    return model_object
 
 
 class FormSchema(Schema):
@@ -294,26 +294,26 @@ class FormSchema(Schema):
     filter_extra_fields = True
 
     transcription = ValidOrthographicTranscription(not_empty=True, max=255)
-    phoneticTranscription = ValidBroadPhoneticTranscription(max=255)
-    narrowPhoneticTranscription = ValidNarrowPhoneticTranscription(max=255)
-    morphemeBreak = ValidMorphemeBreakTranscription(max=255)
+    phonetic_transcription = ValidBroadPhoneticTranscription(max=255)
+    narrow_phonetic_transcription = ValidNarrowPhoneticTranscription(max=255)
+    morpheme_break = ValidMorphemeBreakTranscription(max=255)
     grammaticality = ValidGrammaticality()
-    morphemeGloss = UnicodeString(max=255)
+    morpheme_gloss = UnicodeString(max=255)
     translations = ValidTranslations(not_empty=True)
     comments = UnicodeString()
-    speakerComments = UnicodeString()
+    speaker_comments = UnicodeString()
     syntax = UnicodeString(max=1023)
     semantics = UnicodeString(max=1023)
-    status = OneOf(h.formStatuses)
-    elicitationMethod = ValidOLDModelObject(modelName='ElicitationMethod')
-    syntacticCategory = ValidOLDModelObject(modelName='SyntacticCategory')
-    speaker = ValidOLDModelObject(modelName='Speaker')
-    elicitor = ValidOLDModelObject(modelName='User')
-    verifier = ValidOLDModelObject(modelName='User')
-    source = ValidOLDModelObject(modelName='Source')
-    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
-    files = ForEach(ValidOLDModelObject(modelName='File'))
-    dateElicited = DateConverter(month_style='mm/dd/yyyy')
+    status = OneOf(h.form_statuses)
+    elicitation_method = ValidOLDModelObject(model_name='ElicitationMethod')
+    syntactic_category = ValidOLDModelObject(model_name='SyntacticCategory')
+    speaker = ValidOLDModelObject(model_name='Speaker')
+    elicitor = ValidOLDModelObject(model_name='User')
+    verifier = ValidOLDModelObject(model_name='User')
+    source = ValidOLDModelObject(model_name='Source')
+    tags = ForEach(ValidOLDModelObject(model_name='Tag'))
+    files = ForEach(ValidOLDModelObject(model_name='File'))
+    date_elicited = DateConverter(month_style='mm/dd/yyyy')
 
 
 class FormIdsSchema(Schema):
@@ -323,7 +323,7 @@ class FormIdsSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    forms = ForEach(ValidOLDModelObject(modelName='Form'), not_empty=True)
+    forms = ForEach(ValidOLDModelObject(model_name='Form'), not_empty=True)
 
 
 class FormIdsSchemaNullable(Schema):
@@ -333,18 +333,18 @@ class FormIdsSchemaNullable(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    forms = ForEach(ValidOLDModelObject(modelName='Form'))
+    forms = ForEach(ValidOLDModelObject(model_name='Form'))
 
 
 ################################################################################
 # File Schemata
 ################################################################################
 
-def getMIMEtypeFromContents(contents):
+def get_MIME_type_from_contents(contents):
     return Magic(mime=True).from_buffer(contents).replace('application/ogg', 'audio/ogg')
 
 class ValidBase64EncodedFile(String):
-    """Validator for the base64EncodedFile attribute of a file create request."""
+    """Validator for the base64_encoded_file attribute of a file create request."""
 
     messages = {
         'invalid_base64_encoded_file': u'The uploaded file must be base64 encoded.'
@@ -361,14 +361,14 @@ class ValidFileName(UnicodeString):
     """
 
     messages = {u'invalid_type':
-                u'The file upload failed because the file type %(MIMEtype)s is not allowed.'}
+                u'The file upload failed because the file type %(MIME_type)s is not allowed.'}
 
     def _to_python(self, value, state):
-        MIMEtypeFromExt = h.guess_type(value)[0]
-        if MIMEtypeFromExt in h.allowedFileTypes:
-            return h.cleanAndSecureFilename(value)
+        MIME_type_from_ext = h.guess_type(value)[0]
+        if MIME_type_from_ext in h.allowed_file_types:
+            return h.clean_and_secure_filename(value)
         else:
-            raise Invalid(self.message('invalid_type', state, MIMEtype=MIMEtypeFromExt), value, state)
+            raise Invalid(self.message('invalid_type', state, MIME_type=MIME_type_from_ext), value, state)
 
 class FileUpdateSchema(Schema):
     """FileUpdateSchema is a Schema for validating the data input upon a file
@@ -377,16 +377,16 @@ class FileUpdateSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     description = UnicodeString()
-    utteranceType = OneOf(h.utteranceTypes)
-    speaker = ValidOLDModelObject(modelName='Speaker')
-    elicitor = ValidOLDModelObject(modelName='User')
-    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
-    forms = ForEach(ValidOLDModelObject(modelName='Form'))
-    dateElicited = DateConverter(month_style='mm/dd/yyyy')
+    utterance_type = OneOf(h.utterance_types)
+    speaker = ValidOLDModelObject(model_name='Speaker')
+    elicitor = ValidOLDModelObject(model_name='User')
+    tags = ForEach(ValidOLDModelObject(model_name='Tag'))
+    forms = ForEach(ValidOLDModelObject(model_name='Form'))
+    date_elicited = DateConverter(month_style='mm/dd/yyyy')
 
-class AddMIMEtypeToValues(FancyValidator):
-    """Guesses the MIMEtype based on the file contents and name and sets the
-    MIMEtype key in values.  If python-magic is installed, the system will guess
+class AddMIMETypeToValues(FancyValidator):
+    """Guesses the MIME_type based on the file contents and name and sets the
+    MIME_type key in values.  If python-magic is installed, the system will guess
     the type from the file contents and an error will be raised if the filename
     extension is inaccurate.
     """
@@ -394,31 +394,31 @@ class AddMIMEtypeToValues(FancyValidator):
         'mismatched_type': u'The file extension does not match the file\'s true type (%(x)s vs. %(y)s, respectively).'
     }
     def _to_python(self, values, state):
-        MIMEtypeFromFilename = h.guess_type(values['filename'])[0]
-        if 'base64EncodedFile' in values:
-            contents = values['base64EncodedFile'][:1024]
+        MIME_type_from_filename = h.guess_type(values['filename'])[0]
+        if 'base64_encoded_file' in values:
+            contents = values['base64_encoded_file'][:1024]
         else:
-            contents = values['filedataFirstKB']
+            contents = values['filedata_first_KB']
         try:
-            MIMEtypeFromContents = getMIMEtypeFromContents(contents)
-            if MIMEtypeFromContents != MIMEtypeFromFilename:
+            MIME_type_from_contents = get_MIME_type_from_contents(contents)
+            if MIME_type_from_contents != MIME_type_from_filename:
                 raise Invalid(self.message('mismatched_type', state,
-                    x=MIMEtypeFromFilename, y=MIMEtypeFromContents), values, state)
+                    x=MIME_type_from_filename, y=MIME_type_from_contents), values, state)
         except (NameError, KeyError):
-            pass    # NameError because Magic is not installed; KeyError because PlainFile validation will lack a base64EncodedFile key
-        values['MIMEtype'] = unicode(MIMEtypeFromFilename)
+            pass    # NameError because Magic is not installed; KeyError because PlainFile validation will lack a base64_encoded_file key
+        values['MIME_type'] = unicode(MIME_type_from_filename)
         return values
 
 class FileCreateWithBase64EncodedFiledataSchema(FileUpdateSchema):
     """Schema for validating the data input upon a file create request where a
-    base64EncodedFile attribute is present in the JSON request params.  The
-    base64EncodedFile and filename attributes can only be specified on the create
+    base64_encoded_file attribute is present in the JSON request params.  The
+    base64_encoded_file and filename attributes can only be specified on the create
     request (i.e., not on the update request).
     """
-    chained_validators = [AddMIMEtypeToValues()]
-    base64EncodedFile = ValidBase64EncodedFile(not_empty=True)
+    chained_validators = [AddMIMETypeToValues()]
+    base64_encoded_file = ValidBase64EncodedFile(not_empty=True)
     filename = ValidFileName(not_empty=True, max=255)
-    MIMEtype = UnicodeString()
+    MIME_type = UnicodeString()
 
 class FileCreateWithFiledataSchema(Schema):
     """Schema for validating the data input upon a file create request where the
@@ -436,16 +436,16 @@ class FileCreateWithFiledataSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     pre_validators = [NestedVariables()]
-    chained_validators = [AddMIMEtypeToValues()]
+    chained_validators = [AddMIMETypeToValues()]
     filename = ValidFileName(not_empty=True, max=255)
-    filedataFirstKB = String()
+    filedata_first_KB = String()
     description = UnicodeString()
-    utteranceType = OneOf(h.utteranceTypes)
-    speaker = ValidOLDModelObject(modelName='Speaker')
-    elicitor = ValidOLDModelObject(modelName='User')
-    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
-    forms = ForEach(ValidOLDModelObject(modelName='Form'))
-    dateElicited = DateConverter(month_style='mm/dd/yyyy')
+    utterance_type = OneOf(h.utterance_types)
+    speaker = ValidOLDModelObject(model_name='Speaker')
+    elicitor = ValidOLDModelObject(model_name='User')
+    tags = ForEach(ValidOLDModelObject(model_name='Tag'))
+    forms = ForEach(ValidOLDModelObject(model_name='Form'))
+    date_elicited = DateConverter(month_style='mm/dd/yyyy')
 
 class ValidAudioVideoFile(FancyValidator):
     """Validator for input values that are integer ids (i.e., primary keys) of
@@ -466,15 +466,15 @@ class ValidAudioVideoFile(FancyValidator):
             raise Invalid(self.message('empty', state), value, state)
         else:
             id = Int().to_python(value, state)
-            fileObject = Session.query(model.File).get(id)
-            if fileObject is None:
+            file_object = Session.query(model.File).get(id)
+            if file_object is None:
                 raise Invalid(self.message("invalid_file", state, id=id), value, state)
             else:
-                if h.isAudioVideoFile(fileObject):
-                    if fileObject.parentFile is None:
-                        unrestrictedUsers = h.getUnrestrictedUsers()
-                        if h.userIsAuthorizedToAccessModel(state.user, fileObject, unrestrictedUsers):
-                            return fileObject
+                if h.is_audio_video_file(file_object):
+                    if file_object.parent_file is None:
+                        unrestricted_users = h.get_unrestricted_users()
+                        if h.user_is_authorized_to_access_model(state.user, file_object, unrestricted_users):
+                            return file_object
                         else:
                             raise Invalid(self.message("restricted_file", state, id=id),
                                           value, state)
@@ -509,25 +509,25 @@ class FileSubintervalReferencingSchema(FileUpdateSchema):
     """
     chained_validators = [ValidSubinterval()]
     name = UnicodeString(max=255)
-    parentFile = ValidAudioVideoFile(not_empty=True)
+    parent_file = ValidAudioVideoFile(not_empty=True)
     start = Number(not_empty=True)
     end = Number(not_empty=True)
 
-class ValidMIMEtype(FancyValidator):
-    """Validator ensures that the user-supplied MIMEtype value is one of those
-    listed in h.allowedFileTypes.
+class ValidMIMEType(FancyValidator):
+    """Validator ensures that the user-supplied MIME_type value is one of those
+    listed in h.allowed_file_types.
     """
-    messages = {u'invalid_type': u'The file upload failed because the file type %(MIMEtype)s is not allowed.'}
+    messages = {u'invalid_type': u'The file upload failed because the file type %(MIME_type)s is not allowed.'}
     def validate_python(self, value, state):
-        if value not in h.allowedFileTypes:
-            raise Invalid(self.message('invalid_type', state, MIMEtype=value), value, state)
+        if value not in h.allowed_file_types:
+            raise Invalid(self.message('invalid_type', state, MIME_type=value), value, state)
 
 class FileExternallyHostedSchema(FileUpdateSchema):
     """Validates input for files whose content is hosted elsewhere."""
     name = UnicodeString(max=255)
     url = URL(not_empty=True, check_exists=False, add_http=True)       # add check_exists=True if desired
     password = UnicodeString(max=255)
-    MIMEtype = ValidMIMEtype()
+    MIME_type = ValidMIMEType()
 
 
 ################################################################################
@@ -541,23 +541,23 @@ class CollectionSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     title = UnicodeString(max=255, not_empty=True)
-    type = OneOf(h.collectionTypes)
+    type = OneOf(h.collection_types)
     url = Regex('^[a-zA-Z0-9_/-]{0,255}$')
     description = UnicodeString()
-    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
+    markup_language = OneOf(h.markup_languages, if_empty='reStructuredText')
     contents = UnicodeString()
-    contentsUnpacked = UnicodeString()
-    speaker = ValidOLDModelObject(modelName='Speaker')
-    source = ValidOLDModelObject(modelName='Source')
-    elicitor = ValidOLDModelObject(modelName='User')
-    enterer = ValidOLDModelObject(modelName='User')
-    dateElicited = DateConverter(month_style='mm/dd/yyyy')
-    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
-    files = ForEach(ValidOLDModelObject(modelName='File'))
+    contents_unpacked = UnicodeString()
+    speaker = ValidOLDModelObject(model_name='Speaker')
+    source = ValidOLDModelObject(model_name='Source')
+    elicitor = ValidOLDModelObject(model_name='User')
+    enterer = ValidOLDModelObject(model_name='User')
+    date_elicited = DateConverter(month_style='mm/dd/yyyy')
+    tags = ForEach(ValidOLDModelObject(model_name='Tag'))
+    files = ForEach(ValidOLDModelObject(model_name='File'))
 
     # A forms attribute must be created in the controller using the contents
     # attribute prior to validation.
-    forms = ForEach(ValidOLDModelObject(modelName='Form'))
+    forms = ForEach(ValidOLDModelObject(model_name='Form'))
 
 
 ################################################################################
@@ -569,7 +569,7 @@ class GetMorphemeDelimiters(FancyValidator):
     morpheme delimiters.
     """
     def _to_python(self, value, state):
-        value = h.removeAllWhiteSpace(value)
+        value = h.remove_all_white_space(value)
         return ','.join([d for d in value.split(',') if d])
 
 class ApplicationSettingsSchema(Schema):
@@ -579,27 +579,27 @@ class ApplicationSettingsSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    objectLanguageName = UnicodeString(max=255)
-    objectLanguageId = UnicodeString(max=3)
-    metalanguageName = UnicodeString(max=255)
-    metalanguageId = UnicodeString(max=3)
-    metalanguageInventory = UnicodeString()
-    orthographicValidation = OneOf(h.validationValues)
-    narrowPhoneticInventory = UnicodeString()
-    narrowPhoneticValidation = OneOf(h.validationValues)
-    broadPhoneticInventory = UnicodeString()
-    broadPhoneticValidation = OneOf(h.validationValues)
-    morphemeBreakIsOrthographic = StringBoolean()
-    morphemeBreakValidation = OneOf(h.validationValues)
-    phonemicInventory = UnicodeString()
-    morphemeDelimiters = GetMorphemeDelimiters(max=255)
+    object_language_name = UnicodeString(max=255)
+    object_language_id = UnicodeString(max=3)
+    metalanguage_name = UnicodeString(max=255)
+    metalanguage_id = UnicodeString(max=3)
+    metalanguage_inventory = UnicodeString()
+    orthographic_validation = OneOf(h.validation_values)
+    narrow_phonetic_inventory = UnicodeString()
+    narrow_phonetic_validation = OneOf(h.validation_values)
+    broad_phonetic_inventory = UnicodeString()
+    broad_phonetic_validation = OneOf(h.validation_values)
+    morpheme_break_is_orthographic = StringBoolean()
+    morpheme_break_validation = OneOf(h.validation_values)
+    phonemic_inventory = UnicodeString()
+    morpheme_delimiters = GetMorphemeDelimiters(max=255)
     punctuation = UnicodeString()
     grammaticalities = UnicodeString(max=255)
-    unrestrictedUsers = ForEach(ValidOLDModelObject(modelName='User'))
-    orthographies = ForEach(ValidOLDModelObject(modelName='Orthography'))
-    storageOrthography = ValidOLDModelObject(modelName='Orthography')
-    inputOrthography = ValidOLDModelObject(modelName='Orthography')
-    outputOrthography = ValidOLDModelObject(modelName='Orthography')
+    unrestricted_users = ForEach(ValidOLDModelObject(model_name='User'))
+    orthographies = ForEach(ValidOLDModelObject(model_name='Orthography'))
+    storage_orthography = ValidOLDModelObject(model_name='Orthography')
+    input_orthography = ValidOLDModelObject(model_name='Orthography')
+    output_orthography = ValidOLDModelObject(model_name='Orthography')
 
 
 ################################################################################
@@ -608,18 +608,18 @@ class ApplicationSettingsSchema(Schema):
 
 class ValidBibTeXEntryType(FancyValidator):
     """Validator for the source model's type field.  Value must be any case
-    permutation of BibTeX entry types (cf. bibtex.entryTypes).  The value is
+    permutation of BibTeX entry types (cf. bibtex.entry_types).  The value is
     returned all lowercase.
     """
 
     messages = {'invalid_bibtex_entry':
-        '%(submittedEntry)s is not a valid BibTeX entry type'}
+        '%(submitted_entry)s is not a valid BibTeX entry type'}
 
     def _to_python(self, value, state):
-        if value.lower() in bibtex.entryTypes.keys():
+        if value.lower() in bibtex.entry_types.keys():
             return value.lower()
         else:
-            raise Invalid(self.message('invalid_bibtex_entry', state, submittedEntry=value),
+            raise Invalid(self.message('invalid_bibtex_entry', state, submitted_entry=value),
                           value, state)
 
 class ValidBibTexKey(FancyValidator):
@@ -649,13 +649,13 @@ class ValidBibTeXEntry(FancyValidator):
     """Validator for a Source/BibTeX entry based on its type.  This validator is
     run as a formencode "chained validator", i.e., it is run after the validation
     and conversion of the type and key attributes.  It uses the information in
-    lib/bibtex.entryTypes[type]['required'] to determine which attributes are
+    lib/bibtex.entry_types[type]['required'] to determine which attributes are
     required for which types.
     """
 
     messages = {'invalid_entry': '%(msg)s'}
 
-    def parseRequirements(self, entryType):
+    def parse_requirements(self, entry_type):
         """Given a BibTeX entry type, return a tuple (a, b, c) where a is the
         list of required fields, b is the list of disjunctively required fields
         and c is a string expressing the requirements in English.
@@ -667,45 +667,45 @@ class ValidBibTeXEntry(FancyValidator):
             elif len(list_) == 1:
                 return list_[0]
             return u''
-        def conjugateValues(requiredFields):
-            if len(requiredFields) > 1:
+        def conjugate_values(required_fields):
+            if len(required_fields) > 1:
                 return 'values'
             return 'a value'
 
-        required = bibtex.entryTypes.get(entryType, {}).get('required', [])
-        requiredFields = [r for r in required if isinstance(r, str)]
-        disjunctivelyRequiredFields = [r for r in required if isinstance(r, tuple)]
+        required = bibtex.entry_types.get(entry_type, {}).get('required', [])
+        required_fields = [r for r in required if isinstance(r, str)]
+        disjunctively_required_fields = [r for r in required if isinstance(r, tuple)]
         msg = u'Sources of type %s require %s for %s' % (
-            entryType, conjugateValues(requiredFields), coordinate(requiredFields))
-        if disjunctivelyRequiredFields:
+            entry_type, conjugate_values(required_fields), coordinate(required_fields))
+        if disjunctively_required_fields:
             msg = u'%s as well as a value for %s' % (msg, 
                 coordinate([u'at least one of %s' % coordinate(dr)
-                            for dr in disjunctivelyRequiredFields]))
-        return requiredFields, disjunctivelyRequiredFields, u'%s.' % msg
+                            for dr in disjunctively_required_fields]))
+        return required_fields, disjunctively_required_fields, u'%s.' % msg
 
-    def getRequiredValue(self, values, requiredField):
+    def get_required_value(self, values, required_field):
         """Try to get a requied value from the values dict; if it's not there,
         try the cross-referenced source model.
         """
-        if values.get(requiredField):
-            return values[requiredField]
-        elif getattr(values.get('crossrefSource'), requiredField, None):
-            return getattr(values['crossrefSource'], requiredField)
+        if values.get(required_field):
+            return values[required_field]
+        elif getattr(values.get('crossref_source'), required_field, None):
+            return getattr(values['crossref_source'], required_field)
         else:
             return None
 
     def validate_python(self, values, state):
         invalid = False
         type = values.get('type', '')
-        requiredFields, disjunctivelyRequiredFields, msg = self.parseRequirements(type)
-        requiredFieldsValues = filter(None,
-                    [self.getRequiredValue(values, rf) for rf in requiredFields])
-        if len(requiredFieldsValues) != len(requiredFields):
+        required_fields, disjunctively_required_fields, msg = self.parse_requirements(type)
+        required_fields_values = filter(None,
+                    [self.get_required_value(values, rf) for rf in required_fields])
+        if len(required_fields_values) != len(required_fields):
             invalid = True
         else:
-            for dr in disjunctivelyRequiredFields:
-                drValues = filter(None, [self.getRequiredValue(values, rf) for rf in dr])
-                if not drValues:
+            for dr in disjunctively_required_fields:
+                dr_values = filter(None, [self.get_required_value(values, rf) for rf in dr])
+                if not dr_values:
                     invalid = True
         if invalid:
             raise Invalid(self.message('invalid_entry', state, msg=msg), values, state)
@@ -718,17 +718,17 @@ class ValidCrossref(FancyValidator):
 
     def _to_python(self, values, state):
         if values.get('crossref') in (None, u''):
-            values['crossrefSource'] = None
+            values['crossref_source'] = None
             return values
         else:
             crossref = values['crossref']
-            crossrefSource = Session.query(model.Source).\
+            crossref_source = Session.query(model.Source).\
                 filter(model.Source.key == crossref).first()
-            if crossrefSource is None:
+            if crossref_source is None:
                 raise Invalid(self.message('invalid_crossref', state, crossref=crossref),
                               values, state)
             else:
-                values['crossrefSource'] = crossrefSource
+                values['crossref_source'] = crossref_source
                 return values
 
 class SourceSchema(Schema):
@@ -740,10 +740,10 @@ class SourceSchema(Schema):
     filter_extra_fields = True
     chained_validators = [ValidCrossref(), ValidBibTeXEntry()]
 
-    type = ValidBibTeXEntryType(not_empty=True)   # OneOf lib.bibtex.entryTypes with any uppercase permutations
+    type = ValidBibTeXEntryType(not_empty=True)   # OneOf lib.bibtex.entry_types with any uppercase permutations
     key = ValidBibTexKey(not_empty=True, unique=True, max=1000)  # any combination of letters, numerals and symbols (except commas)
 
-    file = ValidOLDModelObject(modelName='File')
+    file = ValidOLDModelObject(model_name='File')
 
     address = UnicodeString(max=1000)
     annote = UnicodeString()
@@ -756,7 +756,7 @@ class SourceSchema(Schema):
     howpublished = UnicodeString(max=255)
     institution = UnicodeString(max=255)
     journal = UnicodeString(max=255)
-    keyField = UnicodeString(max=255)
+    key_field = UnicodeString(max=255)
     month = UnicodeString(max=100)
     note = UnicodeString(max=1000)
     number = UnicodeString(max=100)
@@ -766,7 +766,7 @@ class SourceSchema(Schema):
     school = UnicodeString(max=255)
     series = UnicodeString(max=255)
     title = UnicodeString(max=255)
-    typeField = UnicodeString(max=255)
+    type_field = UnicodeString(max=255)
     url = URL(add_http=True, max=1000)
     volume = UnicodeString(max=100)
     year = Int(min=-8000, max=3000) # The dawn of recorded history to a millenium into the future!
@@ -793,24 +793,24 @@ class SourceSchema(Schema):
 
 class UniqueUnicodeValue(UnicodeString):
     """Validator ensures that the unicode string value is unique in its column.
-    The validator must be initialized with modelName and attributeName attributes,
-    e.g., UniqueUnicodeValue(modelName='ElicitationMethod', attributeName='name').
+    The validator must be initialized with model_name and attribute_name attributes,
+    e.g., UniqueUnicodeValue(model_name='ElicitationMethod', attribute_name='name').
     An 'id' attribute on the state object indicates that we are updating and
     should therefore nuance our test for uniqueness.
     """
 
     messages = {'not_unique':
-        'The submitted value for %(modelName)s.%(attributeName)s is not unique.'}
+        'The submitted value for %(model_name)s.%(attribute_name)s is not unique.'}
 
     def validate_python(self, value, state):
-        model_ = getattr(model, self.modelName)
-        attribute = getattr(model_, self.attributeName)
+        model_ = getattr(model, self.model_name)
+        attribute = getattr(model_, self.attribute_name)
         id = getattr(state, 'id', None)
         query = Session.query(model_)
         if (id and query.filter(and_(attribute==value, getattr(model_, 'id')!=id)).first()) or \
         (not id and query.filter(attribute==value).first()):
             raise Invalid(self.message('not_unique', state,
-                                modelName=self.modelName, attributeName=self.attributeName),
+                                model_name=self.model_name, attribute_name=self.attribute_name),
                           value, state)
 
 class ElicitationMethodSchema(Schema):
@@ -819,7 +819,7 @@ class ElicitationMethodSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='ElicitationMethod', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='ElicitationMethod', attribute_name='name')
     description = UnicodeString()
 
 class ValidFormQuery(FancyValidator):
@@ -829,8 +829,8 @@ class ValidFormQuery(FancyValidator):
     messages = {'query_error': u'The submitted query was invalid'}
     def _to_python(self, value, state):
         try:
-            queryBuilder = SQLAQueryBuilder('Form', config=state.config)
-            query = queryBuilder.getSQLAQuery(value)
+            query_builder = SQLAQueryBuilder('Form', config=state.config)
+            query = query_builder.get_SQLA_query(value)
         except:
             raise Invalid(self.message('query_error', state), value, state)
         return unicode(json.dumps(value))
@@ -841,7 +841,7 @@ class FormSearchSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='FormSearch', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='FormSearch', attribute_name='name')
     search = ValidFormQuery()
     description = UnicodeString
 
@@ -852,10 +852,10 @@ class OrthographySchema(Schema):
 
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Orthography', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Orthography', attribute_name='name')
     orthography = UnicodeString(not_empty=True)
     lowercase = StringBoolean()
-    initialGlottalStops = StringBoolean()
+    initial_glottal_stops = StringBoolean()
 
 class PageSchema(Schema):
     """PageSchema is a Schema for validating the data submitted to
@@ -865,7 +865,7 @@ class PageSchema(Schema):
     filter_extra_fields = True
     name = UnicodeString(max=255, not_empty=True)
     heading = UnicodeString(max=255)
-    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
+    markup_language = OneOf(h.markup_languages, if_empty='reStructuredText')
     content = UnicodeString()
     html = UnicodeString()
 
@@ -875,11 +875,11 @@ class SpeakerSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    firstName = UnicodeString(max=255, not_empty=True)
-    lastName = UnicodeString(max=255, not_empty=True)
+    first_name = UnicodeString(max=255, not_empty=True)
+    last_name = UnicodeString(max=255, not_empty=True)
     dialect = UnicodeString(max=255)
-    pageContent = UnicodeString()
-    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
+    page_content = UnicodeString()
+    markup_language = OneOf(h.markup_languages, if_empty='reStructuredText')
 
 class SyntacticCategorySchema(Schema):
     """SyntacticCategorySchema is a Schema for validating the data submitted to
@@ -887,8 +887,8 @@ class SyntacticCategorySchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='SyntacticCategory', attributeName='name')
-    type = OneOf(h.syntacticCategoryTypes)
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='SyntacticCategory', attribute_name='name')
+    type = OneOf(h.syntactic_category_types)
     description = UnicodeString()
 
 class ValidTagName(FancyValidator):
@@ -911,7 +911,7 @@ class TagSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     chained_validators = [ValidTagName()]
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Tag', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Tag', attribute_name='name')
     description = UnicodeString()
 
 
@@ -939,44 +939,44 @@ class ValidUsernameAndPassword(FancyValidator):
     }
 
     def _to_python(self, values, state):
-        userToUpdate = getattr(state, 'userToUpdate', {})
-        userAttemptingUpdate = getattr(state, 'user', {})
-        id = userToUpdate.get('id')
-        weAreCreating = id is None and True or False
+        user_to_update = getattr(state, 'user_to_update', {})
+        user_attempting_update = getattr(state, 'user', {})
+        id = user_to_update.get('id')
+        we_are_creating = id is None and True or False
         username = values.get('username', None)
-        usernameIsANonEmptyString = type(username) in (str, unicode) and username != u''
+        username_is_a_non_empty_string = type(username) in (str, unicode) and username != u''
         password = values.get('password', None)
-        passwordIsANonEmptyString = type(password) in (str, unicode) and password != u''
+        password_is_a_non_empty_string = type(password) in (str, unicode) and password != u''
         password_confirm = values.get('password_confirm', None)
 
-        def containsNonASCIIChars(password):
+        def contains_non_ASCII_chars(password):
             return [c for c in password if ord(c) not in range(32, 127)] and True or False
 
-        def isHighEntropyASCII(password):
+        def is_high_entropy_ASCII(password):
             """Returns True if the password has a lowercase character, an uppercase
             character, a digit and a symbol.
             """
-            symbolPatt = re.compile(u'''[-!$%^&*()_+|~=`{}\[\]:";'<>?,./]''')
+            symbol_patt = re.compile(u'''[-!$%^&*()_+|~=`{}\[\]:";'<>?,./]''')
             return re.search('[a-z]', password) is not None and \
             re.search('[A-Z]', password) is not None and \
             re.search('[0-9]', password) is not None and \
-            symbolPatt.search(password) is not None
+            symbol_patt.search(password) is not None
 
-        if passwordIsANonEmptyString:
+        if password_is_a_non_empty_string:
             if len(password) < 8 or (
-                not containsNonASCIIChars(password) and not isHighEntropyASCII(password)):
+                not contains_non_ASCII_chars(password) and not is_high_entropy_ASCII(password)):
                 raise Invalid(self.message('bad_password', state), 'password', state)
             elif password != password_confirm:
                 raise Invalid(self.message('not_confirmed', state), 'password', state)
             else:
                 values['password'] = password
         else:
-            if weAreCreating:
+            if we_are_creating:
                 raise Invalid(self.message('no_password', state), 'password', state)
             else:
                 values['password'] = None
 
-        if usernameIsANonEmptyString:
+        if username_is_a_non_empty_string:
             User = model.User
             query = Session.query(User)
             if re.search('[^\w]+', username):
@@ -988,15 +988,15 @@ class ValidUsernameAndPassword(FancyValidator):
                 # No duplicate usernames
                 raise Invalid(self.message('nonunique_username', state, username=username),
                               'username', state)
-            elif userToUpdate and username != userToUpdate['username'] and \
-            userAttemptingUpdate['role'] != u'administrator':
+            elif user_to_update and username != user_to_update['username'] and \
+            user_attempting_update['role'] != u'administrator':
                 # Non-admins cannot change their usernames
                 raise Invalid(self.message('non_admin_username_update', state, username=username),
                               'username', state)
             else:
                 values['username'] = username
         else:
-            if weAreCreating:
+            if we_are_creating:
                 raise Invalid(self.message('no_username', state), 'username', state)
             else:
                 values['username'] = None
@@ -1010,10 +1010,10 @@ class LicitRoleChange(FancyValidator):
 
     def validate_python(self, values, state):
         role = values.get('role')
-        userToUpdate = getattr(state, 'userToUpdate', {})
-        userAttemptingUpdate = getattr(state, 'user', {})
-        if userToUpdate and userToUpdate['role'] != role and \
-        userAttemptingUpdate['role'] != u'administrator':
+        user_to_update = getattr(state, 'user_to_update', {})
+        user_attempting_update = getattr(state, 'user', {})
+        if user_to_update and user_to_update['role'] != role and \
+        user_attempting_update['role'] != u'administrator':
             raise Invalid(self.message('non_admin_role_update', state), 'role', state)
 
 class UserSchema(Schema):
@@ -1028,15 +1028,15 @@ class UserSchema(Schema):
     username = UnicodeString(max=255)
     password = UnicodeString(max=255)
     password_confirm = UnicodeString(max=255)
-    firstName = UnicodeString(max=255, not_empty=True)
-    lastName = UnicodeString(max=255, not_empty=True)
+    first_name = UnicodeString(max=255, not_empty=True)
+    last_name = UnicodeString(max=255, not_empty=True)
     email = Email(max=255, not_empty=True)
     affiliation = UnicodeString(max=255)
-    role = OneOf(h.userRoles, not_empty=True)
-    markupLanguage = OneOf(h.markupLanguages, if_empty='reStructuredText')
-    pageContent = UnicodeString()
-    inputOrthography = ValidOLDModelObject(modelName='Orthography')
-    outputOrthography = ValidOLDModelObject(modelName='Orthography')
+    role = OneOf(h.user_roles, not_empty=True)
+    markup_language = OneOf(h.markup_languages, if_empty='reStructuredText')
+    page_content = UnicodeString()
+    input_orthography = ValidOLDModelObject(model_name='Orthography')
+    output_orthography = ValidOLDModelObject(model_name='Orthography')
 
 class PhonologySchema(Schema):
     """PhonologySchema is a Schema for validating the data submitted to
@@ -1044,7 +1044,7 @@ class PhonologySchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Phonology', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Phonology', attribute_name='name')
     description = UnicodeString()
     script = UnicodeString()
 
@@ -1058,19 +1058,26 @@ class MorphemeSequencesSchema(Schema):
     """Validates input to ``morphologies/applydown/id``."""
     allow_extra_fields = True
     filter_extra_fields = True
-    morphemeSequences = ForEach(UnicodeString(), not_empty=True)
+    morpheme_sequences = ForEach(UnicodeString(), not_empty=True)
 
 class ValidFormReferences(FancyValidator):
     messages = {'invalid': 'At least one form id in the content was invalid.'}
 
     def _to_python(self, values, state):
-        if values.get('formSearch'):
-            values['forms'] = SQLAQueryBuilder().getSQLAQuery(
-                json.loads(values['formSearch'].search)).all()
+        if values.get('form_search'):
+            values['forms'] = SQLAQueryBuilder().get_SQLA_query(
+                json.loads(values['form_search'].search)).all()
             return values
-        formReferences = list(set(h.getFormReferences(values.get('content', u''))))
-        forms = Session.query(model.Form).filter(model.Form.id.in_(formReferences)).all()
-        if len(forms) != len(formReferences):
+        form_references = list(set(h.get_form_references(values.get('content', u''))))
+        RDBMS = h.get_RDBMS_name(config=state.config)
+        # SQLite will raise an SQLA OperationalError if in_() has too many parameters, so we make multiple queries:
+        if RDBMS == 'sqlite':
+            forms = []
+            for form_id_list in h.chunker(form_references, 500):
+                forms += Session.query(model.Form).filter(model.Form.id.in_(form_id_list)).all()
+        else:
+            forms = Session.query(model.Form).filter(model.Form.id.in_(form_references)).all()
+        if len(forms) != len(form_references):
             raise Invalid(self.message('invalid', state), values, state)
         else:
             values['forms'] = forms
@@ -1092,11 +1099,11 @@ class CorpusSchema(Schema):
     chained_validators = [ValidFormReferences()]
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Corpus', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Corpus', attribute_name='name')
     description = UnicodeString()
     content = UnicodeString()
-    tags = ForEach(ValidOLDModelObject(modelName='Tag'))
-    formSearch = ValidOLDModelObject(modelName='FormSearch')
+    tags = ForEach(ValidOLDModelObject(model_name='Tag'))
+    form_search = ValidOLDModelObject(model_name='FormSearch')
 
 class CorpusFormatSchema(Schema):
     """Validates the data submitted to ``PUT /corpora/writetofile/id`` and
@@ -1105,7 +1112,7 @@ class CorpusFormatSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    format = OneOf(h.corpusFormats.keys(), not_empty=True)
+    format = OneOf(h.corpus_formats.keys(), not_empty=True)
 
 class MorphologySchema(Schema):
     """MorphologySchema is a Schema for validating the data submitted to
@@ -1114,9 +1121,9 @@ class MorphologySchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UniqueUnicodeValue(max=255, not_empty=True, modelName='Morphology', attributeName='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Morphology', attribute_name='name')
     description = UnicodeString()
-    lexiconCorpus = ValidOLDModelObject(modelName='Corpus')
-    rulesCorpus = ValidOLDModelObject(modelName='Corpus', not_empty=True)
+    lexicon_corpus = ValidOLDModelObject(model_name='Corpus')
+    rules_corpus = ValidOLDModelObject(model_name='Corpus', not_empty=True)
     script_type = OneOf(h.morphology_script_types)
     extract_morphemes_from_rules_corpus = StringBoolean()

@@ -51,7 +51,7 @@ class SpeakersController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Speaker', config=config)
+    query_builder = SQLAQueryBuilder('Speaker', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -65,14 +65,14 @@ class SpeakersController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(Speaker)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -93,7 +93,7 @@ class SpeakersController(BaseController):
             schema = SpeakerSchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            speaker = createNewSpeaker(data)
+            speaker = create_new_speaker(data)
             Session.add(speaker)
             Session.commit()
             return speaker
@@ -136,8 +136,8 @@ class SpeakersController(BaseController):
                 schema = SpeakerSchema()
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
-                speaker = updateSpeaker(speaker, data)
-                # speaker will be False if there are no changes (cf. updateSpeaker).
+                speaker = update_speaker(speaker, data)
+                # speaker will be False if there are no changes (cf. update_speaker).
                 if speaker:
                     Session.add(speaker)
                     Session.commit()
@@ -225,7 +225,7 @@ class SpeakersController(BaseController):
 # Speaker Create & Update Functions
 ################################################################################
 
-def createNewSpeaker(data):
+def create_new_speaker(data):
     """Create a new speaker.
 
     :param dict data: the data for the speaker to be created.
@@ -233,17 +233,17 @@ def createNewSpeaker(data):
 
     """
     speaker = Speaker()
-    speaker.firstName = h.normalize(data['firstName'])
-    speaker.lastName = h.normalize(data['lastName'])
+    speaker.first_name = h.normalize(data['first_name'])
+    speaker.last_name = h.normalize(data['last_name'])
     speaker.dialect = h.normalize(data['dialect'])
-    speaker.pageContent = h.normalize(data['pageContent'])
-    speaker.datetimeModified = datetime.datetime.utcnow()
-    speaker.markupLanguage = h.normalize(data['markupLanguage'])
-    speaker.html = h.getHTMLFromContents(speaker.pageContent, speaker.markupLanguage)
+    speaker.page_content = h.normalize(data['page_content'])
+    speaker.datetime_modified = datetime.datetime.utcnow()
+    speaker.markup_language = h.normalize(data['markup_language'])
+    speaker.html = h.get_HTML_from_contents(speaker.page_content, speaker.markup_language)
     return speaker
 
 
-def updateSpeaker(speaker, data):
+def update_speaker(speaker, data):
     """Update a speaker.
 
     :param speaker: the speaker model to be updated.
@@ -255,16 +255,16 @@ def updateSpeaker(speaker, data):
     changed = False
 
     # Unicode Data
-    changed = h.setAttr(speaker, 'firstName', h.normalize(data['firstName']), changed)
-    changed = h.setAttr(speaker, 'lastName', h.normalize(data['lastName']), changed)
-    changed = h.setAttr(speaker, 'dialect', h.normalize(data['dialect']), changed)
-    changed = h.setAttr(speaker, 'pageContent', h.normalize(data['pageContent']), changed)
-    changed = h.setAttr(speaker, 'markupLanguage', h.normalize(data['markupLanguage']), changed)
-    changed = h.setAttr(speaker, 'html',
-                        h.getHTMLFromContents(speaker.pageContent, speaker.markupLanguage),
+    changed = h.set_attr(speaker, 'first_name', h.normalize(data['first_name']), changed)
+    changed = h.set_attr(speaker, 'last_name', h.normalize(data['last_name']), changed)
+    changed = h.set_attr(speaker, 'dialect', h.normalize(data['dialect']), changed)
+    changed = h.set_attr(speaker, 'page_content', h.normalize(data['page_content']), changed)
+    changed = h.set_attr(speaker, 'markup_language', h.normalize(data['markup_language']), changed)
+    changed = h.set_attr(speaker, 'html',
+                        h.get_HTML_from_contents(speaker.page_content, speaker.markup_language),
                         changed)
 
     if changed:
-        speaker.datetimeModified = datetime.datetime.utcnow()
+        speaker.datetime_modified = datetime.datetime.utcnow()
         return speaker
     return changed

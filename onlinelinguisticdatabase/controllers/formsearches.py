@@ -45,7 +45,7 @@ class FormsearchesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('FormSearch', config=config)
+    query_builder = SQLAQueryBuilder('FormSearch', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -56,10 +56,10 @@ class FormsearchesController(BaseController):
         :URL: ``SEARCH /formsearches`` (or ``POST /formsearches/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         .. note::
         
@@ -68,11 +68,11 @@ class FormsearchesController(BaseController):
 
         """
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            query = h.eagerloadFormSearch(
-                self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            query = h.eagerload_form_search(
+                self.query_builder.get_SQLA_query(python_search_params.get('query')))
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -90,10 +90,10 @@ class FormsearchesController(BaseController):
         """Return the data necessary to search the form search resources.
 
         :URL: ``GET /formsearches/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -107,14 +107,14 @@ class FormsearchesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
-            query = h.eagerloadFormSearch(Session.query(FormSearch))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_form_search(Session.query(FormSearch))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -134,13 +134,13 @@ class FormsearchesController(BaseController):
         try:
             schema = FormSearchSchema()
             values = json.loads(unicode(request.body, request.charset))
-            state = h.getStateObject(values)
+            state = h.get_state_object(values)
             state.config = config
             data = schema.to_python(values, state)
-            formSearch = createNewFormSearch(data)
-            Session.add(formSearch)
+            form_search = create_new_form_search(data)
+            Session.add(form_search)
             Session.commit()
-            return formSearch
+            return form_search
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -162,7 +162,7 @@ class FormsearchesController(BaseController):
         :returns: A dictionary of lists of resources
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
 
     @h.jsonify
@@ -179,21 +179,21 @@ class FormsearchesController(BaseController):
         :returns: the updated form search model.
 
         """
-        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(int(id))
-        if formSearch:
+        form_search = h.eagerload_form_search(Session.query(FormSearch)).get(int(id))
+        if form_search:
             try:
                 schema = FormSearchSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 state.config = config
                 data = schema.to_python(values, state)
-                formSearch = updateFormSearch(formSearch, data)
-                # formSearch will be False if there are no changes (cf. updateFormSearch).
-                if formSearch:
-                    Session.add(formSearch)
+                form_search = update_form_search(form_search, data)
+                # form_search will be False if there are no changes (cf. update_form_search).
+                if form_search:
+                    Session.add(form_search)
                     Session.commit()
-                    return formSearch
+                    return form_search
                 else:
                     response.status_int = 400
                     return {'error':
@@ -221,11 +221,11 @@ class FormsearchesController(BaseController):
 
         """
 
-        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
-        if formSearch:
-            Session.delete(formSearch)
+        form_search = h.eagerload_form_search(Session.query(FormSearch)).get(id)
+        if form_search:
+            Session.delete(form_search)
             Session.commit()
-            return formSearch
+            return form_search
         else:
             response.status_int = 404
             return {'error': 'There is no form search with id %s' % id}
@@ -241,9 +241,9 @@ class FormsearchesController(BaseController):
         :returns: a form search model object.
 
         """
-        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
-        if formSearch:
-            return formSearch
+        form_search = h.eagerload_form_search(Session.query(FormSearch)).get(id)
+        if form_search:
+            return form_search
         else:
             response.status_int = 404
             return {'error': 'There is no form search with id %s' % id}
@@ -262,18 +262,18 @@ class FormsearchesController(BaseController):
         :param str id: the ``id`` value of the form search that will be updated.
         :returns: a dictionary of the form::
 
-                {"formSearch": {...}, "data": {...}}
+                {"form_search": {...}, "data": {...}}
 
-            where the value of the ``formSearch`` key is a dictionary
+            where the value of the ``form_search`` key is a dictionary
             representation of the form search and the value of the ``data`` key
             is a dictionary containing the data necessary to update a form
             search.
 
         """
-        formSearch = h.eagerloadFormSearch(Session.query(FormSearch)).get(id)
-        if formSearch:
-            data = {'searchParameters': h.getSearchParameters(self.queryBuilder)}
-            return {'data': data, 'formSearch': formSearch}
+        form_search = h.eagerload_form_search(Session.query(FormSearch)).get(id)
+        if form_search:
+            data = {'search_parameters': h.get_search_parameters(self.query_builder)}
+            return {'data': data, 'form_search': form_search}
         else:
             response.status_int = 404
             return {'error': 'There is no form search with id %s' % id}
@@ -283,7 +283,7 @@ class FormsearchesController(BaseController):
 # FormSearch Create & Update Functions
 ################################################################################
 
-def createNewFormSearch(data):
+def create_new_form_search(data):
     """Create a new form search.
 
     :param dict data: the form search to be created.
@@ -291,15 +291,15 @@ def createNewFormSearch(data):
 
     """
 
-    formSearch = FormSearch()
-    formSearch.name = h.normalize(data['name'])
-    formSearch.search = data['search']      # Note that this is purposefully not normalized (reconsider this? ...)
-    formSearch.description = h.normalize(data['description'])
-    formSearch.enterer = session['user']
-    formSearch.datetimeModified = datetime.datetime.utcnow()
-    return formSearch
+    form_search = FormSearch()
+    form_search.name = h.normalize(data['name'])
+    form_search.search = data['search']      # Note that this is purposefully not normalized (reconsider this? ...)
+    form_search.description = h.normalize(data['description'])
+    form_search.enterer = session['user']
+    form_search.datetime_modified = datetime.datetime.utcnow()
+    return form_search
 
-def updateFormSearch(formSearch, data):
+def update_form_search(form_search, data):
     """Update a form search model.
 
     :param form: the form search model to be updated.
@@ -312,11 +312,11 @@ def updateFormSearch(formSearch, data):
     changed = False
 
     # Unicode Data
-    changed = h.setAttr(formSearch, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(formSearch, 'search', data['search'], changed)
-    changed = h.setAttr(formSearch, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(form_search, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(form_search, 'search', data['search'], changed)
+    changed = h.set_attr(form_search, 'description', h.normalize(data['description']), changed)
 
     if changed:
-        formSearch.datetimeModified = datetime.datetime.utcnow()
-        return formSearch
+        form_search.datetime_modified = datetime.datetime.utcnow()
+        return form_search
     return changed

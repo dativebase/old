@@ -15,14 +15,14 @@
 """ApplicationSettings model"""
 
 from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 import logging
 
 log = logging.getLogger(__name__)
 
-def deleteKey(dict_, key_):
+def delete_key(dict_, key_):
     """Try to delete the key_ from the dict_; then return the dict_."""
     try:
         del dict_[key_]
@@ -37,7 +37,7 @@ applicationsettingsuser_table = Table(
         primary_key=True),
     Column('applicationsettings_id', Integer, ForeignKey('applicationsettings.id')),
     Column('user_id', Integer, ForeignKey('user.id')),
-    Column('datetimeModified', DateTime, default=now),
+    Column('datetime_modified', DateTime, default=now),
     mysql_charset='utf8'
 )
 
@@ -51,61 +51,61 @@ class ApplicationSettings(Base):
 
     id = Column(Integer, Sequence('applicationsettings_seq_id', optional=True),
                 primary_key=True)
-    objectLanguageName = Column(Unicode(255))
-    objectLanguageId = Column(Unicode(3))
-    metalanguageName = Column(Unicode(255))
-    metalanguageId = Column(Unicode(3))
-    metalanguageInventory = Column(UnicodeText)
-    orthographicValidation = Column(Unicode(7))
-    narrowPhoneticInventory = Column(UnicodeText)
-    narrowPhoneticValidation = Column(Unicode(7))
-    broadPhoneticInventory = Column(UnicodeText)
-    broadPhoneticValidation = Column(Unicode(7))
-    morphemeBreakIsOrthographic = Column(Boolean)
-    morphemeBreakValidation = Column(Unicode(7))
-    phonemicInventory = Column(UnicodeText)
-    morphemeDelimiters = Column(Unicode(255))
+    object_language_name = Column(Unicode(255))
+    object_language_id = Column(Unicode(3))
+    metalanguage_name = Column(Unicode(255))
+    metalanguage_id = Column(Unicode(3))
+    metalanguage_inventory = Column(UnicodeText)
+    orthographic_validation = Column(Unicode(7))
+    narrow_phonetic_inventory = Column(UnicodeText)
+    narrow_phonetic_validation = Column(Unicode(7))
+    broad_phonetic_inventory = Column(UnicodeText)
+    broad_phonetic_validation = Column(Unicode(7))
+    morpheme_break_is_orthographic = Column(Boolean)
+    morpheme_break_validation = Column(Unicode(7))
+    phonemic_inventory = Column(UnicodeText)
+    morpheme_delimiters = Column(Unicode(255))
     punctuation = Column(UnicodeText)
     grammaticalities = Column(Unicode(255))
-    storageOrthography_id = Column(Integer, ForeignKey('orthography.id'))
-    storageOrthography = relation('Orthography',
-        primaryjoin='ApplicationSettings.storageOrthography_id==Orthography.id')
-    inputOrthography_id = Column(Integer, ForeignKey('orthography.id'))
-    inputOrthography = relation('Orthography',
-        primaryjoin='ApplicationSettings.inputOrthography_id==Orthography.id')
-    outputOrthography_id = Column(Integer, ForeignKey('orthography.id'))
-    outputOrthography = relation('Orthography',
-        primaryjoin='ApplicationSettings.outputOrthography_id==Orthography.id')
-    datetimeModified = Column(DateTime, default=now)
-    unrestrictedUsers = relation('User', secondary=applicationsettingsuser_table)
+    storage_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    storage_orthography = relation('Orthography',
+        primaryjoin='ApplicationSettings.storage_orthography_id==Orthography.id')
+    input_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    input_orthography = relation('Orthography',
+        primaryjoin='ApplicationSettings.input_orthography_id==Orthography.id')
+    output_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    output_orthography = relation('Orthography',
+        primaryjoin='ApplicationSettings.output_orthography_id==Orthography.id')
+    datetime_modified = Column(DateTime, default=now)
+    unrestricted_users = relation('User', secondary=applicationsettingsuser_table)
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the ApplicationSettings.
         This facilitates JSON-stringification, cf. utils.JSONOLDEncoder.
-        Relational data are truncated, e.g., applicationSettings.getDict()['storageOrthography']
+        Relational data are truncated, e.g., application_settings.get_dict()['storage_orthography']
         is a dict with keys that are a subset of an orthography's attributes.
         """
         return {
             'id': self.id,
-            'objectLanguageName': self.objectLanguageName,
-            'objectLanguageId': self.objectLanguageId,
-            'metalanguageName': self.metalanguageName,
-            'metalanguageId': self.metalanguageId,
-            'metalanguageInventory': self.metalanguageInventory,
-            'orthographicValidation': self.orthographicValidation,
-            'narrowPhoneticInventory': self.narrowPhoneticInventory,
-            'narrowPhoneticValidation': self.narrowPhoneticValidation,
-            'broadPhoneticInventory': self.broadPhoneticInventory,
-            'broadPhoneticValidation': self.broadPhoneticValidation,
-            'morphemeBreakIsOrthographic': self.morphemeBreakIsOrthographic,
-            'morphemeBreakValidation': self.morphemeBreakValidation,
-            'phonemicInventory': self.phonemicInventory,
-            'morphemeDelimiters': self.morphemeDelimiters,
+            'object_language_name': self.object_language_name,
+            'object_language_id': self.object_language_id,
+            'metalanguage_name': self.metalanguage_name,
+            'metalanguage_id': self.metalanguage_id,
+            'metalanguage_inventory': self.metalanguage_inventory,
+            'orthographic_validation': self.orthographic_validation,
+            'narrow_phonetic_inventory': self.narrow_phonetic_inventory,
+            'narrow_phonetic_validation': self.narrow_phonetic_validation,
+            'broad_phonetic_inventory': self.broad_phonetic_inventory,
+            'broad_phonetic_validation': self.broad_phonetic_validation,
+            'morpheme_break_is_orthographic': self.morpheme_break_is_orthographic,
+            'morpheme_break_validation': self.morpheme_break_validation,
+            'phonemic_inventory': self.phonemic_inventory,
+            'morpheme_delimiters': self.morpheme_delimiters,
             'punctuation': self.punctuation,
             'grammaticalities': self.grammaticalities,
-            'datetimeModified': self.datetimeModified,
-            'storageOrthography': self.getMiniOrthographyDict(self.storageOrthography),
-            'inputOrthography': self.getMiniOrthographyDict(self.inputOrthography),
-            'outputOrthography': self.getMiniOrthographyDict(self.outputOrthography),
-            'unrestrictedUsers': self.getMiniList(self.unrestrictedUsers)
+            'datetime_modified': self.datetime_modified,
+            'storage_orthography': self.get_mini_orthography_dict(self.storage_orthography),
+            'input_orthography': self.get_mini_orthography_dict(self.input_orthography),
+            'output_orthography': self.get_mini_orthography_dict(self.output_orthography),
+            'unrestricted_users': self.get_mini_list(self.unrestricted_users)
         }

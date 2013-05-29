@@ -37,19 +37,19 @@ class Orthography:
     
     Graph variants (allographs?) should be grouped together with brackets.
     
-    E.g., orthographyAsString = u'[a,a\u0301],b,c,d'
+    E.g., orthography_as_string = u'[a,a\u0301],b,c,d'
     
     The above orthography string represents an orthography where u'a' and
     u'a\u0301' are both ranked first, u'b' second, u'c' third, etc.
     
     Idiosyncratic arguments are in **kwargs, e.g.,:
      - lowercase: whether or not the orthography is all-lowercase
-     - initialGlottalStops: whether it represents glottal stops (assumed to be
+     - initial_glottal_stops: whether it represents glottal stops (assumed to be
        u'7' in the input orthography) word initially.
        
     """
 
-    def removeAllWhiteSpace(self, string):
+    def remove_all_white_space(self, string):
         """Remove all spaces, newlines and tabs."""
         string = string.replace('\n', '')
         string = string.replace('\t', '')
@@ -64,30 +64,30 @@ class Orthography:
         else:
             return string
 
-    def __init__(self, orthographyAsString, **kwargs):
+    def __init__(self, orthography_as_string, **kwargs):
         """Get core attributes; primarily, the orthography in various datatypes.
         """
-        self.orthographyAsString = self.removeAllWhiteSpace(orthographyAsString)
-        self.orthographyAsList = self.getOrthographyAsList(
-            self.orthographyAsString)
-        self.orthographyAsDict = self.getOrthographyAsDict(
-            self.orthographyAsString)
-        self.lowercase = self.getKwargsArg(kwargs, 'lowercase', True)
-        self.initialGlottalStops = self.getKwargsArg(kwargs,
-                                                    'initialGlottalStops', True)
+        self.orthography_as_string = self.remove_all_white_space(orthography_as_string)
+        self.orthography_as_list = self.get_orthography_as_list(
+            self.orthography_as_string)
+        self.orthography_as_dict = self.get_orthography_as_dict(
+            self.orthography_as_string)
+        self.lowercase = self.get_kwargs_arg(kwargs, 'lowercase', True)
+        self.initial_glottal_stops = self.get_kwargs_arg(kwargs,
+                                                    'initial_glottal_stops', True)
 
     def __repr__(self):
         return 'Orthography Object\n\t%s: %s\n\t%s: %s\n\n%s\n\n%s\n\n%s\n\n' % (
             '# graph types',
-            len(self.orthographyAsList),
+            len(self.orthography_as_list),
             '# graphs',
-            len(self.orthographyAsDict),
-            self.orthographyAsString,
-            str(self.orthographyAsList),
-            str(self.orthographyAsDict)
+            len(self.orthography_as_dict),
+            self.orthography_as_string,
+            str(self.orthography_as_list),
+            str(self.orthography_as_dict)
         )
         
-    def getOrthographyAsList(self, orthography):
+    def get_orthography_as_list(self, orthography):
         """Returns orthography as a list of lists.
 
         E.g.,   u'[a,a\u0301],b,c,d'    becomes
@@ -95,16 +95,16 @@ class Orthography:
 
         """
 
-        inBrackets = False
+        in_brackets = False
         result = u''
         for char in orthography:
             if char == u'[':
-                inBrackets = True
+                in_brackets = True
                 char = u''
             elif char == u']':
-                inBrackets = False
+                in_brackets = False
                 char = u''
-            if inBrackets and char == u',':
+            if in_brackets and char == u',':
                 result += u'|'
             else:
                 result += char
@@ -112,7 +112,7 @@ class Orthography:
         result = [item.split('|') for item in temp]
         return result
 
-    def getOrthographyAsDict(self, orthography):
+    def get_orthography_as_dict(self, orthography):
         """Returns orthography as a dictionary of graphs to ranks.
         
         E.g.,   u'[a,a\u0301],b,c,d'    becomes
@@ -120,16 +120,16 @@ class Orthography:
 
         """
 
-        inBrackets = False
+        in_brackets = False
         result = u''
         for char in orthography:
             if char == u'[':
-                inBrackets = True
+                in_brackets = True
                 char = u''
             elif char == u']':
-                inBrackets = False
+                in_brackets = False
                 char = u''
-            if inBrackets and char == u',':
+            if in_brackets and char == u',':
                 result += u'|'
             else:
                 result += char
@@ -140,7 +140,7 @@ class Orthography:
                 result[x] = temp.index(string)
         return result
 
-    def getKwargsArg(self, kwargs, key, default=None):
+    def get_kwargs_arg(self, kwargs, key, default=None):
         """Return **kwargs[key] as a boolean, else return default."""
         if key in kwargs:
             return self.str2bool(kwargs[key])
@@ -153,24 +153,24 @@ class OrthographyTranslator:
     for converting strings form the first orthography to the second.
     """
 
-    def __init__(self, inputOrthography, outputOrthography):
-        self.inputOrthography = inputOrthography
-        self.outputOrthography = outputOrthography
+    def __init__(self, input_orthography, output_orthography):
+        self.input_orthography = input_orthography
+        self.output_orthography = output_orthography
 
         # If input and output orthography objects are incompatible for
         #  translation, raise an OrthographyCompatibilityError.
         
-        if [len(x) for x in self.inputOrthography.orthographyAsList] != \
-            [len(x) for x in self.outputOrthography.orthographyAsList]:
+        if [len(x) for x in self.input_orthography.orthography_as_list] != \
+            [len(x) for x in self.output_orthography.orthography_as_list]:
             raise OrthographyCompatibilityError()
 
-        self.prepareRegexes()
+        self.prepare_regexes()
 
     def print_(self):
         for key in self.replacements:
             print '%s\t%s' % (key, self.replacements[key])
             
-    def getReplacements(self):
+    def get_replacements(self):
         """Create a dictionary with a key for each graph in the input
         orthography; each such key has as value a graph in the output orthography.
 
@@ -182,35 +182,35 @@ class OrthographyTranslator:
         """
 
         replacements = {}
-        for i in range(len(self.inputOrthography.orthographyAsList)):
-            graphTypeList = self.inputOrthography.orthographyAsList[i]
-            for j in range(len(graphTypeList)):
-                if graphTypeList[j] not in replacements:
-                    replacements[graphTypeList[j]] = \
-                        self.outputOrthography.orthographyAsList[i][j]
+        for i in range(len(self.input_orthography.orthography_as_list)):
+            graph_type_list = self.input_orthography.orthography_as_list[i]
+            for j in range(len(graph_type_list)):
+                if graph_type_list[j] not in replacements:
+                    replacements[graph_type_list[j]] = \
+                        self.output_orthography.orthography_as_list[i][j]
         self.replacements = replacements
         
-    def makeReplacementsCaseSensitive(self):
+    def make_replacements_case_sensitive(self):
         """Update replacements to contain (programmatically) capitalized inputs
         and outputs.
         
         """
 
-        newReplacements = {}
+        new_replacements = {}
         for key in self.replacements:
-            if not self.isCapital(key):
+            if not self.is_capital(key):
                 capital = self.capitalize(key)
                 if capital and capital not in self.replacements:
                     # if output orthography is lc, map uc input orthography
                     #  graphs to lc outputs, otherwise to uc outputs
-                    if self.outputOrthography.lowercase:
-                        newReplacements[capital] = self.replacements[key]
+                    if self.output_orthography.lowercase:
+                        new_replacements[capital] = self.replacements[key]
                     else:
-                        newReplacements[capital] = \
+                        new_replacements[capital] = \
                             self.capitalize(self.replacements[key])
-        self.replacements.update(newReplacements)
+        self.replacements.update(new_replacements)
 
-    def prepareRegexes(self):
+    def prepare_regexes(self):
         """Generate the regular expressions for doing character substitutions
         on the input string that will convert it into the output orthography.
         
@@ -219,7 +219,7 @@ class OrthographyTranslator:
         # build a dictionary representing the mapping between input and output
         #  orthographies
         
-        self.getReplacements()
+        self.get_replacements()
         
         # 4 Possibilities for .lowercase attribute:
         #  1. io.lc = True, oo.lc = True: do nothing (Default)
@@ -228,21 +228,21 @@ class OrthographyTranslator:
         #  3. io.lc = False, oo.lc = True: map lc to lc and uc to lc
         #  4. io.lc = False, oo.lc = False: map lc to lc and uc to uc
         
-        if not self.inputOrthography.lowercase:
-            self.makeReplacementsCaseSensitive()
+        if not self.input_orthography.lowercase:
+            self.make_replacements_case_sensitive()
         
         # Sort the keys according to length, longest words first, to prevent
         #  parts of n-graphs from being found-n-replaced before the n-graph is.
         
-        self.replacementKeys = self.replacements.keys()
-        self.replacementKeys.sort(lambda x,y:len(y)-len(x))
+        self.replacement_keys = self.replacements.keys()
+        self.replacement_keys.sort(lambda x,y:len(y)-len(x))
         
         # This is the pattern that does most of the work
         #  It matches a string in metalanguage tags ("<ml>" and "</ml>") or
         #  a key from self.replacements
         
         self.regex = re.compile(
-            "<ml>.*?</ml>|(" + "|".join(self.replacementKeys) + ")"
+            "<ml>.*?</ml>|(" + "|".join(self.replacement_keys) + ")"
         )
         
         # If the output orthography doesn't represent initial glottal stops,
@@ -251,9 +251,9 @@ class OrthographyTranslator:
         #  create initial glottal stops in the output (Glottal stops are assumed
         #  to be represented by "7".)
         
-        if self.inputOrthography.initialGlottalStops and \
-            not self.outputOrthography.initialGlottalStops:
-            self.initialGlottalStopRemover = re.compile("""( |^|(^| )'|")7""")
+        if self.input_orthography.initial_glottal_stops and \
+            not self.output_orthography.initial_glottal_stops:
+            self.initial_glottal_stop_remover = re.compile("""( |^|(^| )'|")7""")
     
     # This and the constructor will be the only functions other modules will
     #  need to use;
@@ -262,18 +262,18 @@ class OrthographyTranslator:
     
     def translate(self, text):
         """Takes text as input and returns it in the output orthography."""
-        if self.inputOrthography.lowercase:
-            text = self.makeLowercase(text)
-        if self.inputOrthography.initialGlottalStops and \
-            not self.outputOrthography.initialGlottalStops:
-            text = self.initialGlottalStopRemover.sub("\\1", text)
-        return self.regex.sub(lambda x:self.getReplacement(x.group()), text)
+        if self.input_orthography.lowercase:
+            text = self.make_lowercase(text)
+        if self.input_orthography.initial_glottal_stops and \
+            not self.output_orthography.initial_glottal_stops:
+            text = self.initial_glottal_stop_remover.sub("\\1", text)
+        return self.regex.sub(lambda x:self.get_replacement(x.group()), text)
 
     # We can't just replace each match from self.regex with its value in
     #  self.replacements, because some matches are metalangauge strings that
     #  should not be altered (except to remove the <ml> tags...)
     
-    def getReplacement(self, string):
+    def get_replacement(self, string):
         """If string DOES NOT begin with "<ml>" and end with "</ml>", then treat
         it as an object language input orthography graph and return
         self.replacements[string].
@@ -289,16 +289,16 @@ class OrthographyTranslator:
     # The built-in methods lower(), upper(), isupper(), capitalize(), etc.
     #  don't do exactly what we need here
 
-    def makeLowercase(self, string):
+    def make_lowercase(self, string):
         """Return the string in lowercase except for the substrings enclosed
         in metalanguage tags."""
         patt = re.compile("<ml>.*?</ml>|.")
-        def getReplacement(string):
+        def get_replacement(string):
             if string[:4] == '<ml>' and string[-5:] == '</ml>':
                 return string
             else:
                 return string.lower()
-        return patt.sub(lambda x:getReplacement(x.group()), string)
+        return patt.sub(lambda x:get_replacement(x.group()), string)
 
     def capitalize(self, str):
         """If str contains an alpha character, return str with first alpha
@@ -309,7 +309,7 @@ class OrthographyTranslator:
             if str[i].isalpha(): return str[:i] + str[i:].capitalize()
         return result
 
-    def isCapital(self, str):
+    def is_capital(self, str):
         """Returns true only if first alpha character found is uppercase."""
         for char in str:
             if char.isalpha():
@@ -332,10 +332,10 @@ class CustomSorter():
     def __init__(self, orthography):
         self.orthography = orthography
         
-    def removeWhiteSpace(self, word):
+    def remove_white_space(self, word):
         return word.replace(' ', '').lower()
 
-    def getIntegerTuple(self, word):
+    def get_integer_tuple(self, word):
         """Takes a word and returns a tuple of integers representing the rank of
         each graph in the word.  A list of such tuples can then be quickly
         sorted by a Pythonic list's sort() method.
@@ -344,13 +344,13 @@ class CustomSorter():
         each graph with its rank, starting with the longest graphs first.
         """
         
-        graphs = self.orthography.orthographyAsDict.keys()
+        graphs = self.orthography.orthography_as_dict.keys()
         graphs.sort(key=len)
         graphs.reverse()
          
         for graph in graphs: 
             word = unicode(word.replace(graph,
-                            '%s,' % self.orthography.orthographyAsDict[graph]))
+                            '%s,' % self.orthography.orthography_as_dict[graph]))
 
         # Filter out anything that is not a digit or a comma
         word = filter(lambda x: x in '01234546789,', word)
@@ -361,7 +361,7 @@ class CustomSorter():
         """Take a list of OLD Forms and return it sorted according to the order
         of graphs in CustomSorter().orthography.
         """
-        temp = [(self.getIntegerTuple(self.removeWhiteSpace(form.transcription)),
+        temp = [(self.get_integer_tuple(self.remove_white_space(form.transcription)),
                  form) for form in forms]
         temp.sort()
         return [x[1] for x in temp]

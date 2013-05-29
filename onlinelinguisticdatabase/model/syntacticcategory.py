@@ -34,13 +34,13 @@ class SyntacticCategory(Base):
     name = Column(Unicode(255))
     type = Column(Unicode(60))
     description = Column(UnicodeText)
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'name': self.name,
             'type': self.type,
             'description': self.description,
-            'datetimeModified': self.datetimeModified
+            'datetime_modified': self.datetime_modified
         }

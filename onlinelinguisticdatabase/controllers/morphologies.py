@@ -58,14 +58,14 @@ class MorphologiesController(BaseController):
        The ``h.jsonify`` decorator converts the return value of the methods to
        JSON.
 
-    TODO: consider generating values for ``lexiconScript`` and ``rulesScript`` attributes
+    TODO: consider generating values for ``lexicon_script`` and ``rules_script`` attributes
     which, by default, are concatenated to produce a value for the ``script`` attribute but 
     where such default auto-generation can be overridden by the user so that, for example, the
     auto-generated subscripts could be used to hand-write a more intelligent morphology FST script.
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Morphology', config=config)
+    query_builder = SQLAQueryBuilder('Morphology', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -79,14 +79,14 @@ class MorphologiesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
-            query = h.eagerloadMorphology(Session.query(Morphology))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_morphology(Session.query(Morphology))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -130,7 +130,7 @@ class MorphologiesController(BaseController):
         :returns: a dictionary containing summarizing the corpora.
 
         """
-        return getDataForNewEdit(dict(request.GET))
+        return get_data_for_new_edit(dict(request.GET))
 
     @h.jsonify
     @h.restrict('PUT')
@@ -145,19 +145,19 @@ class MorphologiesController(BaseController):
         :returns: the updated morphology model.
 
         """
-        morphology = h.eagerloadMorphology(Session.query(Morphology)).get(int(id))
+        morphology = h.eagerload_morphology(Session.query(Morphology)).get(int(id))
         if morphology:
             try:
                 schema = MorphologySchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 data = schema.to_python(values, state)
-                morphologyDict = morphology.getDict()
+                morphology_dict = morphology.get_dict()
                 morphology = update_morphology(morphology, data)
                 # morphology will be False if there are no changes (cf. update_morphology).
                 if morphology:
-                    backupMorphology(morphologyDict)
+                    backup_morphology(morphology_dict)
                     Session.add(morphology)
                     Session.commit()
                     return morphology
@@ -187,10 +187,10 @@ class MorphologiesController(BaseController):
         :returns: the deleted morphology model.
 
         """
-        morphology = h.eagerloadMorphology(Session.query(Morphology)).get(id)
+        morphology = h.eagerload_morphology(Session.query(Morphology)).get(id)
         if morphology:
-            morphologyDict = morphology.getDict()
-            backupMorphology(morphologyDict)
+            morphology_dict = morphology.get_dict()
+            backup_morphology(morphology_dict)
             Session.delete(morphology)
             Session.commit()
             remove_morphology_directory(morphology)
@@ -211,17 +211,17 @@ class MorphologiesController(BaseController):
         :returns: a morphology model object.
 
         """
-        morphology = h.eagerloadMorphology(Session.query(Morphology)).get(id)
+        morphology = h.eagerload_morphology(Session.query(Morphology)).get(id)
         if morphology:
-            morphology_dict = morphology.getDict()
+            morphology_dict = morphology.get_dict()
             if request.GET.get('script') == u'1':
-                morphology_script_path = get_morphology_file_path(morphology, fileType='script')
+                morphology_script_path = get_morphology_file_path(morphology, file_type='script')
                 if os.path.isfile(morphology_script_path):
                     morphology_dict['script'] = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
                 else:
                     morphology_dict['script'] = u''
             if request.GET.get('lexicon') == u'1':
-                morphology_lexicon_path = get_morphology_file_path(morphology, fileType='lexicon')
+                morphology_lexicon_path = get_morphology_file_path(morphology, file_type='lexicon')
                 if os.path.isfile(morphology_lexicon_path):
                     morphology_dict['lexicon'] = cPickle.load(open(morphology_lexicon_path, 'rb'))
                 else:
@@ -249,9 +249,9 @@ class MorphologiesController(BaseController):
             is an empty dictionary.
 
         """
-        morphology = h.eagerloadMorphology(Session.query(Morphology)).get(id)
+        morphology = h.eagerload_morphology(Session.query(Morphology)).get(id)
         if morphology:
-            return {'data': getDataForNewEdit(dict(request.GET)), 'morphology': morphology}
+            return {'data': get_data_for_new_edit(dict(request.GET)), 'morphology': morphology}
         else:
             response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}
@@ -267,18 +267,18 @@ class MorphologiesController(BaseController):
             morphology whose history is requested.
         :returns: A dictionary of the form::
 
-                {"morphology": { ... }, "previousVersions": [ ... ]}
+                {"morphology": { ... }, "previous_versions": [ ... ]}
 
             where the value of the ``morphology`` key is the morphology whose
-            history is requested and the value of the ``previousVersions`` key
+            history is requested and the value of the ``previous_versions`` key
             is a list of dictionaries representing previous versions of the
             morphology.
 
         """
-        morphology, previousVersions = h.getModelAndPreviousVersions('Morphology', id)
-        if morphology or previousVersions:
+        morphology, previous_versions = h.get_model_and_previous_versions('Morphology', id)
+        if morphology or previous_versions:
             return {'morphology': morphology,
-                    'previousVersions': previousVersions}
+                    'previous_versions': previous_versions}
         else:
             response.status_int = 404
             return {'error': 'No morphologies or morphology backups match %s' % id}
@@ -321,7 +321,7 @@ class MorphologiesController(BaseController):
         return generate_and_compile_morphology(id, compile_=False)
 
     @h.restrict('GET')
-    @h.authenticateWithJSON
+    @h.authenticate_with_JSON
     def servecompiled(self, id):
         """Serve the compiled foma script of the morphology.
 
@@ -332,10 +332,10 @@ class MorphologiesController(BaseController):
         """
         morphology = Session.query(Morphology).get(id)
         if morphology:
-            if h.fomaInstalled():
-                fomaFilePath = get_morphology_file_path(morphology, 'binary')
-                if os.path.isfile(fomaFilePath):
-                    return forward(FileApp(fomaFilePath))
+            if h.foma_installed():
+                foma_file_path = get_morphology_file_path(morphology, 'binary')
+                if os.path.isfile(foma_file_path):
+                    return forward(FileApp(foma_file_path))
                 else:
                     response.status_int = 400
                     return json.dumps({'error': 'Morphology %d has not been compiled yet.' % morphology.id})
@@ -394,13 +394,13 @@ class MorphologiesController(BaseController):
         """
         morphology = Session.query(Morphology).get(id)
         if morphology:
-            if h.fomaInstalled():
+            if h.foma_installed():
                 morphology_binary_path = get_morphology_file_path(morphology, 'binary')
                 if os.path.isfile(morphology_binary_path):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         inputs = MorphemeSequencesSchema.to_python(inputs)
-                        return foma_apply(direction, inputs['morphemeSequences'], morphology,
+                        return foma_apply(direction, inputs['morpheme_sequences'], morphology,
                                                  morphology_binary_path, session['user'])
                     except h.JSONDecodeError:
                         response.status_int = 400
@@ -418,26 +418,26 @@ class MorphologiesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}
 
-def getDataForNewEdit(GET_params):
+def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new morphology or edit one."""
-    modelNameMap = {'corpora': 'Corpus'}
-    getterMap = {'corpora': h.getMiniDictsGetter('Corpus')}
-    return h.getDataForNewAction(GET_params, getterMap, modelNameMap)
+    model_name_map = {'corpora': 'Corpus'}
+    getter_map = {'corpora': h.get_mini_dicts_getter('Corpus')}
+    return h.get_data_for_new_action(GET_params, getter_map, model_name_map)
 
 ################################################################################
 # Backup morphology
 ################################################################################
 
-def backupMorphology(morphologyDict):
+def backup_morphology(morphology_dict):
     """Backup a morphology.
 
-    :param dict morphologyDict: a representation of a morphology model.
+    :param dict morphology_dict: a representation of a morphology model.
     :returns: ``None``
 
     """
-    morphologyBackup = MorphologyBackup()
-    morphologyBackup.vivify(morphologyDict)
-    Session.add(morphologyBackup)
+    morphology_backup = MorphologyBackup()
+    morphology_backup.vivify(morphology_dict)
+    Session.add(morphology_backup)
 
 
 ################################################################################
@@ -456,9 +456,9 @@ def create_new_morphology(data):
     morphology.name = h.normalize(data['name'])
     morphology.description = h.normalize(data['description'])
     morphology.enterer = morphology.modifier = session['user']
-    morphology.datetimeModified = morphology.datetimeEntered = h.now()
-    morphology.lexiconCorpus = data['lexiconCorpus']
-    morphology.rulesCorpus = data['rulesCorpus']
+    morphology.datetime_modified = morphology.datetime_entered = h.now()
+    morphology.lexicon_corpus = data['lexicon_corpus']
+    morphology.rules_corpus = data['rules_corpus']
     morphology.script_type = data['script_type']
     morphology.extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus']
     return morphology
@@ -473,16 +473,16 @@ def update_morphology(morphology, data):
 
     """
     changed = False
-    changed = h.setAttr(morphology, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(morphology, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(morphology, 'lexiconCorpus', data['lexiconCorpus'], changed)
-    changed = h.setAttr(morphology, 'rulesCorpus', data['rulesCorpus'], changed)
-    changed = h.setAttr(morphology, 'script_type', data['script_type'], changed)
-    changed = h.setAttr(morphology, 'extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
+    changed = h.set_attr(morphology, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(morphology, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(morphology, 'lexicon_corpus', data['lexicon_corpus'], changed)
+    changed = h.set_attr(morphology, 'rules_corpus', data['rules_corpus'], changed)
+    changed = h.set_attr(morphology, 'script_type', data['script_type'], changed)
+    changed = h.set_attr(morphology, 'extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']
-        morphology.datetimeModified = h.now()
+        morphology.datetime_modified = h.now()
         return morphology
     return changed
 
@@ -493,7 +493,7 @@ def get_morphology_dir_path(morphology):
     :returns: an absolute path to the directory for the morphology.
 
     """
-    return os.path.join(h.getOLDDirectoryPath('morphologies', config=config),
+    return os.path.join(h.get_OLD_directory_path('morphologies', config=config),
                         'morphology_%d' % morphology.id)
 
 def create_morphology_dir(morphology):
@@ -504,14 +504,14 @@ def create_morphology_dir(morphology):
 
     """
     morphology_dir_path = get_morphology_dir_path(morphology)
-    h.makeDirectorySafely(morphology_dir_path)
+    h.make_directory_safely(morphology_dir_path)
     return morphology_dir_path
 
-def get_morphology_file_path(morphology, fileType='script'):
+def get_morphology_file_path(morphology, file_type='script'):
     """Return the path to a morphology's file of the given type.
 
     :param morphology: a morphology model object.
-    :param str fileType: one of 'script', 'binary', 'compiler', or 'tester'.
+    :param str file_type: one of 'script', 'binary', 'compiler', or 'tester'.
     :returns: an absolute path to the morphology's script file.
 
     """
@@ -523,25 +523,25 @@ def get_morphology_file_path(morphology, fileType='script'):
         'lexicon': 'pickle'
     }
     return os.path.join(get_morphology_dir_path(morphology),
-            'morphology_%d.%s' % (morphology.id, ext_map.get(fileType, 'script')))
+            'morphology_%d.%s' % (morphology.id, ext_map.get(file_type, 'script')))
 
 def generate_and_compile_morphology(morphology_id, compile_=True):
     morphology = Session.query(Morphology).get(morphology_id)
     if not morphology:
         response.status_int = 404
         return {'error': 'There is no morphology with id %s' % id}
-    if compile_ and not h.fomaInstalled():
+    if compile_ and not h.foma_installed():
         response.status_int = 400
         return {'error': 'Foma and flookup are not installed.'}
     morphology_dir_path = get_morphology_dir_path(morphology)
     verification_string = {'lexc': u'Done!', 'regex': u'defined morphology: '}.get(
         morphology.script_type, u'Done!')
     foma_worker_q.put({
-        'id': h.generateSalt(),
+        'id': h.generate_salt(),
         'func': 'generate_and_compile_morphology_script',
         'args': {'morphology_id': morphology.id, 'compile': compile_,
             'script_dir_path': morphology_dir_path, 'user_id': session['user'].id,
-            'verification_string': verification_string, 'timeout': h.morphologyCompileTimeout}
+            'verification_string': verification_string, 'timeout': h.morphology_compile_timeout}
     })
     return morphology
 
@@ -570,7 +570,7 @@ def foma_apply(direction, inputs, morphology, morphology_binary_path, user):
     :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
 
     """
-    random_string = h.generateSalt()
+    random_string = h.generate_salt()
     morphology_dir_path = get_morphology_dir_path(morphology)
     inputs_file_path = os.path.join(morphology_dir_path,
             'inputs_%s_%s.txt' % (user.username, random_string))
@@ -589,7 +589,7 @@ def foma_apply(direction, inputs, morphology, morphology_binary_path, user):
             p = Popen(apply_file_path, shell=False, stdout=outfile, stderr=devnull)
     p.communicate()
     with codecs.open(outputs_file_path, 'r', 'utf8') as f:
-        result = h.fomaOutputFile2Dict(f, remove_word_boundaries=False)
+        result = h.foma_output_file2dict(f, remove_word_boundaries=False)
     os.remove(inputs_file_path)
     os.remove(outputs_file_path)
     os.remove(apply_file_path)

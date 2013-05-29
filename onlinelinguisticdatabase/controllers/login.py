@@ -46,7 +46,7 @@ class LoginController(BaseController):
 
     """
 
-    here = h.getConfig(config=config).get('here')
+    here = h.get_config(config=config).get('here')
 
     @h.jsonify
     @h.restrict('POST')
@@ -65,10 +65,10 @@ class LoginController(BaseController):
             values = json.loads(unicode(request.body, request.charset))
             result = schema.to_python(values)
             username = result['username']
-            userFromUsername = Session.query(User).filter(User.username==username).first()
-            if userFromUsername:
-                salt = userFromUsername.salt
-                password = unicode(h.encryptPassword(result['password'], str(salt)))
+            user_from_username = Session.query(User).filter(User.username==username).first()
+            if user_from_username:
+                salt = user_from_username.salt
+                password = unicode(h.encrypt_password(result['password'], str(salt)))
                 user = Session.query(User).filter(User.username==username).filter(
                     User.password==password).first()
                 if user:
@@ -108,7 +108,7 @@ class LoginController(BaseController):
 
         :URL: ``POST /login/email_reset_password``
         :request body: a JSON object with a ``"username"`` attribute.
-        :returns: a dictionary with ``'validUsername'`` and ``'passwordReset'``
+        :returns: a dictionary with ``'valid_username'`` and ``'password_reset'``
             keys whose values are booleans.
 
         """
@@ -119,16 +119,16 @@ class LoginController(BaseController):
             user = Session.query(User).filter(User.username==result['username']).first()
             if user:
                 try:
-                    newPassword = h.generatePassword()
-                    h.sendPasswordResetEmailTo(user, newPassword, config=config)
-                    user.password = unicode(h.encryptPassword(newPassword, str(user.salt)))
+                    new_password = h.generate_password()
+                    h.send_password_reset_email_to(user, new_password, config=config)
+                    user.password = unicode(h.encrypt_password(new_password, str(user.salt)))
                     Session.add(user)
                     Session.commit()
                     if os.path.split(config['__file__'])[-1] == 'test.ini':
-                        return {'validUsername': True, 'passwordReset': True,
-                                'newPassword': newPassword}
+                        return {'valid_username': True, 'password_reset': True,
+                                'new_password': new_password}
                     else:
-                        return {'validUsername': True, 'passwordReset': True}
+                        return {'valid_username': True, 'password_reset': True}
                 except:     # socket.error was too specific ...
                     response.status_int = 500
                     return {'error': 'The server is unable to send email.'}

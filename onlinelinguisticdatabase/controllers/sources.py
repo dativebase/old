@@ -34,7 +34,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Source
-from onlinelinguisticdatabase.lib.bibtex import entryTypes
+from onlinelinguisticdatabase.lib.bibtex import entry_types
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class SourcesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Source', config=config)
+    query_builder = SQLAQueryBuilder('Source', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -61,17 +61,17 @@ class SourcesController(BaseController):
         :URL: ``SEARCH /sources`` (or ``POST /sources/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            query = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            query = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -89,10 +89,10 @@ class SourcesController(BaseController):
         """Return the data necessary to search the source resources.
 
         :URL: ``GET /sources/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -106,14 +106,14 @@ class SourcesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(Source)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -133,9 +133,9 @@ class SourcesController(BaseController):
         try:
             schema = SourceSchema()
             values = json.loads(unicode(request.body, request.charset))
-            state = h.getStateObject(values)
+            state = h.get_state_object(values)
             data = schema.to_python(values, state)
-            source = createNewSource(data)
+            source = create_new_source(data)
             Session.add(source)
             Session.commit()
             return source
@@ -157,7 +157,7 @@ class SourcesController(BaseController):
         :returns: a dictionary containing the valid BibTeX entry types.
 
         """
-        return {'types': sorted(entryTypes.keys())}
+        return {'types': sorted(entry_types.keys())}
 
     @h.jsonify
     @h.restrict('PUT')
@@ -177,11 +177,11 @@ class SourcesController(BaseController):
             try:
                 schema = SourceSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 data = schema.to_python(values, state)
-                source = updateSource(source, data)
-                # source will be False if there are no changes (cf. updateSource).
+                source = update_source(source, data)
+                # source will be False if there are no changes (cf. update_source).
                 if source:
                     Session.add(source)
                     Session.commit()
@@ -266,7 +266,7 @@ class SourcesController(BaseController):
         """
         source = Session.query(Source).get(id)
         if source:
-            return {'data': {'types': sorted(entryTypes.keys())}, 'source': source}
+            return {'data': {'types': sorted(entry_types.keys())}, 'source': source}
         else:
             response.status_int = 404
             return {'error': 'There is no source with id %s' % id}
@@ -276,7 +276,7 @@ class SourcesController(BaseController):
 # Source Create & Update Functions
 ################################################################################
 
-def createNewSource(data):
+def create_new_source(data):
     """Create a new source.
 
     :param dict data: the data for the source to be created.
@@ -297,7 +297,7 @@ def createNewSource(data):
     source.howpublished = h.normalize(data['howpublished'])
     source.institution = h.normalize(data['institution'])
     source.journal = h.normalize(data['journal'])
-    source.keyField = h.normalize(data['keyField'])
+    source.key_field = h.normalize(data['key_field'])
     source.month = h.normalize(data['month'])
     source.note = h.normalize(data['note'])
     source.number = h.normalize(data['number'])
@@ -307,7 +307,7 @@ def createNewSource(data):
     source.school = h.normalize(data['school'])
     source.series = h.normalize(data['series'])
     source.title = h.normalize(data['title'])
-    source.typeField = h.normalize(data['typeField'])
+    source.type_field = h.normalize(data['type_field'])
     source.url = data['url']
     source.volume = h.normalize(data['volume'])
     source.year = data['year']
@@ -325,17 +325,17 @@ def createNewSource(data):
     source.price = h.normalize(data['price'])
     source.size = h.normalize(data['size'])
 
-    # Many-to-one: file, crossrefSource
+    # Many-to-one: file, crossref_source
     source.file = data['file']
-    source.crossrefSource = data['crossrefSource']
+    source.crossref_source = data['crossref_source']
 
     # OLD-generated Data
-    source.datetimeModified = datetime.datetime.utcnow()
+    source.datetime_modified = datetime.datetime.utcnow()
 
     return source
 
 
-def updateSource(source, data):
+def update_source(source, data):
     """Update a source.
 
     :param source: the source model to be updated.
@@ -347,52 +347,52 @@ def updateSource(source, data):
     changed = False
 
     # Unicode Data
-    changed = h.setAttr(source, 'type', h.normalize(data['type']), changed)
-    changed = h.setAttr(source, 'key', h.normalize(data['key']), changed)
-    changed = h.setAttr(source, 'address', h.normalize(data['address']), changed)
-    changed = h.setAttr(source, 'annote', h.normalize(data['annote']), changed)
-    changed = h.setAttr(source, 'author', h.normalize(data['author']), changed)
-    changed = h.setAttr(source, 'booktitle', h.normalize(data['booktitle']), changed)
-    changed = h.setAttr(source, 'chapter', h.normalize(data['chapter']), changed)
-    changed = h.setAttr(source, 'crossref', h.normalize(data['crossref']), changed)
-    changed = h.setAttr(source, 'edition', h.normalize(data['edition']), changed)
-    changed = h.setAttr(source, 'editor', h.normalize(data['editor']), changed)
-    changed = h.setAttr(source, 'howpublished', h.normalize(data['howpublished']), changed)
-    changed = h.setAttr(source, 'institution', h.normalize(data['institution']), changed)
-    changed = h.setAttr(source, 'journal', h.normalize(data['journal']), changed)
-    changed = h.setAttr(source, 'keyField', h.normalize(data['keyField']), changed)
-    changed = h.setAttr(source, 'month', h.normalize(data['month']), changed)
-    changed = h.setAttr(source, 'note', h.normalize(data['note']), changed)
-    changed = h.setAttr(source, 'number', h.normalize(data['number']), changed)
-    changed = h.setAttr(source, 'organization', h.normalize(data['organization']), changed)
-    changed = h.setAttr(source, 'pages', h.normalize(data['pages']), changed)
-    changed = h.setAttr(source, 'publisher', h.normalize(data['publisher']), changed)
-    changed = h.setAttr(source, 'school', h.normalize(data['school']), changed)
-    changed = h.setAttr(source, 'series', h.normalize(data['series']), changed)
-    changed = h.setAttr(source, 'title', h.normalize(data['title']), changed)
-    changed = h.setAttr(source, 'typeField', h.normalize(data['typeField']), changed)
-    changed = h.setAttr(source, 'url', data['url'], changed)
-    changed = h.setAttr(source, 'volume', h.normalize(data['volume']), changed)
-    changed = h.setAttr(source, 'year', data['year'], changed)
-    changed = h.setAttr(source, 'affiliation', h.normalize(data['affiliation']), changed)
-    changed = h.setAttr(source, 'abstract', h.normalize(data['abstract']), changed)
-    changed = h.setAttr(source, 'contents', h.normalize(data['contents']), changed)
-    changed = h.setAttr(source, 'copyright', h.normalize(data['copyright']), changed)
-    changed = h.setAttr(source, 'ISBN', h.normalize(data['ISBN']), changed)
-    changed = h.setAttr(source, 'ISSN', h.normalize(data['ISSN']), changed)
-    changed = h.setAttr(source, 'keywords', h.normalize(data['keywords']), changed)
-    changed = h.setAttr(source, 'language', h.normalize(data['language']), changed)
-    changed = h.setAttr(source, 'location', h.normalize(data['location']), changed)
-    changed = h.setAttr(source, 'LCCN', h.normalize(data['LCCN']), changed)
-    changed = h.setAttr(source, 'mrnumber', h.normalize(data['mrnumber']), changed)
-    changed = h.setAttr(source, 'price', h.normalize(data['price']), changed)
-    changed = h.setAttr(source, 'size', h.normalize(data['size']), changed)
+    changed = h.set_attr(source, 'type', h.normalize(data['type']), changed)
+    changed = h.set_attr(source, 'key', h.normalize(data['key']), changed)
+    changed = h.set_attr(source, 'address', h.normalize(data['address']), changed)
+    changed = h.set_attr(source, 'annote', h.normalize(data['annote']), changed)
+    changed = h.set_attr(source, 'author', h.normalize(data['author']), changed)
+    changed = h.set_attr(source, 'booktitle', h.normalize(data['booktitle']), changed)
+    changed = h.set_attr(source, 'chapter', h.normalize(data['chapter']), changed)
+    changed = h.set_attr(source, 'crossref', h.normalize(data['crossref']), changed)
+    changed = h.set_attr(source, 'edition', h.normalize(data['edition']), changed)
+    changed = h.set_attr(source, 'editor', h.normalize(data['editor']), changed)
+    changed = h.set_attr(source, 'howpublished', h.normalize(data['howpublished']), changed)
+    changed = h.set_attr(source, 'institution', h.normalize(data['institution']), changed)
+    changed = h.set_attr(source, 'journal', h.normalize(data['journal']), changed)
+    changed = h.set_attr(source, 'key_field', h.normalize(data['key_field']), changed)
+    changed = h.set_attr(source, 'month', h.normalize(data['month']), changed)
+    changed = h.set_attr(source, 'note', h.normalize(data['note']), changed)
+    changed = h.set_attr(source, 'number', h.normalize(data['number']), changed)
+    changed = h.set_attr(source, 'organization', h.normalize(data['organization']), changed)
+    changed = h.set_attr(source, 'pages', h.normalize(data['pages']), changed)
+    changed = h.set_attr(source, 'publisher', h.normalize(data['publisher']), changed)
+    changed = h.set_attr(source, 'school', h.normalize(data['school']), changed)
+    changed = h.set_attr(source, 'series', h.normalize(data['series']), changed)
+    changed = h.set_attr(source, 'title', h.normalize(data['title']), changed)
+    changed = h.set_attr(source, 'type_field', h.normalize(data['type_field']), changed)
+    changed = h.set_attr(source, 'url', data['url'], changed)
+    changed = h.set_attr(source, 'volume', h.normalize(data['volume']), changed)
+    changed = h.set_attr(source, 'year', data['year'], changed)
+    changed = h.set_attr(source, 'affiliation', h.normalize(data['affiliation']), changed)
+    changed = h.set_attr(source, 'abstract', h.normalize(data['abstract']), changed)
+    changed = h.set_attr(source, 'contents', h.normalize(data['contents']), changed)
+    changed = h.set_attr(source, 'copyright', h.normalize(data['copyright']), changed)
+    changed = h.set_attr(source, 'ISBN', h.normalize(data['ISBN']), changed)
+    changed = h.set_attr(source, 'ISSN', h.normalize(data['ISSN']), changed)
+    changed = h.set_attr(source, 'keywords', h.normalize(data['keywords']), changed)
+    changed = h.set_attr(source, 'language', h.normalize(data['language']), changed)
+    changed = h.set_attr(source, 'location', h.normalize(data['location']), changed)
+    changed = h.set_attr(source, 'LCCN', h.normalize(data['LCCN']), changed)
+    changed = h.set_attr(source, 'mrnumber', h.normalize(data['mrnumber']), changed)
+    changed = h.set_attr(source, 'price', h.normalize(data['price']), changed)
+    changed = h.set_attr(source, 'size', h.normalize(data['size']), changed)
 
     # Many-to-One Data
-    changed = h.setAttr(source, 'file', data['file'], changed)
-    changed = h.setAttr(source, 'crossrefSource', data['crossrefSource'], changed)
+    changed = h.set_attr(source, 'file', data['file'], changed)
+    changed = h.set_attr(source, 'crossref_source', data['crossref_source'], changed)
 
     if changed:
-        source.datetimeModified = datetime.datetime.utcnow()
+        source.datetime_modified = datetime.datetime.utcnow()
         return source
     return changed

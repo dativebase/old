@@ -59,212 +59,212 @@ class TestController(TestCase):
         self.extra_environ_contrib = {'test.authentication.role': u'contributor'}
         self.extra_environ_admin = {'test.authentication.role': u'administrator'}
         self.extra_environ_view_appset = {'test.authentication.role': u'viewer',
-                                            'test.applicationSettings': True}
+                                            'test.application_settings': True}
         self.extra_environ_contrib_appset = {'test.authentication.role': u'contributor',
-                                            'test.applicationSettings': True}
+                                            'test.application_settings': True}
         self.extra_environ_admin_appset = {'test.authentication.role': u'administrator',
-                                            'test.applicationSettings': True}
+                                            'test.application_settings': True}
 
         self.json_headers = {'Content-Type': 'application/json'}
 
         config = self.config = appconfig('config:test.ini', relative_to='.')
         self.here = config['here']
-        self.filesPath = h.getOLDDirectoryPath('files', config=config)
-        self.reducedFilesPath = h.getOLDDirectoryPath('reduced_files', config=config)
-        self.testFilesPath = os.path.join(self.here, 'onlinelinguisticdatabase', 'tests',
+        self.files_path = h.get_OLD_directory_path('files', config=config)
+        self.reduced_files_path = h.get_OLD_directory_path('reduced_files', config=config)
+        self.test_files_path = os.path.join(self.here, 'onlinelinguisticdatabase', 'tests',
                              'data', 'files')
         self.create_reduced_size_file_copies = asbool(config.get(
             'create_reduced_size_file_copies', False))
         self.preferred_lossy_audio_format = config.get('preferred_lossy_audio_format', 'ogg')
-        self.corporaPath = h.getOLDDirectoryPath('corpora', config=config)
-        self.testDatasetsPath = os.path.join(self.here, 'onlinelinguisticdatabase',
+        self.corpora_path = h.get_OLD_directory_path('corpora', config=config)
+        self.test_datasets_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'datasets')
-        self.testScriptsPath = os.path.join(self.here, 'onlinelinguisticdatabase',
+        self.test_scripts_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'scripts')
-        self.loremipsum100Path = os.path.join(self.testDatasetsPath, 'loremipsum_100.txt')
-        self.loremipsum1000Path = os.path.join(self.testDatasetsPath , 'loremipsum_1000.txt')
-        self.loremipsum10000Path = os.path.join(self.testDatasetsPath, 'loremipsum_10000.txt')
-        self.usersPath = h.getOLDDirectoryPath('users', config=config)
-        self.morphologiesPath = h.getOLDDirectoryPath('morphologies', config=config)
-        self.phonologiesPath = h.getOLDDirectoryPath('phonologies', config=config)
-        self.testPhonologiesPath = os.path.join(self.here, 'onlinelinguisticdatabase',
+        self.loremipsum100_path = os.path.join(self.test_datasets_path, 'loremipsum_100.txt')
+        self.loremipsum1000_path = os.path.join(self.test_datasets_path , 'loremipsum_1000.txt')
+        self.loremipsum10000_path = os.path.join(self.test_datasets_path, 'loremipsum_10000.txt')
+        self.users_path = h.get_OLD_directory_path('users', config=config)
+        self.morphologies_path = h.get_OLD_directory_path('morphologies', config=config)
+        self.phonologies_path = h.get_OLD_directory_path('phonologies', config=config)
+        self.test_phonologies_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'phonologies')
-        self.testPhonologyScriptPath = os.path.join(
-                self.testPhonologiesPath, 'test_phonology.script')
-        self.testMalformedPhonologyScriptPath = os.path.join(
-                self.testPhonologiesPath, 'test_phonology_malformed.script')
-        self.testPhonologyNoPhonologyScriptPath = os.path.join(
-                self.testPhonologiesPath, 'test_phonology_malformed.script')
-        self.testMediumPhonologyScriptPath = os.path.join(
-                self.testPhonologiesPath, 'test_phonology_medium.script')
-        self.testLargePhonologyScriptPath = os.path.join(
-                self.testPhonologiesPath, 'test_phonology_large.script')
-        self.testPhonologyTestlessScriptPath = os.path.join(
-                self.testPhonologiesPath, 'test_phonology_no_tests.script')
-        self.testMorphologiesPath = os.path.join(self.here, 'onlinelinguisticdatabase',
+        self.test_phonology_script_path = os.path.join(
+                self.test_phonologies_path, 'test_phonology.script')
+        self.test_malformed_phonology_script_path = os.path.join(
+                self.test_phonologies_path, 'test_phonology_malformed.script')
+        self.test_phonology_no_phonology_script_path = os.path.join(
+                self.test_phonologies_path, 'test_phonology_malformed.script')
+        self.test_medium_phonology_script_path = os.path.join(
+                self.test_phonologies_path, 'test_phonology_medium.script')
+        self.test_large_phonology_script_path = os.path.join(
+                self.test_phonologies_path, 'test_phonology_large.script')
+        self.test_phonology_testless_script_path = os.path.join(
+                self.test_phonologies_path, 'test_phonology_no_tests.script')
+        self.test_morphologies_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'morphologies')
 
     def __setcreateparams__(self):
 
-        self.applicationSettingsCreateParams = {
-            'objectLanguageName': u'',
-            'objectLanguageId': u'',
-            'metalanguageName': u'',
-            'metalanguageId': u'',
-            'metalanguageInventory': u'',
-            'orthographicValidation': u'None', # Value should be one of [u'None', u'Warning', u'Error']
-            'narrowPhoneticInventory': u'',
-            'narrowPhoneticValidation': u'None',
-            'broadPhoneticInventory': u'',
-            'broadPhoneticValidation': u'None',
-            'morphemeBreakIsOrthographic': u'',
-            'morphemeBreakValidation': u'None',
-            'phonemicInventory': u'',
-            'morphemeDelimiters': u'',
+        self.application_settings_create_params = {
+            'object_language_name': u'',
+            'object_language_id': u'',
+            'metalanguage_name': u'',
+            'metalanguage_id': u'',
+            'metalanguage_inventory': u'',
+            'orthographic_validation': u'None', # Value should be one of [u'None', u'Warning', u'Error']
+            'narrow_phonetic_inventory': u'',
+            'narrow_phonetic_validation': u'None',
+            'broad_phonetic_inventory': u'',
+            'broad_phonetic_validation': u'None',
+            'morpheme_break_is_orthographic': u'',
+            'morpheme_break_validation': u'None',
+            'phonemic_inventory': u'',
+            'morpheme_delimiters': u'',
             'punctuation': u'',
             'grammaticalities': u'',
-            'unrestrictedUsers': [],        # A list of user ids
-            'storageOrthography': u'',        # An orthography id
-            'inputOrthography': u'',          # An orthography id
-            'outputOrthography': u''         # An orthography id
+            'unrestricted_users': [],        # A list of user ids
+            'storage_orthography': u'',        # An orthography id
+            'input_orthography': u'',          # An orthography id
+            'output_orthography': u''         # An orthography id
         }
-        self.collectionCreateParams = {
+        self.collection_create_params = {
             'title': u'',
             'type': u'',
             'url': u'',
             'description': u'',
-            'markupLanguage': u'',
+            'markup_language': u'',
             'contents': u'',
             'speaker': u'',
             'source': u'',
             'elicitor': u'',
             'enterer': u'',
-            'dateElicited': u'',
+            'date_elicited': u'',
             'tags': [],
             'files': []
         }
-        self.corpusCreateParams = {
+        self.corpus_create_params = {
             'name': u'',
             'description': u'',
             'content': u'',
-            'formSearch': u'',
+            'form_search': u'',
             'tags': []
         }
-        self.fileCreateParams = {
+        self.file_create_params = {
             'name': u'',
             'description': u'',
-            'dateElicited': u'',    # mm/dd/yyyy
+            'date_elicited': u'',    # mm/dd/yyyy
             'elicitor': u'',
             'speaker': u'',
-            'utteranceType': u'',
-            'embeddedFileMarkup': u'',
-            'embeddedFilePassword': u'',
+            'utterance_type': u'',
+            'embedded_file_markup': u'',
+            'embedded_file_password': u'',
             'tags': [],
             'forms': [],
             'file': ''      # file data Base64 encoded
         }
-        self.fileCreateParamsBase64 = {
+        self.file_create_params_base64 = {
             'filename': u'',        # Will be filtered out on update requests
             'description': u'',
-            'dateElicited': u'',    # mm/dd/yyyy
+            'date_elicited': u'',    # mm/dd/yyyy
             'elicitor': u'',
             'speaker': u'',
-            'utteranceType': u'',
+            'utterance_type': u'',
             'tags': [],
             'forms': [],
-            'base64EncodedFile': '' # file data Base64 encoded; will be filtered out on update requests
+            'base64_encoded_file': '' # file data Base64 encoded; will be filtered out on update requests
         }
-        self.fileCreateParamsMPFD = {
+        self.file_create_params_MPFD = {
             'filename': u'',        # Will be filtered out on update requests
             'description': u'',
-            'dateElicited': u'',    # mm/dd/yyyy
+            'date_elicited': u'',    # mm/dd/yyyy
             'elicitor': u'',
             'speaker': u'',
-            'utteranceType': u'',
+            'utterance_type': u'',
             'tags-0': u'',
             'forms-0': u''
         }
-        self.fileCreateParamsSubRef = {
-            'parentFile': u'',
+        self.file_create_params_sub_ref = {
+            'parent_file': u'',
             'name': u'',
             'start': u'',
             'end': u'',
             'description': u'',
-            'dateElicited': u'',    # mm/dd/yyyy
+            'date_elicited': u'',    # mm/dd/yyyy
             'elicitor': u'',
             'speaker': u'',
-            'utteranceType': u'',
+            'utterance_type': u'',
             'tags': [],
             'forms': []
         }
-        self.fileCreateParamsExtHost = {
+        self.file_create_params_ext_host = {
             'url': u'',
             'name': u'',
             'password': u'',
-            'MIMEtype': u'',
+            'MIME_type': u'',
             'description': u'',
-            'dateElicited': u'',    # mm/dd/yyyy
+            'date_elicited': u'',    # mm/dd/yyyy
             'elicitor': u'',
             'speaker': u'',
-            'utteranceType': u'',
+            'utterance_type': u'',
             'tags': [],
             'forms': []
         }
-        self.formCreateParams = {
+        self.form_create_params = {
             'transcription': u'',
-            'phoneticTranscription': u'',
-            'narrowPhoneticTranscription': u'',
-            'morphemeBreak': u'',
+            'phonetic_transcription': u'',
+            'narrow_phonetic_transcription': u'',
+            'morpheme_break': u'',
             'grammaticality': u'',
-            'morphemeGloss': u'',
+            'morpheme_gloss': u'',
             'translations': [],
             'comments': u'',
-            'speakerComments': u'',
-            'elicitationMethod': u'',
+            'speaker_comments': u'',
+            'elicitation_method': u'',
             'tags': [],
-            'syntacticCategory': u'',
+            'syntactic_category': u'',
             'speaker': u'',
             'elicitor': u'',
             'verifier': u'',
             'source': u'',
             'status': u'tested',
-            'dateElicited': u'',     # mm/dd/yyyy
+            'date_elicited': u'',     # mm/dd/yyyy
             'syntax': u'',
             'semantics': u''
         }
-        self.formSearchCreateParams = {
+        self.form_search_create_params = {
             'name': u'',
             'search': u'',
             'description': u'',
             'searcher': u''
         }
-        self.morphologyCreateParams = {
+        self.morphology_create_params = {
             'name': u'',
             'description': u'',
-            'lexiconCorpus': u'',
-            'rulesCorpus': u'',
+            'lexicon_corpus': u'',
+            'rules_corpus': u'',
             'script_type': u'lexc',
             'extract_morphemes_from_rules_corpus': False
         }
-        self.orthographyCreateParams = {
+        self.orthography_create_params = {
             'name': u'',
             'orthography': u'',
             'lowercase': False,
-            'initialGlottalStops': True
+            'initial_glottal_stops': True
         }
-        self.pageCreateParams = {
+        self.page_create_params = {
             'name': u'',
             'heading': u'',
-            'markupLanguage': u'',
+            'markup_language': u'',
             'content': u'',
             'html': u''
         }
-        self.phonologyCreateParams = {
+        self.phonology_create_params = {
             'name': u'',
             'description': u'',
             'script': u''
         }
-        self.sourceCreateParams = {
+        self.source_create_params = {
             'file': u'',
             'type': u'',
             'key': u'',
@@ -279,7 +279,7 @@ class TestController(TestCase):
             'howpublished': u'',
             'institution': u'',
             'journal': u'',
-            'keyField': u'',
+            'key_field': u'',
             'month': u'',
             'note': u'',
             'number': u'',
@@ -289,7 +289,7 @@ class TestController(TestCase):
             'school': u'',
             'series': u'',
             'title': u'',
-            'typeField': u'',
+            'type_field': u'',
             'url': u'',
             'volume': u'',
             'year': u'',
@@ -307,80 +307,80 @@ class TestController(TestCase):
             'price': u'',
             'size': u'',
         }
-        self.speakerCreateParams = {
-            'firstName': u'',
-            'lastName': u'',
-            'pageContent': u'',
+        self.speaker_create_params = {
+            'first_name': u'',
+            'last_name': u'',
+            'page_content': u'',
             'dialect': u'dialect',
-            'markupLanguage': u'reStructuredText'
+            'markup_language': u'reStructuredText'
         }
-        self.syntacticCategoryCreateParams = {
+        self.syntactic_category_create_params = {
             'name': u'',
             'type': u'',
             'description': u''
         }
-        self.userCreateParams = {
+        self.user_create_params = {
             'username': u'',
             'password': u'',
             'password_confirm': u'',
-            'firstName': u'',
-            'lastName': u'',
+            'first_name': u'',
+            'last_name': u'',
             'email': u'',
             'affiliation': u'',
             'role': u'',
-            'markupLanguage': u'',
-            'pageContent': u'',
-            'inputOrthography': None,
-            'outputOrthography': None
+            'markup_language': u'',
+            'page_content': u'',
+            'input_orthography': None,
+            'output_orthography': None
         }
 
     def tearDown(self, **kwargs):
-        clearAllTables = kwargs.get('clearAllTables', False)
-        dirsToClear = kwargs.get('dirsToClear', [])
-        delGlobalAppSet = kwargs.get('delGlobalAppSet', False)
-        dirsToDestroy = kwargs.get('dirsToDestroy', [])
+        clear_all_tables = kwargs.get('clear_all_tables', False)
+        dirs_to_clear = kwargs.get('dirs_to_clear', [])
+        del_global_app_set = kwargs.get('del_global_app_set', False)
+        dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
 
-        if clearAllTables:
-            h.clearAllTables(['language'])
+        if clear_all_tables:
+            h.clear_all_tables(['language'])
         else:
-            h.clearAllModels()
-        administrator = h.generateDefaultAdministrator()
-        contributor = h.generateDefaultContributor()
-        viewer = h.generateDefaultViewer()
+            h.clear_all_models()
+        administrator = h.generate_default_administrator()
+        contributor = h.generate_default_contributor()
+        viewer = h.generate_default_viewer()
         Session.add_all([administrator, contributor, viewer])
         Session.commit()
 
-        for dirPath in dirsToClear:
-            h.clearDirectoryOfFiles(getattr(self, dirPath))
+        for dir_path in dirs_to_clear:
+            h.clear_directory_of_files(getattr(self, dir_path))
 
-        for dirName in dirsToDestroy:
+        for dir_name in dirs_to_destroy:
             {
-                'user': lambda: h.destroyAllDirectories('users', 'test.ini'),
-                'corpus': lambda: h.destroyAllDirectories('corpora', 'test.ini'),
-                'phonology': lambda: h.destroyAllDirectories('phonologies', 'test.ini'),
-                'morphology': lambda: h.destroyAllDirectories('morphologies', 'test.ini'),
-            }.get(dirName, lambda: None)()
+                'user': lambda: h.destroy_all_directories('users', 'test.ini'),
+                'corpus': lambda: h.destroy_all_directories('corpora', 'test.ini'),
+                'phonology': lambda: h.destroy_all_directories('phonologies', 'test.ini'),
+                'morphology': lambda: h.destroy_all_directories('morphologies', 'test.ini'),
+            }.get(dir_name, lambda: None)()
 
-        if delGlobalAppSet:
-            # Perform a vacuous GET just to delete app_globals.applicationSettings
+        if del_global_app_set:
+            # Perform a vacuous GET just to delete app_globals.application_settings
             # to clean up for subsequent tests.
             self.app.get(url('new_form'), extra_environ=self.extra_environ_admin_appset)
 
-    def addSEARCHToWebTestValidMethods(self):
+    def _add_SEARCH_to_web_test_valid_methods(self):
         """Hack to prevent webtest from printing warnings when SEARCH method is used."""
         new_valid_methods = list(webtest.lint.valid_methods)
         new_valid_methods.append('SEARCH')
         new_valid_methods = tuple(new_valid_methods)
         webtest.lint.valid_methods = new_valid_methods
 
-def decompressGzipString(compressedData):
-    compressedStream = StringIO.StringIO(compressedData)
-    gzipFile = gzip.GzipFile(fileobj=compressedStream, mode="rb")
-    return gzipFile.read()
+def decompress_gzip_string(compressed_data):
+    compressed_stream = StringIO.StringIO(compressed_data)
+    gzip_file = gzip.GzipFile(fileobj=compressed_stream, mode="rb")
+    return gzip_file.read()
 
-def getFileSize(filePath):
+def get_file_size(file_path):
     try:
-        return os.path.getsize(filePath)
+        return os.path.getsize(file_path)
     except Exception:
         None
 

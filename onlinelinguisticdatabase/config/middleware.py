@@ -41,9 +41,9 @@ class HTML2JSONContentType(object):
     def __call__(self, environ, start_response):
         def custom_start_response(status, headers, exc_info=None):
             if dict(headers).get('Content-Type') == 'text/html; charset=utf-8':
-                newHeaders = dict(headers)
-                newHeaders['Content-Type'] = 'application/json'
-                headers = newHeaders.items()
+                new_headers = dict(headers)
+                new_headers['Content-Type'] = 'application/json'
+                headers = new_headers.items()
             return start_response(status, headers, exc_info)
 
         return self.app(environ, custom_start_response)

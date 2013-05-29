@@ -37,65 +37,65 @@ import os, sys, re
 
 
 try:
-    onOff = sys.argv[1]
-    if onOff not in ('on', 'off'):
-        onOff = None
+    on_off = sys.argv[1]
+    if on_off not in ('on', 'off'):
+        on_off = None
 except IndexError:
-    onOff = None
+    on_off = None
 
-testsDirPath = os.path.dirname(os.path.realpath(__file__))
+tests_dir_path = os.path.dirname(os.path.realpath(__file__))
 
-def addPySuffix(fn):
+def add_py_suffix(fn):
     if fn.split('.')[-1] == 'py':
         return fn
     else:
         return '%s.py' % fn
 
 
-def getTestScripts():
-    ignorePatt = re.compile('^(\.|_|setup\.py$)')
-    scripts = os.listdir(testsDirPath)
-    return [s for s in scripts if not ignorePatt.search(s)]
+def get_test_scripts():
+    ignore_patt = re.compile('^(\.|_|setup\.py$)')
+    scripts = os.listdir(tests_dir_path)
+    return [s for s in scripts if not ignore_patt.search(s)]
 
-files = [addPySuffix(fn) for fn in sys.argv[2:]]
+files = [add_py_suffix(fn) for fn in sys.argv[2:]]
 
 
-def toggleTestsInScript(onOff, script):
-    scriptPath = os.path.join(testsDirPath, script)
-    newScriptPath = os.path.join(testsDirPath, '%s.tmp' % script)
-    scriptFile = open(scriptPath, 'r')
-    newScriptFile = open(newScriptPath, 'w')
-    testMePatt = re.compile('^    #@nottest(\n| )')
-    testMeNotPatt = re.compile('^    @nottest(\n| )')
+def toggle_tests_in_script(on_off, script):
+    script_path = os.path.join(tests_dir_path, script)
+    new_script_path = os.path.join(tests_dir_path, '%s.tmp' % script)
+    script_file = open(script_path, 'r')
+    new_script_file = open(new_script_path, 'w')
+    test_me_patt = re.compile('^    #@nottest(\n| )')
+    test_me_not_patt = re.compile('^    @nottest(\n| )')
     i = 1
     messages = []
-    for line in scriptFile:
-        if testMeNotPatt.search(line) and onOff == 'on':
+    for line in script_file:
+        if test_me_not_patt.search(line) and on_off == 'on':
             messages.append('Turned on test at line %d of %s.' % (i, script))
-            newScriptFile.write('    #@nottest\n')
-        elif testMePatt.search(line) and onOff == 'off':
+            new_script_file.write('    #@nottest\n')
+        elif test_me_patt.search(line) and on_off == 'off':
             messages.append('Turned off test at line %d of %s.' % (i, script))
-            newScriptFile.write('    @nottest\n')
+            new_script_file.write('    @nottest\n')
         else:
-            newScriptFile.write(line)
+            new_script_file.write(line)
         i = i + 1
-    newScriptFile.close()
-    scriptFile.close()
+    new_script_file.close()
+    script_file.close()
     if messages:
-        os.rename(newScriptPath, scriptPath)
+        os.rename(new_script_path, script_path)
     else:
-        os.remove(newScriptPath)
+        os.remove(new_script_path)
     return messages
 
-if onOff is not None:
-    testScripts = getTestScripts()
+if on_off is not None:
+    test_scripts = get_test_scripts()
     if files == []:
-        scriptsToToggle = testScripts
+        scripts_to_toggle = test_scripts
     else:
-        scriptsToToggle = list(set(testScripts) & set(files))
-    messages = [toggleTestsInScript(onOff, script) for script in scriptsToToggle]
+        scripts_to_toggle = list(set(test_scripts) & set(files))
+    messages = [toggle_tests_in_script(on_off, script) for script in scripts_to_toggle]
     if sum([len(ms) for ms in messages]) == 0:
-        print 'No tests were turned %s.' % onOff
+        print 'No tests were turned %s.' % on_off
     else:
         print '\n'.join(['\n'.join([m for m in ms]) for ms in messages if ms])
 else:

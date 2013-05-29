@@ -56,7 +56,7 @@ class PhonologybackupsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('PhonologyBackup', config=config)
+    query_builder = SQLAQueryBuilder('PhonologyBackup', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -70,8 +70,8 @@ class PhonologybackupsController(BaseController):
         """
         try:
             query = Session.query(PhonologyBackup)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -107,9 +107,9 @@ class PhonologybackupsController(BaseController):
         :returns: a phonology backup model object.
 
         """
-        phonologyBackup = Session.query(PhonologyBackup).get(id)
-        if phonologyBackup:
-            return phonologyBackup
+        phonology_backup = Session.query(PhonologyBackup).get(id)
+        if phonology_backup:
+            return phonology_backup
         else:
             response.status_int = 404
             return {'error': 'There is no phonology backup with id %s' % id}

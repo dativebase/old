@@ -64,7 +64,7 @@ class ApplicationsettingsController(BaseController):
         :returns: a list of all application settings resources.
 
         """
-        return h.eagerloadApplicationSettings(
+        return h.eagerload_application_settings(
             Session.query(ApplicationSettings)).order_by(
                 asc(ApplicationSettings.id)).all()
 
@@ -84,11 +84,11 @@ class ApplicationsettingsController(BaseController):
             schema = ApplicationSettingsSchema()
             values = json.loads(unicode(request.body, request.charset))
             result = schema.to_python(values)
-            applicationSettings = createNewApplicationSettings(result)
-            Session.add(applicationSettings)
+            application_settings = create_new_application_settings(result)
+            Session.add(application_settings)
             Session.commit()
-            app_globals.applicationSettings = h.ApplicationSettings()
-            return applicationSettings
+            app_globals.application_settings = h.ApplicationSettings()
+            return application_settings
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -108,12 +108,12 @@ class ApplicationsettingsController(BaseController):
 
         .. note::
 
-           See :func:`getNewApplicationSettingsData` to understand how the 
+           See :func:`get_new_application_settings_data` to understand how the 
            query string parameters can affect the contents of the lists in the
            returned dictionary.
 
         """
-        return getNewApplicationSettingsData(request.GET)
+        return get_new_application_settings_data(request.GET)
 
     @h.jsonify
     @h.restrict('PUT')
@@ -128,21 +128,21 @@ class ApplicationsettingsController(BaseController):
         :returns: the updated application settings model.
 
         """
-        applicationSettings = h.eagerloadApplicationSettings(
+        application_settings = h.eagerload_application_settings(
             Session.query(ApplicationSettings)).get(int(id))
-        if applicationSettings:
+        if application_settings:
             try:
                 schema = ApplicationSettingsSchema()
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
                 # Try to create an updated ApplicationSetting object.
-                applicationSettings = updateApplicationSettings(applicationSettings, data)
-                # applicationSettings will be False if there are no changes
-                if applicationSettings:
-                    Session.add(applicationSettings)
+                application_settings = update_application_settings(application_settings, data)
+                # application_settings will be False if there are no changes
+                if application_settings:
+                    Session.add(application_settings)
                     Session.commit()
-                    app_globals.applicationSettings = h.ApplicationSettings()
-                    return applicationSettings
+                    app_globals.application_settings = h.ApplicationSettings()
+                    return application_settings
                 else:
                     response.status_int = 400
                     return {'error': 'The update request failed because the submitted data were not new.'}
@@ -168,16 +168,16 @@ class ApplicationsettingsController(BaseController):
         :returns: the deleted application settings model.
 
         """
-        applicationSettings = h.eagerloadApplicationSettings(
+        application_settings = h.eagerload_application_settings(
             Session.query(ApplicationSettings)).get(id)
-        if applicationSettings:
-            activeApplicationSettingsId = getattr(h.getApplicationSettings(), 'id', None)
-            toBeDeletedApplicationSettingsId = applicationSettings.id
-            Session.delete(applicationSettings)
+        if application_settings:
+            active_application_settings_id = getattr(h.get_application_settings(), 'id', None)
+            to_be_deleted_application_settings_id = application_settings.id
+            Session.delete(application_settings)
             Session.commit()
-            if activeApplicationSettingsId == toBeDeletedApplicationSettingsId:
-                app_globals.applicationSettings = h.ApplicationSettings()
-            return applicationSettings
+            if active_application_settings_id == to_be_deleted_application_settings_id:
+                app_globals.application_settings = h.ApplicationSettings()
+            return application_settings
         else:
             response.status_int = 404
             return {'error': 'There is no application settings with id %s' % id}
@@ -193,10 +193,10 @@ class ApplicationsettingsController(BaseController):
         :returns: an application settings model object.
 
         """
-        applicationSettings = h.eagerloadApplicationSettings(
+        application_settings = h.eagerload_application_settings(
             Session.query(ApplicationSettings)).get(id)
-        if applicationSettings:
-            return applicationSettings
+        if application_settings:
+            return application_settings
         else:
             response.status_int = 404
             return {'error': 'There is no application settings with id %s' % id}
@@ -212,9 +212,9 @@ class ApplicationsettingsController(BaseController):
         :param str id: the ``id`` value of the application settings that will be updated.
         :returns: a dictionary of the form::
 
-                {"applicationSettings": {...}, "data": {...}}
+                {"application_settings": {...}, "data": {...}}
 
-            where the value of the ``applicationSettings`` key is a dictionary
+            where the value of the ``application_settings`` key is a dictionary
             representation of the application settings and the value of the
             ``data`` key is a dictionary containing the objects necessary to
             update an application settings, viz. the return value of
@@ -225,23 +225,23 @@ class ApplicationsettingsController(BaseController):
            This action can be thought of as a combination of
            :func:`ApplicationsettingsController.show` and
            :func:`ApplicationsettingsController.new`.  See
-           :func:`getNewApplicationSettingsData` to understand how the query
+           :func:`get_new_application_settings_data` to understand how the query
            string parameters can affect the contents of the lists in the
            ``data`` dictionary.
 
         """
 
-        applicationSettings = h.eagerloadApplicationSettings(
+        application_settings = h.eagerload_application_settings(
             Session.query(ApplicationSettings)).get(id)
-        if applicationSettings:
-            return {'data': getNewApplicationSettingsData(request.GET),
-                    'applicationSettings': applicationSettings}
+        if application_settings:
+            return {'data': get_new_application_settings_data(request.GET),
+                    'application_settings': application_settings}
         else:
             response.status_int = 404
             return {'error': 'There is no application settings with id %s' % id}
 
 
-def getNewApplicationSettingsData(GET_params):
+def get_new_application_settings_data(GET_params):
     """Return the data necessary to create a new application settings or update an existing one.
     
     :param GET_params: the ``request.GET`` dictionary-like object generated by
@@ -254,34 +254,34 @@ def getNewApplicationSettingsData(GET_params):
     string (and not a valid ISO 8601 datetime) add the appropriate list of
     objects to the return dictionary.  If the value of a key is a valid ISO 8601
     datetime string, add the corresponding list of objects *only* if the
-    datetime does *not* match the most recent ``datetimeModified`` value of the
+    datetime does *not* match the most recent ``datetime_modified`` value of the
     resource.  That is, a non-matching datetime indicates that the requester has
     out-of-date data.
 
     """
 
-    # modelNameMap maps param names to the OLD model objects from which they are
+    # model_name_map maps param names to the OLD model objects from which they are
     # derived.
-    modelNameMap = {
+    model_name_map = {
         'users': 'User',
         'orthographies': 'Orthography',
         'languages': 'Language'
     }
 
-    # getterMap maps param names to getter functions that retrieve the
+    # getter_map maps param names to getter functions that retrieve the
     # appropriate data from the db.
-    getterMap = {
-        'users': h.getMiniDictsGetter('User'),
-        'orthographies': h.getMiniDictsGetter('Orthography'),
-        'languages': h.getLanguages
+    getter_map = {
+        'users': h.get_mini_dicts_getter('User'),
+        'orthographies': h.get_mini_dicts_getter('Orthography'),
+        'languages': h.get_languages
     }
 
-    result = h.getDataForNewAction(GET_params, getterMap, modelNameMap)
+    result = h.get_data_for_new_action(GET_params, getter_map, model_name_map)
 
     return result
 
 
-def createNewApplicationSettings(data):
+def create_new_application_settings(data):
     """Create a new application settings.
 
     :param dict data: the application settings to be created.
@@ -289,50 +289,50 @@ def createNewApplicationSettings(data):
 
     """
 
-    # Create the applicationSettings model object.
-    applicationSettings = ApplicationSettings()
-    applicationSettings.objectLanguageName = data['objectLanguageName']
-    applicationSettings.objectLanguageId = data['objectLanguageId']
-    applicationSettings.metalanguageName = data['metalanguageName']
-    applicationSettings.metalanguageId = data['metalanguageId']
-    applicationSettings.metalanguageInventory = h.normalize(h.removeAllWhiteSpace(
-        data['metalanguageInventory']))
-    applicationSettings.orthographicValidation = data['orthographicValidation']
-    applicationSettings.narrowPhoneticInventory = h.normalize(h.removeAllWhiteSpace(
-        data['narrowPhoneticInventory']))
-    applicationSettings.narrowPhoneticValidation = data['narrowPhoneticValidation']
-    applicationSettings.broadPhoneticInventory = h.normalize(h.removeAllWhiteSpace(
-        data['broadPhoneticInventory']))
-    applicationSettings.broadPhoneticValidation = data['broadPhoneticValidation']
-    applicationSettings.morphemeBreakIsOrthographic = data[
-        'morphemeBreakIsOrthographic']
-    applicationSettings.morphemeBreakValidation = data['morphemeBreakValidation']
-    applicationSettings.phonemicInventory = h.normalize(h.removeAllWhiteSpace(
-        data['phonemicInventory']))
-    applicationSettings.morphemeDelimiters = h.normalize(data['morphemeDelimiters'])
-    applicationSettings.punctuation = h.normalize(h.removeAllWhiteSpace(
+    # Create the application_settings model object.
+    application_settings = ApplicationSettings()
+    application_settings.object_language_name = data['object_language_name']
+    application_settings.object_language_id = data['object_language_id']
+    application_settings.metalanguage_name = data['metalanguage_name']
+    application_settings.metalanguage_id = data['metalanguage_id']
+    application_settings.metalanguage_inventory = h.normalize(h.remove_all_white_space(
+        data['metalanguage_inventory']))
+    application_settings.orthographic_validation = data['orthographic_validation']
+    application_settings.narrow_phonetic_inventory = h.normalize(h.remove_all_white_space(
+        data['narrow_phonetic_inventory']))
+    application_settings.narrow_phonetic_validation = data['narrow_phonetic_validation']
+    application_settings.broad_phonetic_inventory = h.normalize(h.remove_all_white_space(
+        data['broad_phonetic_inventory']))
+    application_settings.broad_phonetic_validation = data['broad_phonetic_validation']
+    application_settings.morpheme_break_is_orthographic = data[
+        'morpheme_break_is_orthographic']
+    application_settings.morpheme_break_validation = data['morpheme_break_validation']
+    application_settings.phonemic_inventory = h.normalize(h.remove_all_white_space(
+        data['phonemic_inventory']))
+    application_settings.morpheme_delimiters = h.normalize(data['morpheme_delimiters'])
+    application_settings.punctuation = h.normalize(h.remove_all_white_space(
         data['punctuation']))
-    applicationSettings.grammaticalities = h.normalize(h.removeAllWhiteSpace(
+    application_settings.grammaticalities = h.normalize(h.remove_all_white_space(
         data['grammaticalities']))
 
     # Many-to-One
-    if data['storageOrthography']:
-        applicationSettings.storageOrthography = data['storageOrthography']
-    if data['inputOrthography']:
-        applicationSettings.inputOrthography = data['inputOrthography']
-    if data['outputOrthography']:
-        applicationSettings.outputOrthography = data['outputOrthography']
+    if data['storage_orthography']:
+        application_settings.storage_orthography = data['storage_orthography']
+    if data['input_orthography']:
+        application_settings.input_orthography = data['input_orthography']
+    if data['output_orthography']:
+        application_settings.output_orthography = data['output_orthography']
 
-    # Many-to-Many Data: unrestrictedUsers
-    applicationSettings.unrestrictedUsers = [u for u in data['unrestrictedUsers'] if u]
+    # Many-to-Many Data: unrestricted_users
+    application_settings.unrestricted_users = [u for u in data['unrestricted_users'] if u]
 
-    return applicationSettings
+    return application_settings
 
 
-def updateApplicationSettings(applicationSettings, data):
+def update_application_settings(application_settings, data):
     """Update an application settings.
 
-    :param applicationSettings: the application settings model to be updated.
+    :param application_settings: the application settings model to be updated.
     :param dict data: representation of the updated application settings.
     :returns: the updated application settings model or, if ``changed`` has not
         been set to ``True``, then ``False``.
@@ -341,49 +341,49 @@ def updateApplicationSettings(applicationSettings, data):
     changed = False
 
     # Unicode Data
-    changed = h.setAttr(applicationSettings, 'objectLanguageName', data['objectLanguageName'], changed)
-    changed = h.setAttr(applicationSettings, 'objectLanguageId', data['objectLanguageId'], changed)
-    changed = h.setAttr(applicationSettings, 'metalanguageName', data['metalanguageName'], changed)
-    changed = h.setAttr(applicationSettings, 'metalanguageId', data['metalanguageId'], changed)
-    changed = h.setAttr(applicationSettings, 'metalanguageInventory',
-            h.normalize(h.removeAllWhiteSpace(data['metalanguageInventory'])), changed)
-    changed = h.setAttr(applicationSettings, 'orthographicValidation',
-            data['orthographicValidation'], changed)
-    changed = h.setAttr(applicationSettings, 'narrowPhoneticInventory',
-            h.normalize(h.removeAllWhiteSpace(data['narrowPhoneticInventory'])), changed)
-    changed = h.setAttr(applicationSettings, 'narrowPhoneticValidation',
-            data['narrowPhoneticValidation'], changed)
-    changed = h.setAttr(applicationSettings, 'broadPhoneticInventory',
-            h.normalize(h.removeAllWhiteSpace(data['broadPhoneticInventory'])), changed)
-    changed = h.setAttr(applicationSettings, 'broadPhoneticValidation',
-            data['broadPhoneticValidation'], changed)
-    changed = h.setAttr(applicationSettings, 'morphemeBreakIsOrthographic',
-            data['morphemeBreakIsOrthographic'], changed)
-    changed = h.setAttr(applicationSettings, 'morphemeBreakValidation',
-            data['morphemeBreakValidation'], changed)
-    changed = h.setAttr(applicationSettings, 'phonemicInventory',
-            h.normalize(h.removeAllWhiteSpace(data['phonemicInventory'])), changed)
-    changed = h.setAttr(applicationSettings, 'morphemeDelimiters',
-            h.normalize(data['morphemeDelimiters']), changed)
-    changed = h.setAttr(applicationSettings, 'punctuation',
-            h.normalize(h.removeAllWhiteSpace(data['punctuation'])), changed)
-    changed = h.setAttr(applicationSettings, 'grammaticalities',
-            h.normalize(h.removeAllWhiteSpace(data['grammaticalities'])), changed)
+    changed = h.set_attr(application_settings, 'object_language_name', data['object_language_name'], changed)
+    changed = h.set_attr(application_settings, 'object_language_id', data['object_language_id'], changed)
+    changed = h.set_attr(application_settings, 'metalanguage_name', data['metalanguage_name'], changed)
+    changed = h.set_attr(application_settings, 'metalanguage_id', data['metalanguage_id'], changed)
+    changed = h.set_attr(application_settings, 'metalanguage_inventory',
+            h.normalize(h.remove_all_white_space(data['metalanguage_inventory'])), changed)
+    changed = h.set_attr(application_settings, 'orthographic_validation',
+            data['orthographic_validation'], changed)
+    changed = h.set_attr(application_settings, 'narrow_phonetic_inventory',
+            h.normalize(h.remove_all_white_space(data['narrow_phonetic_inventory'])), changed)
+    changed = h.set_attr(application_settings, 'narrow_phonetic_validation',
+            data['narrow_phonetic_validation'], changed)
+    changed = h.set_attr(application_settings, 'broad_phonetic_inventory',
+            h.normalize(h.remove_all_white_space(data['broad_phonetic_inventory'])), changed)
+    changed = h.set_attr(application_settings, 'broad_phonetic_validation',
+            data['broad_phonetic_validation'], changed)
+    changed = h.set_attr(application_settings, 'morpheme_break_is_orthographic',
+            data['morpheme_break_is_orthographic'], changed)
+    changed = h.set_attr(application_settings, 'morpheme_break_validation',
+            data['morpheme_break_validation'], changed)
+    changed = h.set_attr(application_settings, 'phonemic_inventory',
+            h.normalize(h.remove_all_white_space(data['phonemic_inventory'])), changed)
+    changed = h.set_attr(application_settings, 'morpheme_delimiters',
+            h.normalize(data['morpheme_delimiters']), changed)
+    changed = h.set_attr(application_settings, 'punctuation',
+            h.normalize(h.remove_all_white_space(data['punctuation'])), changed)
+    changed = h.set_attr(application_settings, 'grammaticalities',
+            h.normalize(h.remove_all_white_space(data['grammaticalities'])), changed)
 
     # Many-to-One
-    changed = h.setAttr(applicationSettings, 'storageOrthography', data['storageOrthography'], changed)
-    changed = h.setAttr(applicationSettings, 'inputOrthography', data['inputOrthography'], changed)
-    changed = h.setAttr(applicationSettings, 'outputOrthography', data['outputOrthography'], changed)
+    changed = h.set_attr(application_settings, 'storage_orthography', data['storage_orthography'], changed)
+    changed = h.set_attr(application_settings, 'input_orthography', data['input_orthography'], changed)
+    changed = h.set_attr(application_settings, 'output_orthography', data['output_orthography'], changed)
 
-    # Many-to-Many Data: unrestrictedUsers
+    # Many-to-Many Data: unrestricted_users
     # First check if the user has made any changes. If there are changes, just
     # delete all and replace with new.
-    unrestrictedUsersToAdd = [u for u in data['unrestrictedUsers'] if u]
-    if set(unrestrictedUsersToAdd) != set(applicationSettings.unrestrictedUsers):
-        applicationSettings.unrestrictedUsers = unrestrictedUsersToAdd
+    unrestricted_users_to_add = [u for u in data['unrestricted_users'] if u]
+    if set(unrestricted_users_to_add) != set(application_settings.unrestricted_users):
+        application_settings.unrestricted_users = unrestricted_users_to_add
         changed = True
 
     if changed:
-        applicationSettings.datetimeModified = datetime.datetime.utcnow()
-        return applicationSettings
+        application_settings.datetime_modified = datetime.datetime.utcnow()
+        return application_settings
     return changed

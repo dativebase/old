@@ -50,8 +50,8 @@ class CorporaController(BaseController):
        JSON.
 
     """
-    queryBuilderForOrdering = SQLAQueryBuilder('Corpus', config=config)
-    queryBuilder = SQLAQueryBuilder('Form', config=config)
+    query_builder_for_ordering = SQLAQueryBuilder('Corpus', config=config)
+    query_builder = SQLAQueryBuilder('Form', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -63,10 +63,10 @@ class CorporaController(BaseController):
         :URL: ``SEARCH /corpora/id` (or ``POST /corpora/id/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         .. note::
 
@@ -79,13 +79,13 @@ class CorporaController(BaseController):
         corpus = Session.query(Corpus).get(id)
         if corpus:
             try:
-                jsonSearchParams = unicode(request.body, request.charset)
-                pythonSearchParams = json.loads(jsonSearchParams)
-                query = h.eagerloadForm(
-                    self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
+                json_search_params = unicode(request.body, request.charset)
+                python_search_params = json.loads(json_search_params)
+                query = h.eagerload_form(
+                    self.query_builder.get_SQLA_query(python_search_params.get('query')))
                 query = query.filter(Form.corpora.contains(corpus))
-                query = h.filterRestrictedModels('Form', query)
-                return h.addPagination(query, pythonSearchParams.get('paginator'))
+                query = h.filter_restricted_models('Form', query)
+                return h.add_pagination(query, python_search_params.get('paginator'))
             except h.JSONDecodeError:
                 response.status_int = 400
                 return h.JSONDecodeErrorResponse
@@ -94,7 +94,7 @@ class CorporaController(BaseController):
                 return {'errors': e.unpack_errors()}
             except Exception, e:
                 log.warn("%s's filter expression (%s) raised an unexpected exception: %s." % (
-                    h.getUserFullName(session['user']), request.body, e))
+                    h.get_user_full_name(session['user']), request.body, e))
                 response.status_int = 400
                 return {'error': u'The specified search parameters generated an invalid database query'}
         else:
@@ -108,10 +108,10 @@ class CorporaController(BaseController):
         """Return the data necessary to search the form resources.
 
         :URL: ``GET /corpora/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -125,14 +125,14 @@ class CorporaController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
-            query = h.eagerloadCorpus(Session.query(Corpus))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilderForOrdering)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_corpus(Session.query(Corpus))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder_for_ordering)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -152,12 +152,13 @@ class CorporaController(BaseController):
         try:
             schema = CorpusSchema()
             values = json.loads(unicode(request.body, request.charset))
-            state = h.getStateObject(values)
+            state = h.get_state_object(values)
+            state.config = config
             data = schema.to_python(values, state)
-            corpus = createNewCorpus(data)
+            corpus = create_new_corpus(data)
             Session.add(corpus)
             Session.commit()
-            createCorpusDir(corpus)
+            create_corpus_dir(corpus)
             return corpus
         except h.JSONDecodeError:
             response.status_int = 400
@@ -178,12 +179,12 @@ class CorporaController(BaseController):
 
         .. note::
         
-           See :func:`h.getDataForNewAction` to understand how the query
+           See :func:`h.get_data_for_new_action` to understand how the query
            string parameters can affect the contents of the lists in the
            returned dictionary.
 
         """
-        return getDataForNewEdit(dict(request.GET))
+        return get_data_for_new_edit(dict(request.GET))
 
     @h.jsonify
     @h.restrict('PUT')
@@ -198,19 +199,20 @@ class CorporaController(BaseController):
         :returns: the updated corpus model.
 
         """
-        corpus = h.eagerloadCorpus(Session.query(Corpus)).get(int(id))
+        corpus = h.eagerload_corpus(Session.query(Corpus)).get(int(id))
         if corpus:
             try:
                 schema = CorpusSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
+                state.config = config
                 data = schema.to_python(values, state)
-                corpusDict = corpus.getDict()
-                corpus = updateCorpus(corpus, data)
-                # corpus will be False if there are no changes (cf. updateCorpus).
+                corpus_dict = corpus.get_dict()
+                corpus = update_corpus(corpus, data)
+                # corpus will be False if there are no changes (cf. update_corpus).
                 if corpus:
-                    backupCorpus(corpusDict)
+                    backup_corpus(corpus_dict)
                     Session.add(corpus)
                     Session.commit()
                     return corpus
@@ -240,14 +242,14 @@ class CorporaController(BaseController):
         :returns: the deleted corpus model.
 
         """
-        corpus = h.eagerloadCorpus(Session.query(Corpus)).get(id)
+        corpus = h.eagerload_corpus(Session.query(Corpus)).get(id)
         if corpus:
-            corpusDict = corpus.getDict()
-            backupCorpus(corpusDict)
+            corpus_dict = corpus.get_dict()
+            backup_corpus(corpus_dict)
             Session.delete(corpus)
             Session.commit()
-            removeCorpusDirectory(corpus)
-            return corpusDict
+            remove_corpus_directory(corpus)
+            return corpus_dict
         else:
             response.status_int = 404
             return {'error': 'There is no corpus with id %s' % id}
@@ -263,7 +265,7 @@ class CorporaController(BaseController):
         :returns: a corpus model object.
 
         """
-        corpus = h.eagerloadCorpus(Session.query(Corpus)).get(id)
+        corpus = h.eagerload_corpus(Session.query(Corpus)).get(id)
         if corpus:
             return corpus
         else:
@@ -288,9 +290,9 @@ class CorporaController(BaseController):
             is an empty dictionary.
 
         """
-        corpus = h.eagerloadCorpus(Session.query(Corpus)).get(id)
+        corpus = h.eagerload_corpus(Session.query(Corpus)).get(id)
         if corpus:
-            return {'data': getDataForNewEdit(request.GET),
+            return {'data': get_data_for_new_edit(request.GET),
                     'corpus': corpus}
         else:
             response.status_int = 404
@@ -307,18 +309,18 @@ class CorporaController(BaseController):
             corpus whose history is requested.
         :returns: A dictionary of the form::
 
-                {"corpus": { ... }, "previousVersions": [ ... ]}
+                {"corpus": { ... }, "previous_versions": [ ... ]}
 
             where the value of the ``corpus`` key is the corpus whose
-            history is requested and the value of the ``previousVersions`` key
+            history is requested and the value of the ``previous_versions`` key
             is a list of dictionaries representing previous versions of the
             corpus.
 
         """
-        corpus, previousVersions = h.getModelAndPreviousVersions('Corpus', id)
-        if corpus or previousVersions:
+        corpus, previous_versions = h.get_model_and_previous_versions('Corpus', id)
+        if corpus or previous_versions:
             return {'corpus': corpus,
-                    'previousVersions': previousVersions}
+                    'previous_versions': previous_versions}
         else:
             response.status_int = 404
             return {'error': 'No corpora or corpus backups match %s' % id}
@@ -336,14 +338,14 @@ class CorporaController(BaseController):
         :returns: the modified corpus model (or a JSON error message).
 
         """
-        #corpus = h.eagerloadCorpus(Session.query(Corpus), eagerloadForms=True).get(id)
+        #corpus = h.eagerload_corpus(Session.query(Corpus), eagerload_forms=True).get(id)
         corpus = Session.query(Corpus).get(id)
         if corpus:
             try:
                 schema = CorpusFormatSchema
                 values = json.loads(unicode(request.body, request.charset))
                 format_ = schema.to_python(values)['format']
-                return writeToFile(corpus, format_)
+                return write_to_file(corpus, format_)
             except Invalid, e:
                 response.status_int = 400
                 return {'errors': e.unpack_errors()}
@@ -355,31 +357,31 @@ class CorporaController(BaseController):
             return {'error': 'There is no corpus with id %s' % id}
 
     @h.restrict('GET')
-    @h.authenticateWithJSON
-    def servefile(self, id, fileId):
+    @h.authenticate_with_JSON
+    def servefile(self, id, file_id):
         """Return the corpus as a file in the format specified in the URL query string.
 
-        :URL: ``PUT /corpora/id/servefile/fileId``.
+        :URL: ``PUT /corpora/id/servefile/file_id``.
         :param str id: the ``id`` value of the corpus.
-        :param str fileId: the ``id`` value of the corpus file.
+        :param str file_id: the ``id`` value of the corpus file.
         :returns: the file data
 
         """
         corpus = Session.query(Corpus).get(id)
         if corpus:
             try:
-                corpusFile = filter(lambda cf: cf.id == int(fileId), corpus.files)[0]
-                corpusFilePath = os.path.join(getCorpusDirPath(corpus),
-                                              '%s.gz' % corpusFile.filename)
-                if authorizedToAccessCorpusFile(session['user'], corpusFile):
-                    return forward(FileApp(corpusFilePath, content_type='application/x-gzip'))
+                corpus_file = filter(lambda cf: cf.id == int(file_id), corpus.files)[0]
+                corpus_file_path = os.path.join(get_corpus_dir_path(corpus),
+                                              '%s.gz' % corpus_file.filename)
+                if authorized_to_access_corpus_file(session['user'], corpus_file):
+                    return forward(FileApp(corpus_file_path, content_type='application/x-gzip'))
                 else:
                     response.status_int = 403
-                    return json.dumps(h.unauthorizedMsg)
+                    return json.dumps(h.unauthorized_msg)
             except Exception:
                 response.status_int = 400
                 return json.dumps({'error': 'Unable to serve corpus file %d of corpus %d' % (
-                        fileId, id)})
+                        file_id, id)})
         else:
             response.status_int = 404
             return json.dumps({'error': 'There is no corpus with id %s' % id})
@@ -393,56 +395,56 @@ class CorporaController(BaseController):
 
         :URL: ``SEARCH/POST /corpora/id/tgrep2``.
         :Request body: JSON object with obligatory 'tgrep2pattern' attribute and
-            optional 'paginator' and 'orderBy' attributes.
+            optional 'paginator' and 'order_by' attributes.
         :param str id: the ``id`` value of the corpus.
         :returns: an array of forms as JSON objects
 
         """
-        if not h.commandLineProgramInstalled('tgrep2'):
+        if not h.command_line_program_installed('tgrep2'):
             response.status_int = 400
             return {'error': 'TGrep2 is not installed.'}
         corpus = Session.query(Corpus).get(id)
         if corpus:
             try:
-                treebankCorpusFileObject = filter(lambda cf: cf.format == u'treebank',
+                treebank_corpus_file_object = filter(lambda cf: cf.format == u'treebank',
                         corpus.files)[0]
-                corpusDirPath = getCorpusDirPath(corpus)
-                tgrep2CorpusFilePath = os.path.join(corpusDirPath,
-                        '%s.t2c' % treebankCorpusFileObject.filename)
+                corpus_dir_path = get_corpus_dir_path(corpus)
+                tgrep2_corpus_file_path = os.path.join(corpus_dir_path,
+                        '%s.t2c' % treebank_corpus_file_object.filename)
             except Exception:
                 response.status_int = 400
                 return {'error': 'Corpus %d has not been written to file as a treebank.'}
-            if not os.path.exists(tgrep2CorpusFilePath):
+            if not os.path.exists(tgrep2_corpus_file_path):
                 response.status_int = 400
                 return {'error': 'Corpus %d has not been written to file as a treebank.'}
-            #if not authorizedToAccessCorpusFile(session['user'], treebankCorpusFileObject):
+            #if not authorized_to_access_corpus_file(session['user'], treebank_corpus_file_object):
             #    response.status_int = 403
-            #    return h.unauthorizedMsg
+            #    return h.unauthorized_msg
             try:
-                requestParams = json.loads(unicode(request.body, request.charset))
+                request_params = json.loads(unicode(request.body, request.charset))
                 try:
-                    tgrep2pattern = requestParams['tgrep2pattern']
+                    tgrep2pattern = request_params['tgrep2pattern']
                     assert isinstance(tgrep2pattern, basestring)
                 except Exception:
                     response.status_int = 400
                     return {'errors': {'tgrep2pattern':
                         'A tgrep2pattern attribute must be supplied and must have a unicode/string value'}}
-                tmpPath = os.path.join(corpusDirPath, '%s%s.txt' % (session['user'].username, h.generateSalt()))
+                tmp_path = os.path.join(corpus_dir_path, '%s%s.txt' % (session['user'].username, h.generate_salt()))
                 with open(os.devnull, "w") as fnull:
-                    with open(tmpPath, 'w') as stdout:
+                    with open(tmp_path, 'w') as stdout:
                         # The -wu option causes TGrep2 to print only the root symbol of each matching tree
-                        process = Popen(['tgrep2', '-c', tgrep2CorpusFilePath, '-wu', tgrep2pattern],
+                        process = Popen(['tgrep2', '-c', tgrep2_corpus_file_path, '-wu', tgrep2pattern],
                             stdout=stdout, stderr=fnull)
                         process.communicate()
-                matchIds = filter(None, map(getFormIdsFromTGrep2OutputLine, open(tmpPath, 'r')))
-                os.remove(tmpPath)
-                if matchIds:
-                    query = h.eagerloadForm(Session.query(Form)).filter(Form.id.in_(matchIds))
-                    query = h.filterRestrictedModels('Form', query)
-                    query = h.addOrderBy(query, requestParams.get('orderBy'), self.queryBuilder)
-                    result = h.addPagination(query, requestParams.get('paginator'))
-                elif requestParams.get('paginator'):
-                    paginator = requestParams['paginator']
+                match_ids = filter(None, map(get_form_ids_from_tgrep2_output_line, open(tmp_path, 'r')))
+                os.remove(tmp_path)
+                if match_ids:
+                    query = h.eagerload_form(Session.query(Form)).filter(Form.id.in_(match_ids))
+                    query = h.filter_restricted_models('Form', query)
+                    query = h.add_order_by(query, request_params.get('order_by'), self.query_builder)
+                    result = h.add_pagination(query, request_params.get('paginator'))
+                elif request_params.get('paginator'):
+                    paginator = request_params['paginator']
                     paginator['count'] = 0
                     result = {'paginator': paginator, 'items': []}
                 else:
@@ -461,20 +463,20 @@ class CorporaController(BaseController):
             response.status_int = 404
             return {'error': 'There is no corpus with id %s' % id}
 
-def getFormIdsFromTGrep2OutputLine(line):
+def get_form_ids_from_tgrep2_output_line(line):
     try:
         return int(line.split('-')[1])
     except Exception:
         return None
 
-def authorizedToAccessCorpusFile(user, corpusFile):
+def authorized_to_access_corpus_file(user, corpus_file):
     """Return True if user is authorized to access the corpus file."""
-    if corpusFile.restricted and user.role != u'administrator' and \
-    user not in h.getUnrestrictedUsers():
+    if corpus_file.restricted and user.role != u'administrator' and \
+    user not in h.get_unrestricted_users():
         return False
     return True
 
-def writeToFile(corpus, format_):
+def write_to_file(corpus, format_):
     """Write the corpus to file in the specified format.
 
     Write the corpus to a binary file, create or update a corpus file model and
@@ -492,99 +494,99 @@ def writeToFile(corpus, format_):
 
     """
 
-    errorMsg = lambda msg: {'error': u'Unable to write corpus %d to file with format "%s". (%s)' % (
+    error_msg = lambda msg: {'error': u'Unable to write corpus %d to file with format "%s". (%s)' % (
                 corpus.id, format_, msg)}
 
-    def updateCorpusFile(corpus, filename, modifier, datetimeModified, restricted):
+    def update_corpus_file(corpus, filename, modifier, datetime_modified, restricted):
         """Update the corpus file model of ``corpus`` that matches ``filename``."""
-        corpusFile = [cf for cf in corpus.files if cf.filename == filename][0]
-        corpusFile.restricted = restricted
-        corpusFile.modifier = modifier
-        corpusFile.datetimeModified = corpus.datetimeModified = now
+        corpus_file = [cf for cf in corpus.files if cf.filename == filename][0]
+        corpus_file.restricted = restricted
+        corpus_file.modifier = modifier
+        corpus_file.datetime_modified = corpus.datetime_modified = now
 
-    def generateNewCorpusFile(corpus, filename, format_, creator, datetimeCreated, restricted):
+    def generate_new_corpus_file(corpus, filename, format_, creator, datetime_created, restricted):
         """Create a corpus file model with ``filename`` and append it to ``corpus.files``."""
-        corpusFile = CorpusFile()
-        corpusFile.restricted = restricted
-        corpus.files.append(corpusFile)
-        corpusFile.filename = filename
-        corpusFile.format = format_
-        corpusFile.creator = corpusFile.modifier = creator
-        corpusFile.datetimeCreated = corpusFile.datetimeModified = datetimeCreated
-        corpus.datetimeModified = datetimeCreated
+        corpus_file = CorpusFile()
+        corpus_file.restricted = restricted
+        corpus.files.append(corpus_file)
+        corpus_file.filename = filename
+        corpus_file.format = format_
+        corpus_file.creator = corpus_file.modifier = creator
+        corpus_file.datetime_created = corpus_file.datetime_modified = datetime_created
+        corpus.datetime_modified = datetime_created
 
-    def destroyFile(filePath):
+    def destroy_file(file_path):
         try:
-            rmtree(filePath)
+            rmtree(file_path)
         except Exception:
             pass
 
-    corpusFilePath = getCorpusFilePath(corpus, format_)
-    update = os.path.exists(corpusFilePath) # If True, we are upating
+    corpus_file_path = get_corpus_file_path(corpus, format_)
+    update = os.path.exists(corpus_file_path) # If True, we are upating
     restricted = False
 
     # Create the corpus file on the filesystem
     try:
-        writer = h.corpusFormats[format_]['writer']
-        if corpus.formSearch:   # ``formSearch`` value negates any content.
-            with codecs.open(corpusFilePath, 'w', 'utf8') as f:
+        writer = h.corpus_formats[format_]['writer']
+        if corpus.form_search:   # ``form_search`` value negates any content.
+            with codecs.open(corpus_file_path, 'w', 'utf8') as f:
                 for form in corpus.forms:
                     if not restricted and "restricted" in [t.name for t in form.tags]:
                         restricted = True
                     f.write(writer(form))
         else:
-            formReferences = h.getFormReferences(corpus.content)
+            form_references = h.get_form_references(corpus.content)
             forms = dict([(f.id, f) for f in corpus.forms])
-            with codecs.open(corpusFilePath, 'w', 'utf8') as f:
-                for id in formReferences:
+            with codecs.open(corpus_file_path, 'w', 'utf8') as f:
+                for id in form_references:
                     form = forms[id]
                     if not restricted and "restricted" in [t.name for t in form.tags]:
                         restricted = True
                     f.write(writer(form))
-        gzippedCorpusFilePath = h.compressFile(corpusFilePath)
-        createTGrep2CorpusFile(gzippedCorpusFilePath, format_)
+        gzipped_corpus_file_path = h.compress_file(corpus_file_path)
+        create_tgrep2_corpus_file(gzipped_corpus_file_path, format_)
     except Exception, e:
-        destroyFile(corpusFilePath)
+        destroy_file(corpus_file_path)
         response.status_int = 400
-        return errorMsg(e)
+        return error_msg(e)
 
-    # Update/create the corpusFile object
+    # Update/create the corpus_file object
     try:
         now = h.now()
         session['user'] = Session.merge(session['user'])
         user = session['user']
-        corpusFilename = os.path.split(corpusFilePath)[1]
+        corpus_filename = os.path.split(corpus_file_path)[1]
         if update:
             try:
-                updateCorpusFile(corpus, corpusFilename, user, now, restricted)
+                update_corpus_file(corpus, corpus_filename, user, now, restricted)
             except Exception:
-                generateNewCorpusFile(corpus, corpusFilename, format_, user,
+                generate_new_corpus_file(corpus, corpus_filename, format_, user,
                                       now, restricted)
         else:
-            generateNewCorpusFile(corpus, corpusFilename, format_, user, now,
+            generate_new_corpus_file(corpus, corpus_filename, format_, user, now,
                                   restricted)
     except Exception, e:
-        destroyFile(corpusFilePath)
+        destroy_file(corpus_file_path)
         response.status_int = 400
-        return errorMsg(e)
+        return error_msg(e)
     Session.commit()
     return corpus
 
-def createTGrep2CorpusFile(gzippedCorpusFilePath, format_):
+def create_tgrep2_corpus_file(gzipped_corpus_file_path, format_):
     """Use TGrep2 to create a .t2c corpus file from the gzipped file of phrase-structure trees.
 
-    :param str gzippedCorpusFilePath: absolute path to the gzipped corpus file.
+    :param str gzipped_corpus_file_path: absolute path to the gzipped corpus file.
     :param str format_: the format in which the corpus has just been written to disk.
     :returns: the absolute path to the .t2c file or ``False``.
 
     """
-    if format_ == u'treebank' and h.commandLineProgramInstalled('tgrep2'):
+    if format_ == u'treebank' and h.command_line_program_installed('tgrep2'):
 
-        outPath = '%s.t2c' % os.path.splitext(gzippedCorpusFilePath)[0]
+        out_path = '%s.t2c' % os.path.splitext(gzipped_corpus_file_path)[0]
         with open(os.devnull, "w") as fnull:
-            call(['tgrep2', '-p', gzippedCorpusFilePath, outPath], stdout=fnull, stderr=fnull)
-        if os.path.exists(outPath):
-            return outPath
+            call(['tgrep2', '-p', gzipped_corpus_file_path, out_path], stdout=fnull, stderr=fnull)
+        if os.path.exists(out_path):
+            return out_path
         return False
     return False
 
@@ -592,23 +594,23 @@ def createTGrep2CorpusFile(gzippedCorpusFilePath, format_):
 # Backup corpus
 ################################################################################
 
-def backupCorpus(corpusDict):
+def backup_corpus(corpus_dict):
     """Backup a corpus.
 
-    :param dict corpusDict: a representation of a corpus model.
+    :param dict corpus_dict: a representation of a corpus model.
     :returns: ``None``
 
     """
-    corpusBackup = CorpusBackup()
-    corpusBackup.vivify(corpusDict)
-    Session.add(corpusBackup)
+    corpus_backup = CorpusBackup()
+    corpus_backup.vivify(corpus_dict)
+    Session.add(corpus_backup)
 
 
 ################################################################################
 # Corpus Create & Update Functions
 ################################################################################
 
-def createNewCorpus(data):
+def create_new_corpus(data):
     """Create a new corpus.
 
     :param dict data: the data for the corpus to be created.
@@ -630,14 +632,14 @@ def createNewCorpus(data):
     corpus.name = h.normalize(data['name'])
     corpus.description = h.normalize(data['description'])
     corpus.content = data['content']
-    corpus.formSearch = data['formSearch']
+    corpus.form_search = data['form_search']
     corpus.forms = data['forms']
     corpus.tags = data['tags']
     corpus.enterer = corpus.modifier = session['user']
-    corpus.datetimeModified = corpus.datetimeEntered = h.now()
+    corpus.datetime_modified = corpus.datetime_entered = h.now()
     return corpus
 
-def updateCorpus(corpus, data):
+def update_corpus(corpus, data):
     """Update a corpus.
 
     :param corpus: the corpus model to be updated.
@@ -648,39 +650,39 @@ def updateCorpus(corpus, data):
     """
     changed = False
     # Unicode Data
-    changed = h.setAttr(corpus, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(corpus, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(corpus, 'content', data['content'], changed)
-    changed = h.setAttr(corpus, 'formSearch', data['formSearch'], changed)
+    changed = h.set_attr(corpus, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(corpus, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(corpus, 'content', data['content'], changed)
+    changed = h.set_attr(corpus, 'form_search', data['form_search'], changed)
 
-    tagsToAdd = [t for t in data['tags'] if t]
-    formsToAdd = [f for f in data['forms'] if f]
-    if set(tagsToAdd) != set(corpus.tags):
-        corpus.tags = tagsToAdd
+    tags_to_add = [t for t in data['tags'] if t]
+    forms_to_add = [f for f in data['forms'] if f]
+    if set(tags_to_add) != set(corpus.tags):
+        corpus.tags = tags_to_add
         changed = True
-    if set(formsToAdd) != set(corpus.forms):
-        corpus.forms = formsToAdd
+    if set(forms_to_add) != set(corpus.forms):
+        corpus.forms = forms_to_add
         changed = True
 
     if changed:
         session['user'] = Session.merge(session['user'])
         corpus.modifier = session['user']
-        corpus.datetimeModified = h.now()
+        corpus.datetime_modified = h.now()
         return corpus
     return changed
 
-def createCorpusDir(corpus):
+def create_corpus_dir(corpus):
     """Create the directory to hold the various forms of the corpus written to disk.
     
     :param corpus: a corpus model object.
     :returns: an absolute path to the directory for the corpus.
 
     """
-    corpusDirPath = getCorpusDirPath(corpus)
-    h.makeDirectorySafely(corpusDirPath)
-    return corpusDirPath
+    corpus_dir_path = get_corpus_dir_path(corpus)
+    h.make_directory_safely(corpus_dir_path)
+    return corpus_dir_path
 
-def getCorpusFilePath(corpus, format_):
+def get_corpus_file_path(corpus, format_):
     """Return the path to a corpus's file of the given format.
     
     :param corpus: a corpus model object.
@@ -692,16 +694,16 @@ def getCorpusFilePath(corpus, format_):
         It will be necessary to figure out other formats.
 
     """
-    ext = h.corpusFormats[format_]['extension']
-    sfx = h.corpusFormats[format_]['suffix']
-    return os.path.join(getCorpusDirPath(corpus),
+    ext = h.corpus_formats[format_]['extension']
+    sfx = h.corpus_formats[format_]['suffix']
+    return os.path.join(get_corpus_dir_path(corpus),
             'corpus_%d%s.%s' % (corpus.id, sfx, ext))
 
-def getCorpusDirPath(corpus):
-    return os.path.join(h.getOLDDirectoryPath('corpora', config=config),
+def get_corpus_dir_path(corpus):
+    return os.path.join(h.get_OLD_directory_path('corpora', config=config),
                         'corpus_%d' % corpus.id)
 
-def removeCorpusDirectory(corpus):
+def remove_corpus_directory(corpus):
     """Remove the directory of the corpus model and everything in it.
     
     :param corpus: a corpus model object.
@@ -709,27 +711,27 @@ def removeCorpusDirectory(corpus):
 
     """
     try:
-        corpusDirPath = getCorpusDirPath(corpus)
-        rmtree(corpusDirPath)
-        return corpusDirPath
+        corpus_dir_path = get_corpus_dir_path(corpus)
+        rmtree(corpus_dir_path)
+        return corpus_dir_path
     except Exception:
         return None
 
 
-def getDataForNewEdit(GET_params):
+def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new corpus or edit one."""
-    mandatoryAttributes = ['corpusFormats']
-    modelNameMap = {
-        'formSearches': 'FormSearch',
+    mandatory_attributes = ['corpus_formats']
+    model_name_map = {
+        'form_searches': 'FormSearch',
         'users': 'User',
         'tags': 'Tag'
     }
-    getterMap = {
-        'formSearches': h.getMiniDictsGetter('FormSearch'),
-        'users': h.getMiniDictsGetter('User'),
-        'tags': h.getMiniDictsGetter('Tag'),
-        'corpusFormats': lambda: h.corpusFormats.keys()
+    getter_map = {
+        'form_searches': h.get_mini_dicts_getter('FormSearch'),
+        'users': h.get_mini_dicts_getter('User'),
+        'tags': h.get_mini_dicts_getter('Tag'),
+        'corpus_formats': lambda: h.corpus_formats.keys()
     }
-    return h.getDataForNewAction(GET_params, getterMap, modelNameMap, mandatoryAttributes)
+    return h.get_data_for_new_action(GET_params, getter_map, model_name_map, mandatory_attributes)
 
 

@@ -51,7 +51,7 @@ class ElicitationmethodsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('ElicitationMethod', config=config)
+    query_builder = SQLAQueryBuilder('ElicitationMethod', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -65,14 +65,14 @@ class ElicitationmethodsController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(ElicitationMethod)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -93,10 +93,10 @@ class ElicitationmethodsController(BaseController):
             schema = ElicitationMethodSchema()
             values = json.loads(unicode(request.body, request.charset))
             result = schema.to_python(values)
-            elicitationMethod = createNewElicitationMethod(result)
-            Session.add(elicitationMethod)
+            elicitation_method = create_new_elicitation_method(result)
+            Session.add(elicitation_method)
             Session.commit()
-            return elicitationMethod
+            return elicitation_method
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -130,20 +130,20 @@ class ElicitationmethodsController(BaseController):
         :returns: the updated elicitation method model.
 
         """
-        elicitationMethod = Session.query(ElicitationMethod).get(int(id))
-        if elicitationMethod:
+        elicitation_method = Session.query(ElicitationMethod).get(int(id))
+        if elicitation_method:
             try:
                 schema = ElicitationMethodSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 data = schema.to_python(values, state)
-                elicitationMethod = updateElicitationMethod(elicitationMethod, data)
-                # elicitationMethod will be False if there are no changes (cf. updateElicitationMethod).
-                if elicitationMethod:
-                    Session.add(elicitationMethod)
+                elicitation_method = update_elicitation_method(elicitation_method, data)
+                # elicitation_method will be False if there are no changes (cf. update_elicitation_method).
+                if elicitation_method:
+                    Session.add(elicitation_method)
                     Session.commit()
-                    return elicitationMethod
+                    return elicitation_method
                 else:
                     response.status_int = 400
                     return {'error':
@@ -170,11 +170,11 @@ class ElicitationmethodsController(BaseController):
         :returns: the deleted elicitation method model.
 
         """
-        elicitationMethod = Session.query(ElicitationMethod).get(id)
-        if elicitationMethod:
-            Session.delete(elicitationMethod)
+        elicitation_method = Session.query(ElicitationMethod).get(id)
+        if elicitation_method:
+            Session.delete(elicitation_method)
             Session.commit()
-            return elicitationMethod
+            return elicitation_method
         else:
             response.status_int = 404
             return {'error': 'There is no elicitation method with id %s' % id}
@@ -190,9 +190,9 @@ class ElicitationmethodsController(BaseController):
         :returns: an elicitation method model object.
 
         """
-        elicitationMethod = Session.query(ElicitationMethod).get(id)
-        if elicitationMethod:
-            return elicitationMethod
+        elicitation_method = Session.query(ElicitationMethod).get(id)
+        if elicitation_method:
+            return elicitation_method
         else:
             response.status_int = 404
             return {'error': 'There is no elicitation method with id %s' % id}
@@ -208,17 +208,17 @@ class ElicitationmethodsController(BaseController):
         :param str id: the ``id`` value of the elicitation method that will be updated.
         :returns: a dictionary of the form::
 
-                {"elicitationMethod": {...}, "data": {...}}
+                {"elicitation_method": {...}, "data": {...}}
 
-            where the value of the ``elicitationMethod`` key is a dictionary
+            where the value of the ``elicitation_method`` key is a dictionary
             representation of the elicitation method and the value of the
             ``data`` key is a dictionary containing the objects necessary to
             update an elicitation method, viz. ``{}``.
 
         """
-        elicitationMethod = Session.query(ElicitationMethod).get(id)
-        if elicitationMethod:
-            return {'data': {}, 'elicitationMethod': elicitationMethod}
+        elicitation_method = Session.query(ElicitationMethod).get(id)
+        if elicitation_method:
+            return {'data': {}, 'elicitation_method': elicitation_method}
         else:
             response.status_int = 404
             return {'error': 'There is no elicitation method with id %s' % id}
@@ -228,32 +228,32 @@ class ElicitationmethodsController(BaseController):
 # ElicitationMethod Create & Update Functions
 ################################################################################
 
-def createNewElicitationMethod(data):
+def create_new_elicitation_method(data):
     """Create a new elicitation method.
 
     :param dict data: the elicitation method to be created.
     :returns: an SQLAlchemy model object representing the elicitation method.
 
     """
-    elicitationMethod = ElicitationMethod()
-    elicitationMethod.name = h.normalize(data['name'])
-    elicitationMethod.description = h.normalize(data['description'])
-    elicitationMethod.datetimeModified = datetime.datetime.utcnow()
-    return elicitationMethod
+    elicitation_method = ElicitationMethod()
+    elicitation_method.name = h.normalize(data['name'])
+    elicitation_method.description = h.normalize(data['description'])
+    elicitation_method.datetime_modified = datetime.datetime.utcnow()
+    return elicitation_method
 
-def updateElicitationMethod(elicitationMethod, data):
+def update_elicitation_method(elicitation_method, data):
     """Update an elicitation method.
 
-    :param elicitationMethod: the elicitation method model to be updated.
+    :param elicitation_method: the elicitation method model to be updated.
     :param dict data: representation of the updated elicitation method.
     :returns: the updated elicitation method model or, if ``changed`` has not
         been set to ``True``, ``False``.
 
     """
     changed = False
-    changed = h.setAttr(elicitationMethod, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(elicitationMethod, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(elicitation_method, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(elicitation_method, 'description', h.normalize(data['description']), changed)
     if changed:
-        elicitationMethod.datetimeModified = datetime.datetime.utcnow()
-        return elicitationMethod
+        elicitation_method.datetime_modified = datetime.datetime.utcnow()
+        return elicitation_method
     return changed

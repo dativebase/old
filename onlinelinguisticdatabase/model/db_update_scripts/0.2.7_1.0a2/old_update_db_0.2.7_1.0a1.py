@@ -86,7 +86,7 @@ CREATE TABLE `applicationsettingsuser` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `applicationsettings_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `applicationsettings_id` (`applicationsettings_id`),
   KEY `user_id` (`user_id`)
@@ -98,8 +98,8 @@ CREATE TABLE `orthography` (
   `name` varchar(255) DEFAULT NULL,
   `orthography` text,
   `lowercase` tinyint(1) DEFAULT NULL,
-  `initialGlottalStops` tinyint(1) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `initial_glottal_stops` tinyint(1) DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
@@ -114,47 +114,55 @@ UPDATE applicationsettings
 ALTER TABLE applicationsettings
     -- The following CONVERT clause may change TEXTs to MEDIUMTEXTS, cf. http://bugs.mysql.com/bug.php?id=31291
     CONVERT TO CHARACTER SET utf8,
-    MODIFY objectLanguageId VARCHAR(3) DEFAULT NULL,
-    MODIFY metalanguageId VARCHAR(3) DEFAULT NULL,
-    MODIFY orthographicValidation VARCHAR(7) DEFAULT NULL,
-    CHANGE metaLanguageOrthography metalanguageInventory TEXT,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE objectLanguageId object_language_id VARCHAR(3) DEFAULT NULL,
+    CHANGE objectLanguageName object_language_name VARCHAR(255) DEFAULT NULL,
+    CHANGE metaLanguageId metalanguage_id VARCHAR(3) DEFAULT NULL,
+    CHANGE metaLanguageName metalanguage_name VARCHAR(255) DEFAULT NULL,
+    CHANGE metaLanguageOrthography metalanguage_inventory TEXT,
+    CHANGE orthographicValidation orthographic_validation VARCHAR(7) DEFAULT NULL,
     CHANGE punctuation punctuation TEXT,
-    CHANGE metaLanguageName metalanguageName VARCHAR(255) DEFAULT NULL,
-    CHANGE narrPhonInventory narrowPhoneticInventory TEXT,
-    CHANGE narrPhonValidation narrowPhoneticValidation VARCHAR(7) DEFAULT NULL,
-    CHANGE broadPhonInventory broadPhoneticInventory TEXT,
-    CHANGE broadPhonValidation broadPhoneticValidation VARCHAR(7) DEFAULT NULL,
-    CHANGE morphemeBreakIsObjectLanguageString morphemeBreakIsOrthographic tinyint(1) DEFAULT NULL,
-    CHANGE morphPhonValidation morphemeBreakValidation VARCHAR(7) DEFAULT NULL,
-    CHANGE morphPhonInventory phonemicInventory TEXT,
-    CHANGE morphDelimiters morphemeDelimiters VARCHAR(255) DEFAULT NULL,
+    CHANGE narrPhonInventory narrow_phonetic_inventory TEXT,
+    CHANGE narrPhonValidation narrow_phonetic_validation VARCHAR(7) DEFAULT NULL,
+    CHANGE broadPhonInventory broad_phonetic_inventory TEXT,
+    CHANGE broadPhonValidation broad_phonetic_validation VARCHAR(7) DEFAULT NULL,
+    CHANGE morphemeBreakIsObjectLanguageString morpheme_break_is_orthographic tinyint(1) DEFAULT NULL,
+    CHANGE morphPhonValidation morpheme_break_validation VARCHAR(7) DEFAULT NULL,
+    CHANGE morphPhonInventory phonemic_inventory TEXT,
+    CHANGE morphDelimiters morpheme_delimiters VARCHAR(255) DEFAULT NULL,
     DROP COLUMN headerImageName,
     DROP COLUMN colorsCSS,
-    ADD storageOrthography_id int(11) DEFAULT NULL,
-    ADD inputOrthography_id int(11) DEFAULT NULL,
-    ADD outputOrthography_id int(11) DEFAULT NULL,
-    ADD KEY (storageOrthography_id),
-    ADD KEY (inputOrthography_id),
-    ADD KEY (outputOrthography_id);
+    ADD storage_orthography_id int(11) DEFAULT NULL,
+    ADD input_orthography_id int(11) DEFAULT NULL,
+    ADD output_orthography_id int(11) DEFAULT NULL,
+    ADD KEY (storage_orthography_id),
+    ADD KEY (input_orthography_id),
+    ADD KEY (output_orthography_id);
 
 -- Change the collection table
 ALTER TABLE collection
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE datetimeEntered datetime_entered datetime DEFAULT NULL,
+    CHANGE dateElicited date_elicited date DEFAULT NULL,
     MODIFY contents TEXT,
     MODIFY description TEXT,
     ADD COLUMN UUID VARCHAR(36) DEFAULT NULL,
-    ADD COLUMN markupLanguage VARCHAR(100) DEFAULT NULL,
+    ADD COLUMN markup_language VARCHAR(100) DEFAULT NULL,
     ADD COLUMN html TEXT,
     ADD COLUMN modifier_id INT(11) DEFAULT NULL,
-    ADD COLUMN contentsUnpacked TEXT,
+    ADD COLUMN contents_unpacked TEXT,
     ADD KEY (modifier_id);
-UPDATE collection SET markupLanguage = 'restructuredText';
+UPDATE collection SET markup_language = 'restructuredText';
 
 -- Change the collectionbackup TABLE
 ALTER TABLE collectionbackup
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE datetimeEntered datetime_entered datetime DEFAULT NULL,
+    CHANGE dateElicited date_elicited date DEFAULT NULL,
     ADD COLUMN UUID VARCHAR(36) DEFAULT NULL,
-    ADD COLUMN markupLanguage VARCHAR(100) DEFAULT NULL,
+    ADD COLUMN markup_language VARCHAR(100) DEFAULT NULL,
     ADD COLUMN html TEXT,
     ADD COLUMN modifier TEXT,
     MODIFY speaker TEXT,
@@ -166,19 +174,21 @@ ALTER TABLE collectionbackup
     MODIFY files TEXT,
     ADD COLUMN forms TEXT,
     ADD COLUMN tags TEXT;
-UPDATE collectionbackup SET markupLanguage = 'restructuredText';
+UPDATE collectionbackup SET markup_language = 'restructuredText';
 
 ALTER TABLE collectionfile
-    CONVERT TO CHARACTER SET utf8;
+    CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL;
 
 ALTER TABLE collectionform
-    CONVERT TO CHARACTER SET utf8;
+    CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL;
 
 CREATE TABLE `collectiontag` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `collection_id` int(11) DEFAULT NULL,
   `tag_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `collection_id` (`collection_id`),
   KEY `tag_id` (`tag_id`)
@@ -192,13 +202,13 @@ CREATE TABLE `corpus` (
   `content` longtext,
   `enterer_id` int(11) DEFAULT NULL,
   `modifier_id` int(11) DEFAULT NULL,
-  `formSearch_id` int(11) DEFAULT NULL,
-  `datetimeEntered` datetime DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `form_search_id` int(11) DEFAULT NULL,
+  `datetime_entered` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `enterer_id` (`enterer_id`),
   KEY `modifier_id` (`modifier_id`),
-  KEY `formSearch_id` (`formSearch_id`)
+  KEY `form_search_id` (`form_search_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 CREATE TABLE `corpusbackup` (
@@ -211,9 +221,9 @@ CREATE TABLE `corpusbackup` (
   `content` longtext,
   `enterer` text,
   `modifier` text,
-  `formSearch` text,
-  `datetimeEntered` datetime DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `form_search` text,
+  `datetime_entered` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   `tags` text,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
@@ -225,8 +235,8 @@ CREATE TABLE `corpusfile` (
   `format` varchar(255) DEFAULT NULL,
   `creator_id` int(11) DEFAULT NULL,
   `modifier_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
-  `datetimeCreated` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
+  `datetime_created` datetime DEFAULT NULL,
   `restricted` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `corpus_id` (`corpus_id`),
@@ -238,7 +248,7 @@ CREATE TABLE `corpusform` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `corpus_id` int(11) DEFAULT NULL,
   `form_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `corpus_id` (`corpus_id`),
   KEY `form_id` (`form_id`)
@@ -248,7 +258,7 @@ CREATE TABLE `corpustag` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `corpus_id` int(11) DEFAULT NULL,
   `tag_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `corpus_id` (`corpus_id`),
   KEY `tag_id` (`tag_id`)
@@ -256,19 +266,25 @@ CREATE TABLE `corpustag` (
 
 ALTER TABLE elicitationmethod
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
     MODIFY description TEXT;
 
 ALTER TABLE file
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE datetimeEntered datetime_entered datetime DEFAULT NULL,
+    CHANGE dateElicited date_elicited date DEFAULT NULL,
+    CHANGE MIMEtype MIME_type VARCHAR(255) DEFAULT NULL,
+    CHANGE utteranceType utterance_type VARCHAR(255) DEFAULT NULL,
     ADD COLUMN filename VARCHAR(255) DEFAULT NULL,
-    ADD COLUMN lossyFilename VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN lossy_filename VARCHAR(255) DEFAULT NULL,
     MODIFY description TEXT,
-    CHANGE embeddedFileMarkup url TEXT,
+    CHANGE embeddedFileMarkup url VARCHAR(255) DEFAULT NULL,
     CHANGE embeddedFilePassword password VARCHAR(255) DEFAULT NULL,
-    ADD COLUMN parentFile_id INT(11) DEFAULT NULL,
+    ADD COLUMN parent_file_id INT(11) DEFAULT NULL,
     ADD COLUMN start FLOAT DEFAULT NULL,
     ADD COLUMN end FLOAT DEFAULT NULL,
-    ADD KEY (parentFile_id),
+    ADD KEY (parent_file_id),
     ADD UNIQUE (filename),
     DROP INDEX name;
 
@@ -276,7 +292,7 @@ CREATE TABLE `filetag` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `file_id` int(11) DEFAULT NULL,
   `tag_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `file_id` (`file_id`),
   KEY `tag_id` (`tag_id`)
@@ -284,11 +300,20 @@ CREATE TABLE `filetag` (
 
 ALTER TABLE form
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE datetimeEntered datetime_entered datetime DEFAULT NULL,
+    CHANGE dateElicited date_elicited date DEFAULT NULL,
+    CHANGE phoneticTranscription phonetic_transcription VARCHAR(255) DEFAULT NULL,
+    CHANGE narrowPhoneticTranscription narrow_phonetic_transcription VARCHAR(255) DEFAULT NULL,
+    CHANGE morphemeBreak morpheme_break VARCHAR(255) DEFAULT NULL,
+    CHANGE morphemeGloss morpheme_gloss VARCHAR(255) DEFAULT NULL,
+    CHANGE syntacticCategoryString syntactic_category_string VARCHAR(255) DEFAULT NULL,
+    CHANGE breakGlossCategory break_gloss_category VARCHAR(1023) DEFAULT NULL,
     ADD COLUMN UUID VARCHAR(36) DEFAULT NULL,
     MODIFY comments TEXT,
-    MODIFY speakerComments TEXT,
-    MODIFY morphemeBreakIDs TEXT,
-    MODIFY morphemeGlossIDs TEXT,
+    CHANGE speakerComments speaker_comments TEXT,
+    CHANGE morphemeBreakIDs morpheme_break_ids TEXT,
+    CHANGE morphemeGlossIDs morpheme_gloss_ids TEXT,
     ADD COLUMN syntax VARCHAR(1023) DEFAULT NULL,
     ADD COLUMN semantics VARCHAR(1023) DEFAULT NULL,
     ADD COLUMN status VARCHAR(40) DEFAULT NULL,
@@ -298,17 +323,26 @@ UPDATE form SET status='tested';
 
 ALTER TABLE formbackup
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE datetimeEntered datetime_entered datetime DEFAULT NULL,
+    CHANGE dateElicited date_elicited date DEFAULT NULL,
+    CHANGE phoneticTranscription phonetic_transcription VARCHAR(255) DEFAULT NULL,
+    CHANGE narrowPhoneticTranscription narrow_phonetic_transcription VARCHAR(255) DEFAULT NULL,
+    CHANGE morphemeBreak morpheme_break VARCHAR(255) DEFAULT NULL,
+    CHANGE morphemeGloss morpheme_gloss VARCHAR(255) DEFAULT NULL,
+    CHANGE syntacticCategoryString syntactic_category_string VARCHAR(255) DEFAULT NULL,
+    CHANGE breakGlossCategory break_gloss_category VARCHAR(1023) DEFAULT NULL,
     ADD COLUMN UUID VARCHAR(36) DEFAULT NULL,
     MODIFY comments TEXT,
-    MODIFY speakerComments TEXT,
-    MODIFY morphemeBreakIDs TEXT,
-    MODIFY morphemeGlossIDs TEXT,
+    CHANGE speakerComments speaker_comments TEXT,
+    CHANGE morphemeBreakIDs morpheme_break_ids TEXT,
+    CHANGE morphemeGlossIDs morpheme_gloss_ids TEXT,
     MODIFY elicitor TEXT,
     MODIFY enterer TEXT,
     MODIFY verifier TEXT,
     MODIFY speaker TEXT,
-    MODIFY elicitationMethod TEXT,
-    MODIFY syntacticCategory TEXT,
+    CHANGE elicitationMethod elicitation_method TEXT,
+    CHANGE syntacticCategory syntactic_category TEXT,
     MODIFY source TEXT,
     MODIFY files TEXT,
     CHANGE keywords tags TEXT,
@@ -318,7 +352,8 @@ ALTER TABLE formbackup
     ADD COLUMN modifier TEXT;
 
 ALTER TABLE formfile
-    CONVERT TO CHARACTER SET utf8;
+    CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL;
 
 CREATE TABLE `formsearch` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -326,7 +361,7 @@ CREATE TABLE `formsearch` (
   `search` text,
   `description` text,
   `enterer_id` int(11) DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `enterer_id` (`enterer_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
@@ -334,23 +369,27 @@ CREATE TABLE `formsearch` (
 RENAME TABLE formkeyword TO formtag;
 ALTER TABLE formtag
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
     CHANGE keyword_id tag_id INT(11) DEFAULT NULL,
     ADD KEY (tag_id);
 
 RENAME TABLE gloss TO translation;
 ALTER TABLE translation
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
     CHANGE gloss transcription TEXT NOT NULL,
     CHANGE glossGrammaticality grammaticality VARCHAR(255) DEFAULT NULL;
 
 RENAME TABLE keyword TO tag;
 ALTER TABLE tag
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
     MODIFY description TEXT,
     ADD UNIQUE (name);
 
 ALTER TABLE language
-    CONVERT TO CHARACTER SET utf8;
+    CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL;
 
 CREATE TABLE `morphology` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -358,21 +397,21 @@ CREATE TABLE `morphology` (
   `name` varchar(255) DEFAULT NULL,
   `description` text,
   `script_type` varchar(5),
-  `lexiconCorpus_id` int(11) DEFAULT NULL,
-  `rulesCorpus_id` int(11) DEFAULT NULL,
+  `lexicon_corpus_id` int(11) DEFAULT NULL,
+  `rules_corpus_id` int(11) DEFAULT NULL,
   `enterer_id` int(11) DEFAULT NULL,
   `modifier_id` int(11) DEFAULT NULL,
-  `datetimeEntered` datetime DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
-  `compileSucceeded` tinyint(1) DEFAULT NULL,
-  `compileMessage` varchar(255) DEFAULT NULL,
+  `datetime_entered` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
+  `compile_succeeded` tinyint(1) DEFAULT NULL,
+  `compile_message` varchar(255) DEFAULT NULL,
   `compile_attempt` varchar(36) DEFAULT NULL,
   `generate_attempt` varchar(36) DEFAULT NULL,
   `extract_morphemes_from_rules_corpus` tinyint(1) DEFAULT NULL,
   `rules` text,
   PRIMARY KEY (`id`),
-  KEY `lexiconCorpus_id` (`lexiconCorpus_id`),
-  KEY `rulesCorpus_id` (`rulesCorpus_id`),
+  KEY `lexicon_corpus_id` (`lexicon_corpus_id`),
+  KEY `rules_corpus_id` (`rules_corpus_id`),
   KEY `enterer_id` (`enterer_id`),
   KEY `modifier_id` (`modifier_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
@@ -384,14 +423,14 @@ CREATE TABLE `morphologybackup` (
   `name` varchar(255) DEFAULT NULL,
   `description` text,
   `script_type` varchar(5),
-  `lexiconCorpus` text,
-  `rulesCorpus` text,
+  `lexicon_corpus` text,
+  `rules_corpus` text,
   `enterer` text,
   `modifier` text,
-  `datetimeEntered` datetime DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
-  `compileSucceeded` tinyint(1) DEFAULT NULL,
-  `compileMessage` varchar(255) DEFAULT NULL,
+  `datetime_entered` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
+  `compile_succeeded` tinyint(1) DEFAULT NULL,
+  `compile_message` varchar(255) DEFAULT NULL,
   `compile_attempt` varchar(36) DEFAULT NULL,
   `generate_attempt` varchar(36) DEFAULT NULL,
   `extract_morphemes_from_rules_corpus` tinyint(1) DEFAULT NULL,
@@ -400,18 +439,21 @@ CREATE TABLE `morphologybackup` (
 
 ALTER TABLE page
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
     ADD COLUMN html TEXT,
-    CHANGE markup markupLanguage VARCHAR(100) DEFAULT NULL,
+    CHANGE markup markup_language VARCHAR(100) DEFAULT NULL,
     MODIFY content TEXT;
-UPDATE page SET markupLanguage='restructuredText';
+UPDATE page SET markup_language='restructuredText';
 
 ALTER TABLE phonology
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE datetimeEntered datetime_entered datetime DEFAULT NULL,
     ADD COLUMN UUID VARCHAR(36) DEFAULT NULL,
     MODIFY description TEXT,
     MODIFY script TEXT,
-    ADD COLUMN compileSucceeded tinyint(1) DEFAULT NULL,
-    ADD COLUMN compileMessage VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN compile_succeeded tinyint(1) DEFAULT NULL,
+    ADD COLUMN compile_message VARCHAR(255) DEFAULT NULL,
     ADD COLUMN compile_attempt VARCHAR(36) DEFAULT NULL,
     ADD FOREIGN KEY (modifier_id) REFERENCES user(id),
     ADD FOREIGN KEY (enterer_id) REFERENCES user(id);
@@ -425,17 +467,18 @@ CREATE TABLE `phonologybackup` (
   `script` text,
   `enterer` text,
   `modifier` text,
-  `datetimeEntered` datetime DEFAULT NULL,
-  `datetimeModified` datetime DEFAULT NULL,
-  `compileSucceeded` tinyint(1) DEFAULT NULL,
-  `compileMessage` varchar(255) DEFAULT NULL,
+  `datetime_entered` datetime DEFAULT NULL,
+  `datetime_modified` datetime DEFAULT NULL,
+  `compile_succeeded` tinyint(1) DEFAULT NULL,
+  `compile_message` varchar(255) DEFAULT NULL,
   `compile_attempt` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 ALTER TABLE source
     CONVERT TO CHARACTER SET utf8,
-    ADD COLUMN `crossrefSource_id` int(11) DEFAULT NULL,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    ADD COLUMN `crossref_source_id` int(11) DEFAULT NULL,
     ADD COLUMN `type` varchar(20) DEFAULT NULL,
     ADD COLUMN `key` varchar(1000) DEFAULT NULL,
     ADD COLUMN `address` varchar(1000) DEFAULT NULL,
@@ -449,7 +492,7 @@ ALTER TABLE source
     ADD COLUMN `howpublished` varchar(255) DEFAULT NULL,
     ADD COLUMN `institution` varchar(255) DEFAULT NULL,
     ADD COLUMN `journal` varchar(255) DEFAULT NULL,
-    ADD COLUMN `keyField` varchar(255) DEFAULT NULL,
+    ADD COLUMN `key_field` varchar(255) DEFAULT NULL,
     ADD COLUMN `month` varchar(100) DEFAULT NULL,
     ADD COLUMN `note` varchar(1000) DEFAULT NULL,
     ADD COLUMN `number` varchar(100) DEFAULT NULL,
@@ -458,7 +501,7 @@ ALTER TABLE source
     ADD COLUMN `publisher` varchar(255) DEFAULT NULL,
     ADD COLUMN `school` varchar(255) DEFAULT NULL,
     ADD COLUMN `series` varchar(255) DEFAULT NULL,
-    ADD COLUMN `typeField` varchar(255) DEFAULT NULL,
+    ADD COLUMN `type_field` varchar(255) DEFAULT NULL,
     ADD COLUMN `url` varchar(1000) DEFAULT NULL,
     ADD COLUMN `volume` varchar(100) DEFAULT NULL,
     ADD COLUMN `affiliation` varchar(255) DEFAULT NULL,
@@ -474,36 +517,44 @@ ALTER TABLE source
     ADD COLUMN `mrnumber` varchar(25) DEFAULT NULL,
     ADD COLUMN `price` varchar(100) DEFAULT NULL,
     ADD COLUMN `size` varchar(255) DEFAULT NULL,
-    ADD KEY (crossrefSource_id);
+    ADD KEY (crossref_source_id);
 
 ALTER TABLE speaker
     CONVERT TO CHARACTER SET utf8,
-    ADD COLUMN markupLanguage VARCHAR(100) DEFAULT NULL,
-    CHANGE speakerPageContent pageContent TEXT,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE firstName first_name VARCHAR(255) DEFAULT NULL,
+    CHANGE lastName last_name VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN markup_language VARCHAR(100) DEFAULT NULL,
+    CHANGE speakerPageContent page_content TEXT,
     ADD COLUMN html TEXT;
-UPDATE speaker SET markupLanguage='restructuredText';
+UPDATE speaker SET markup_language='restructuredText';
 
 ALTER TABLE syntacticcategory
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
     ADD COLUMN `type` VARCHAR(60) DEFAULT NULL,
     MODIFY description TEXT;
 
 ALTER TABLE `user`
     CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL,
+    CHANGE firstName first_name VARCHAR(255) DEFAULT NULL,
+    CHANGE lastName last_name VARCHAR(255) DEFAULT NULL,
     ADD COLUMN salt VARCHAR(255) DEFAULT NULL,
     MODIFY role VARCHAR(100) DEFAULT NULL,
-    ADD COLUMN markupLanguage VARCHAR(100) DEFAULT NULL,
-    CHANGE personalPageContent pageContent TEXT,
+    ADD COLUMN markup_language VARCHAR(100) DEFAULT NULL,
+    CHANGE personalPageContent page_content TEXT,
     ADD COLUMN html TEXT,
-    ADD COLUMN inputOrthography_id INT(11) DEFAULT NULL,
-    ADD COLUMN outputOrthography_id INT(11) DEFAULT NULL,
-    ADD KEY (inputOrthography_id),
-    ADD KEY (outputOrthography_id),
+    ADD COLUMN input_orthography_id INT(11) DEFAULT NULL,
+    ADD COLUMN output_orthography_id INT(11) DEFAULT NULL,
+    ADD KEY (input_orthography_id),
+    ADD KEY (output_orthography_id),
     DROP COLUMN collectionViewType;
-UPDATE user SET markupLanguage='restructuredText';
+UPDATE user SET markup_language='restructuredText';
 
 ALTER TABLE userform
-    CONVERT TO CHARACTER SET utf8;
+    CONVERT TO CHARACTER SET utf8,
+    CHANGE datetimeModified datetime_modified datetime DEFAULT NULL;
 
 '''.strip()
 
@@ -546,7 +597,6 @@ ALTER TABLE applicationsettings
     DROP COLUMN unrestrictedUsers;
 
 ALTER TABLE collectionbackup
-    DROP COLUMN collectionViewType,
     DROP COLUMN backuper;
 
 ALTER TABLE file
@@ -801,8 +851,8 @@ def extract_orthographies_from_application_settings(applicationsettings):
                 'orthography': applicationsettings['objectLanguageOrthography%d' % i],
                 'name': applicationsettings['objectLanguageOrthography%dName' % i],
                 'lowercase': applicationsettings['OLO%dLowercase' % i],
-                'initialGlottalStops': applicationsettings['OLO%dInitialGlottalStops' % i],
-                'datetimeModified': applicationsettings['datetimeModified'],
+                'initial_glottal_stops': applicationsettings['OLO%dInitialGlottalStops' % i],
+                'datetime_modified': applicationsettings['datetime_modified'],
             })
     return orthographies
 
@@ -820,13 +870,13 @@ def fix_orthography_table(engine, orthography_table, application_settings_collat
         for orthography in orthographies:
             orthographies_dict.setdefault(
                 (normalize(orthography['name']), normalize(orthography['orthography']),
-                 orthography['lowercase'], orthography['initialGlottalStops']), []).\
-                append(orthography['datetimeModified'])
+                 orthography['lowercase'], orthography['initial_glottal_stops']), []).\
+                append(orthography['datetime_modified'])
     buffer1 = []
-    for (name, orthography, lowercase, initialGlottalStops), dts in orthographies_dict.items():
+    for (name, orthography, lowercase, initial_glottal_stops), dts in orthographies_dict.items():
         max_dt_modified = max(dts)
         buffer1.append({'name': name, 'orthography': orthography, 'lowercase': lowercase,
-            'initialGlottalStops': initialGlottalStops, 'datetimeModified': max_dt_modified})
+            'initial_glottal_stops': initial_glottal_stops, 'datetime_modified': max_dt_modified})
     engine.execute('set names utf8;')
     if buffer1:
         insert = orthography_table.insert().values(**dict([(k, bindparam(k)) for k in buffer1[0]]))
@@ -849,7 +899,7 @@ def collation2charset(collation):
     return {'utf8_general_ci': 'utf8'}.get(collation, 'latin1')
 
 def fix_applicationsettings_table(engine, applicationsettings_table, user_table, now_string, table_collations):
-    """Fix the applicationsettings table: create the orthography and unrestrictedUsers relations."""
+    """Fix the applicationsettings table: create the orthography and unrestricted_users relations."""
     print_('Fixing the applicationsettings table ... ')
     msgs = []
     orthographies = get_orthographies_by_name(engine)
@@ -864,22 +914,22 @@ def fix_applicationsettings_table(engine, applicationsettings_table, user_table,
         if row['storageOrthography']:
             orthography_id = getOrthographyReferenced(values['storageOrthography'], values, orthographies)
             if orthography_id:
-                values['storageOrthography_id'] = orthography_id
+                values['storage_orthography_id'] = orthography_id
         if row['defaultInputOrthography']:
             orthography_id = getOrthographyReferenced(values['defaultInputOrthography'], values, orthographies)
             if orthography_id:
-                values['inputOrthography_id'] = orthography_id
+                values['input_orthography_id'] = orthography_id
         if row['defaultOutputOrthography']:
             orthography_id = getOrthographyReferenced(values['defaultOutputOrthography'], values, orthographies)
             if orthography_id:
-                values['outputOrthography_id'] = orthography_id
+                values['output_orthography_id'] = orthography_id
         buffer1.append(values)
         try:
             unrestricted_user_ids = json.loads(values['unrestrictedUsers'])
             for user_id in unrestricted_user_ids:
                 if user_id in user_ids:
                     engine.execute(
-                        "INSERT INTO applicationsettingsuser (applicationsettings_id, user_id, datetimeModified) VALUES (%d, %d, '%s');" % (
+                        "INSERT INTO applicationsettingsuser (applicationsettings_id, user_id, datetime_modified) VALUES (%d, %d, '%s');" % (
                         values['id'], user_id, now_string))
                 else:
                     msgs.append('WARNING: user %d was listed as unrestricted but this user does not exist.\n' % user_id)
@@ -894,7 +944,7 @@ def fix_applicationsettings_table(engine, applicationsettings_table, user_table,
     return msgs
 
 def fix_user_table(engine, user_table):
-    """Generate new values for password, salt, html, inputOrthography_id and outputOrthography_id."""
+    """Generate new values for password, salt, html, input_orthography_id and output_orthography_id."""
     print_('Fixing the user table ... ')
     msgs = []
     orthographies = get_orthographies_by_name(engine)
@@ -908,24 +958,24 @@ def fix_user_table(engine, user_table):
     buffer1 = []
     for row in engine.execute(user_table.select()):
         values = row2dict(row)
-        lastName = values['lastName']
-        firstName = values['firstName']
-        values['html'] = rst2html(values['pageContent'])
+        last_name = values['last_name']
+        first_name = values['first_name']
+        values['html'] = rst2html(values['page_content'])
         values['salt'] = generateSalt()
         new_password = generatePassword()
         values['password'] = encryptPassword(new_password, values['salt'])
-        msgs.append('%s %s (%s) now has the password %s' % (firstName, lastName, values['email'], new_password))
+        msgs.append('%s %s (%s) now has the password %s' % (first_name, last_name, values['email'], new_password))
         if values['role'] not in ('administrator', 'contributor', 'viewer'):
-            msgs.append('User %d (%s %s) had an invalid role (%s); now changed to viewer' % (values['id'], firstName, lastName, values['role']))
+            msgs.append('User %d (%s %s) had an invalid role (%s); now changed to viewer' % (values['id'], first_name, last_name, values['role']))
             values['role'] = 'viewer'
-        values['inputOrthography_id'] = values['outputOrthography_id'] = None
+        values['input_orthography_id'] = values['output_orthography_id'] = None
         if current_application_settings:
             if values['inputOrthography']:
                 orthography_name = current_application_settings['objectLanguageOrthography%sName' % values['inputOrthography'].split()[-1]]
-                values['inputOrthography_id'] = orthographies.get(orthography_name, None)
+                values['input_orthography_id'] = orthographies.get(orthography_name, None)
             if values['outputOrthography']:
                 orthography_name = current_application_settings['objectLanguageOrthography%sName' % values['outputOrthography'].split()[-1]]
-                values['outputOrthography_id'] = orthographies.get(orthography_name, None)
+                values['output_orthography_id'] = orthographies.get(orthography_name, None)
         buffer1.append(values)
     engine.execute('set names utf8;')
     if buffer1:
@@ -936,7 +986,7 @@ def fix_user_table(engine, user_table):
     return msgs
 
 def fix_collection_table(engine, collection_table, collectionbackup_table, user_table):
-    """Add UUID, html, contentsUnpacked and modifier_id values to the collections.  Also,
+    """Add UUID, html, contents_unpacked and modifier_id values to the collections.  Also,
     add UUID values to the backups of each collection.  Return a list of collection ids corresponding
     to those that reference other collections.
 
@@ -977,9 +1027,9 @@ def fix_collection_table(engine, collection_table, collectionbackup_table, user_
         values = row2dict(row)
         values['UUID'] = str(uuid4())
         values['html'] = rst2html(values['contents'])
-        values['contentsUnpacked'] = values['contents']
+        values['contents_unpacked'] = values['contents']
         backups = sorted([cb for cb in collectionbackups if cb['collection_id'] == values['id']],
-                         key=lambda cb: cb['datetimeModified'])
+                         key=lambda cb: cb['datetime_modified'])
         if backups:
             try:
                 most_recent_backuper = json.loads(backups[-1]['backuper'])['id']
@@ -998,7 +1048,7 @@ it was not possible to extract a backuper from the most recent one (backuper val
             values['modifier_id'] = values['enterer_id']
         if collectionReferencePattern.search(row['contents']):
             msgs.append('''WARNING: collection %d references other collections; please update this collection via the
-OLD interface in order to generate appropriate html and contentsUnpacked values.''' % values['id'])
+OLD interface in order to generate appropriate html and contents_unpacked values.''' % values['id'])
         buffer1.append(values)
         for cb in backups:
             buffer2.append({'cb_id': cb['id'], 'UUID': values['UUID']})
@@ -1026,7 +1076,7 @@ def fix_collectionbackup_table(engine, collectionbackup_table):
         values = row2dict(row)
         values['html'] = rst2html(values['contents'])
         backups = sorted([cb for cb in collectionbackups if cb['collection_id'] == values['collection_id']],
-                         key=lambda cb: cb['datetimeModified'])
+                         key=lambda cb: cb['datetime_modified'])
         if backups:
             most_recent_backuper = backups[-1]['backuper']
             values['modifier'] = most_recent_backuper
@@ -1094,9 +1144,9 @@ def fix_form_table(engine, form_table, formbackup_table, user_table, default_mor
     """Give UUID, modifier_id values to the form table.  Also give UUID values to
     all form backups that are backups of existing forms.
 
-    :param bool default_morphemes: if True, then forms that have no morphemeBreak and no morphemeGloss
-        and whose transcription contains no space will receive a default morphemeBreak value (the value
-        of the transcription attribute) and a default morphemeGloss value (the value of the first translation
+    :param bool default_morphemes: if True, then forms that have no morpheme_break and no morpheme_gloss
+        and whose transcription contains no space will receive a default morpheme_break value (the value
+        of the transcription attribute) and a default morpheme_gloss value (the value of the first translation
         transcription with spaces replaced by periods).
 
     .. note::
@@ -1137,11 +1187,11 @@ def fix_form_table(engine, form_table, formbackup_table, user_table, default_mor
     for row in engine.execute(form_table.select()):
         values = row2dict(row)
         values['UUID'] = str(uuid4())
-        if default_morphemes and not values['morphemeBreak'] and not values['morphemeGloss'] and ' ' not in values['transcription']:
-            values['morphemeBreak'] = values['transcription']
-            values['morphemeGloss'] = translations[values['id']].replace(' ', '.')
+        if default_morphemes and not values['morpheme_break'] and not values['morpheme_gloss'] and ' ' not in values['transcription']:
+            values['morpheme_break'] = values['transcription']
+            values['morpheme_gloss'] = translations[values['id']].replace(' ', '.')
         backups = sorted([fb for fb in formbackups if fb['form_id'] == row['id']],
-                         key=lambda fb: fb['datetimeModified'])
+                         key=lambda fb: fb['datetime_modified'])
         if backups:
             try:
                 most_recent_backuper = json.loads(backups[-1]['backuper'])['id']
@@ -1180,7 +1230,7 @@ def fix_formbackup_table(engine, formbackup_table):
     for row in formbackups:
         values = row2dict(row)
         backups = sorted([fb for fb in formbackups if fb['form_id'] == values['form_id']],
-                         key=lambda fb: fb['datetimeModified'])
+                         key=lambda fb: fb['datetime_modified'])
         if backups:
             most_recent_backuper = backups[-1]['backuper']
             values['modifier'] = most_recent_backuper
@@ -1264,7 +1314,7 @@ def fix_phonology_table(engine, phonology_table, phonologybackup_table, user_tab
         values = row2dict(row)
         values['UUID'] = str(uuid4())
         backups = sorted([pb for pb in phonologybackups if pb['phonology_id'] == values['id']],
-                         key=lambda pb: pb['datetimeModified'])
+                         key=lambda pb: pb['datetime_modified'])
         if backups:
             try:
                 most_recent_backuper = json.loads(backups[-1]['backuper'])['id']
@@ -1305,7 +1355,7 @@ def fix_phonologybackup_table(engine, phonologybackup_table):
     for row in phonologybackups:
         values = row2dict(row)
         backups = sorted([pb for pb in phonologybackups if pb['phonology_id'] == values['phonology_id']],
-                         key=lambda pb: pb['datetimeModified'])
+                         key=lambda pb: pb['datetime_modified'])
         if backups:
             most_recent_backuper = backups[-1]['backuper']
             values['modifier'] = most_recent_backuper
@@ -1383,7 +1433,7 @@ def fix_speaker_table(engine, speaker_table):
     engine.execute('set names utf8;')
     for row in engine.execute(speaker_table.select()):
         values = row2dict(row)
-        values['html'] = rst2html(values['pageContent'])
+        values['html'] = rst2html(values['page_content'])
         buffer1.append(values)
     if buffer1:
         engine.execute('set names utf8;')
@@ -1593,12 +1643,12 @@ if __name__ == '__main__':
 
     print '\n\n%s' % '\n\n'.join(messages)
 
-    print '\nFinally, you should request forms.update_morpheme_references in order to generate valid breakGlossCategory values and to regenerate the other morpheme-related values.\n\n'
+    print '\nFinally, you should request forms.update_morpheme_references in order to generate valid break_gloss_category values and to regenerate the other morpheme-related values.\n\n'
 
     # TODO: what to do about files without lossy copies?  Create an admin-only method of the forms controller that creates
     #    lossy copies for all relevant files that lack such.
     # TODO: make sure that file names match the names of the files on the file system, i.e., post normalization...
-    # TODO: verify user.inputOrthography_id and user.outputOrthography_id on an app that has specifications for these
+    # TODO: verify user.input_orthography_id and user.output_orthography_id on an app that has specifications for these
     # TODO: search a live OLD app and make sure that the normalization has worked...
     # TODO: dump the schema of an altered db and make sure it matches that of a system-generated one (e.g., old_test)
 

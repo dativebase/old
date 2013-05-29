@@ -51,7 +51,7 @@ class UsersController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('User', config=config)
+    query_builder = SQLAQueryBuilder('User', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -65,14 +65,14 @@ class UsersController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(User)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -97,10 +97,10 @@ class UsersController(BaseController):
             schema = UserSchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            user = createNewUser(data)
+            user = create_new_user(data)
             Session.add(user)
             Session.commit()
-            return user.getFullDict()
+            return user.get_full_dict()
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -120,13 +120,13 @@ class UsersController(BaseController):
 
         .. note::
         
-           See :func:`getNewUserData` to understand how the query string
+           See :func:`get_new_user_data` to understand how the query string
            parameters can affect the contents of the lists in the returned
            dictionary.
 
         """
 
-        return getNewUserData(request.GET)
+        return get_new_user_data(request.GET)
 
     @h.jsonify
     @h.restrict('PUT')
@@ -146,16 +146,16 @@ class UsersController(BaseController):
             try:
                 schema = UserSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
-                state.userToUpdate = user.getFullDict()
-                state.user = session['user'].getFullDict()
+                state = h.get_state_object(values)
+                state.user_to_update = user.get_full_dict()
+                state.user = session['user'].get_full_dict()
                 data = schema.to_python(values, state)
-                user = updateUser(user, data)
-                # user will be False if there are no changes (cf. updateUser).
+                user = update_user(user, data)
+                # user will be False if there are no changes (cf. update_user).
                 if user:
                     Session.add(user)
                     Session.commit()
-                    return user.getFullDict()
+                    return user.get_full_dict()
                 else:
                     response.status_int = 400
                     return {'error':
@@ -184,10 +184,10 @@ class UsersController(BaseController):
         """
         user = Session.query(User).get(id)
         if user:
-            h.destroyUserDirectory(user)
+            h.destroy_user_directory(user)
             Session.delete(user)
             Session.commit()
-            return user.getFullDict()
+            return user.get_full_dict()
         else:
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
@@ -213,7 +213,7 @@ class UsersController(BaseController):
     @h.jsonify
     @h.restrict('GET')
     @h.authenticate
-    @h.authorize(['administrator', 'contributor', 'viewer'], userIDIsArgs1=True)
+    @h.authorize(['administrator', 'contributor', 'viewer'], user_id_is_args1=True)
     def edit(self, id):
         """Return a user resource and the data needed to update it.
 
@@ -229,15 +229,15 @@ class UsersController(BaseController):
 
         .. note::
 
-           See :func:`getNewUserData` to understand how the query string
+           See :func:`get_new_user_data` to understand how the query string
            parameters can affect the contents of the lists in the returned
            dictionary.
 
         """
         user = Session.query(User).get(id)
         if user:
-            data = getNewUserData(request.GET)
-            return {'data': data, 'user': user.getFullDict()}
+            data = get_new_user_data(request.GET)
+            return {'data': data, 'user': user.get_full_dict()}
         else:
             response.status_int = 404
             return {'error': 'There is no user with id %s' % id}
@@ -247,7 +247,7 @@ class UsersController(BaseController):
 # User Create & Update Functions
 ################################################################################
 
-def getNewUserData(GET_params):
+def get_new_user_data(GET_params):
     """Return the data necessary to create a new OLD user or update an existing one.
     
     :param GET_params: the ``request.GET`` dictionary-like object generated by
@@ -260,51 +260,51 @@ def getNewUserData(GET_params):
     valid ISO 8601 datetime) add the appropriate list of objects to the return
     dictionary.  If the value of a key is a valid ISO 8601 datetime string, add
     the corresponding list of objects *only* if the datetime does *not* match
-    the most recent ``datetimeModified`` value of the resource.  That is, a
+    the most recent ``datetime_modified`` value of the resource.  That is, a
     non-matching datetime indicates that the requester has out-of-date data.
 
     """
-    # modelNameMap maps param names to the OLD model objects from which they are
+    # model_name_map maps param names to the OLD model objects from which they are
     # derived.
-    modelNameMap = {'orthographies': 'Orthography'}
+    model_name_map = {'orthographies': 'Orthography'}
 
-    # getterMap maps param names to getter functions that retrieve the
+    # getter_map maps param names to getter functions that retrieve the
     # appropriate data from the db.
-    getterMap = {'orthographies': h.getMiniDictsGetter('Orthography')}
+    getter_map = {'orthographies': h.get_mini_dicts_getter('Orthography')}
 
     # result is initialized as a dict with empty list values.
-    result = dict([(key, []) for key in getterMap])
-    result['roles'] = h.userRoles
-    result['markupLanguages'] = h.markupLanguages
+    result = dict([(key, []) for key in getter_map])
+    result['roles'] = h.user_roles
+    result['markup_languages'] = h.markup_languages
 
     # There are GET params, so we are selective in what we return.
     if GET_params:
-        for key in getterMap:
+        for key in getter_map:
             val = GET_params.get(key)
             # Proceed so long as val is not an empty string.
             if val:
-                valAsDatetimeObj = h.datetimeString2datetime(val)
-                if valAsDatetimeObj:
+                val_as_datetime_obj = h.datetime_string2datetime(val)
+                if val_as_datetime_obj:
                     # Value of param is an ISO 8601 datetime string that
-                    # does not match the most recent datetimeModified of the
+                    # does not match the most recent datetime_modified of the
                     # relevant model in the db: therefore we return a list
                     # of objects/dicts.  If the datetimes do match, this
                     # indicates that the requester's own stores are
                     # up-to-date so we return nothing.
-                    if valAsDatetimeObj != h.getMostRecentModificationDatetime(
-                    modelNameMap[key]):
-                        result[key] = getterMap[key]()
+                    if val_as_datetime_obj != h.get_most_recent_modification_datetime(
+                    model_name_map[key]):
+                        result[key] = getter_map[key]()
                 else:
-                    result[key] = getterMap[key]()
+                    result[key] = getter_map[key]()
 
     # There are no GET params, so we get everything from the db and return it.
     else:
-        for key in getterMap:
-            result[key] = getterMap[key]()
+        for key in getter_map:
+            result[key] = getter_map[key]()
 
     return result
 
-def createNewUser(data):
+def create_new_user(data):
     """Create a new user.
 
     :param dict data: the data for the user to be created.
@@ -312,34 +312,34 @@ def createNewUser(data):
 
     """
     user = User()
-    user.salt = h.generateSalt()
-    user.password = unicode(h.encryptPassword(data['password'], str(user.salt)))
+    user.salt = h.generate_salt()
+    user.password = unicode(h.encrypt_password(data['password'], str(user.salt)))
     user.username = h.normalize(data['username'])
-    user.firstName = h.normalize(data['firstName'])
-    user.lastName = h.normalize(data['lastName'])
+    user.first_name = h.normalize(data['first_name'])
+    user.last_name = h.normalize(data['last_name'])
     user.email = h.normalize(data['email'])
     user.affiliation = h.normalize(data['affiliation'])
     user.role = h.normalize(data['role'])
-    user.markupLanguage = h.normalize(data['markupLanguage'])
-    user.pageContent = h.normalize(data['pageContent'])
-    user.html = h.getHTMLFromContents(user.pageContent, user.markupLanguage)
+    user.markup_language = h.normalize(data['markup_language'])
+    user.page_content = h.normalize(data['page_content'])
+    user.html = h.get_HTML_from_contents(user.page_content, user.markup_language)
 
     # Many-to-One Data: input and output orthographies
-    if data['inputOrthography']:
-        user.inputOrthography= data['inputOrthography']
-    if data['outputOrthography']:
-        user.outputOrthography = data['outputOrthography']
+    if data['input_orthography']:
+        user.input_orthography= data['input_orthography']
+    if data['output_orthography']:
+        user.output_orthography = data['output_orthography']
 
     # OLD-generated Data
-    user.datetimeModified = datetime.datetime.utcnow()
+    user.datetime_modified = datetime.datetime.utcnow()
 
     # Create the user's directory
-    h.createUserDirectory(user)
+    h.create_user_directory(user)
 
     return user
 
 
-def updateUser(user, data):
+def update_user(user, data):
     """Update a user.
 
     :param user: the user model to be updated.
@@ -351,31 +351,31 @@ def updateUser(user, data):
     changed = False
 
     # Unicode Data
-    changed = h.setAttr(user, 'firstName', h.normalize(data['firstName']), changed)
-    changed = h.setAttr(user, 'lastName', h.normalize(data['lastName']), changed)
-    changed = h.setAttr(user, 'email', h.normalize(data['email']), changed)
-    changed = h.setAttr(user, 'affiliation', h.normalize(data['affiliation']), changed)
-    changed = h.setAttr(user, 'role', h.normalize(data['role']), changed)
-    changed = h.setAttr(user, 'pageContent', h.normalize(data['pageContent']), changed)
-    changed = h.setAttr(user, 'markupLanguage', h.normalize(data['markupLanguage']), changed)
-    changed = h.setAttr(user, 'html', h.getHTMLFromContents(user.pageContent, user.markupLanguage), changed)
+    changed = h.set_attr(user, 'first_name', h.normalize(data['first_name']), changed)
+    changed = h.set_attr(user, 'last_name', h.normalize(data['last_name']), changed)
+    changed = h.set_attr(user, 'email', h.normalize(data['email']), changed)
+    changed = h.set_attr(user, 'affiliation', h.normalize(data['affiliation']), changed)
+    changed = h.set_attr(user, 'role', h.normalize(data['role']), changed)
+    changed = h.set_attr(user, 'page_content', h.normalize(data['page_content']), changed)
+    changed = h.set_attr(user, 'markup_language', h.normalize(data['markup_language']), changed)
+    changed = h.set_attr(user, 'html', h.get_HTML_from_contents(user.page_content, user.markup_language), changed)
 
     # username and password need special treatment: a value of None means that
     # these should not be updated.
     if data['password'] is not None:
-        changed = h.setAttr(user, 'password',
-                    unicode(h.encryptPassword(data['password'], str(user.salt))), changed)
+        changed = h.set_attr(user, 'password',
+                    unicode(h.encrypt_password(data['password'], str(user.salt))), changed)
     if data['username'] is not None:
         username = h.normalize(data['username'])
         if username != user.username:
-            h.renameUserDirectory(user.username, username)
-        changed = h.setAttr(user, 'username', username, changed)
+            h.rename_user_directory(user.username, username)
+        changed = h.set_attr(user, 'username', username, changed)
 
     # Many-to-One Data
-    changed = h.setAttr(user, 'inputOrthography', data['inputOrthography'], changed)
-    changed = h.setAttr(user, 'outputOrthography', data['outputOrthography'], changed)
+    changed = h.set_attr(user, 'input_orthography', data['input_orthography'], changed)
+    changed = h.set_attr(user, 'output_orthography', data['output_orthography'], changed)
 
     if changed:
-        user.datetimeModified = datetime.datetime.utcnow()
+        user.datetime_modified = datetime.datetime.utcnow()
         return user
     return changed

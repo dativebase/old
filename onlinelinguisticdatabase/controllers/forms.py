@@ -35,7 +35,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Form, FormBackup, Collection
-from onlinelinguisticdatabase.controllers.oldcollections import updateCollectionByDeletionOfReferencedForm
+from onlinelinguisticdatabase.controllers.oldcollections import update_collection_by_deletion_of_referenced_form
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class FormsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder(config=config)
+    query_builder = SQLAQueryBuilder(config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -62,19 +62,19 @@ class FormsController(BaseController):
         :URL: ``SEARCH /forms`` (or ``POST /forms/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            query = h.eagerloadForm(SQLAQuery)
-            query = h.filterRestrictedModels('Form', SQLAQuery)
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            SQLAQuery = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            query = h.eagerload_form(SQLAQuery)
+            query = h.filter_restricted_models('Form', SQLAQuery)
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -83,7 +83,7 @@ class FormsController(BaseController):
             return {'errors': e.unpack_errors()}
         except Exception, e:
             log.warn("%s's filter expression (%s) raised an unexpected exception: %s." % (
-                h.getUserFullName(session['user']), request.body, e))
+                h.get_user_full_name(session['user']), request.body, e))
             response.status_int = 400
             return {'error': u'The specified search parameters generated an invalid database query'}
 
@@ -94,10 +94,10 @@ class FormsController(BaseController):
         """Return the data necessary to search the form resources.
 
         :URL: ``GET /forms/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -111,15 +111,15 @@ class FormsController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
-            query = h.eagerloadForm(Session.query(Form))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = h.filterRestrictedModels('Form', query)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_form(Session.query(Form))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            query = h.filter_restricted_models('Form', query)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -139,13 +139,13 @@ class FormsController(BaseController):
         try:
             schema = FormSchema()
             values = json.loads(unicode(request.body, request.charset))
-            state = h.getStateObject(values)
+            state = h.get_state_object(values)
             data = schema.to_python(values, state)
-            form = createNewForm(data)
+            form = create_new_form(data)
             Session.add(form)
             Session.commit()
-            updateApplicationSettingsIfFormIsForeignWord(form)
-            updateFormsContainingThisFormAsMorpheme(form)
+            update_application_settings_if_form_is_foreign_word(form)
+            update_forms_containing_this_form_as_morpheme(form)
             return form
         except h.JSONDecodeError:
             response.status_int = 400
@@ -166,12 +166,12 @@ class FormsController(BaseController):
 
         .. note::
         
-           See :func:`getNewEditFormData` to understand how the query string
+           See :func:`get_new_edit_form_data` to understand how the query string
            parameters can affect the contents of the lists in the returned
            dictionary.
 
         """
-        return getNewEditFormData(request.GET)
+        return get_new_edit_form_data(request.GET)
 
     @h.jsonify
     @h.restrict('PUT')
@@ -186,26 +186,26 @@ class FormsController(BaseController):
         :returns: the updated form model.
 
         """
-        form = h.eagerloadForm(Session.query(Form)).get(int(id))
+        form = h.eagerload_form(Session.query(Form)).get(int(id))
         if form:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
+            if h.user_is_authorized_to_access_model(user, form, unrestricted_users):
                 try:
                     schema = FormSchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    state = h.getStateObject(values)
+                    state = h.get_state_object(values)
                     data = schema.to_python(values, state)
-                    formDict = form.getDict()
-                    form = updateForm(form, data)
-                    # form will be False if there are no changes (cf. updateForm).
+                    form_dict = form.get_dict()
+                    form = update_form(form, data)
+                    # form will be False if there are no changes (cf. update_form).
                     if form:
-                        backupForm(formDict)
+                        backup_form(form_dict)
                         Session.add(form)
                         Session.commit()
-                        updateApplicationSettingsIfFormIsForeignWord(form)
-                        if updateHasChangedTheAnalysis(form, formDict):
-                            updateFormsContainingThisFormAsMorpheme(form, 'update', formDict)
+                        update_application_settings_if_form_is_foreign_word(form)
+                        if update_has_changed_the_analysis(form, form_dict):
+                            update_forms_containing_this_form_as_morpheme(form, 'update', form_dict)
                         return form
                     else:
                         response.status_int = 400
@@ -219,7 +219,7 @@ class FormsController(BaseController):
                     return {'errors': e.unpack_errors()}
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
@@ -240,21 +240,21 @@ class FormsController(BaseController):
            Only administrators and a form's enterer can delete it.
 
         """
-        form = h.eagerloadForm(Session.query(Form)).get(id)
+        form = h.eagerload_form(Session.query(Form)).get(id)
         if form:
             if session['user'].role == u'administrator' or \
             form.enterer is session['user']:
-                formDict = form.getDict()
-                backupForm(formDict)
-                updateCollectionsReferencingThisForm(form)
+                form_dict = form.get_dict()
+                backup_form(form_dict)
+                update_collections_referencing_this_form(form)
                 Session.delete(form)
                 Session.commit()
-                updateApplicationSettingsIfFormIsForeignWord(form)
-                updateFormsContainingThisFormAsMorpheme(form, 'delete')
+                update_application_settings_if_form_is_foreign_word(form)
+                update_forms_containing_this_form_as_morpheme(form, 'delete')
                 return form
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
@@ -270,15 +270,15 @@ class FormsController(BaseController):
         :returns: a form model object.
 
         """
-        form = h.eagerloadForm(Session.query(Form)).get(id)
+        form = h.eagerload_form(Session.query(Form)).get(id)
         if form:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, form, unrestrictedUsers):
+            if h.user_is_authorized_to_access_model(user, form, unrestricted_users):
                 return form
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
@@ -305,19 +305,19 @@ class FormsController(BaseController):
         
            This action can be thought of as a combination of
            :func:`FormsController.show` and :func:`FormsController.new`.  See
-           :func:`getNewEditFormData` to understand how the query string
+           :func:`get_new_edit_form_data` to understand how the query string
            parameters can affect the contents of the lists in the ``data``
            dictionary.
 
         """
-        form = h.eagerloadForm(Session.query(Form)).get(id)
+        form = h.eagerload_form(Session.query(Form)).get(id)
         if form:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            if h.userIsAuthorizedToAccessModel(session['user'], form, unrestrictedUsers):
-                return {'data': getNewEditFormData(request.GET), 'form': form}
+            unrestricted_users = h.get_unrestricted_users()
+            if h.user_is_authorized_to_access_model(session['user'], form, unrestricted_users):
+                return {'data': get_new_edit_form_data(request.GET), 'form': form}
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no form with id %s' % id}
@@ -333,29 +333,29 @@ class FormsController(BaseController):
             form whose history is requested.
         :returns: A dictionary of the form::
 
-                {"form": { ... }, "previousVersions": [ ... ]}
+                {"form": { ... }, "previous_versions": [ ... ]}
 
             where the value of the ``form`` key is the form whose history is
-            requested and the value of the ``previousVersions`` key is a list of
+            requested and the value of the ``previous_versions`` key is a list of
             dictionaries representing previous versions of the form.
 
         """
-        form, previousVersions = h.getModelAndPreviousVersions('Form', id)
-        if form or previousVersions:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+        form, previous_versions = h.get_model_and_previous_versions('Form', id)
+        if form or previous_versions:
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            accessible = h.userIsAuthorizedToAccessModel
-            unrestrictedPreviousVersions = [fb for fb in previousVersions
-                                    if accessible(user, fb, unrestrictedUsers)]
-            formIsRestricted = form and not accessible(user, form, unrestrictedUsers)
-            previousVersionsAreRestricted = previousVersions and not \
-                unrestrictedPreviousVersions
-            if formIsRestricted or previousVersionsAreRestricted :
+            accessible = h.user_is_authorized_to_access_model
+            unrestricted_previous_versions = [fb for fb in previous_versions
+                                    if accessible(user, fb, unrestricted_users)]
+            form_is_restricted = form and not accessible(user, form, unrestricted_users)
+            previous_versions_are_restricted = previous_versions and not \
+                unrestricted_previous_versions
+            if form_is_restricted or previous_versions_are_restricted :
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
             else :
                 return {'form': form,
-                        'previousVersions': unrestrictedPreviousVersions}
+                        'previous_versions': unrestricted_previous_versions}
         else:
             response.status_int = 404
             return {'error': 'No forms or form backups match %s' % id}
@@ -387,19 +387,19 @@ class FormsController(BaseController):
             return {'errors': e.unpack_errors()}
         else:
             if forms:
-                accessible = h.userIsAuthorizedToAccessModel
-                unrestrictedUsers = h.getUnrestrictedUsers()
+                accessible = h.user_is_authorized_to_access_model
+                unrestricted_users = h.get_unrestricted_users()
                 user = session['user']
-                unrestrictedForms = [f for f in forms
-                                     if accessible(user, f, unrestrictedUsers)]
-                if unrestrictedForms:
-                    session['user'].rememberedForms += unrestrictedForms
-                    session['user'].datetimeModified = h.now()
+                unrestricted_forms = [f for f in forms
+                                     if accessible(user, f, unrestricted_users)]
+                if unrestricted_forms:
+                    session['user'].remembered_forms += unrestricted_forms
+                    session['user'].datetime_modified = h.now()
                     Session.commit()
-                    return [f.id for f in unrestrictedForms]
+                    return [f.id for f in unrestricted_forms]
                 else:
                     response.status_int = 403
-                    return h.unauthorizedMsg
+                    return h.unauthorized_msg
             else:
                 response.status_int = 404
                 return {'error': u'No valid form ids were provided.'}
@@ -411,9 +411,9 @@ class FormsController(BaseController):
     def update_morpheme_references(self):
         """Update the morphological analysis-related attributes of all forms.
 
-        That is, update the values of the ``morphemeBreakIDs``,
-        ``morphemeGlossIDs``, ``syntacticCategoryString`` and
-        ``breakGlossCategory`` attributes of every form in the database.
+        That is, update the values of the ``morpheme_break_ids``,
+        ``morpheme_gloss_ids``, ``syntactic_category_string`` and
+        ``break_gloss_category`` attributes of every form in the database.
 
         :URL: ``PUT /forms/update_morpheme_references``
         :returns: a list of ids corresponding to the forms where the update
@@ -424,17 +424,17 @@ class FormsController(BaseController):
            It should not be necessary to request the regeneration of morpheme
            references via this action since this should already be accomplished
            automatically by the calls to
-           ``updateFormsContainingThisFormAsMorpheme`` on all successful
+           ``update_forms_containing_this_form_as_morpheme`` on all successful
            update, create and delete requests on form resources.  This action
            is, therefore, deprecated (read: use it with caution) and may be
            removed in future versions of the OLD.
 
         """
-        forms = h.getForms()
-        return updateMorphemeReferencesOfForms(h.getForms(), h.getMorphemeDelimiters(), whole_db=forms, make_backups=False)
+        forms = h.get_forms()
+        return update_morpheme_references_of_forms(h.get_forms(), h.get_morpheme_delimiters(), whole_db=forms, make_backups=False)
 
 
-def updateApplicationSettingsIfFormIsForeignWord(form):
+def update_application_settings_if_form_is_foreign_word(form):
     """Update the transcription validation functionality of the active application settings if the input form is a foreign word.
 
     :param form: a form model object
@@ -442,17 +442,17 @@ def updateApplicationSettingsIfFormIsForeignWord(form):
 
     """
 
-    if h.formIsForeignWord(form):
+    if h.form_is_foreign_word(form):
         try:
-            applicationSettings = getattr(app_globals, 'applicationSettings', None)
-            applicationSettings.getAttributes()
+            application_settings = getattr(app_globals, 'application_settings', None)
+            application_settings.get_attributes()
         except AttributeError:
-            app_globals.applicationSettings = h.ApplicationSettings()
+            app_globals.application_settings = h.ApplicationSettings()
         except NameError:
             pass
 
 
-def getNewEditFormData(GET_params):
+def get_new_edit_form_data(GET_params):
     """Return the data necessary to create a new OLD form or update an existing one.
     
     :param GET_params: the ``request.GET`` dictionary-like object generated by
@@ -465,17 +465,17 @@ def getNewEditFormData(GET_params):
     value is a non-empty string (and not a valid ISO 8601 datetime) add the
     appropriate list of objects to the return dictionary.  If the value of a key
     is a valid ISO 8601 datetime string, add the corresponding list of objects
-    *only* if the datetime does *not* match the most recent ``datetimeModified``
+    *only* if the datetime does *not* match the most recent ``datetime_modified``
     value of the resource.  That is, a non-matching datetime indicates that the
     requester has out-of-date data.
 
     """
     # Map param names to the OLD model objects from which they are derived.
-    paramName2ModelName = {
+    param_name2model_name = {
         'grammaticalities': 'ApplicationSettings',
-        'elicitationMethods': 'ElicitationMethod',
+        'elicitation_methods': 'ElicitationMethod',
         'tags': 'Tag',
-        'syntacticCategories': 'SyntacticCategory',
+        'syntactic_categories': 'SyntacticCategory',
         'speakers': 'Speaker',
         'users': 'User',
         'sources': 'Source'
@@ -484,13 +484,13 @@ def getNewEditFormData(GET_params):
     # map_ maps param names to functions that retrieve the appropriate data
     # from the db.
     map_ = {
-        'grammaticalities': h.getGrammaticalities,
-        'elicitationMethods': h.getMiniDictsGetter('ElicitationMethod'),
-        'tags': h.getMiniDictsGetter('Tag'),
-        'syntacticCategories': h.getMiniDictsGetter('SyntacticCategory'),
-        'speakers': h.getMiniDictsGetter('Speaker'),
-        'users': h.getMiniDictsGetter('User'),
-        'sources': h.getMiniDictsGetter('Source')
+        'grammaticalities': h.get_grammaticalities,
+        'elicitation_methods': h.get_mini_dicts_getter('ElicitationMethod'),
+        'tags': h.get_mini_dicts_getter('Tag'),
+        'syntactic_categories': h.get_mini_dicts_getter('SyntacticCategory'),
+        'speakers': h.get_mini_dicts_getter('Speaker'),
+        'users': h.get_mini_dicts_getter('User'),
+        'sources': h.get_mini_dicts_getter('Source')
     }
 
     # result is initialized as a dict with empty list values.
@@ -502,17 +502,17 @@ def getNewEditFormData(GET_params):
             val = GET_params.get(key)
             # Proceed so long as val is not an empty string.
             if val:
-                valAsDatetimeObj = h.datetimeString2datetime(val)
-                if valAsDatetimeObj:
+                val_as_datetime_obj = h.datetime_string2datetime(val)
+                if val_as_datetime_obj:
                     # Value of param is an ISO 8601 datetime string that
-                    # does not match the most recent datetimeModified of the
+                    # does not match the most recent datetime_modified of the
                     # relevant model in the db: therefore we return a list
                     # of objects/dicts.  If the datetimes do match, this
                     # indicates that the requester's own stores are
                     # up-to-date so we return nothing.
-                    if valAsDatetimeObj != \
-                    h.getMostRecentModificationDatetime(
-                    paramName2ModelName[key]):
+                    if val_as_datetime_obj != \
+                    h.get_most_recent_modification_datetime(
+                    param_name2model_name[key]):
                         result[key] = map_[key]()
                 else:
                     result[key] = map_[key]()
@@ -529,23 +529,23 @@ def getNewEditFormData(GET_params):
 # Backup form
 ################################################################################
 
-def backupForm(formDict):
+def backup_form(form_dict):
     """Backup a form.
 
-    :param dict formDict: a representation of a form model.
+    :param dict form_dict: a representation of a form model.
     :returns: ``None``
 
     """
-    formBackup = FormBackup()
-    formBackup.vivify(formDict)
-    Session.add(formBackup)
+    form_backup = FormBackup()
+    form_backup.vivify(form_dict)
+    Session.add(form_backup)
 
 
 ################################################################################
 # Form Create & Update Functions
 ################################################################################
 
-def createNewForm(data):
+def create_new_form(data):
     """Create a new form.
 
     :param dict data: the form to be created.
@@ -556,26 +556,26 @@ def createNewForm(data):
     form.UUID = unicode(uuid4())
 
     # Unicode Data
-    form.transcription = h.toSingleSpace(h.normalize(data['transcription']))
-    form.phoneticTranscription = h.toSingleSpace(h.normalize(
-                                            data['phoneticTranscription']))
-    form.narrowPhoneticTranscription = h.toSingleSpace(h.normalize(
-                                        data['narrowPhoneticTranscription']))
-    form.morphemeBreak = h.toSingleSpace(h.normalize(data['morphemeBreak']))
-    form.morphemeGloss = h.toSingleSpace(h.normalize(data['morphemeGloss']))
+    form.transcription = h.to_single_space(h.normalize(data['transcription']))
+    form.phonetic_transcription = h.to_single_space(h.normalize(
+                                            data['phonetic_transcription']))
+    form.narrow_phonetic_transcription = h.to_single_space(h.normalize(
+                                        data['narrow_phonetic_transcription']))
+    form.morpheme_break = h.to_single_space(h.normalize(data['morpheme_break']))
+    form.morpheme_gloss = h.to_single_space(h.normalize(data['morpheme_gloss']))
     form.comments = h.normalize(data['comments'])
-    form.speakerComments = h.normalize(data['speakerComments'])
+    form.speaker_comments = h.normalize(data['speaker_comments'])
     form.syntax = h.normalize(data['syntax'])
     form.semantics = h.normalize(data['semantics'])
     form.grammaticality = data['grammaticality']
     form.status = data['status']
 
-    # User-entered date: dateElicited
-    form.dateElicited = data['dateElicited']
+    # User-entered date: date_elicited
+    form.date_elicited = data['date_elicited']
 
     # Many-to-One
-    form.elicitationMethod = data['elicitationMethod']
-    form.syntacticCategory = data['syntacticCategory']
+    form.elicitation_method = data['elicitation_method']
+    form.syntactic_category = data['syntactic_category']
     form.source = data['source']
     form.elicitor = data['elicitor']
     form.verifier = data['verifier']
@@ -590,26 +590,26 @@ def createNewForm(data):
 
     # Restrict the entire form if it is associated to restricted files.
     tags = [f.tags for f in form.files]
-    tags = [tag for tagList in tags for tag in tagList]
-    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-    if restrictedTags:
-        restrictedTag = restrictedTags[0]
-        if restrictedTag not in form.tags:
-            form.tags.append(restrictedTag)
+    tags = [tag for tag_list in tags for tag in tag_list]
+    restricted_tags = [tag for tag in tags if tag.name == u'restricted']
+    if restricted_tags:
+        restricted_tag = restricted_tags[0]
+        if restricted_tag not in form.tags:
+            form.tags.append(restricted_tag)
 
     # OLD-generated Data
-    form.datetimeEntered = form.datetimeModified = h.now()
+    form.datetime_entered = form.datetime_modified = h.now()
     form.enterer = form.modifier = session['user']
 
-    # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
+    # Create the morpheme_break_ids and morpheme_gloss_ids attributes.
     # We add the form first to get an ID so that monomorphemic Forms can be
     # self-referential.
     Session.add(form)
-    (form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString,
-        form.breakGlossCategory, cache) = compileMorphemicAnalysis(form)
+    (form.morpheme_break_ids, form.morpheme_gloss_ids, form.syntactic_category_string,
+        form.break_gloss_category, cache) = compile_morphemic_analysis(form)
     return form
 
-def updateForm(form, data):
+def update_form(form, data):
     """Update a form model.
 
     :param form: the form model to be updated.
@@ -620,25 +620,25 @@ def updateForm(form, data):
     """
     changed = False
     # Unicode Data
-    changed = h.setAttr(form, 'transcription',
-            h.toSingleSpace(h.normalize(data['transcription'])), changed)
-    changed = h.setAttr(form, 'phoneticTranscription',
-            h.toSingleSpace(h.normalize(data['phoneticTranscription'])), changed)
-    changed = h.setAttr(form, 'narrowPhoneticTranscription',
-            h.toSingleSpace(h.normalize(data['narrowPhoneticTranscription'])), changed)
-    changed = h.setAttr(form, 'morphemeBreak',
-            h.toSingleSpace(h.normalize(data['morphemeBreak'])), changed)
-    changed = h.setAttr(form, 'morphemeGloss',
-            h.toSingleSpace(h.normalize(data['morphemeGloss'])), changed)
-    changed = h.setAttr(form, 'comments', h.normalize(data['comments']), changed)
-    changed = h.setAttr(form, 'speakerComments', h.normalize(data['speakerComments']), changed)
-    changed = h.setAttr(form, 'syntax', h.normalize(data['syntax']), changed)
-    changed = h.setAttr(form, 'semantics', h.normalize(data['semantics']), changed)
-    changed = h.setAttr(form, 'grammaticality', data['grammaticality'], changed)
-    changed = h.setAttr(form, 'status', data['status'], changed)
+    changed = h.set_attr(form, 'transcription',
+            h.to_single_space(h.normalize(data['transcription'])), changed)
+    changed = h.set_attr(form, 'phonetic_transcription',
+            h.to_single_space(h.normalize(data['phonetic_transcription'])), changed)
+    changed = h.set_attr(form, 'narrow_phonetic_transcription',
+            h.to_single_space(h.normalize(data['narrow_phonetic_transcription'])), changed)
+    changed = h.set_attr(form, 'morpheme_break',
+            h.to_single_space(h.normalize(data['morpheme_break'])), changed)
+    changed = h.set_attr(form, 'morpheme_gloss',
+            h.to_single_space(h.normalize(data['morpheme_gloss'])), changed)
+    changed = h.set_attr(form, 'comments', h.normalize(data['comments']), changed)
+    changed = h.set_attr(form, 'speaker_comments', h.normalize(data['speaker_comments']), changed)
+    changed = h.set_attr(form, 'syntax', h.normalize(data['syntax']), changed)
+    changed = h.set_attr(form, 'semantics', h.normalize(data['semantics']), changed)
+    changed = h.set_attr(form, 'grammaticality', data['grammaticality'], changed)
+    changed = h.set_attr(form, 'status', data['status'], changed)
 
-    # User-entered date: dateElicited
-    changed = h.setAttr(form, 'dateElicited', data['dateElicited'], changed)
+    # User-entered date: date_elicited
+    changed = h.set_attr(form, 'date_elicited', data['date_elicited'], changed)
 
     # One-to-Many Data: Translations
     # First check if the user has made any changes to the translations.
@@ -646,102 +646,102 @@ def updateForm(form, data):
     #  ones.  (Note: this will result in the deletion of a translation and the
     #  recreation of an identical one with a different index.  There may be a
     #  "better" way of doing this, but this way is simple...
-    translationsWeHave = [(t.transcription, t.grammaticality) for t in form.translations]
-    translationsToAdd = [(t.transcription, t.grammaticality) for t in data['translations']]
-    if set(translationsWeHave) != set(translationsToAdd):
+    translations_we_have = [(t.transcription, t.grammaticality) for t in form.translations]
+    translations_to_add = [(t.transcription, t.grammaticality) for t in data['translations']]
+    if set(translations_we_have) != set(translations_to_add):
         form.translations = data['translations']
         changed = True
 
     # Many-to-One Data
-    changed = h.setAttr(form, 'elicitationMethod', data['elicitationMethod'], changed)
-    changed = h.setAttr(form, 'syntacticCategory', data['syntacticCategory'], changed)
-    changed = h.setAttr(form, 'source', data['source'], changed)
-    changed = h.setAttr(form, 'elicitor', data['elicitor'], changed)
-    changed = h.setAttr(form, 'verifier', data['verifier'], changed)
-    changed = h.setAttr(form, 'speaker', data['speaker'], changed)
+    changed = h.set_attr(form, 'elicitation_method', data['elicitation_method'], changed)
+    changed = h.set_attr(form, 'syntactic_category', data['syntactic_category'], changed)
+    changed = h.set_attr(form, 'source', data['source'], changed)
+    changed = h.set_attr(form, 'elicitor', data['elicitor'], changed)
+    changed = h.set_attr(form, 'verifier', data['verifier'], changed)
+    changed = h.set_attr(form, 'speaker', data['speaker'], changed)
 
     # Many-to-Many Data: tags & files
     # Update only if the user has made changes.
-    filesToAdd = [f for f in data['files'] if f]
-    tagsToAdd = [t for t in data['tags'] if t]
+    files_to_add = [f for f in data['files'] if f]
+    tags_to_add = [t for t in data['tags'] if t]
 
-    if set(filesToAdd) != set(form.files):
-        form.files = filesToAdd
+    if set(files_to_add) != set(form.files):
+        form.files = files_to_add
         changed = True
 
         # Cause the entire form to be tagged as restricted if any one of its
         # files are so tagged.
         tags = [f.tags for f in form.files]
-        tags = [tag for tagList in tags for tag in tagList]
-        restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-        if restrictedTags:
-            restrictedTag = restrictedTags[0]
-            if restrictedTag not in tagsToAdd:
-                tagsToAdd.append(restrictedTag)
+        tags = [tag for tag_list in tags for tag in tag_list]
+        restricted_tags = [tag for tag in tags if tag.name == u'restricted']
+        if restricted_tags:
+            restricted_tag = restricted_tags[0]
+            if restricted_tag not in tags_to_add:
+                tags_to_add.append(restricted_tag)
 
-    if set(tagsToAdd) != set(form.tags):
-        form.tags = tagsToAdd
+    if set(tags_to_add) != set(form.tags):
+        form.tags = tags_to_add
         changed = True
 
-    # Create the morphemeBreakIDs and morphemeGlossIDs attributes.
-    (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString,
-        breakGlossCategory, cache) = compileMorphemicAnalysis(form)
+    # Create the morpheme_break_ids and morpheme_gloss_ids attributes.
+    (morpheme_break_ids, morpheme_gloss_ids, syntactic_category_string,
+        break_gloss_category, cache) = compile_morphemic_analysis(form)
 
-    changed = h.setAttr(form, 'morphemeBreakIDs', morphemeBreakIDs, changed)
-    changed = h.setAttr(form, 'morphemeGlossIDs', morphemeGlossIDs, changed)
-    changed = h.setAttr(form, 'syntacticCategoryString', syntacticCategoryString, changed)
-    changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
+    changed = h.set_attr(form, 'morpheme_break_ids', morpheme_break_ids, changed)
+    changed = h.set_attr(form, 'morpheme_gloss_ids', morpheme_gloss_ids, changed)
+    changed = h.set_attr(form, 'syntactic_category_string', syntactic_category_string, changed)
+    changed = h.set_attr(form, 'break_gloss_category', break_gloss_category, changed)
 
     if changed:
-        form.datetimeModified = h.now()
+        form.datetime_modified = h.now()
         session['user'] = Session.merge(session['user'])
         form.modifier = session['user']
         return form
     return changed
 
 
-def updateMorphemeReferencesOfForm(form, validDelimiters=None, **kwargs):
+def update_morpheme_references_of_form(form, valid_delimiters=None, **kwargs):
     """Update the morphological analysis-related attributes of a form model.
 
-    Attempt to update the values of the ``morphemeBreakIDs``,
-    ``morphemeGlossIDs``, ``syntacticCategoryString`` and ``breakGlossCategory``
+    Attempt to update the values of the ``morpheme_break_ids``,
+    ``morpheme_gloss_ids``, ``syntactic_category_string`` and ``break_gloss_category``
     attributes of a form using only the lexical items specified in the list
-    ``kwargs['lexicalItems']`` or the list ``kwargs['deletedLexicalItems']``.
+    ``kwargs['lexical_items']`` or the list ``kwargs['deleted_lexical_items']``.
 
     :param form: the form model to be updated.
-    :param list validDelimiters: morpheme delimiters as strings.
-    :param list kwargs['lexicalItems']: a list of form models.
-    :param list kwargs['deletedLexicalItems']: a list of form models.
+    :param list valid_delimiters: morpheme delimiters as strings.
+    :param list kwargs['lexical_items']: a list of form models.
+    :param list kwargs['deleted_lexical_items']: a list of form models.
     :returns: the form if updated; else ``False``.
 
     """
     changed = False
-    (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString,
-        breakGlossCategory, cache) = compileMorphemicAnalysis(form, validDelimiters, **kwargs)
-    changed = h.setAttr(form, 'morphemeBreakIDs', morphemeBreakIDs, changed)
-    changed = h.setAttr(form, 'morphemeGlossIDs', morphemeGlossIDs, changed)
-    changed = h.setAttr(form, 'syntacticCategoryString', syntacticCategoryString, changed)
-    changed = h.setAttr(form, 'breakGlossCategory', breakGlossCategory, changed)
+    (morpheme_break_ids, morpheme_gloss_ids, syntactic_category_string,
+        break_gloss_category, cache) = compile_morphemic_analysis(form, valid_delimiters, **kwargs)
+    changed = h.set_attr(form, 'morpheme_break_ids', morpheme_break_ids, changed)
+    changed = h.set_attr(form, 'morpheme_gloss_ids', morpheme_gloss_ids, changed)
+    changed = h.set_attr(form, 'syntactic_category_string', syntactic_category_string, changed)
+    changed = h.set_attr(form, 'break_gloss_category', break_gloss_category, changed)
     if changed:
-        form.datetimeModified = h.now()
+        form.datetime_modified = h.now()
         session['user'] = Session.merge(session['user'])
         form.modifier = session['user']
         return form, cache
     return changed, cache
 
-def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
+def update_morpheme_references_of_forms(forms, valid_delimiters, **kwargs):
     """Update the morphological analysis-related attributes of a list of form models.
 
-    Attempt to update the values of the ``morphemeBreakIDs``,
-    ``morphemeGlossIDs``, ``syntacticCategoryString`` and ``breakGlossCategory``
+    Attempt to update the values of the ``morpheme_break_ids``,
+    ``morpheme_gloss_ids``, ``syntactic_category_string`` and ``break_gloss_category``
     attributes of all forms in ``forms``.  The ``kwargs`` dict may contain
-    ``lexicalItems``, ``deletedLexicalItems`` or ``whole_db`` values which will be
-    passed to compileMorphemicAnalysis.
+    ``lexical_items``, ``deleted_lexical_items`` or ``whole_db`` values which will be
+    passed to compile_morphemic_analysis.
 
     :param list forms: the form models to be updated.
-    :param list validDelimiters: morpheme delimiters as strings.
-    :param list kwargs['lexicalItems']: a list of form models.
-    :param list kwargs['deletedLexicalItems']: a list of form models.
+    :param list valid_delimiters: morpheme delimiters as strings.
+    :param list kwargs['lexical_items']: a list of form models.
+    :param list kwargs['deleted_lexical_items']: a list of form models.
     :param list kwargs['whole_db']: a list of all the form models in the database.
     :returns: a list of form ``id`` values corresponding to the forms that have
         been updated.
@@ -755,25 +755,25 @@ def updateMorphemeReferencesOfForms(forms, validDelimiters, **kwargs):
     modification_datetime = h.now()
     form_table = Form.__table__
     for form in forms:
-        (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString,
-            breakGlossCategory, kwargs['cache']) = compileMorphemicAnalysis(form, validDelimiters, **kwargs)
-        if (morphemeBreakIDs, morphemeGlossIDs, syntacticCategoryString, breakGlossCategory) != \
-            (form.morphemeBreakIDs, form.morphemeGlossIDs, form.syntacticCategoryString, form.breakGlossCategory):
+        (morpheme_break_ids, morpheme_gloss_ids, syntactic_category_string,
+            break_gloss_category, kwargs['cache']) = compile_morphemic_analysis(form, valid_delimiters, **kwargs)
+        if (morpheme_break_ids, morpheme_gloss_ids, syntactic_category_string, break_gloss_category) != \
+            (form.morpheme_break_ids, form.morpheme_gloss_ids, form.syntactic_category_string, form.break_gloss_category):
             form_buffer.append({
                 'id_': form.id, 
-                'morphemeBreakIDs': utf8_encode(morphemeBreakIDs),
-                'morphemeGlossIDs': utf8_encode(morphemeGlossIDs),
-                'syntacticCategoryString': utf8_encode(syntacticCategoryString),
-                'breakGlossCategory': utf8_encode(breakGlossCategory),
+                'morpheme_break_ids': utf8_encode(morpheme_break_ids),
+                'morpheme_gloss_ids': utf8_encode(morpheme_gloss_ids),
+                'syntactic_category_string': utf8_encode(syntactic_category_string),
+                'break_gloss_category': utf8_encode(break_gloss_category),
                 'modifier_id': modifier_id,
-                'datetimeModified': modification_datetime
+                'datetime_modified': modification_datetime
             })
             if make_backups:
                 formbackup = FormBackup()
-                formbackup.vivify(form.getDict())
+                formbackup.vivify(form.get_dict())
                 formbackup_buffer.append(formbackup)
     if form_buffer:
-        rdbms_name = h.getRDBMSName(config=config)
+        rdbms_name = h.get_RDBMS_name(config=config)
         if rdbms_name == 'mysql':
             Session.execute('set names utf8;')
         update = form_table.update().where(form_table.c.id==bindparam('id_')).\
@@ -790,53 +790,53 @@ def utf8_encode(unistr):
     except AttributeError:
         return None
 
-def compileMorphemicAnalysis(form, morphemeDelimiters=None, **kwargs):
+def compile_morphemic_analysis(form, morpheme_delimiters=None, **kwargs):
     """An error-handling wrapper arround :func:`compileMorphemicAnalysis_`.
 
     Catch any error, log it and return a default 4-tuple.
 
     :param form: the form model for which the morphological values are to be generated.
-    :param list validDelimiters: morpheme delimiters as strings.
+    :param list valid_delimiters: morpheme delimiters as strings.
     :param dict kwargs: arguments that can affect the degree to which the database is queried.
     :returns: the output of :func:`compileMorphemicAnalysis_` or, if an error
         occurs, a 4-tuple of ``None`` objects.
 
     """
     try:
-        return compileMorphemicAnalysis_(form, morphemeDelimiters, **kwargs)
+        return compileMorphemicAnalysis_(form, morpheme_delimiters, **kwargs)
     except Exception, e:
-        log.debug('compileMorphemicAnalysis raised an error (%s) on "%s"/"%s".' % (
-            e, form.morphemeBreak, form.morphemeGloss))
+        log.debug('compile_morphemic_analysis raised an error (%s) on "%s"/"%s".' % (
+            e, form.morpheme_break, form.morpheme_gloss))
         return None, None, None, None, {}
 
-def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
+def compileMorphemicAnalysis_(form, morpheme_delimiters=None, **kwargs):
     """Generate values fo the morphological analysis-related attributes of a form model.
 
     :param form: the form model for which the morphological values are to be generated.
-    :param list validDelimiters: morpheme delimiters as strings.
+    :param list valid_delimiters: morpheme delimiters as strings.
     :param dict kwargs: arguments that can affect the degree to which the database is queried.
     :returns: a 4-tuple containing the generated values or all four ``None``
         objects if no values can be generated.
 
-    Generate values for the ``morphemeBreakIDs``, ``morphemeGlossIDs``,
-    ``syntacticCategoryString`` and ``breakGlossCategory`` attributes of the
+    Generate values for the ``morpheme_break_ids``, ``morpheme_gloss_ids``,
+    ``syntactic_category_string`` and ``break_gloss_category`` attributes of the
     input form.
 
     For each morpheme detected in the ``form``, search the database for forms
-    whose ``morphemeBreak`` value matches the morpheme's phonemic form and whose
-    ``morphemeGloss`` value matches the morpheme's gloss.  If a perfect match is
+    whose ``morpheme_break`` value matches the morpheme's phonemic form and whose
+    ``morpheme_gloss`` value matches the morpheme's gloss.  If a perfect match is
     not found, search the database for forms matching just the phonemic form or
     just the gloss.
 
     Matching forms are represented as triples where the first element is the
-    ``id`` value of the match, the second is its ``morphemeBreak`` or
-    ``morphemeGloss`` value and the third is its ``syntacticCategory.name``
-    value.  To illustrate, consider a form with ``morphemeBreak`` value
-    u'chien-s' and ``morphemeGloss`` value u'dog-PL' and assume the lexical
+    ``id`` value of the match, the second is its ``morpheme_break`` or
+    ``morpheme_gloss`` value and the third is its ``syntactic_category.name``
+    value.  To illustrate, consider a form with ``morpheme_break`` value
+    u'chien-s' and ``morpheme_gloss`` value u'dog-PL' and assume the lexical
     entries 'chien/dog/N/33', 's/PL/Agr/103' and 's/PL/Num/111' (where, for
-    */a/b/c/d*, *a* is the ``morphemeBreak`` value, *b* is the ``morphemeGloss``
-    value, *c* is the ``syntacticCategory.name`` value and *d* is the ``id``
-    value.  Running :func:`compileMorphemicAnalysis` on the target form returns
+    */a/b/c/d*, *a* is the ``morpheme_break`` value, *b* is the ``morpheme_gloss``
+    value, *c* is the ``syntactic_category.name`` value and *d* is the ``id``
+    value.  Running :func:`compile_morphemic_analysis` on the target form returns
     the following 4-tuple ``q``::
 
         (
@@ -846,20 +846,20 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
             u'chien|dog|N-s|PL|Num'
         )
 
-    where ``q[0]`` is the ``morphemeBreakIDs`` value, ``q[1]`` is the
-    ``morphemeGlossIDs`` value, ``q[2]`` is ``syntacticCategoryString`` value
-    and ``q[3]`` is ``breakGlossCategory`` value.
+    where ``q[0]`` is the ``morpheme_break_ids`` value, ``q[1]`` is the
+    ``morpheme_gloss_ids`` value, ``q[2]`` is ``syntactic_category_string`` value
+    and ``q[3]`` is ``break_gloss_category`` value.
 
-    If ``kwargs`` contains a 'lexicalItems' or a 'deletedLexicalItems' key, then
-    :func:`compileMorphemicAnalysis` will *update* (i.e., not re-create) the 4
+    If ``kwargs`` contains a 'lexical_items' or a 'deleted_lexical_items' key, then
+    :func:`compile_morphemic_analysis` will *update* (i.e., not re-create) the 4
     relevant values of the form using only the items in
-    ``kwargs['lexicalItems']`` or ``kwargs['deletedLexicalItems']``.  This
+    ``kwargs['lexical_items']`` or ``kwargs['deleted_lexical_items']``.  This
     facilitates lexical change percolation without massively redundant database
     queries.
 
     """
 
-    def join(bgc, morphemeDelimiters, bgcDelimiter):
+    def join(bgc, morpheme_delimiters, bgc_delimiter):
         """Convert a break-gloss-category tuple into a delimited string.
         
         Join the break-gloss-category 3-tuple ``bgc`` using the delimiter
@@ -867,8 +867,8 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
         first such delimiter is returned::
 
         :param list bgc: the morpheme as phonemic form, gloss and category.
-        :param list morphemeDelimiters: morpheme delimiters as strings.
-        :param str bgcDelimiter: delimiter used to join the elements of the morpheme.
+        :param list morpheme_delimiters: morpheme delimiters as strings.
+        :param str bgc_delimiter: delimiter used to join the elements of the morpheme.
         :returns: a string representation of the morpheme.
 
             >>> join([u'le', u'the', u'Det'], [u'-', u'=', u' '], u'|')
@@ -882,58 +882,58 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
 
         """
 
-        if (bgc[0] in morphemeDelimiters and bgc[1] in morphemeDelimiters and
-            bgc[2] in morphemeDelimiters):
+        if (bgc[0] in morpheme_delimiters and bgc[1] in morpheme_delimiters and
+            bgc[2] in morpheme_delimiters):
             return bgc[0]
 
-        return bgcDelimiter.join(bgc)
+        return bgc_delimiter.join(bgc)
 
-    def morphemicAnalysisIsConsistent(**kwargs):
+    def morphemic_analysis_is_consistent(**kwargs):
         """Determine whether a morphemic analysis is consistent.
         
         :param dict kwargs: contains the morphological data in various pre-processed states.
         :returns: ``True`` if the morphemic analysis is consistent; ``False`` otherwise.
 
-        "Consistent" means that the ``morphemeBreak`` and ``morphemeGloss``
+        "Consistent" means that the ``morpheme_break`` and ``morpheme_gloss``
         values of ``kargs`` are not empty, there are equal numbers of morpheme
         break and morpheme gloss "words" and each morpheme break word has the
         same number of morphemes as its morpheme gloss counterpart.
 
         """
-        return (kwargs['morphemeBreak'] != u'' and
-            kwargs['morphemeGloss'] != u'' and
-            len(kwargs['mbWords']) == len(kwargs['mgWords']) and
-            [len(re.split(kwargs['morphemeSplitter'], mbw)) for mbw in kwargs['mbWords']] ==
-            [len(re.split(kwargs['morphemeSplitter'], mgw)) for mgw in kwargs['mgWords']])
+        return (kwargs['morpheme_break'] != u'' and
+            kwargs['morpheme_gloss'] != u'' and
+            len(kwargs['mb_words']) == len(kwargs['mg_words']) and
+            [len(re.split(kwargs['morpheme_splitter'], mbw)) for mbw in kwargs['mb_words']] ==
+            [len(re.split(kwargs['morpheme_splitter'], mgw)) for mgw in kwargs['mg_words']])
 
-    def getCategoryFromPartialMatch(morphemeMatches, glossMatches):
+    def get_category_from_partial_match(morpheme_matches, gloss_matches):
         """Return a syntactic category name for a partially matched morpheme.
 
-        :param list morphemeMatches: forms matching the morpheme's transcription.
-        :param list glossMatches: forms matching the morpheme's gloss.
+        :param list morpheme_matches: forms matching the morpheme's transcription.
+        :param list gloss_matches: forms matching the morpheme's gloss.
         :returns: the category name of the first morpheme match, else that of
-            the first gloss match, else the value of ``h.unknownCategory``, i.e,. ``u'?'``.
+            the first gloss match, else the value of ``h.unknown_category``, i.e,. ``u'?'``.
 
         """
         return filter(None,
-            [getattr(m.syntacticCategory, 'name', None) for m in morphemeMatches] +
-            [getattr(g.syntacticCategory, 'name', None) for g in glossMatches] + [h.unknownCategory])[0]
+            [getattr(m.syntactic_category, 'name', None) for m in morpheme_matches] +
+            [getattr(g.syntactic_category, 'name', None) for g in gloss_matches] + [h.unknown_category])[0]
 
-    def getBreakGlossCategory(morphemeDelimiters, morphemeBreak, morphemeGloss,
-                              syntacticCategoryString, bgcDelimiter):
-        """Return a ``breakGlossCategory`` string, e.g., u'le|the|Det-s|PL|Num chien|dog|N-s|PL|Num'."""
+    def get_break_gloss_category(morpheme_delimiters, morpheme_break, morpheme_gloss,
+                              syntactic_category_string, bgc_delimiter):
+        """Return a ``break_gloss_category`` string, e.g., u'le|the|Det-s|PL|Num chien|dog|N-s|PL|Num'."""
         try:
-            delimiters = [u' '] + morphemeDelimiters
-            splitter = u'([%s])' % ''.join([h.escREMetaChars(d) for d in delimiters])
-            mbSplit = filter(None, re.split(splitter, morphemeBreak))
-            mgSplit = filter(None, re.split(splitter, morphemeGloss))
-            scSplit = filter(None, re.split(splitter, syntacticCategoryString))
-            breakGlossCategory = zip(mbSplit, mgSplit, scSplit)
-            return u''.join([join(bgc, delimiters, bgcDelimiter) for bgc in breakGlossCategory])
+            delimiters = [u' '] + morpheme_delimiters
+            splitter = u'([%s])' % ''.join([h.esc_RE_meta_chars(d) for d in delimiters])
+            mb_split = filter(None, re.split(splitter, morpheme_break))
+            mg_split = filter(None, re.split(splitter, morpheme_gloss))
+            sc_split = filter(None, re.split(splitter, syntactic_category_string))
+            break_gloss_category = zip(mb_split, mg_split, sc_split)
+            return u''.join([join(bgc, delimiters, bgc_delimiter) for bgc in break_gloss_category])
         except TypeError:
             return None
 
-    def getFakeForm(quadruple):
+    def get_fake_form(quadruple):
         """Return ``quadruple`` as a form-like object.
         
         :param tuple quadruple: ``(id, mb, mg, sc)``.
@@ -944,227 +944,227 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
             pass
         class FakeSyntacticCategory(object):
             pass
-        fakeForm = FakeForm()
-        fakeSyntacticCategory = FakeSyntacticCategory()
-        fakeSyntacticCategory.name = quadruple[3]
-        fakeForm.id = quadruple[0]
-        fakeForm.morphemeBreak = quadruple[1]
-        fakeForm.morphemeGloss = quadruple[2]
-        fakeForm.syntacticCategory = fakeSyntacticCategory
-        return fakeForm
+        fake_form = FakeForm()
+        fake_syntactic_category = FakeSyntacticCategory()
+        fake_syntactic_category.name = quadruple[3]
+        fake_form.id = quadruple[0]
+        fake_form.morpheme_break = quadruple[1]
+        fake_form.morpheme_gloss = quadruple[2]
+        fake_form.syntactic_category = fake_syntactic_category
+        return fake_form
 
-    def getPerfectMatches(form, wordIndex, morphemeIndex, morpheme, gloss, matchesFound,
-                          lexicalItems, deletedLexicalItems, whole_db):
+    def get_perfect_matches(form, word_index, morpheme_index, morpheme, gloss, matches_found,
+                          lexical_items, deleted_lexical_items, whole_db):
         """Return the list of forms that perfectly match a given morpheme.
         
-        That is, return all forms ``f`` such that ``f.morphemeBreak==morpheme``
-        *and* ``f.morphemeGloss==gloss``.
+        That is, return all forms ``f`` such that ``f.morpheme_break==morpheme``
+        *and* ``f.morpheme_gloss==gloss``.
 
-        If one of ``lexicalItems`` or ``deletedLexicalItems`` is truthy, then
+        If one of ``lexical_items`` or ``deleted_lexical_items`` is truthy, then
         the result is generated using only those lists plus the existing
-        references ``form.morphemeBreakIDs`` and ``form.morphemeGlossIDs``.
+        references ``form.morpheme_break_ids`` and ``form.morpheme_gloss_ids``.
         This facilitates lexical change percolation while eliminating
         unnecessary database requests.  Note that the presence of a non-empty
-        ``lexicalItems`` or ``deletedLexicalItems`` list implies that the
+        ``lexical_items`` or ``deleted_lexical_items`` list implies that the
         supplied forms represent the only changes to the database relevant to
         the morphological analysis of ``form``.
 
         One complication arises from the fact that perfect matches mask partial
-        ones.  If :func:`getPerfectMatches` removes the only perfect matches for
+        ones.  If :func:`get_perfect_matches` removes the only perfect matches for
         a given morpheme, then it is possible that there are partial matches not
-        listed in ``lexicalItems``.  Therefore, :ref:`getPartialMatches` must be
+        listed in ``lexical_items``.  Therefore, :ref:`get_partial_matches` must be
         made to query the database *only* when the morpheme in question is
-        encountered.  This message is passed to :ref:`getPartialMatches` by
+        encountered.  This message is passed to :ref:`get_partial_matches` by
         returning an ordered pair (tuple) containing the newly match-less
         morpheme instead of the usual list of matches.
 
         :param form: the form model whose morphological analysis-related attributes are being generated.
-        :param int wordIndex: the index of the word containing the morpheme being analyzed.
-        :param int morphemeIndex: the index, within the word, of the morpheme being analyzed.
+        :param int word_index: the index of the word containing the morpheme being analyzed.
+        :param int morpheme_index: the index, within the word, of the morpheme being analyzed.
         :param str morpheme: the transcription of the morpheme.
         :param str gloss: the gloss of the morpheme.
-        :param dict matchesFound: keys are morpheme 2-tuples and values are lists of matches.
-        :param list lexicalItems: forms constituting the exclusive pool of potential matches.
-        :param list deletedLexicalItems: forms that must be deleted from the matches.
+        :param dict matches_found: keys are morpheme 2-tuples and values are lists of matches.
+        :param list lexical_items: forms constituting the exclusive pool of potential matches.
+        :param list deleted_lexical_items: forms that must be deleted from the matches.
         :returns: an ordered pair (tuple), where the second element is always
-            the (potentially updated) ``matchesFound`` dictionary.  In the
+            the (potentially updated) ``matches_found`` dictionary.  In the
             normal case, the first element is the list of perfect matches for
             the input morpheme.  When it is necessary to force
-            :func:`getPartialMatches` to query the database, the first element
+            :func:`get_partial_matches` to query the database, the first element
             of the return value is the ``(morpheme, gloss)`` tuple representing
             the morpheme.
 
         """
-        if (morpheme, gloss) in matchesFound:
-            return matchesFound[(morpheme, gloss)], matchesFound
+        if (morpheme, gloss) in matches_found:
+            return matches_found[(morpheme, gloss)], matches_found
         if whole_db:
-            result = [f for f in whole_db if f.morphemeBreak == morpheme and f.morphemeGloss == gloss]
-        elif lexicalItems or deletedLexicalItems:
-            extantMorphemeBreakIDs = json.loads(form.morphemeBreakIDs)
-            extantMorphemeGlossIDs = json.loads(form.morphemeGlossIDs)
+            result = [f for f in whole_db if f.morpheme_break == morpheme and f.morpheme_gloss == gloss]
+        elif lexical_items or deleted_lexical_items:
+            extant_morpheme_break_ids = json.loads(form.morpheme_break_ids)
+            extant_morpheme_gloss_ids = json.loads(form.morpheme_gloss_ids)
             # Extract extant perfect matches as quadruples: (id, mb, mg, sc)
-            extantPerfectMatchesOriginally = [(x[0][0], x[1][1], x[0][1], x[0][2])
-                for x in zip(extantMorphemeBreakIDs[wordIndex][morphemeIndex],
-                             extantMorphemeGlossIDs[wordIndex][morphemeIndex])
+            extant_perfect_matches_originally = [(x[0][0], x[1][1], x[0][1], x[0][2])
+                for x in zip(extant_morpheme_break_ids[word_index][morpheme_index],
+                             extant_morpheme_gloss_ids[word_index][morpheme_index])
                 if x[0][0] == x[1][0]]
             # Make extant matches look like form objects and remove those that
             # may have been deleted or updated
-            extantPerfectMatches = [getFakeForm(m) for m in extantPerfectMatchesOriginally
-                if m[0] not in [f.id for f in lexicalItems + deletedLexicalItems]]
-            perfectMatchesInLexicalItems = [f for f in lexicalItems
-                if f.morphemeBreak == morpheme and f.morphemeGloss == gloss]
-            perfectMatchesNow = sorted(extantPerfectMatches + perfectMatchesInLexicalItems,
+            extant_perfect_matches = [get_fake_form(m) for m in extant_perfect_matches_originally
+                if m[0] not in [f.id for f in lexical_items + deleted_lexical_items]]
+            perfect_matches_in_lexical_items = [f for f in lexical_items
+                if f.morpheme_break == morpheme and f.morpheme_gloss == gloss]
+            perfect_matches_now = sorted(extant_perfect_matches + perfect_matches_in_lexical_items,
                                        key=lambda f: f.id)
             # If perfect matches have been emptied by us, we return a tuple so that
-            # getPartialMatches knows to query the database for this morpheme only
-            if perfectMatchesNow == [] and extantPerfectMatchesOriginally != []:
-                return (morpheme, gloss), matchesFound
-            result = perfectMatchesNow
+            # get_partial_matches knows to query the database for this morpheme only
+            if perfect_matches_now == [] and extant_perfect_matches_originally != []:
+                return (morpheme, gloss), matches_found
+            result = perfect_matches_now
         else:
             result = Session.query(Form)\
-                .filter(Form.morphemeBreak==morpheme)\
-                .filter(Form.morphemeGloss==gloss).order_by(asc(Form.id)).all()
-        matchesFound[(morpheme, gloss)] = result
-        return result, matchesFound
+                .filter(Form.morpheme_break==morpheme)\
+                .filter(Form.morpheme_gloss==gloss).order_by(asc(Form.id)).all()
+        matches_found[(morpheme, gloss)] = result
+        return result, matches_found
 
-    def getPartialMatches(form, wordIndex, morphemeIndex, matchesFound, **kwargs):
+    def get_partial_matches(form, word_index, morpheme_index, matches_found, **kwargs):
         """Return the list of forms that partially match a given morpheme.
         
         If ``kwargs['morpheme']`` is present, return all forms ``f`` such that
-        ``f.morphemeBreak==kwargs['morpheme']``; else if ``kwargs['gloss']`` is
+        ``f.morpheme_break==kwargs['morpheme']``; else if ``kwargs['gloss']`` is
         present, return all forms such that
-        ``f.morphemeGloss==kwargs['gloss']``.
+        ``f.morpheme_gloss==kwargs['gloss']``.
 
-        If ``kwargs['lexicalItems']`` or ``kwargs['deletedLexicalItems']`` are
+        If ``kwargs['lexical_items']`` or ``kwargs['deleted_lexical_items']`` are
         present, then that list of forms will be used to build the list of
         partial matches and database will, usually, not be queried, cf.
-        :func:`getPerfectMatches` above.  The only case where the db will be
-        queried (when ``lexicalItems`` or ``deletedLexicalItems`` are supplied)
+        :func:`get_perfect_matches` above.  The only case where the db will be
+        queried (when ``lexical_items`` or ``deleted_lexical_items`` are supplied)
         is when ``kwargs['morpheme']`` or ``kwargs['gloss']`` is in
-        ``forceQuery``.  When this is so, it indicates that
-        :func:`getPerfectMatches` is communicating that the supplied lexical
+        ``force_query``.  When this is so, it indicates that
+        :func:`get_perfect_matches` is communicating that the supplied lexical
         info resulted in all perfect matches for the given morpheme being
         emptied and that, therefore, the database must be searched for partial
         matches.
 
         :param form: the form model whose morphological analysis-related attributes are being generated.
-        :param int wordIndex: the index of the word containing the morpheme being analyzed.
-        :param int morphemeIndex: the index, within the word, of the morpheme being analyzed.
-        :param dict matchesFound: keys are morpheme 2-tuples and values are lists of matches.
+        :param int word_index: the index of the word containing the morpheme being analyzed.
+        :param int morpheme_index: the index, within the word, of the morpheme being analyzed.
+        :param dict matches_found: keys are morpheme 2-tuples and values are lists of matches.
         :param str kwargs['morpheme']: the phonemic representation of the morpheme, if present.
         :param str kwargs['gloss']: the gloss of the morpheme, if present.
-        :param list kwargs['lexicalItems']: forms constituting the exclusive pool of potential matches.
-        :param list kwargs['deletedLexicalItems']: forms that must be deleted from the matches.
-        :param iterable kwargs['forceQuery']: a 2-tuple representing a morpheme or a list of perfect matches.
+        :param list kwargs['lexical_items']: forms constituting the exclusive pool of potential matches.
+        :param list kwargs['deleted_lexical_items']: forms that must be deleted from the matches.
+        :param iterable kwargs['force_query']: a 2-tuple representing a morpheme or a list of perfect matches.
         :returns: an ordered pair (tuple), where the first element is the list
             of partial matches found and the second is the (potentially updated)
-            ``matchesFound`` dictionary.
+            ``matches_found`` dictionary.
 
         """
-        lexicalItems = kwargs.get('lexicalItems')
-        deletedLexicalItems = kwargs.get('deletedLexicalItems')
+        lexical_items = kwargs.get('lexical_items')
+        deleted_lexical_items = kwargs.get('deleted_lexical_items')
         whole_db = kwargs.get('whole_db')
-        forceQuery = kwargs.get('forceQuery')   # The output of getPerfectMatches: [] or (morpheme, gloss)
+        force_query = kwargs.get('force_query')   # The output of get_perfect_matches: [] or (morpheme, gloss)
         morpheme = kwargs.get('morpheme')
         gloss = kwargs.get('gloss')
-        attribute = morpheme and u'morphemeBreak' or u'morphemeGloss'
+        attribute = morpheme and u'morpheme_break' or u'morpheme_gloss'
         value = morpheme or gloss
-        if (morpheme, gloss) in matchesFound:
-            return matchesFound[(morpheme, gloss)], matchesFound
+        if (morpheme, gloss) in matches_found:
+            return matches_found[(morpheme, gloss)], matches_found
         if whole_db:
             result = [f for f in whole_db if getattr(f, attribute) == value]
-        elif lexicalItems or deletedLexicalItems:
-            if value in forceQuery:
+        elif lexical_items or deleted_lexical_items:
+            if value in force_query:
                 result = Session.query(Form)\
                         .filter(getattr(Form, attribute)==value).order_by(asc(Form.id)).all()
             else:
-                extantAnalyses = json.loads(getattr(form, attribute + 'IDs'))[wordIndex][morphemeIndex]
+                extant_analyses = json.loads(getattr(form, attribute + '_ids'))[word_index][morpheme_index]
                 # Extract extant partial matches as quadruples of the form (id, mb, mg, sc)
                 # where one of mb or mg will be None.
-                extantPartialMatches = [(x[0], None, x[1], x[2]) if morpheme else
-                                    (x[0], x[1], None, x[2]) for x in extantAnalyses]
+                extant_partial_matches = [(x[0], None, x[1], x[2]) if morpheme else
+                                    (x[0], x[1], None, x[2]) for x in extant_analyses]
                 # Make extant matches look like form objects and remove those that
                 # may have been deleted or updated
-                extantPartialMatches = [getFakeForm(m) for m in extantPartialMatches
-                    if m[0] not in [f.id for f in lexicalItems + deletedLexicalItems]]
-                partialMatchesInLexicalItems = [f for f in lexicalItems
+                extant_partial_matches = [get_fake_form(m) for m in extant_partial_matches
+                    if m[0] not in [f.id for f in lexical_items + deleted_lexical_items]]
+                partial_matches_in_lexical_items = [f for f in lexical_items
                                                 if getattr(f, attribute) == value]
-                result = sorted(extantPartialMatches + partialMatchesInLexicalItems,
+                result = sorted(extant_partial_matches + partial_matches_in_lexical_items,
                               key=lambda f: f.id)
         else:
             result = Session.query(Form).filter(getattr(Form, attribute)==value).order_by(asc(Form.id)).all()
-        matchesFound[(morpheme, gloss)] = result
-        return result, matchesFound
+        matches_found[(morpheme, gloss)] = result
+        return result, matches_found
 
-    bgcDelimiter = kwargs.get('bgcDelimiter', h.defaultDelimiter)     # The default delimiter for the breakGlossCategory field
-    lexicalItems = kwargs.get('lexicalItems', [])
-    deletedLexicalItems = kwargs.get('deletedLexicalItems', [])
-    matchesFound = kwargs.get('cache', {})   # temporary store -- eliminates redundant queries & processing -- updated as a byproduct of getPerfectMatches and getPartialMatches
+    bgc_delimiter = kwargs.get('bgc_delimiter', h.default_delimiter)     # The default delimiter for the break_gloss_category field
+    lexical_items = kwargs.get('lexical_items', [])
+    deleted_lexical_items = kwargs.get('deleted_lexical_items', [])
+    matches_found = kwargs.get('cache', {})   # temporary store -- eliminates redundant queries & processing -- updated as a byproduct of get_perfect_matches and get_partial_matches
     whole_db = kwargs.get('whole_db')
-    morphemeBreakIDs = []
-    morphemeGlossIDs = []
-    syntacticCategoryString = []
-    morphemeDelimiters = morphemeDelimiters or h.getMorphemeDelimiters()
-    morphemeSplitter = morphemeDelimiters and u'[%s]' % ''.join(
-                        [h.escREMetaChars(d) for d in morphemeDelimiters]) or u''
-    morphemeBreak = form.morphemeBreak
-    morphemeGloss = form.morphemeGloss
-    mbWords = morphemeBreak.split()     # e.g., u'le-s chien-s'
-    mgWords = morphemeGloss.split()     # e.g., u'the-PL dog-PL'
-    scWords = morphemeBreak.split()[:]  # e.g., u'le-s chien-s' (placeholder)
+    morpheme_break_ids = []
+    morpheme_gloss_ids = []
+    syntactic_category_string = []
+    morpheme_delimiters = morpheme_delimiters or h.get_morpheme_delimiters()
+    morpheme_splitter = morpheme_delimiters and u'[%s]' % ''.join(
+                        [h.esc_RE_meta_chars(d) for d in morpheme_delimiters]) or u''
+    morpheme_break = form.morpheme_break
+    morpheme_gloss = form.morpheme_gloss
+    mb_words = morpheme_break.split()     # e.g., u'le-s chien-s'
+    mg_words = morpheme_gloss.split()     # e.g., u'the-PL dog-PL'
+    sc_words = morpheme_break.split()[:]  # e.g., u'le-s chien-s' (placeholder)
 
-    if morphemicAnalysisIsConsistent(morphemeDelimiters=morphemeDelimiters,
-        morphemeBreak=morphemeBreak, morphemeGloss=morphemeGloss, mbWords=mbWords,
-        mgWords=mgWords, morphemeSplitter=morphemeSplitter):
-        for i in range(len(mbWords)):
-            mbWordAnalysis = []
-            mgWordAnalysis = []
-            mbWord = mbWords[i]     # e.g., u'chien-s'
-            mgWord = mgWords[i]     # e.g., u'dog-PL'
-            scWord = scWords[i]     # e.g., u'chien-s'
-            morphemeAndDelimiterSplitter = '(%s)' % morphemeSplitter    # splits on delimiters while retaining them
-            mbWordMorphemesList = re.split(morphemeAndDelimiterSplitter, mbWord)[::2]   # e.g., ['chien', 's']
-            mgWordMorphemesList = re.split(morphemeAndDelimiterSplitter, mgWord)[::2]   # e.g., ['dog', 'PL']
-            scWordAnalysis = re.split(morphemeAndDelimiterSplitter, scWord)    # e.g., ['chien', '-', 's']
-            for j in range(len(mbWordMorphemesList)):
-                morpheme = mbWordMorphemesList[j]
-                gloss = mgWordMorphemesList[j]
-                perfectMatches, matchesFound = getPerfectMatches(form, i, j, morpheme, gloss,
-                                            matchesFound, lexicalItems, deletedLexicalItems, whole_db)
-                if perfectMatches and type(perfectMatches) is list:
-                    mbWordAnalysis.append([(f.id, f.morphemeGloss,
-                        getattr(f.syntacticCategory, 'name', None)) for f in perfectMatches])
-                    mgWordAnalysis.append([(f.id, f.morphemeBreak,
-                        getattr(f.syntacticCategory, 'name', None)) for f in perfectMatches])
-                    scWordAnalysis[j * 2] = getattr(perfectMatches[0].syntacticCategory, 'name', h.unknownCategory)
+    if morphemic_analysis_is_consistent(morpheme_delimiters=morpheme_delimiters,
+        morpheme_break=morpheme_break, morpheme_gloss=morpheme_gloss, mb_words=mb_words,
+        mg_words=mg_words, morpheme_splitter=morpheme_splitter):
+        for i in range(len(mb_words)):
+            mb_word_analysis = []
+            mg_word_analysis = []
+            mb_word = mb_words[i]     # e.g., u'chien-s'
+            mg_word = mg_words[i]     # e.g., u'dog-PL'
+            sc_word = sc_words[i]     # e.g., u'chien-s'
+            morpheme_and_delimiter_splitter = '(%s)' % morpheme_splitter    # splits on delimiters while retaining them
+            mb_word_morphemes_list = re.split(morpheme_and_delimiter_splitter, mb_word)[::2]   # e.g., ['chien', 's']
+            mg_word_morphemes_list = re.split(morpheme_and_delimiter_splitter, mg_word)[::2]   # e.g., ['dog', 'PL']
+            sc_word_analysis = re.split(morpheme_and_delimiter_splitter, sc_word)    # e.g., ['chien', '-', 's']
+            for j in range(len(mb_word_morphemes_list)):
+                morpheme = mb_word_morphemes_list[j]
+                gloss = mg_word_morphemes_list[j]
+                perfect_matches, matches_found = get_perfect_matches(form, i, j, morpheme, gloss,
+                                            matches_found, lexical_items, deleted_lexical_items, whole_db)
+                if perfect_matches and type(perfect_matches) is list:
+                    mb_word_analysis.append([(f.id, f.morpheme_gloss,
+                        getattr(f.syntactic_category, 'name', None)) for f in perfect_matches])
+                    mg_word_analysis.append([(f.id, f.morpheme_break,
+                        getattr(f.syntactic_category, 'name', None)) for f in perfect_matches])
+                    sc_word_analysis[j * 2] = getattr(perfect_matches[0].syntactic_category, 'name', h.unknown_category)
                 else:
-                    morphemeMatches, matchesFound = getPartialMatches(form, i, j, matchesFound, morpheme=morpheme,
-                                        forceQuery=perfectMatches, lexicalItems=lexicalItems,
-                                        deletedLexicalItems=deletedLexicalItems, whole_db=whole_db)
-                    if morphemeMatches:
-                        mbWordAnalysis.append([(f.id, f.morphemeGloss,
-                            getattr(f.syntacticCategory, 'name', None)) for f in morphemeMatches])
+                    morpheme_matches, matches_found = get_partial_matches(form, i, j, matches_found, morpheme=morpheme,
+                                        force_query=perfect_matches, lexical_items=lexical_items,
+                                        deleted_lexical_items=deleted_lexical_items, whole_db=whole_db)
+                    if morpheme_matches:
+                        mb_word_analysis.append([(f.id, f.morpheme_gloss,
+                            getattr(f.syntactic_category, 'name', None)) for f in morpheme_matches])
                     else:
-                        mbWordAnalysis.append([])
-                    glossMatches, matchesFound = getPartialMatches(form, i, j, matchesFound, gloss=gloss,
-                                        forceQuery=perfectMatches, lexicalItems=lexicalItems,
-                                        deletedLexicalItems=deletedLexicalItems, whole_db=whole_db)
-                    if glossMatches:
-                        mgWordAnalysis.append([(f.id, f.morphemeBreak,
-                            getattr(f.syntacticCategory, 'name', None)) for f in glossMatches])
+                        mb_word_analysis.append([])
+                    gloss_matches, matches_found = get_partial_matches(form, i, j, matches_found, gloss=gloss,
+                                        force_query=perfect_matches, lexical_items=lexical_items,
+                                        deleted_lexical_items=deleted_lexical_items, whole_db=whole_db)
+                    if gloss_matches:
+                        mg_word_analysis.append([(f.id, f.morpheme_break,
+                            getattr(f.syntactic_category, 'name', None)) for f in gloss_matches])
                     else:
-                        mgWordAnalysis.append([])
-                    scWordAnalysis[j * 2] = getCategoryFromPartialMatch(morphemeMatches, glossMatches)
-            morphemeBreakIDs.append(mbWordAnalysis)
-            morphemeGlossIDs.append(mgWordAnalysis)
-            syntacticCategoryString.append(''.join(scWordAnalysis))
-        syntacticCategoryString = u' '.join(syntacticCategoryString)
-        breakGlossCategory = getBreakGlossCategory(morphemeDelimiters, morphemeBreak,
-                                                   morphemeGloss, syntacticCategoryString, bgcDelimiter)
+                        mg_word_analysis.append([])
+                    sc_word_analysis[j * 2] = get_category_from_partial_match(morpheme_matches, gloss_matches)
+            morpheme_break_ids.append(mb_word_analysis)
+            morpheme_gloss_ids.append(mg_word_analysis)
+            syntactic_category_string.append(''.join(sc_word_analysis))
+        syntactic_category_string = u' '.join(syntactic_category_string)
+        break_gloss_category = get_break_gloss_category(morpheme_delimiters, morpheme_break,
+                                                   morpheme_gloss, syntactic_category_string, bgc_delimiter)
     else:
-        morphemeBreakIDs = morphemeGlossIDs = syntacticCategoryString = breakGlossCategory = None
-    return (unicode(json.dumps(morphemeBreakIDs)), unicode(json.dumps(morphemeGlossIDs)),
-           syntacticCategoryString, breakGlossCategory, matchesFound)
+        morpheme_break_ids = morpheme_gloss_ids = syntactic_category_string = break_gloss_category = None
+    return (unicode(json.dumps(morpheme_break_ids)), unicode(json.dumps(morpheme_gloss_ids)),
+           syntactic_category_string, break_gloss_category, matches_found)
 
 
 
@@ -1172,76 +1172,76 @@ def compileMorphemicAnalysis_(form, morphemeDelimiters=None, **kwargs):
 # Form -> Morpheme updating functionality
 ################################################################################
 
-def updateFormsContainingThisFormAsMorpheme(form, change='create', previousVersion=None):
+def update_forms_containing_this_form_as_morpheme(form, change='create', previous_version=None):
     """Update the morphological analysis-related attributes of every form containing the input form as morpheme.
     
-    Update the values of the ``morphemeBreakIDs``, ``morphemeGlossIDs``,
-    ``syntacticCategoryString``, and ``breakGlossCategory`` attributes of each
+    Update the values of the ``morpheme_break_ids``, ``morpheme_gloss_ids``,
+    ``syntactic_category_string``, and ``break_gloss_category`` attributes of each
     form that contains the input form in its morphological analysis, i.e., each
-    form whose ``morphemeBreak`` value contains the input form's
-    ``morphemeBreak`` value as a morpheme or whose ``morphemeGloss`` value
-    contains the input form's ``morphemeGloss`` line as a gloss.  If the input
+    form whose ``morpheme_break`` value contains the input form's
+    ``morpheme_break`` value as a morpheme or whose ``morpheme_gloss`` value
+    contains the input form's ``morpheme_gloss`` line as a gloss.  If the input
     form is not lexical (i.e., if it contains the space character or a
     morpheme delimiter), then no updates occur.
 
     :param form: a form model object.
     :param str change: indicates whether the form has just been deleted or created/updated.
-    :param dict previousVersion: a representation of the form prior to update.
+    :param dict previous_version: a representation of the form prior to update.
     :returns: ``None``
 
     """
 
-    if h.isLexical(form):
+    if h.is_lexical(form):
         # Here we construct the query to get all forms that may have been affected
         # by the change to the lexical item (i.e., form).
-        morphemeDelimiters = h.getMorphemeDelimiters()
-        escapedMorphemeDelimiters = [h.escREMetaChars(d) for d in morphemeDelimiters]
-        startPatt = '(%s)' % '|'.join(escapedMorphemeDelimiters + [u' ', '^'])
-        endPatt = '(%s)' % '|'.join(escapedMorphemeDelimiters + [u' ', '$'])
-        morphemePatt = '%s%s%s' % (startPatt, form.morphemeBreak, endPatt)
-        glossPatt = '%s%s%s' % (startPatt, form.morphemeGloss, endPatt)
-        disjunctiveConditions = [Form.morphemeBreak.op('regexp')(morphemePatt),
-                                 Form.morphemeGloss.op('regexp')(glossPatt)]
-        matchesQuery = Session.query(Form).options(subqueryload(Form.syntacticCategory))
+        morpheme_delimiters = h.get_morpheme_delimiters()
+        escaped_morpheme_delimiters = [h.esc_RE_meta_chars(d) for d in morpheme_delimiters]
+        start_patt = '(%s)' % '|'.join(escaped_morpheme_delimiters + [u' ', '^'])
+        end_patt = '(%s)' % '|'.join(escaped_morpheme_delimiters + [u' ', '$'])
+        morpheme_patt = '%s%s%s' % (start_patt, form.morpheme_break, end_patt)
+        gloss_patt = '%s%s%s' % (start_patt, form.morpheme_gloss, end_patt)
+        disjunctive_conditions = [Form.morpheme_break.op('regexp')(morpheme_patt),
+                                 Form.morpheme_gloss.op('regexp')(gloss_patt)]
+        matches_query = Session.query(Form).options(subqueryload(Form.syntactic_category))
 
         # Updates entail a wider range of possibly affected forms
-        if previousVersion and h.isLexical(previousVersion):
-            if previousVersion['morphemeBreak'] != form.morphemeBreak:
-                morphemePattPV = '%s%s%s' % (startPatt, previousVersion['morphemeBreak'], endPatt)
-                disjunctiveConditions.append(Form.morphemeBreak.op('regexp')(morphemePattPV))
-            if previousVersion['morphemeGloss'] != form.morphemeGloss:
-                glossPattPV = '%s%s%s' % (startPatt, previousVersion['morphemeGloss'], endPatt)
-                disjunctiveConditions.append(Form.morphemeGloss.op('regexp')(glossPattPV))
+        if previous_version and h.is_lexical(previous_version):
+            if previous_version['morpheme_break'] != form.morpheme_break:
+                morpheme_patt_PV = '%s%s%s' % (start_patt, previous_version['morpheme_break'], end_patt)
+                disjunctive_conditions.append(Form.morpheme_break.op('regexp')(morpheme_patt_PV))
+            if previous_version['morpheme_gloss'] != form.morpheme_gloss:
+                gloss_patt_PV = '%s%s%s' % (start_patt, previous_version['morpheme_gloss'], end_patt)
+                disjunctive_conditions.append(Form.morpheme_gloss.op('regexp')(gloss_patt_PV))
 
-        matchesQuery = matchesQuery.filter(or_(*disjunctiveConditions))
-        #matches = [f for f in matchesQuery.all() if f.id != form.id]
-        matches = matchesQuery.all()
+        matches_query = matches_query.filter(or_(*disjunctive_conditions))
+        #matches = [f for f in matches_query.all() if f.id != form.id]
+        matches = matches_query.all()
 
         if change == 'delete':
-            updatedFormIds = updateMorphemeReferencesOfForms(matches,
-                                morphemeDelimiters, deletedLexicalItems=[form])
+            updated_form_ids = update_morpheme_references_of_forms(matches,
+                                morpheme_delimiters, deleted_lexical_items=[form])
         else:
-            updatedFormIds = updateMorphemeReferencesOfForms(matches,
-                                morphemeDelimiters, lexicalItems=[form])
+            updated_form_ids = update_morpheme_references_of_forms(matches,
+                                morpheme_delimiters, lexical_items=[form])
 
-def updateHasChangedTheAnalysis(form, formDict):
-    """Return ``True`` if the update from formDict to form has changed the morphological analysis of the form."""
+def update_has_changed_the_analysis(form, form_dict):
+    """Return ``True`` if the update from form_dict to form has changed the morphological analysis of the form."""
     try:
-        oldSyntacticCategoryName = formDict['syntacticCategory'].get('name')
+        old_syntactic_category_name = form_dict['syntactic_category'].get('name')
     except AttributeError:
-        oldSyntacticCategoryName = None
-    return form.morphemeBreak != formDict['morphemeBreak'] or \
-           form.morphemeGloss != formDict['morphemeGloss'] or \
-           form.breakGlossCategory != formDict['breakGlossCategory'] or \
-           getattr(form.syntacticCategory, 'name', None) != oldSyntacticCategoryName
+        old_syntactic_category_name = None
+    return form.morpheme_break != form_dict['morpheme_break'] or \
+           form.morpheme_gloss != form_dict['morpheme_gloss'] or \
+           form.break_gloss_category != form_dict['break_gloss_category'] or \
+           getattr(form.syntactic_category, 'name', None) != old_syntactic_category_name
 
 
-def updateCollectionsReferencingThisForm(form):
+def update_collections_referencing_this_form(form):
     """Update all collections that reference the input form in their ``contents`` value.
 
     When a form is deleted, it is necessary to update all collections whose
     ``contents`` value references the deleted form.  The update removes the
-    reference, recomputes the ``contentsUnpacked``, ``html`` and ``forms``
+    reference, recomputes the ``contents_unpacked``, ``html`` and ``forms``
     attributes of the affected collection and causes all of these changes to
     percolate through the collection-collection reference chain.
 
@@ -1256,8 +1256,8 @@ def updateCollectionsReferencingThisForm(form):
        form -- in short, this will result in redundant updates and backups.
 
     """
-    pattern = unicode(h.formReferencePattern.pattern.replace('[0-9]+', str(form.id)))
-    collectionsReferencingThisForm = Session.query(Collection).\
+    pattern = unicode(h.form_reference_pattern.pattern.replace('[0-9]+', str(form.id)))
+    collections_referencing_this_form = Session.query(Collection).\
         filter(Collection.contents.op('regexp')(pattern)).all()
-    for collection in collectionsReferencingThisForm:
-        updateCollectionByDeletionOfReferencedForm(collection, form)
+    for collection in collections_referencing_this_form:
+        update_collection_by_deletion_of_referenced_form(collection, form)

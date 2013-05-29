@@ -56,7 +56,7 @@ class LanguagesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Language', 'Id', config=config)
+    query_builder = SQLAQueryBuilder('Language', 'Id', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -67,18 +67,18 @@ class LanguagesController(BaseController):
         :URL: ``SEARCH /languages`` (or ``POST /languages/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         """
 
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query'))
-            return h.addPagination(SQLAQuery, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            SQLAQuery = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            return h.add_pagination(SQLAQuery, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -96,10 +96,10 @@ class LanguagesController(BaseController):
         """Return the data necessary to search the language resources.
 
         :URL: ``GET /languages/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -113,8 +113,8 @@ class LanguagesController(BaseController):
         """
         try:
             query = Session.query(Language)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder, 'Id')
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder, 'Id')
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}

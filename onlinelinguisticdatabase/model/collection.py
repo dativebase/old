@@ -23,7 +23,7 @@ collectionfile_table = Table('collectionfile', Base.metadata,
     Column('id', Integer, Sequence('collectionfile_seq_id', optional=True), primary_key=True),
     Column('collection_id', Integer, ForeignKey('collection.id')),
     Column('file_id', Integer, ForeignKey('file.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -31,7 +31,7 @@ collectiontag_table = Table('collectiontag', Base.metadata,
     Column('id', Integer, Sequence('collectiontag_seq_id', optional=True), primary_key=True),
     Column('collection_id', Integer, ForeignKey('collection.id')),
     Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -49,7 +49,7 @@ class Collection(Base):
     type = Column(Unicode(255))
     url = Column(Unicode(255))
     description = Column(UnicodeText)
-    markupLanguage = Column(Unicode(100))
+    markup_language = Column(Unicode(100))
     contents = Column(UnicodeText)
     html = Column(UnicodeText)
     speaker_id = Column(Integer, ForeignKey('speaker.id'))
@@ -62,30 +62,30 @@ class Collection(Base):
     enterer = relation('User', primaryjoin='Collection.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id'))
     modifier = relation('User', primaryjoin='Collection.modifier_id==User.id')
-    dateElicited = Column(Date)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
+    date_elicited = Column(Date)
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
     tags = relation('Tag', secondary=collectiontag_table)
     files = relation('File', secondary=collectionfile_table, backref='collections')
     # forms attribute is defined in a relation/backref in the form model
 
-    # The contentsUnpacked column holds the contents of the collection where all
+    # The contents_unpacked column holds the contents of the collection where all
     # collection references in the contents field are replaced with the contents
     # of the referred-to collections.  These referred-to collections can refer
     # to others in turn.  The forms related to a collection are calculated by
-    # gathering the form references from contentsUnpacked.  The result of all
+    # gathering the form references from contents_unpacked.  The result of all
     # this is that the contents (and form references) of a collection can be
     # altered by updates to another collection; however, these updates will not
     # propagate until the collection in question is itself updated.
-    contentsUnpacked = Column(UnicodeText)
+    contents_unpacked = Column(UnicodeText)
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the Collection.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
-        data are truncated, e.g., collectionDict['elicitor'] is a dict with keys
-        for 'id', 'firstName' and 'lastName' (cf. getMiniUserDict above) and
+        data are truncated, e.g., collection_dict['elicitor'] is a dict with keys
+        for 'id', 'first_name' and 'last_name' (cf. get_mini_user_dict above) and
         lacks keys for other attributes such as 'username',
-        'personalPageContent', etc.
+        'personal_page_content', etc.
         """
 
         return {
@@ -95,23 +95,23 @@ class Collection(Base):
             'type': self.type,
             'url': self.url,
             'description': self.description,
-            'markupLanguage': self.markupLanguage,
+            'markup_language': self.markup_language,
             'contents': self.contents,
-            'contentsUnpacked': self.contentsUnpacked,
+            'contents_unpacked': self.contents_unpacked,
             'html': self.html,
-            'dateElicited': self.dateElicited,
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'speaker': self.getMiniSpeakerDict(self.speaker),
-            'source': self.getMiniSourceDict(self.source),
-            'elicitor': self.getMiniUserDict(self.elicitor),
-            'enterer': self.getMiniUserDict(self.enterer),
-            'modifier': self.getMiniUserDict(self.modifier),
-            'tags': self.getTagsList(self.tags),
-            'files': self.getFilesList(self.files)
+            'date_elicited': self.date_elicited,
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'speaker': self.get_mini_speaker_dict(self.speaker),
+            'source': self.get_mini_source_dict(self.source),
+            'elicitor': self.get_mini_user_dict(self.elicitor),
+            'enterer': self.get_mini_user_dict(self.enterer),
+            'modifier': self.get_mini_user_dict(self.modifier),
+            'tags': self.get_tags_list(self.tags),
+            'files': self.get_files_list(self.files)
         }
 
-    def getFullDict(self):
-        result = self.getDict()
-        result['forms'] = self.getFormsList(self.forms)
+    def get_full_dict(self):
+        result = self.get_dict()
+        result['forms'] = self.get_forms_list(self.forms)
         return result

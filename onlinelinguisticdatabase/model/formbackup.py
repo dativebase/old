@@ -47,106 +47,106 @@ class FormBackup(Base):
     form_id = Column(Integer)
     UUID = Column(Unicode(36))
     transcription = Column(Unicode(255), nullable=False)
-    phoneticTranscription = Column(Unicode(255))
-    narrowPhoneticTranscription = Column(Unicode(255))
-    morphemeBreak = Column(Unicode(255))
-    morphemeGloss = Column(Unicode(255))
+    phonetic_transcription = Column(Unicode(255))
+    narrow_phonetic_transcription = Column(Unicode(255))
+    morpheme_break = Column(Unicode(255))
+    morpheme_gloss = Column(Unicode(255))
     comments = Column(UnicodeText)
-    speakerComments = Column(UnicodeText)
+    speaker_comments = Column(UnicodeText)
     grammaticality = Column(Unicode(255))
-    dateElicited = Column(Date)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
-    syntacticCategoryString = Column(Unicode(255))
-    morphemeBreakIDs = Column(UnicodeText)
-    morphemeGlossIDs = Column(UnicodeText)
-    breakGlossCategory = Column(Unicode(1023))
+    date_elicited = Column(Date)
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
+    syntactic_category_string = Column(Unicode(255))
+    morpheme_break_ids = Column(UnicodeText)
+    morpheme_gloss_ids = Column(UnicodeText)
+    break_gloss_category = Column(Unicode(1023))
     syntax = Column(Unicode(1023))
     semantics = Column(Unicode(1023))
     elicitor = Column(UnicodeText)
     enterer = Column(UnicodeText)
     verifier = Column(UnicodeText)
     speaker = Column(UnicodeText)
-    elicitationMethod = Column(UnicodeText)
-    syntacticCategory = Column(UnicodeText)
+    elicitation_method = Column(UnicodeText)
+    syntactic_category = Column(UnicodeText)
     source = Column(UnicodeText)
     translations = Column(UnicodeText)
     tags = Column(UnicodeText)
     files = Column(UnicodeText) 
     modifier = Column(UnicodeText)
 
-    def vivify(self, formDict):
+    def vivify(self, form_dict):
         """The vivify method gives life to FormBackup by specifying its
         attributes using the to-be-backed-up form as represented in
-        ``formDict``.  The relational attributes of the backup are converted to
+        ``form_dict``.  The relational attributes of the backup are converted to
         (truncated) JSON objects.
 
         """
 
-        self.UUID = formDict['UUID']
-        self.form_id = formDict['id']
-        self.transcription = formDict['transcription']
-        self.phoneticTranscription = formDict['phoneticTranscription']
-        self.narrowPhoneticTranscription = formDict['narrowPhoneticTranscription']
-        self.morphemeBreak = formDict['morphemeBreak']
-        self.morphemeGloss = formDict['morphemeGloss']
-        self.grammaticality = formDict['grammaticality']
-        self.comments = formDict['comments']
-        self.speakerComments = formDict['speakerComments']
-        self.dateElicited = formDict['dateElicited']
-        self.datetimeEntered = formDict['datetimeEntered']
-        self.datetimeModified = formDict['datetimeModified']
-        self.syntacticCategoryString = formDict['syntacticCategoryString']
-        self.morphemeBreakIDs = unicode(json.dumps(formDict['morphemeBreakIDs']))
-        self.morphemeGlossIDs = unicode(json.dumps(formDict['morphemeGlossIDs']))
-        self.breakGlossCategory = formDict['breakGlossCategory']
-        self.syntax = formDict['syntax']
-        self.semantics = formDict['semantics']
-        self.elicitationMethod = unicode(json.dumps(formDict['elicitationMethod']))
-        self.syntacticCategory = unicode(json.dumps(formDict['syntacticCategory']))
-        self.source = unicode(json.dumps(formDict['source']))
-        self.speaker = unicode(json.dumps(formDict['speaker']))
-        self.elicitor = unicode(json.dumps(formDict['elicitor']))
-        self.enterer = unicode(json.dumps(formDict['enterer']))
-        self.verifier = unicode(json.dumps(formDict['verifier']))
-        self.modifier = unicode(json.dumps(formDict['modifier']))
-        self.translations = unicode(json.dumps(formDict['translations']))
-        self.tags = unicode(json.dumps(formDict['tags']))
-        self.files = unicode(json.dumps(formDict['files']))
+        self.UUID = form_dict['UUID']
+        self.form_id = form_dict['id']
+        self.transcription = form_dict['transcription']
+        self.phonetic_transcription = form_dict['phonetic_transcription']
+        self.narrow_phonetic_transcription = form_dict['narrow_phonetic_transcription']
+        self.morpheme_break = form_dict['morpheme_break']
+        self.morpheme_gloss = form_dict['morpheme_gloss']
+        self.grammaticality = form_dict['grammaticality']
+        self.comments = form_dict['comments']
+        self.speaker_comments = form_dict['speaker_comments']
+        self.date_elicited = form_dict['date_elicited']
+        self.datetime_entered = form_dict['datetime_entered']
+        self.datetime_modified = form_dict['datetime_modified']
+        self.syntactic_category_string = form_dict['syntactic_category_string']
+        self.morpheme_break_ids = unicode(json.dumps(form_dict['morpheme_break_ids']))
+        self.morpheme_gloss_ids = unicode(json.dumps(form_dict['morpheme_gloss_ids']))
+        self.break_gloss_category = form_dict['break_gloss_category']
+        self.syntax = form_dict['syntax']
+        self.semantics = form_dict['semantics']
+        self.elicitation_method = unicode(json.dumps(form_dict['elicitation_method']))
+        self.syntactic_category = unicode(json.dumps(form_dict['syntactic_category']))
+        self.source = unicode(json.dumps(form_dict['source']))
+        self.speaker = unicode(json.dumps(form_dict['speaker']))
+        self.elicitor = unicode(json.dumps(form_dict['elicitor']))
+        self.enterer = unicode(json.dumps(form_dict['enterer']))
+        self.verifier = unicode(json.dumps(form_dict['verifier']))
+        self.modifier = unicode(json.dumps(form_dict['modifier']))
+        self.translations = unicode(json.dumps(form_dict['translations']))
+        self.tags = unicode(json.dumps(form_dict['tags']))
+        self.files = unicode(json.dumps(form_dict['files']))
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'UUID': self.UUID,
             'form_id': self.form_id,
             'transcription': self.transcription,
-            'phoneticTranscription': self.phoneticTranscription,
-            'narrowPhoneticTranscription': self.narrowPhoneticTranscription,
-            'morphemeBreak': self.morphemeBreak,
-            'morphemeGloss': self.morphemeGloss,
+            'phonetic_transcription': self.phonetic_transcription,
+            'narrow_phonetic_transcription': self.narrow_phonetic_transcription,
+            'morpheme_break': self.morpheme_break,
+            'morpheme_gloss': self.morpheme_gloss,
             'grammaticality': self.grammaticality,
             'comments': self.comments,
-            'speakerComments': self.speakerComments,
-            'dateElicited': self.dateElicited,
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'syntacticCategoryString': self.syntacticCategoryString,
-            'morphemeBreakIDs': self.jsonLoads(self.morphemeBreakIDs),
-            'morphemeGlossIDs': self.jsonLoads(self.morphemeGlossIDs),
-            'breakGlossCategory': self.breakGlossCategory,
+            'speaker_comments': self.speaker_comments,
+            'date_elicited': self.date_elicited,
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'syntactic_category_string': self.syntactic_category_string,
+            'morpheme_break_ids': self.json_loads(self.morpheme_break_ids),
+            'morpheme_gloss_ids': self.json_loads(self.morpheme_gloss_ids),
+            'break_gloss_category': self.break_gloss_category,
             'syntax': self.syntax,
             'semantics': self.semantics,
-            'elicitationMethod': self.jsonLoads(self.elicitationMethod),
-            'syntacticCategory': self.jsonLoads(self.syntacticCategory),
-            'source': self.jsonLoads(self.source),
-            'speaker': self.jsonLoads(self.speaker),
-            'elicitor': self.jsonLoads(self.elicitor),
-            'enterer': self.jsonLoads(self.enterer),
-            'verifier': self.jsonLoads(self.verifier),
-            'modifier': self.jsonLoads(self.modifier),
-            'translations': self.jsonLoads(self.translations),
-            'tags': self.jsonLoads(self.tags),
-            'files': self.jsonLoads(self.files)
+            'elicitation_method': self.json_loads(self.elicitation_method),
+            'syntactic_category': self.json_loads(self.syntactic_category),
+            'source': self.json_loads(self.source),
+            'speaker': self.json_loads(self.speaker),
+            'elicitor': self.json_loads(self.elicitor),
+            'enterer': self.json_loads(self.enterer),
+            'verifier': self.json_loads(self.verifier),
+            'modifier': self.json_loads(self.modifier),
+            'translations': self.json_loads(self.translations),
+            'tags': self.json_loads(self.tags),
+            'files': self.json_loads(self.files)
         }
 
     def load(self):
@@ -155,79 +155,79 @@ class FormBackup(Base):
 
         """
 
-        if self.elicitationMethod:
-            elicitationMethod = json.loads(self.elicitationMethod)
-            self.elicitationMethod = self.Column()
-            self.elicitationMethod.id = elicitationMethod['id']
-            self.elicitationMethod.name = elicitationMethod['name']
-        if self.syntacticCategory:
-            syntacticCategory = json.loads(self.syntacticCategory)
-            self.syntacticCategory = self.Column()
-            self.syntacticCategory.id = syntacticCategory['id']
-            self.syntacticCategory.name = syntacticCategory['name']
+        if self.elicitation_method:
+            elicitation_method = json.loads(self.elicitation_method)
+            self.elicitation_method = self.Column()
+            self.elicitation_method.id = elicitation_method['id']
+            self.elicitation_method.name = elicitation_method['name']
+        if self.syntactic_category:
+            syntactic_category = json.loads(self.syntactic_category)
+            self.syntactic_category = self.Column()
+            self.syntactic_category.id = syntactic_category['id']
+            self.syntactic_category.name = syntactic_category['name']
         if self.source:
             source = json.loads(self.source)
             self.source = self.Column()
             self.source.id = source['id']
-            self.source.authorFirstName = source['authorFirstName']
-            self.source.authorLastName = source['authorLastName']
+            self.source.author_first_name = source['author_first_name']
+            self.source.author_last_name = source['author_last_name']
             self.source.year = source['year']
-            self.source.fullReference = source['fullReference']
+            self.source.full_reference = source['full_reference']
         if self.speaker:
             speaker = json.loads(self.speaker)
             self.speaker = self.Column()
             self.speaker.id = speaker['id']
-            self.speaker.firstName = speaker['firstName']
-            self.speaker.lastName = speaker['lastName']
+            self.speaker.first_name = speaker['first_name']
+            self.speaker.last_name = speaker['last_name']
             self.speaker.dialect = speaker['dialect']
         if self.elicitor:
             elicitor = json.loads(self.elicitor)
             self.elicitor = self.Column()
             self.elicitor.id = elicitor['id']
-            self.elicitor.firstName = elicitor['firstName']
-            self.elicitor.lastName = elicitor['lastName']
+            self.elicitor.first_name = elicitor['first_name']
+            self.elicitor.last_name = elicitor['last_name']
         if self.enterer:
             enterer = json.loads(self.enterer)
             self.enterer = self.Column()
             self.enterer.id = enterer['id']
-            self.enterer.firstName = enterer['firstName']
-            self.enterer.lastName = enterer['lastName']
+            self.enterer.first_name = enterer['first_name']
+            self.enterer.last_name = enterer['last_name']
         if self.verifier:
             verifier = json.loads(self.verifier)
             self.verifier = self.Column()
             self.verifier.id = verifier['id']
-            self.verifier.firstName = verifier['firstName']
-            self.verifier.lastName = verifier['lastName']
+            self.verifier.first_name = verifier['first_name']
+            self.verifier.last_name = verifier['last_name']
         if self.translations:
             translations = json.loads(self.translations)
             self.translations = []
-            for translationDict in translations:
+            for translation_dict in translations:
                 translation = self.Column()
-                translation.id = translationDict['id']
-                translation.transcription = translationDict['transcription']
-                translation.grammaticality = translationDict['grammaticality']
+                translation.id = translation_dict['id']
+                translation.transcription = translation_dict['transcription']
+                translation.grammaticality = translation_dict['grammaticality']
                 self.translations.append(translation)
         if self.tags:
             tags = json.loads(self.tags)
             self.tags = []
-            for tagDict in tags:
+            for tag_dict in tags:
                 tag = self.Column()
-                tag.id = tagDict['id']
-                tag.name = tagDict['name']
+                tag.id = tag_dict['id']
+                tag.name = tag_dict['name']
                 self.tags.append(tag)
         if self.files:
             files = json.loads(self.files)
             self.files = []
-            for fileDict in files:
+            for file_dict in files:
                 file = self.Column()
-                file.id = fileDict['id']
-                file.name = fileDict['name']
-                file.embeddedFileMarkup = fileDict['embeddedFileMarkup']
-                file.embeddedFilePassword = fileDict['embeddedFilePassword']
+                file.id = file_dict['id']
+                file.name = file_dict['name']
+                file.embedded_file_markup = file_dict['embedded_file_markup']
+                file.embedded_file_password = file_dict['embedded_file_password']
                 self.files.append(file)
         if self.modifier:
             modifier = json.loads(self.modifier)
             self.modifier = self.Column()
             self.modifier.id = modifier['id']
-            self.modifier.firstName = modifier['firstName']
-            self.modifier.lastName = modifier['lastName']
+            self.modifier.first_name = modifier['first_name']
+            self.modifier.last_name = modifier['last_name']

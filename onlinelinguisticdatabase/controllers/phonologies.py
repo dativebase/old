@@ -52,7 +52,7 @@ class PhonologiesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Phonology', config=config)
+    query_builder = SQLAQueryBuilder('Phonology', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -66,14 +66,14 @@ class PhonologiesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
-            query = h.eagerloadPhonology(Session.query(Phonology))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_phonology(Session.query(Phonology))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -94,10 +94,10 @@ class PhonologiesController(BaseController):
             schema = PhonologySchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            phonology = createNewPhonology(data)
+            phonology = create_new_phonology(data)
             Session.add(phonology)
             Session.commit()
-            savePhonologyScript(phonology)
+            save_phonology_script(phonology)
             return phonology
         except h.JSONDecodeError:
             response.status_int = 400
@@ -132,22 +132,22 @@ class PhonologiesController(BaseController):
         :returns: the updated phonology model.
 
         """
-        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(int(id))
+        phonology = h.eagerload_phonology(Session.query(Phonology)).get(int(id))
         if phonology:
             try:
                 schema = PhonologySchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 data = schema.to_python(values, state)
-                phonologyDict = phonology.getDict()
-                phonology = updatePhonology(phonology, data)
-                # phonology will be False if there are no changes (cf. updatePhonology).
+                phonology_dict = phonology.get_dict()
+                phonology = update_phonology(phonology, data)
+                # phonology will be False if there are no changes (cf. update_phonology).
                 if phonology:
-                    backupPhonology(phonologyDict)
+                    backup_phonology(phonology_dict)
                     Session.add(phonology)
                     Session.commit()
-                    savePhonologyScript(phonology)
+                    save_phonology_script(phonology)
                     return phonology
                 else:
                     response.status_int = 400
@@ -175,13 +175,13 @@ class PhonologiesController(BaseController):
         :returns: the deleted phonology model.
 
         """
-        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
+        phonology = h.eagerload_phonology(Session.query(Phonology)).get(id)
         if phonology:
-            phonologyDict = phonology.getDict()
-            backupPhonology(phonologyDict)
+            phonology_dict = phonology.get_dict()
+            backup_phonology(phonology_dict)
             Session.delete(phonology)
             Session.commit()
-            removePhonologyDirectory(phonology)
+            remove_phonology_directory(phonology)
             return phonology
         else:
             response.status_int = 404
@@ -198,7 +198,7 @@ class PhonologiesController(BaseController):
         :returns: a phonology model object.
 
         """
-        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
+        phonology = h.eagerload_phonology(Session.query(Phonology)).get(id)
         if phonology:
             return phonology
         else:
@@ -223,7 +223,7 @@ class PhonologiesController(BaseController):
             is an empty dictionary.
 
         """
-        phonology = h.eagerloadPhonology(Session.query(Phonology)).get(id)
+        phonology = h.eagerload_phonology(Session.query(Phonology)).get(id)
         if phonology:
             return {'data': {}, 'phonology': phonology}
         else:
@@ -241,18 +241,18 @@ class PhonologiesController(BaseController):
             phonology whose history is requested.
         :returns: A dictionary of the form::
 
-                {"phonology": { ... }, "previousVersions": [ ... ]}
+                {"phonology": { ... }, "previous_versions": [ ... ]}
 
             where the value of the ``phonology`` key is the phonology whose
-            history is requested and the value of the ``previousVersions`` key
+            history is requested and the value of the ``previous_versions`` key
             is a list of dictionaries representing previous versions of the
             phonology.
 
         """
-        phonology, previousVersions = h.getModelAndPreviousVersions('Phonology', id)
-        if phonology or previousVersions:
+        phonology, previous_versions = h.get_model_and_previous_versions('Phonology', id)
+        if phonology or previous_versions:
             return {'phonology': phonology,
-                    'previousVersions': previousVersions}
+                    'previous_versions': previous_versions}
         else:
             response.status_int = 404
             return {'error': 'No phonologies or phonology backups match %s' % id}
@@ -278,14 +278,14 @@ class PhonologiesController(BaseController):
         """
         phonology = Session.query(Phonology).get(id)
         if phonology:
-            if h.fomaInstalled():
-                phonologyDirPath = getPhonologyDirPath(phonology)
+            if h.foma_installed():
+                phonology_dir_path = get_phonology_dir_path(phonology)
                 foma_worker_q.put({
-                    'id': h.generateSalt(),
+                    'id': h.generate_salt(),
                     'func': 'compile_phonology_script',
-                    'args': {'phonology_id': phonology.id, 'script_dir_path': phonologyDirPath,
+                    'args': {'phonology_id': phonology.id, 'script_dir_path': phonology_dir_path,
                         'user_id': session['user'].id, 'verification_string': u'defined phonology: ',
-                        'timeout': h.phonologyCompileTimeout}
+                        'timeout': h.phonology_compile_timeout}
                 })
                 return phonology
             else:
@@ -296,7 +296,7 @@ class PhonologiesController(BaseController):
             return {'error': 'There is no phonology with id %s' % id}
 
     @h.restrict('GET')
-    @h.authenticateWithJSON
+    @h.authenticate_with_JSON
     def servecompiled(self, id):
         """Serve the compiled foma script of the phonology.
 
@@ -307,10 +307,10 @@ class PhonologiesController(BaseController):
         """
         phonology = Session.query(Phonology).get(id)
         if phonology:
-            if h.fomaInstalled():
-                fomaFilePath = getPhonologyFilePath(phonology, 'binary')
-                if os.path.isfile(fomaFilePath):
-                    return forward(FileApp(fomaFilePath))
+            if h.foma_installed():
+                foma_file_path = get_phonology_file_path(phonology, 'binary')
+                if os.path.isfile(foma_file_path):
+                    return forward(FileApp(foma_file_path))
                 else:
                     response.status_int = 400
                     return json.dumps({'error': 'Phonology %d has not been compiled yet.' % phonology.id})
@@ -338,14 +338,14 @@ class PhonologiesController(BaseController):
         """
         phonology = Session.query(Phonology).get(id)
         if phonology:
-            if h.fomaInstalled():
-                phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
-                if os.path.isfile(phonologyBinaryPath):
+            if h.foma_installed():
+                phonology_binary_path = get_phonology_file_path(phonology, 'binary')
+                if os.path.isfile(phonology_binary_path):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         inputs = MorphophonemicTranscriptionsSchema.to_python(inputs)
                         return phonologize(inputs['transcriptions'], phonology,
-                                                 phonologyBinaryPath, session['user'])
+                                                 phonology_binary_path, session['user'])
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
@@ -386,10 +386,10 @@ class PhonologiesController(BaseController):
         """
         phonology = Session.query(Phonology).get(id)
         if phonology:
-            if h.fomaInstalled():
-                phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
-                if os.path.isfile(phonologyBinaryPath):
-                    return runTests(phonology, phonologyBinaryPath, session['user'])
+            if h.foma_installed():
+                phonology_binary_path = get_phonology_file_path(phonology, 'binary')
+                if os.path.isfile(phonology_binary_path):
+                    return run_tests(phonology, phonology_binary_path, session['user'])
                 else:
                     response.status_int = 400
                     return {'error': 'Phonology %d has not been compiled yet.' % phonology.id}
@@ -405,23 +405,23 @@ class PhonologiesController(BaseController):
 # Backup phonology
 ################################################################################
 
-def backupPhonology(phonologyDict):
+def backup_phonology(phonology_dict):
     """Backup a phonology.
 
-    :param dict phonologyDict: a representation of a phonology model.
+    :param dict phonology_dict: a representation of a phonology model.
     :returns: ``None``
 
     """
-    phonologyBackup = PhonologyBackup()
-    phonologyBackup.vivify(phonologyDict)
-    Session.add(phonologyBackup)
+    phonology_backup = PhonologyBackup()
+    phonology_backup.vivify(phonology_dict)
+    Session.add(phonology_backup)
 
 
 ################################################################################
 # Phonology Create & Update Functions
 ################################################################################
 
-def createNewPhonology(data):
+def create_new_phonology(data):
     """Create a new phonology.
 
     :param dict data: the data for the phonology to be created.
@@ -436,10 +436,10 @@ def createNewPhonology(data):
     phonology.script = h.normalize(data['script'])  # normalize or not?
 
     phonology.enterer = phonology.modifier = session['user']
-    phonology.datetimeModified = phonology.datetimeEntered = h.now()
+    phonology.datetime_modified = phonology.datetime_entered = h.now()
     return phonology
 
-def updatePhonology(phonology, data):
+def update_phonology(phonology, data):
     """Update a phonology.
 
     :param page: the phonology model to be updated.
@@ -450,18 +450,18 @@ def updatePhonology(phonology, data):
     """
     changed = False
     # Unicode Data
-    changed = h.setAttr(phonology, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(phonology, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(phonology, 'script', h.normalize(data['script']), changed)
+    changed = h.set_attr(phonology, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(phonology, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(phonology, 'script', h.normalize(data['script']), changed)
 
     if changed:
         session['user'] = Session.merge(session['user'])
         phonology.modifier = session['user']
-        phonology.datetimeModified = h.now()
+        phonology.datetime_modified = h.now()
         return phonology
     return changed
 
-def savePhonologyScript(phonology):
+def save_phonology_script(phonology):
     """Save the phonology's ``script`` value to disk as ``phonology_<id>.script``.
     
     Also create the phonology compiler shell script, i.e., ``phonology_<id>.sh``
@@ -472,55 +472,55 @@ def savePhonologyScript(phonology):
 
     """
     try:
-        createPhonologyDir(phonology)
-        phonologyScriptPath = getPhonologyFilePath(phonology, 'script')
-        phonologyBinaryPath = getPhonologyFilePath(phonology, 'binary')
-        phonologyCompilerPath = getPhonologyFilePath(phonology, 'compiler')
-        with codecs.open(phonologyScriptPath, 'w', 'utf8') as f:
+        create_phonology_dir(phonology)
+        phonology_script_path = get_phonology_file_path(phonology, 'script')
+        phonology_binary_path = get_phonology_file_path(phonology, 'binary')
+        phonology_compiler_path = get_phonology_file_path(phonology, 'compiler')
+        with codecs.open(phonology_script_path, 'w', 'utf8') as f:
             f.write(phonology.script)
         # The compiler shell script loads the foma script and compiles it to binary form.
-        with open(phonologyCompilerPath, 'w') as f:
+        with open(phonology_compiler_path, 'w') as f:
             f.write('#!/bin/sh\nfoma -e "source %s" -e "regex phonology;" -e "save stack %s" -e "quit"' % (
-                    phonologyScriptPath, phonologyBinaryPath))
-        os.chmod(phonologyCompilerPath, 0744)
-        return phonologyScriptPath
+                    phonology_script_path, phonology_binary_path))
+        os.chmod(phonology_compiler_path, 0744)
+        return phonology_script_path
     except Exception:
         return None
 
-def createPhonologyDir(phonology):
+def create_phonology_dir(phonology):
     """Create the directory to hold the phonology script and auxiliary files.
     
     :param phonology: a phonology model object.
     :returns: an absolute path to the directory for the phonology.
 
     """
-    phonologyDirPath = getPhonologyDirPath(phonology)
-    h.makeDirectorySafely(phonologyDirPath)
-    return phonologyDirPath
+    phonology_dir_path = get_phonology_dir_path(phonology)
+    h.make_directory_safely(phonology_dir_path)
+    return phonology_dir_path
 
-def getPhonologyDirPath(phonology):
+def get_phonology_dir_path(phonology):
     """Return the path to a phonology's directory.
     
     :param phonology: a phonology model object.
     :returns: an absolute path to the directory for the phonology.
 
     """
-    return os.path.join(h.getOLDDirectoryPath('phonologies', config=config),
+    return os.path.join(h.get_OLD_directory_path('phonologies', config=config),
                         'phonology_%d' % phonology.id)
 
-def getPhonologyFilePath(phonology, fileType='script'):
+def get_phonology_file_path(phonology, file_type='script'):
     """Return the path to a phonology's file of the given type.
     
     :param phonology: a phonology model object.
-    :param str fileType: one of 'script', 'binary', 'compiler', or 'tester'.
+    :param str file_type: one of 'script', 'binary', 'compiler', or 'tester'.
     :returns: an absolute path to the phonology's script file.
 
     """
-    extMap = {'script': 'script', 'binary': 'foma', 'compiler': 'sh', 'tester': 'tester.sh'}
-    return os.path.join(getPhonologyDirPath(phonology),
-            'phonology_%d.%s' % (phonology.id, extMap.get(fileType, 'script')))
+    ext_map = {'script': 'script', 'binary': 'foma', 'compiler': 'sh', 'tester': 'tester.sh'}
+    return os.path.join(get_phonology_dir_path(phonology),
+            'phonology_%d.%s' % (phonology.id, ext_map.get(file_type, 'script')))
 
-def removePhonologyDirectory(phonology):
+def remove_phonology_directory(phonology):
     """Remove the directory of the phonology model and everything in it.
     
     :param phonology: a phonology model object.
@@ -528,55 +528,55 @@ def removePhonologyDirectory(phonology):
 
     """
     try:
-        phonologyDirPath = getPhonologyDirPath(phonology)
-        rmtree(phonologyDirPath)
-        return phonologyDirPath
+        phonology_dir_path = get_phonology_dir_path(phonology)
+        rmtree(phonology_dir_path)
+        return phonology_dir_path
     except Exception:
         return None
 
-def phonologize(inputs, phonology, phonologyBinaryPath, user):
+def phonologize(inputs, phonology, phonology_binary_path, user):
     """Phonologize the inputs using the phonology's compiled script.
     
     :param list inputs: a list of morpho-phonemic transcriptions.
     :param phonology: a phonology model.
-    :param str phonologyBinaryPath: an absolute path to a compiled phonology script.
+    :param str phonology_binary_path: an absolute path to a compiled phonology script.
     :param user: a user model.
     :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
 
     """
-    randomString = h.generateSalt()
-    phonologyDirPath = getPhonologyDirPath(phonology)
-    inputsFilePath = os.path.join(phonologyDirPath,
-            'inputs_%s_%s.txt' % (user.username, randomString))
-    outputsFilePath = os.path.join(phonologyDirPath,
-            'outputs_%s_%s.txt' % (user.username, randomString))
-    applydownFilePath = os.path.join(phonologyDirPath,
-            'applydown_%s_%s.sh' % (user.username, randomString))
-    with codecs.open(inputsFilePath, 'w', 'utf8') as f:
+    random_string = h.generate_salt()
+    phonology_dir_path = get_phonology_dir_path(phonology)
+    inputs_file_path = os.path.join(phonology_dir_path,
+            'inputs_%s_%s.txt' % (user.username, random_string))
+    outputs_file_path = os.path.join(phonology_dir_path,
+            'outputs_%s_%s.txt' % (user.username, random_string))
+    applydown_file_path = os.path.join(phonology_dir_path,
+            'applydown_%s_%s.sh' % (user.username, random_string))
+    with codecs.open(inputs_file_path, 'w', 'utf8') as f:
         inputs = [u'%s%s%s' % (h.word_boundary_symbol, input_, h.word_boundary_symbol)
                   for input_ in inputs]
         f.write(u'\n'.join(inputs))
-    with codecs.open(applydownFilePath, 'w', 'utf8') as f:
+    with codecs.open(applydown_file_path, 'w', 'utf8') as f:
         f.write('#!/bin/sh\ncat %s | flookup -i %s' % (
-                inputsFilePath, phonologyBinaryPath))
-    os.chmod(applydownFilePath, 0744)
+                inputs_file_path, phonology_binary_path))
+    os.chmod(applydown_file_path, 0744)
     with open(os.devnull, 'w') as devnull:
-        with codecs.open(outputsFilePath, 'w', 'utf8') as outfile:
-            p = Popen(applydownFilePath, shell=False, stdout=outfile, stderr=devnull)
+        with codecs.open(outputs_file_path, 'w', 'utf8') as outfile:
+            p = Popen(applydown_file_path, shell=False, stdout=outfile, stderr=devnull)
     p.communicate()
-    with codecs.open(outputsFilePath, 'r', 'utf8') as f:
-        result = h.fomaOutputFile2Dict(f)
-    os.remove(inputsFilePath)
-    os.remove(outputsFilePath)
-    os.remove(applydownFilePath)
+    with codecs.open(outputs_file_path, 'r', 'utf8') as f:
+        result = h.foma_output_file2dict(f)
+    os.remove(inputs_file_path)
+    os.remove(outputs_file_path)
+    os.remove(applydown_file_path)
     return result
 
 
-def getTests(phonology):
+def get_tests(phonology):
     """Return any tests defined in a phonology's script as a dictionary."""
     result = {}
-    testLines = [l[6:] for l in phonology.script.splitlines() if l[:6] == u'#test ']
-    for l in testLines:
+    test_lines = [l[6:] for l in phonology.script.splitlines() if l[:6] == u'#test ']
+    for l in test_lines:
         try:
             i, o = map(unicode.strip, l.split(u'->'))
             result.setdefault(i, []).append(o)
@@ -584,11 +584,11 @@ def getTests(phonology):
             pass
     return result
 
-def runTests(phonology, phonologyBinaryPath, user):
+def run_tests(phonology, phonology_binary_path, user):
     """Run the test defined in the phonology's script and return a report.
     
     :param phonology: a phonology model.
-    :param str phonologyBinaryPath: an absolute path to the phonology's compiled foma script.
+    :param str phonology_binary_path: an absolute path to the phonology's compiled foma script.
     :param user: a user model.
     :returns: a dictionary representing the report on the tests.
 
@@ -599,13 +599,13 @@ def runTests(phonology, phonologyBinaryPath, user):
     representation.  Requests to ``GET /phonologies/runtests/id`` will cause
     the OLD to run a phonology script against its tests and return a
     dictionary detailing the expected and actual outputs of each input in the
-    transcription.  :func:`runTests` generates that dictionary.
+    transcription.  :func:`run_tests` generates that dictionary.
 
     """
 
-    tests = getTests(phonology)
+    tests = get_tests(phonology)
     if not tests:
         response.status_int = 400
         return {'error': 'The script of phonology %d contains no tests.' % phonology.id}
-    results = phonologize(tests.keys(), phonology, phonologyBinaryPath, user)
+    results = phonologize(tests.keys(), phonology, phonology_binary_path, user)
     return dict([(t, {'expected': tests[t], 'actual': results[t]}) for t in tests])

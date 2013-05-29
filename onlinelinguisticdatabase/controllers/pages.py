@@ -51,7 +51,7 @@ class PagesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Page', config=config)
+    query_builder = SQLAQueryBuilder('Page', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -65,14 +65,14 @@ class PagesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(Page)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -93,7 +93,7 @@ class PagesController(BaseController):
             schema = PageSchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            page = createNewPage(data)
+            page = create_new_page(data)
             Session.add(page)
             Session.commit()
             return page
@@ -115,7 +115,7 @@ class PagesController(BaseController):
         :returns: a dictionary containing the names of valid OLD markup languages.
 
         """
-        return {'markupLanguages': h.markupLanguages}
+        return {'markup_languages': h.markup_languages}
 
     @h.jsonify
     @h.restrict('PUT')
@@ -136,8 +136,8 @@ class PagesController(BaseController):
                 schema = PageSchema()
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
-                page = updatePage(page, data)
-                # page will be False if there are no changes (cf. updatePage).
+                page = update_page(page, data)
+                # page will be False if there are no changes (cf. update_page).
                 if page:
                     Session.add(page)
                     Session.commit()
@@ -215,7 +215,7 @@ class PagesController(BaseController):
         """
         page = Session.query(Page).get(id)
         if page:
-            return {'data': {'markupLanguages': h.markupLanguages}, 'page': page}
+            return {'data': {'markup_languages': h.markup_languages}, 'page': page}
         else:
             response.status_int = 404
             return {'error': 'There is no page with id %s' % id}
@@ -225,7 +225,7 @@ class PagesController(BaseController):
 # Page Create & Update Functions
 ################################################################################
 
-def createNewPage(data):
+def create_new_page(data):
     """Create a new page.
 
     :param dict data: the data for the page to be created.
@@ -235,13 +235,13 @@ def createNewPage(data):
     page = Page()
     page.name = h.normalize(data['name'])
     page.heading = h.normalize(data['heading'])
-    page.markupLanguage = data['markupLanguage']
+    page.markup_language = data['markup_language']
     page.content = h.normalize(data['content'])
-    page.html = h.getHTMLFromContents(page.content, page.markupLanguage)
-    page.datetimeModified = datetime.datetime.utcnow()
+    page.html = h.get_HTML_from_contents(page.content, page.markup_language)
+    page.datetime_modified = datetime.datetime.utcnow()
     return page
 
-def updatePage(page, data):
+def update_page(page, data):
     """Update a page.
 
     :param page: the page model to be updated.
@@ -252,13 +252,13 @@ def updatePage(page, data):
     """
     changed = False
     # Unicode Data
-    changed = h.setAttr(page, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(page, 'heading', h.normalize(data['heading']), changed)
-    changed = h.setAttr(page, 'markupLanguage', data['markupLanguage'], changed)
-    changed = h.setAttr(page, 'content', h.normalize(data['content']), changed)
-    changed = h.setAttr(page, 'html', h.getHTMLFromContents(page.content, page.markupLanguage), changed)
+    changed = h.set_attr(page, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(page, 'heading', h.normalize(data['heading']), changed)
+    changed = h.set_attr(page, 'markup_language', data['markup_language'], changed)
+    changed = h.set_attr(page, 'content', h.normalize(data['content']), changed)
+    changed = h.set_attr(page, 'html', h.get_HTML_from_contents(page.content, page.markup_language), changed)
 
     if changed:
-        page.datetimeModified = datetime.datetime.utcnow()
+        page.datetime_modified = datetime.datetime.utcnow()
         return page
     return changed

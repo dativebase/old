@@ -29,11 +29,11 @@ class TestPhonologybackupsController(TestController):
 
     def __init__(self, *args, **kwargs):
         TestController.__init__(self, *args, **kwargs)
-        self.testPhonologyScript = h.normalize(
-            codecs.open(self.testPhonologyScriptPath, 'r', 'utf8').read())
+        self.test_phonology_script = h.normalize(
+            codecs.open(self.test_phonology_script_path, 'r', 'utf8').read())
 
     def tearDown(self):
-        TestController.tearDown(self, dirsToDestroy=['phonology'])
+        TestController.tearDown(self, dirs_to_destroy=['phonology'])
 
     #@nottest
     def test_index(self):
@@ -41,60 +41,60 @@ class TestPhonologybackupsController(TestController):
         """
 
         # Define some extra_environs
-        view = {'test.authentication.role': u'viewer', 'test.applicationSettings': True}
-        contrib = {'test.authentication.role': u'contributor', 'test.applicationSettings': True}
-        admin = {'test.authentication.role': u'administrator', 'test.applicationSettings': True}
+        view = {'test.authentication.role': u'viewer', 'test.application_settings': True}
+        contrib = {'test.authentication.role': u'contributor', 'test.application_settings': True}
+        admin = {'test.authentication.role': u'administrator', 'test.application_settings': True}
 
         # Create a phonology.
-        params = self.phonologyCreateParams.copy()
+        params = self.phonology_create_params.copy()
         params.update({
             'name': u'Phonology',
             'description': u'Covers a lot of the data.',
-            'script': self.testPhonologyScript
+            'script': self.test_phonology_script
         })
         params = json.dumps(params)
         response = self.app.post(url('phonologies'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonologyCount = Session.query(Phonology).count()
-        phonologyDir = os.path.join(self.phonologiesPath, 'phonology_%d' % resp['id'])
-        phonologyDirContents = os.listdir(phonologyDir)
-        phonologyId = resp['id']
-        assert phonologyCount == 1
+        phonology_count = Session.query(Phonology).count()
+        phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % resp['id'])
+        phonology_dir_contents = os.listdir(phonology_dir)
+        phonology_id = resp['id']
+        assert phonology_count == 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert 'phonology_%d.script' % phonologyId in phonologyDirContents
+        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
         assert response.content_type == 'application/json'
-        assert resp['script'] == self.testPhonologyScript
+        assert resp['script'] == self.test_phonology_script
 
         # Update the phonology as the admin to create a phonology backup.
-        params = self.phonologyCreateParams.copy()
+        params = self.phonology_create_params.copy()
         params.update({
             'name': u'Phonology Renamed',
             'description': u'Covers a lot of the data.',
-            'script': self.testPhonologyScript
+            'script': self.test_phonology_script
         })
         params = json.dumps(params)
-        response = self.app.put(url('phonology', id=phonologyId), params,
+        response = self.app.put(url('phonology', id=phonology_id), params,
                         self.json_headers, admin)
         resp = json.loads(response.body)
-        phonologyCount = Session.query(model.Phonology).count()
+        phonology_count = Session.query(model.Phonology).count()
         assert response.content_type == 'application/json'
-        assert phonologyCount == 1
+        assert phonology_count == 1
 
         # Now Update the phonology as the default contributor to create a second backup.
-        params = self.phonologyCreateParams.copy()
+        params = self.phonology_create_params.copy()
         params.update({
             'name': u'Phonology Renamed by Contributor',
             'description': u'Covers a lot of the data.',
-            'script': self.testPhonologyScript
+            'script': self.test_phonology_script
         })
         params = json.dumps(params)
-        response = self.app.put(url('phonology', id=phonologyId), params,
+        response = self.app.put(url('phonology', id=phonology_id), params,
                         self.json_headers, contrib)
         resp = json.loads(response.body)
-        phonologyCount = Session.query(model.Phonology).count()
-        assert phonologyCount == 1
+        phonology_count = Session.query(model.Phonology).count()
+        assert phonology_count == 1
 
         # Now GET the phonology backups (as the viewer).
         response = self.app.get(url('phonologybackups'), headers=self.json_headers,
@@ -104,60 +104,60 @@ class TestPhonologybackupsController(TestController):
         assert response.content_type == 'application/json'
 
         # Now update the phonology.
-        params = self.phonologyCreateParams.copy()
+        params = self.phonology_create_params.copy()
         params.update({
             'name': u'Phonology Updated',
             'description': u'Covers a lot of the data.',
-            'script': self.testPhonologyScript
+            'script': self.test_phonology_script
         })
         params = json.dumps(params)
-        response = self.app.put(url('phonology', id=phonologyId), params,
+        response = self.app.put(url('phonology', id=phonology_id), params,
                         self.json_headers, contrib)
         resp = json.loads(response.body)
-        phonologyCount = Session.query(model.Phonology).count()
-        assert phonologyCount == 1
+        phonology_count = Session.query(model.Phonology).count()
+        assert phonology_count == 1
 
         # Now GET the phonology backups.  Admin and contrib should see 4 and the
         # viewer should see 1
         response = self.app.get(url('phonologybackups'), headers=self.json_headers,
                                 extra_environ=contrib)
         resp = json.loads(response.body)
-        allPhonologyBackups = resp
+        all_phonology_backups = resp
         assert len(resp) == 3
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 1, 'page': 2}
+        paginator = {'items_per_page': 1, 'page': 2}
         response = self.app.get(url('phonologybackups'), paginator,
                                 headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
         assert len(resp['items']) == 1
-        assert resp['items'][0]['name'] == allPhonologyBackups[1]['name']
+        assert resp['items'][0]['name'] == all_phonology_backups[1]['name']
         assert response.content_type == 'application/json'
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'PhonologyBackup', 'orderByAttribute': 'datetimeModified',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('phonologybackups'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'PhonologyBackup', 'order_by_attribute': 'datetime_modified',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('phonologybackups'), order_by_params,
                         headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        resultSet = sorted(allPhonologyBackups, key=lambda pb: pb['datetimeModified'], reverse=True)
-        assert [pb['id'] for pb in resp] == [pb['id'] for pb in resultSet]
+        result_set = sorted(all_phonology_backups, key=lambda pb: pb['datetime_modified'], reverse=True)
+        assert [pb['id'] for pb in resp] == [pb['id'] for pb in result_set]
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'PhonologyBackup', 'orderByAttribute': 'datetimeModified',
-                     'orderByDirection': 'desc', 'itemsPerPage': 1, 'page': 3}
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'PhonologyBackup', 'order_by_attribute': 'datetime_modified',
+                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
         response = self.app.get(url('phonologybackups'), params,
                         headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        assert resultSet[2]['name'] == resp['items'][0]['name']
+        assert result_set[2]['name'] == resp['items'][0]['name']
 
         # Now test the show action:
 
         # Get a particular phonology backup
-        response = self.app.get(url('phonologybackup', id=allPhonologyBackups[0]['id']),
+        response = self.app.get(url('phonologybackup', id=all_phonology_backups[0]['id']),
                                 headers=self.json_headers, extra_environ=admin)
         resp = json.loads(response.body)
-        assert resp['name'] == allPhonologyBackups[0]['name']
+        assert resp['name'] == all_phonology_backups[0]['name']
         assert response.content_type == 'application/json'
 
         # A nonexistent pb id will return a 404 error

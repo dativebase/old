@@ -25,7 +25,7 @@ corpusform_table = Table('corpusform', Base.metadata,
     Column('id', Integer, Sequence('corpusform_seq_id', optional=True), primary_key=True),
     Column('corpus_id', Integer, ForeignKey('corpus.id')),
     Column('form_id', Integer, ForeignKey('form.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -33,7 +33,7 @@ corpustag_table = Table('corpustag', Base.metadata,
     Column('id', Integer, Sequence('corpustag_seq_id', optional=True), primary_key=True),
     Column('corpus_id', Integer, ForeignKey('corpus.id')),
     Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -54,10 +54,10 @@ class Corpus(Base):
     enterer = relation('User', primaryjoin='Corpus.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id'))
     modifier = relation('User', primaryjoin='Corpus.modifier_id==User.id')
-    formSearch_id = Column(Integer, ForeignKey('formsearch.id'))
-    formSearch = relation('FormSearch')
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
+    form_search_id = Column(Integer, ForeignKey('formsearch.id'))
+    form_search = relation('FormSearch')
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
     tags = relation('Tag', secondary=corpustag_table)
     forms = relation('Form', secondary=corpusform_table, backref='corpora')
 
@@ -65,13 +65,13 @@ class Corpus(Base):
     # models.  This is a one-to-many relation, like form.translations.
     files = relation('CorpusFile', backref='corpus', cascade='all, delete, delete-orphan')
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the Corpus.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
-        data are truncated, e.g., corpusDict['elicitor'] is a dict with keys
-        for 'id', 'firstName' and 'lastName' (cf. getMiniUserDict above) and
+        data are truncated, e.g., corpus_dict['elicitor'] is a dict with keys
+        for 'id', 'first_name' and 'last_name' (cf. get_mini_user_dict above) and
         lacks keys for other attributes such as 'username',
-        'personalPageContent', etc.
+        'personal_page_content', etc.
         """
 
         return {
@@ -80,18 +80,18 @@ class Corpus(Base):
             'name': self.name,
             'description': self.description,
             'content': self.content,
-            'enterer': self.getMiniUserDict(self.enterer),
-            'modifier': self.getMiniUserDict(self.modifier),
-            'formSearch': self.getMiniFormSearchDict(self.formSearch),
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'tags': self.getTagsList(self.tags),
-            'files': self.getCorpusFilesList(self.files)
+            'enterer': self.get_mini_user_dict(self.enterer),
+            'modifier': self.get_mini_user_dict(self.modifier),
+            'form_search': self.get_mini_form_search_dict(self.form_search),
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'tags': self.get_tags_list(self.tags),
+            'files': self.get_corpus_files_list(self.files)
         }
 
-    def getFullDict(self):
-        result = self.getDict()
-        result['forms'] = self.getFormsList(self.forms)
+    def get_full_dict(self):
+        result = self.get_dict()
+        result['forms'] = self.get_forms_list(self.forms)
         return result
 
 
@@ -112,20 +112,20 @@ class CorpusFile(Base):
     creator = relation('User', primaryjoin='CorpusFile.creator_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id'))
     modifier = relation('User', primaryjoin='CorpusFile.modifier_id==User.id')
-    datetimeModified = Column(DateTime, default=now)
-    datetimeCreated = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
+    datetime_created = Column(DateTime)
     restricted = Column(Boolean)
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the corpus file."""
         return {
             'id': self.id,
             'corpus_id': self.corpus_id,
             'filename': self.filename,
             'format': self.format,
-            'creator': self.getMiniUserDict(self.creator),
-            'modifier': self.getMiniUserDict(self.modifier),
-            'datetimeModified': self.datetimeModified,
-            'datetimeEntered': self.datetimeEntered,
+            'creator': self.get_mini_user_dict(self.creator),
+            'modifier': self.get_mini_user_dict(self.modifier),
+            'datetime_modified': self.datetime_modified,
+            'datetime_entered': self.datetime_entered,
             'restricted': self.restricted
         }

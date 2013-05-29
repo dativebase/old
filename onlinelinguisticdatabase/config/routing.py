@@ -24,10 +24,10 @@ refer to the routes manual at http://routes.groovie.org/docs/
 
 from routes import Mapper
 
-def searchConnect(map, name, controller=None):
+def search_connect(map, name, controller=None):
     """Create a SEARCH mapping for the input ``name``/``controller``.
     
-    E.g., ``map = searchConnect(map, 'forms')`` causes ``SEARCH /forms`` to
+    E.g., ``map = search_connect(map, 'forms')`` causes ``SEARCH /forms`` to
     route to :func:`FormsController.search`, etc.
 
     """
@@ -64,7 +64,7 @@ def make_map(config):
     map.connect('/corpora/{id}/history', controller='corpora', action='history')
     map.connect('/corpora/{id}/search', controller='corpora', action='search',
                 conditions=dict(method='POST'))
-    map.connect('/corpora/{id}/servefile/{fileId}', controller='corpora',
+    map.connect('/corpora/{id}/servefile/{file_id}', controller='corpora',
                 action='servefile', conditions=dict(method='GET'))
     map.connect('/corpora/{id}/tgrep2', controller='corpora',
                 action='tgrep2', conditions=dict(method=['POST', 'SEARCH']))
@@ -104,15 +104,15 @@ def make_map(config):
                 action='servecompiled', conditions=dict(method='GET'))
 
     # SEARCH routes
-    map = searchConnect(map, 'collectionbackups')
-    map = searchConnect(map, 'collections', 'oldcollections')
-    map = searchConnect(map, 'corpusbackups')
-    map = searchConnect(map, 'files')
-    map = searchConnect(map, 'formbackups')
-    map = searchConnect(map, 'forms')
-    map = searchConnect(map, 'formsearches')
-    map = searchConnect(map, 'languages')
-    map = searchConnect(map, 'sources')
+    map = search_connect(map, 'collectionbackups')
+    map = search_connect(map, 'collections', 'oldcollections')
+    map = search_connect(map, 'corpusbackups')
+    map = search_connect(map, 'files')
+    map = search_connect(map, 'formbackups')
+    map = search_connect(map, 'forms')
+    map = search_connect(map, 'formsearches')
+    map = search_connect(map, 'languages')
+    map = search_connect(map, 'sources')
 
     # rememberedforms "resource"
     map.connect("rememberedforms", "/rememberedforms/{id}",

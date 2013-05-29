@@ -36,24 +36,24 @@ class Phonology(Base):
     enterer = relation('User', primaryjoin='Phonology.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id'))
     modifier = relation('User', primaryjoin='Phonology.modifier_id==User.id')
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
-    compileSucceeded = Column(Boolean, default=False)
-    compileMessage = Column(Unicode(255))
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
+    compile_succeeded = Column(Boolean, default=False)
+    compile_message = Column(Unicode(255))
     compile_attempt = Column(Unicode(36))
 
-    def getDict(self):
+    def get_dict(self):
         return {
             'id': self.id,
             'UUID': self.UUID,
             'name': self.name,
             'description': self.description,
             'script': self.script,
-            'enterer': self.getMiniUserDict(self.enterer),
-            'modifier': self.getMiniUserDict(self.modifier),
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
-            'compileSucceeded': self.compileSucceeded,
-            'compileMessage': self.compileMessage,
+            'enterer': self.get_mini_user_dict(self.enterer),
+            'modifier': self.get_mini_user_dict(self.modifier),
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
+            'compile_succeeded': self.compile_succeeded,
+            'compile_message': self.compile_message,
             'compile_attempt': self.compile_attempt
         }

@@ -22,7 +22,7 @@
 import simplejson as json
 from decorator import decorator
 from pylons import session, response
-from utils import unauthorizedMsg
+from utils import unauthorized_msg
 import logging
 
 log = logging.getLogger(__name__)
@@ -44,13 +44,13 @@ def authenticate(target):
 
     return decorator(wrapper)(target)
 
-def authenticateWithJSON(target):
+def authenticate_with_JSON(target):
     """Authentication decorator that returns JSON error messages.
     
     Identical to the authenticate decorator except that the response body is
     json.dumped beforehand.  This is decorator is only needed in those few
     actions whose successful output is not JSON, e.g., the actions that serve
-    file data, cf. the ``serve`` and ``serveFile`` actions of the
+    file data, cf. the ``serve`` and ``serve_file`` actions of the
     ``FilesController`` and ``CorporaController``.
     
     """
@@ -63,7 +63,7 @@ def authenticateWithJSON(target):
 
     return decorator(wrapper)(target)
 
-def authorize(roles, users=None, userIDIsArgs1=False):
+def authorize(roles, users=None, user_id_is_args1=False):
     """Authorization decorator.  If user tries to request a controller action
     but has insufficient authorization, this decorator will respond with a
     header status of '403 Forbidden' and a JSON object explanation.
@@ -77,17 +77,17 @@ def authorize(roles, users=None, userIDIsArgs1=False):
 
     Example 1: (user must be an administrator or a contributor): 
     >@authorize(['administrator', 'contributor'])
-    >def actionName(self):
+    >def action_name(self):
     >   ...
 
     Example 2: (user must be either an administrator or the contributor with Id 2): 
     >@authorize(['administrator', 'contributor'], [2])
-    >def actionName(self):
+    >def action_name(self):
     >   ...
 
     Example 3: (user must have the same ID as the entity she is trying to affect): 
-    >@authorize(['administrator', 'contributor', 'viewer'], userIDIsArgs1=True)
-    >def actionName(self, id):
+    >@authorize(['administrator', 'contributor', 'viewer'], user_id_is_args1=True)
+    >def action_name(self, id):
     >   ...
 
     """
@@ -101,16 +101,16 @@ def authorize(roles, users=None, userIDIsArgs1=False):
             if users:
                 if role != 'administrator' and id not in users:
                     response.status_int = 403
-                    return unauthorizedMsg
+                    return unauthorized_msg
             # Check whether the user id equals the id argument given to the
             # target action.  This is useful, e.g., when a user can only edit
             # their own personal page.
-            if userIDIsArgs1:
+            if user_id_is_args1:
                 if role != u'administrator' and int(id) != int(args[1]):
                     response.status_int = 403
-                    return unauthorizedMsg
+                    return unauthorized_msg
             return target(*args, **kwargs)
         else:
             response.status_int = 403
-            return unauthorizedMsg
+            return unauthorized_msg
     return decorator(wrapper)

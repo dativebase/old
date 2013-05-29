@@ -26,7 +26,7 @@ filetag_table = Table('filetag', Base.metadata,
     Column('id', Integer, Sequence('formfile_seq_id', optional=True), primary_key=True),
     Column('file_id', Integer, ForeignKey('file.id')),
     Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetimeModified', DateTime(), default=now),
+    Column('datetime_modified', DateTime(), default=now),
     mysql_charset='utf8'
 )
 
@@ -36,7 +36,7 @@ class File(Base):
     1. Standard files: their content is a file in /files/filename.  These files
        have a filename attribute.
     2. Subinterval-referring A/V files: these refer to another OLD file for
-       their content.  These files have a parentFile attribute (as well as start
+       their content.  These files have a parent_file attribute (as well as start
        and end attributes.)
     3. Externally hosted files: these refer to a file hosted on another server.
        They have a url attribute (and optionally a password attribute as well.)
@@ -51,19 +51,19 @@ class File(Base):
     id = Column(Integer, Sequence('file_seq_id', optional=True), primary_key=True)
     filename = Column(Unicode(255), unique=True)    # filename is the name of the file as written to disk
     name = Column(Unicode(255))                     # just a name; useful for subinterval-referencing files; need not be unique
-    MIMEtype = Column(Unicode(255))
+    MIME_type = Column(Unicode(255))
     size = Column(Integer)
     description = Column(UnicodeText)
-    dateElicited = Column(Date)
-    datetimeEntered = Column(DateTime)
-    datetimeModified = Column(DateTime, default=now)
+    date_elicited = Column(Date)
+    datetime_entered = Column(DateTime)
+    datetime_modified = Column(DateTime, default=now)
     enterer_id = Column(Integer, ForeignKey('user.id'))
     enterer = relation('User', primaryjoin='File.enterer_id==User.id')
     elicitor_id = Column(Integer, ForeignKey('user.id'))
     elicitor = relation('User', primaryjoin='File.elicitor_id==User.id')
     speaker_id = Column(Integer, ForeignKey('speaker.id'))
     speaker = relation('Speaker')
-    utteranceType = Column(Unicode(255))
+    utterance_type = Column(Unicode(255))
     tags = relation('Tag', secondary=filetag_table, backref='files')
 
     # Attributes germane to externally hosted files.
@@ -71,38 +71,38 @@ class File(Base):
     password = Column(Unicode(255))     # for external files requiring authentication
 
     # Attributes germane to subinterval-referencing a/v files.
-    parentFile_id = Column(Integer, ForeignKey('file.id'))
-    parentFile = relation('File', remote_side=[id])
+    parent_file_id = Column(Integer, ForeignKey('file.id'))
+    parent_file = relation('File', remote_side=[id])
     start = Column(Float)
     end = Column(Float)
 
-    lossyFilename = Column(Unicode(255))        # .ogg generated from .wav or resized images
+    lossy_filename = Column(Unicode(255))        # .ogg generated from .wav or resized images
 
-    def getDict(self):
+    def get_dict(self):
         """Return a Python dictionary representation of the File.  This
         facilitates JSON-stringification, cf. utils.JSONOLDEncoder.  Relational
         data are truncated.
         """
         return {
             'id': self.id,
-            'dateElicited': self.dateElicited,
-            'datetimeEntered': self.datetimeEntered,
-            'datetimeModified': self.datetimeModified,
+            'date_elicited': self.date_elicited,
+            'datetime_entered': self.datetime_entered,
+            'datetime_modified': self.datetime_modified,
             'filename': self.filename,
             'name': self.name,
-            'lossyFilename': self.lossyFilename,
-            'MIMEtype': self.MIMEtype,
+            'lossy_filename': self.lossy_filename,
+            'MIME_type': self.MIME_type,
             'size': self.size,
             'description': self.description,
-            'utteranceType': self.utteranceType,
+            'utterance_type': self.utterance_type,
             'url': self.url,
             'password': self.password,
-            'enterer': self.getMiniUserDict(self.enterer),
-            'elicitor': self.getMiniUserDict(self.elicitor),
-            'speaker': self.getMiniSpeakerDict(self.speaker),
-            'tags': self.getTagsList(self.tags),
-            'forms': self.getFormsList(self.forms),
-            'parentFile': self.getMiniFileDict(self.parentFile),
+            'enterer': self.get_mini_user_dict(self.enterer),
+            'elicitor': self.get_mini_user_dict(self.elicitor),
+            'speaker': self.get_mini_speaker_dict(self.speaker),
+            'tags': self.get_tags_list(self.tags),
+            'forms': self.get_forms_list(self.forms),
+            'parent_file': self.get_mini_file_dict(self.parent_file),
             'start': self.start,
             'end': self.end
         }

@@ -32,89 +32,89 @@ class TestSpeakersController(TestController):
 
     #@nottest
     def test_index(self):
-        """Tests that GET /speakers returns an array of all speakers and that orderBy and pagination parameters work correctly."""
+        """Tests that GET /speakers returns an array of all speakers and that order_by and pagination parameters work correctly."""
 
         # Add 100 speakers.
-        def createSpeakerFromIndex(index):
+        def create_speaker_from_index(index):
             speaker = model.Speaker()
-            speaker.firstName = u'John%d' % index
-            speaker.lastName = u'Doe%d' % index
+            speaker.first_name = u'John%d' % index
+            speaker.last_name = u'Doe%d' % index
             speaker.dialect = u'dialect %d' % index
-            speaker.pageContent = u'page content %d' % index
+            speaker.page_content = u'page content %d' % index
             return speaker
-        speakers = [createSpeakerFromIndex(i) for i in range(1, 101)]
+        speakers = [create_speaker_from_index(i) for i in range(1, 101)]
         Session.add_all(speakers)
         Session.commit()
-        speakers = h.getSpeakers(True)
-        speakersCount = len(speakers)
+        speakers = h.get_speakers(True)
+        speakers_count = len(speakers)
 
         # Test that GET /speakers gives us all of the speakers.
         response = self.app.get(url('speakers'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == speakersCount
-        assert resp[0]['firstName'] == u'John1'
+        assert len(resp) == speakers_count
+        assert resp[0]['first_name'] == u'John1'
         assert resp[0]['id'] == speakers[0].id
         assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 23, 'page': 3}
+        paginator = {'items_per_page': 23, 'page': 3}
         response = self.app.get(url('speakers'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert len(resp['items']) == 23
-        assert resp['items'][0]['firstName'] == speakers[46].firstName
+        assert resp['items'][0]['first_name'] == speakers[46].first_name
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'Speaker', 'orderByAttribute': 'firstName',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('speakers'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'Speaker', 'order_by_attribute': 'first_name',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('speakers'), order_by_params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = sorted([s.firstName for s in speakers], reverse=True)
-        assert resultSet == [s['firstName'] for s in resp]
+        result_set = sorted([s.first_name for s in speakers], reverse=True)
+        assert result_set == [s['first_name'] for s in resp]
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'Speaker', 'orderByAttribute': 'firstName',
-                     'orderByDirection': 'desc', 'itemsPerPage': 23, 'page': 3}
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'Speaker', 'order_by_attribute': 'first_name',
+                     'order_by_direction': 'desc', 'items_per_page': 23, 'page': 3}
         response = self.app.get(url('speakers'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resultSet[46] == resp['items'][0]['firstName']
+        assert result_set[46] == resp['items'][0]['first_name']
 
-        # Expect a 400 error when the orderByDirection param is invalid
-        orderByParams = {'orderByModel': 'Speaker', 'orderByAttribute': 'firstName',
-                     'orderByDirection': 'descending'}
-        response = self.app.get(url('speakers'), orderByParams, status=400,
+        # Expect a 400 error when the order_by_direction param is invalid
+        order_by_params = {'order_by_model': 'Speaker', 'order_by_attribute': 'first_name',
+                     'order_by_direction': 'descending'}
+        response = self.app.get(url('speakers'), order_by_params, status=400,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-        # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
+        # Expect the default BY id ASCENDING ordering when the order_by_model/Attribute
         # param is invalid.
-        orderByParams = {'orderByModel': 'Speakerist', 'orderByAttribute': 'prenom',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('speakers'), orderByParams,
+        order_by_params = {'order_by_model': 'Speakerist', 'order_by_attribute': 'prenom',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('speakers'), order_by_params,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp[0]['id'] == speakers[0].id
 
         # Expect a 400 error when the paginator GET params are empty
         # or are integers less than 1
-        paginator = {'itemsPerPage': u'a', 'page': u''}
+        paginator = {'items_per_page': u'a', 'page': u''}
         response = self.app.get(url('speakers'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
+        assert resp['errors']['items_per_page'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
         assert response.content_type == 'application/json'
 
-        paginator = {'itemsPerPage': 0, 'page': -1}
+        paginator = {'items_per_page': 0, 'page': -1}
         response = self.app.get(url('speakers'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
+        assert resp['errors']['items_per_page'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
@@ -124,37 +124,37 @@ class TestSpeakersController(TestController):
         or returns an appropriate error if the input is invalid.
         """
 
-        originalSpeakerCount = Session.query(Speaker).count()
+        original_speaker_count = Session.query(Speaker).count()
 
         # Create a valid one
-        params = self.speakerCreateParams.copy()
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'John',
-            'lastName': u'Doe',
-            'pageContent': u'pageContent',
+            'first_name': u'John',
+            'last_name': u'Doe',
+            'page_content': u'page_content',
             'dialect': u'dialect'
         })
         params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        newSpeakerCount = Session.query(Speaker).count()
-        assert newSpeakerCount == originalSpeakerCount + 1
-        assert resp['firstName'] == u'John'
+        new_speaker_count = Session.query(Speaker).count()
+        assert new_speaker_count == original_speaker_count + 1
+        assert resp['first_name'] == u'John'
         assert resp['dialect'] == u'dialect'
         assert response.content_type == 'application/json'
 
-        # Invalid because firstName is too long
-        params = self.speakerCreateParams.copy()
+        # Invalid because first_name is too long
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'John' * 400,
-            'lastName': u'Doe',
-            'pageContent': u'pageContent',
+            'first_name': u'John' * 400,
+            'last_name': u'Doe',
+            'page_content': u'page_content',
             'dialect': u'dialect'
         })
         params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers, self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['firstName'] == u'Enter a value not more than 255 characters long'
+        assert resp['errors']['first_name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
     #@nottest
@@ -171,50 +171,50 @@ class TestSpeakersController(TestController):
         """Tests that PUT /speakers/id updates the speaker with id=id."""
 
         # Create a speaker to update.
-        params = self.speakerCreateParams.copy()
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'firstName',
-            'lastName': u'lastName',
-            'pageContent': u'pageContent',
+            'first_name': u'first_name',
+            'last_name': u'last_name',
+            'page_content': u'page_content',
             'dialect': u'dialect'
         })
         params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        speakerCount = Session.query(Speaker).count()
-        speakerId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
+        speaker_count = Session.query(Speaker).count()
+        speaker_id = resp['id']
+        original_datetime_modified = resp['datetime_modified']
 
         # Update the speaker
-        sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
-        params = self.speakerCreateParams.copy()
+        sleep(1)    # sleep for a second to ensure that MySQL registers a different datetime_modified for the update
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'firstName',
-            'lastName': u'lastName',
-            'pageContent': u'pageContent',
+            'first_name': u'first_name',
+            'last_name': u'last_name',
+            'page_content': u'page_content',
             'dialect': u'updated dialect.'
         })
         params = json.dumps(params)
-        response = self.app.put(url('speaker', id=speakerId), params, self.json_headers,
+        response = self.app.put(url('speaker', id=speaker_id), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeModified = resp['datetimeModified']
-        newSpeakerCount = Session.query(Speaker).count()
-        assert speakerCount == newSpeakerCount
-        assert datetimeModified != originalDatetimeModified
+        datetime_modified = resp['datetime_modified']
+        new_speaker_count = Session.query(Speaker).count()
+        assert speaker_count == new_speaker_count
+        assert datetime_modified != original_datetime_modified
         assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        response = self.app.put(url('speaker', id=speakerId), params, self.json_headers,
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        response = self.app.put(url('speaker', id=speaker_id), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        speakerCount = newSpeakerCount
-        newSpeakerCount = Session.query(Speaker).count()
-        ourSpeakerDatetimeModified = Session.query(Speaker).get(speakerId).datetimeModified
-        assert ourSpeakerDatetimeModified.isoformat() == datetimeModified
-        assert speakerCount == newSpeakerCount
+        speaker_count = new_speaker_count
+        new_speaker_count = Session.query(Speaker).count()
+        our_speaker_datetime_modified = Session.query(Speaker).get(speaker_id).datetime_modified
+        assert our_speaker_datetime_modified.isoformat() == datetime_modified
+        assert speaker_count == new_speaker_count
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
@@ -223,32 +223,32 @@ class TestSpeakersController(TestController):
         """Tests that DELETE /speakers/id deletes the speaker with id=id."""
 
         # Create a speaker to delete.
-        params = self.speakerCreateParams.copy()
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'firstName',
-            'lastName': u'lastName',
-            'pageContent': u'pageContent',
+            'first_name': u'first_name',
+            'last_name': u'last_name',
+            'page_content': u'page_content',
             'dialect': u'dialect'
         })
         params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        speakerCount = Session.query(Speaker).count()
-        speakerId = resp['id']
+        speaker_count = Session.query(Speaker).count()
+        speaker_id = resp['id']
 
         # Now delete the speaker
-        response = self.app.delete(url('speaker', id=speakerId), headers=self.json_headers,
+        response = self.app.delete(url('speaker', id=speaker_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        newSpeakerCount = Session.query(Speaker).count()
-        assert newSpeakerCount == speakerCount - 1
-        assert resp['id'] == speakerId
+        new_speaker_count = Session.query(Speaker).count()
+        assert new_speaker_count == speaker_count - 1
+        assert resp['id'] == speaker_id
         assert response.content_type == 'application/json'
 
         # Trying to get the deleted speaker from the db should return None
-        deletedSpeaker = Session.query(Speaker).get(speakerId)
-        assert deletedSpeaker == None
+        deleted_speaker = Session.query(Speaker).get(speaker_id)
+        assert deleted_speaker == None
         assert response.content_type == 'application/json'
 
         # Delete with an invalid id
@@ -270,18 +270,18 @@ class TestSpeakersController(TestController):
         """Tests that GET /speakers/id returns the speaker with id=id or an appropriate error."""
 
         # Create a speaker to show.
-        params = self.speakerCreateParams.copy()
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'firstName',
-            'lastName': u'lastName',
-            'pageContent': u'pageContent',
+            'first_name': u'first_name',
+            'last_name': u'last_name',
+            'page_content': u'page_content',
             'dialect': u'dialect'
         })
         params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        speakerId = resp['id']
+        speaker_id = resp['id']
 
         # Try to get a speaker using an invalid id
         id = 100000000000
@@ -299,10 +299,10 @@ class TestSpeakersController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid id
-        response = self.app.get(url('speaker', id=speakerId), headers=self.json_headers,
+        response = self.app.get(url('speaker', id=speaker_id), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resp['firstName'] == u'firstName'
+        assert resp['first_name'] == u'first_name'
         assert resp['dialect'] == u'dialect'
         assert response.content_type == 'application/json'
 
@@ -316,21 +316,21 @@ class TestSpeakersController(TestController):
         """
 
         # Create a speaker to edit.
-        params = self.speakerCreateParams.copy()
+        params = self.speaker_create_params.copy()
         params.update({
-            'firstName': u'firstName',
-            'lastName': u'lastName',
-            'pageContent': u'pageContent',
+            'first_name': u'first_name',
+            'last_name': u'last_name',
+            'page_content': u'page_content',
             'dialect': u'dialect'
         })
         params = json.dumps(params)
         response = self.app.post(url('speakers'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        speakerId = resp['id']
+        speaker_id = resp['id']
 
         # Not logged in: expect 401 Unauthorized
-        response = self.app.get(url('edit_speaker', id=speakerId), status=401)
+        response = self.app.get(url('edit_speaker', id=speaker_id), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
         assert response.content_type == 'application/json'
@@ -350,9 +350,9 @@ class TestSpeakersController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid id
-        response = self.app.get(url('edit_speaker', id=speakerId),
+        response = self.app.get(url('edit_speaker', id=speaker_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resp['speaker']['firstName'] == u'firstName'
+        assert resp['speaker']['first_name'] == u'first_name'
         assert resp['data'] == {}
         assert response.content_type == 'application/json'

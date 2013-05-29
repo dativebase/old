@@ -42,7 +42,7 @@ u'Knuth, Donald E.'
 """
 
 # Entry types.
-entryTypes = {
+entry_types = {
     'article': {
         'description': 'An article from a journal or magazine.',
         'required': ('author', 'title', 'journal', 'year'),
@@ -123,13 +123,13 @@ entryTypes = {
 }
 
 # Other entry types.  Not recommended.
-otherEntryTypes = (
+other_entry_types = (
     'collection',
     'patent'
 )
 
 # These field names are optional for all entry types.
-universallyOptionalFieldNames = (
+universally_optional_field_names = (
     'key',      # Additional info for alphabetizing entries
     'crossref'  # Field text here is the cite key for another entry,
     'url',
@@ -138,7 +138,7 @@ universallyOptionalFieldNames = (
 
 # Fields names.
 # Note that 'eprint' and 'url' might also be in the standard fields, cf. http://en.wikipedia.org/wiki/BibTeX#Bibliographic_information_file
-fieldNames = (
+field_names = (
     'address',      # Usually the address of the publisher or other type of institution. For major publishing houses, van Leunen recommends omitting the information entirely. For small publishers, on the other hand, you can help the reader by giving the complete address.
     'annote',       # An annotation. It is not used by the standard bibliography styles, but may be used by others that produce an annotated bibliography.
     'author',       # The name(s) of the author(s), in the format described in the LaTeX book.
@@ -167,7 +167,7 @@ fieldNames = (
 )
 
 # Other field names.
-otherFieldNames = (
+other_field_names = (
     'affiliation',  # The author's affiliation.
     'abstract',     # An abstract of the work.
     'contents',     # A Table of Contents

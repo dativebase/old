@@ -31,5 +31,5 @@ class Orthography(Base):
     name = Column(Unicode(255))
     orthography = Column(UnicodeText)
     lowercase = Column(Boolean, default=False)
-    initialGlottalStops = Column(Boolean, default=True)
-    datetimeModified = Column(DateTime, default=now)
+    initial_glottal_stops = Column(Boolean, default=True)
+    datetime_modified = Column(DateTime, default=now)

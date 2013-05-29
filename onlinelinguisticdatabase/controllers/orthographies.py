@@ -51,7 +51,7 @@ class OrthographiesController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Orthography', config=config)
+    query_builder = SQLAQueryBuilder('Orthography', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -65,14 +65,14 @@ class OrthographiesController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(Orthography)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -93,7 +93,7 @@ class OrthographiesController(BaseController):
             schema = OrthographySchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            orthography = createNewOrthography(data)
+            orthography = create_new_orthography(data)
             Session.add(orthography)
             Session.commit()
             return orthography
@@ -138,17 +138,17 @@ class OrthographiesController(BaseController):
         orthography = Session.query(Orthography).get(int(id))
         user = session['user']
         if orthography:
-            appSet = h.getApplicationSettings()
+            app_set = h.get_application_settings()
             if user.role == u'administrator' or orthography not in (
-            appSet.storageOrthography, appSet.inputOrthography, appSet.outputOrthography):
+            app_set.storage_orthography, app_set.input_orthography, app_set.output_orthography):
                 try:
                     schema = OrthographySchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    state = h.getStateObject(values)
+                    state = h.get_state_object(values)
                     state.id = id
                     result = schema.to_python(values, state)
-                    orthography = updateOrthography(orthography, result)
-                    # orthography will be False if there are no changes (cf. updateOrthography).
+                    orthography = update_orthography(orthography, result)
+                    # orthography will be False if there are no changes (cf. update_orthography).
                     if orthography:
                         Session.add(orthography)
                         Session.commit()
@@ -189,9 +189,9 @@ class OrthographiesController(BaseController):
         """
         orthography = Session.query(Orthography).get(id)
         if orthography:
-            appSet = h.getApplicationSettings()
+            app_set = h.get_application_settings()
             if session['user'].role == u'administrator' or orthography not in (
-            appSet.storageOrthography, appSet.inputOrthography, appSet.outputOrthography):
+            app_set.storage_orthography, app_set.input_orthography, app_set.output_orthography):
                 Session.delete(orthography)
                 Session.commit()
                 return orthography
@@ -250,7 +250,7 @@ class OrthographiesController(BaseController):
 # Orthography Create & Update Functions
 ################################################################################
 
-def createNewOrthography(data):
+def create_new_orthography(data):
     """Create a new orthography.
 
     :param dict data: the data for the orthography to be created.
@@ -261,11 +261,11 @@ def createNewOrthography(data):
     orthography.name = h.normalize(data['name'])
     orthography.orthography = h.normalize(data['orthography'])
     orthography.lowercase = data['lowercase']
-    orthography.initialGlottalStops = data['initialGlottalStops']
-    orthography.datetimeModified = datetime.datetime.utcnow()
+    orthography.initial_glottal_stops = data['initial_glottal_stops']
+    orthography.datetime_modified = datetime.datetime.utcnow()
     return orthography
 
-def updateOrthography(orthography, data):
+def update_orthography(orthography, data):
     """Update an orthography.
 
     :param orthography: the orthography model to be updated.
@@ -275,11 +275,11 @@ def updateOrthography(orthography, data):
 
     """
     changed = False
-    changed = h.setAttr(orthography, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(orthography, 'orthography', h.normalize(data['orthography']), changed)
-    changed = h.setAttr(orthography, 'lowercase', data['lowercase'], changed)
-    changed = h.setAttr(orthography, 'initialGlottalStops', data['initialGlottalStops'], changed)
+    changed = h.set_attr(orthography, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(orthography, 'orthography', h.normalize(data['orthography']), changed)
+    changed = h.set_attr(orthography, 'lowercase', data['lowercase'], changed)
+    changed = h.set_attr(orthography, 'initial_glottal_stops', data['initial_glottal_stops'], changed)
     if changed:
-        orthography.datetimeModified = datetime.datetime.utcnow()
+        orthography.datetime_modified = datetime.datetime.utcnow()
         return orthography
     return changed

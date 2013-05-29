@@ -73,7 +73,7 @@ class OldcollectionsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Collection', config=config)
+    query_builder = SQLAQueryBuilder('Collection', config=config)
 
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
@@ -84,10 +84,10 @@ class OldcollectionsController(BaseController):
         :URL: ``SEARCH /collections`` (or ``POST /collections/search``)
         :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "orderBy": [ ... ]},
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``orderBy`` and ``paginator`` attributes are optional.
+            where the ``order_by`` and ``paginator`` attributes are optional.
 
         .. note::
         
@@ -97,12 +97,12 @@ class OldcollectionsController(BaseController):
 
         """
         try:
-            jsonSearchParams = unicode(request.body, request.charset)
-            pythonSearchParams = json.loads(jsonSearchParams)
-            SQLAQuery = h.eagerloadCollection(
-                self.queryBuilder.getSQLAQuery(pythonSearchParams.get('query')))
-            query = h.filterRestrictedModels('Collection', SQLAQuery)
-            return h.addPagination(query, pythonSearchParams.get('paginator'))
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            SQLAQuery = h.eagerload_collection(
+                self.query_builder.get_SQLA_query(python_search_params.get('query')))
+            query = h.filter_restricted_models('Collection', SQLAQuery)
+            return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -120,11 +120,11 @@ class OldcollectionsController(BaseController):
         """Return the data necessary to search the collection resources.
 
         :URL: ``GET /collections/new_search``
-        :returns: ``{"searchParameters": {"attributes": { ... }, "relations": { ... }}``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
 
         """
 
-        return {'searchParameters': h.getSearchParameters(self.queryBuilder)}
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -138,7 +138,7 @@ class OldcollectionsController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         .. note::
@@ -149,10 +149,10 @@ class OldcollectionsController(BaseController):
 
         """
         try:
-            query = h.eagerloadCollection(Session.query(Collection))
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            query = h.filterRestrictedModels('Collection', query)
-            return h.addPagination(query, dict(request.GET))
+            query = h.eagerload_collection(Session.query(Collection))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            query = h.filter_restricted_models('Collection', query)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -170,20 +170,20 @@ class OldcollectionsController(BaseController):
 
         """
         try:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
             schema = CollectionSchema()
             values = json.loads(unicode(request.body, request.charset))
-            collectionsReferenced = getCollectionsReferenced(values['contents'],
-                                                        user, unrestrictedUsers)
-            values = addContentsUnpackedToValues(values, collectionsReferenced)
-            values = addFormIdsListToValues(values)
-            state = h.getStateObject(values)
+            collections_referenced = get_collections_referenced(values['contents'],
+                                                        user, unrestricted_users)
+            values = add_contents_unpacked_to_values(values, collections_referenced)
+            values = add_form_ids_list_to_values(values)
+            state = h.get_state_object(values)
             data = schema.to_python(values, state)
-            collection = createNewCollection(data, collectionsReferenced)
+            collection = create_new_collection(data, collections_referenced)
             Session.add(collection)
             Session.commit()
-            return collection.getFullDict()
+            return collection.get_full_dict()
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -209,12 +209,12 @@ class OldcollectionsController(BaseController):
 
         .. note::
         
-           See :func:`getNewEditCollectionData` to understand how the query
+           See :func:`get_new_edit_collection_data` to understand how the query
            string parameters can affect the contents of the lists in the
            returned dictionary.
 
         """
-        return getNewEditCollectionData(request.GET)
+        return get_new_edit_collection_data(request.GET)
 
     @h.jsonify
     @h.restrict('PUT')
@@ -229,32 +229,32 @@ class OldcollectionsController(BaseController):
         :returns: the updated collection model.
 
         """
-        collection = h.eagerloadCollection(Session.query(Collection),
-                                           eagerloadForms=True).get(int(id))
+        collection = h.eagerload_collection(Session.query(Collection),
+                                           eagerload_forms=True).get(int(id))
         if collection:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, collection, unrestrictedUsers):
+            if h.user_is_authorized_to_access_model(user, collection, unrestricted_users):
                 try:
                     schema = CollectionSchema()
                     values = json.loads(unicode(request.body, request.charset))
-                    collectionsReferenced = getCollectionsReferenced(
-                                values['contents'], user, unrestrictedUsers, id)
-                    values = addContentsUnpackedToValues(values, collectionsReferenced)
-                    values = addFormIdsListToValues(values)
-                    state = h.getStateObject(values)
+                    collections_referenced = get_collections_referenced(
+                                values['contents'], user, unrestricted_users, id)
+                    values = add_contents_unpacked_to_values(values, collections_referenced)
+                    values = add_form_ids_list_to_values(values)
+                    state = h.get_state_object(values)
                     data = schema.to_python(values, state)
-                    collectionDict = collection.getFullDict()
-                    collection, restricted, contents_changed = updateCollection(
-                        collection, data, collectionsReferenced)
-                    # collection will be False if there are no changes (cf. updateCollection).
+                    collection_dict = collection.get_full_dict()
+                    collection, restricted, contents_changed = update_collection(
+                        collection, data, collections_referenced)
+                    # collection will be False if there are no changes (cf. update_collection).
                     if collection:
-                        backupCollection(collectionDict)
-                        updateCollectionsThatReferenceThisCollection(collection, self.queryBuilder,
+                        backup_collection(collection_dict)
+                        update_collections_that_reference_this_collection(collection, self.query_builder,
                                             restricted=restricted, contents_changed=contents_changed)
                         Session.add(collection)
                         Session.commit()
-                        return collection.getFullDict()
+                        return collection.get_full_dict()
                     else:
                         response.status_int = 400
                         return {'error':
@@ -277,7 +277,7 @@ class OldcollectionsController(BaseController):
                     return {'errors': e.unpack_errors()}
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
@@ -298,23 +298,23 @@ class OldcollectionsController(BaseController):
            Only administrators and a collection's enterer can delete it.
 
         """
-        collection = h.eagerloadCollection(Session.query(Collection),
-                                           eagerloadForms=True).get(id)
+        collection = h.eagerload_collection(Session.query(Collection),
+                                           eagerload_forms=True).get(id)
         if collection:
             if session['user'].role == u'administrator' or \
             collection.enterer is session['user']:
                 session['user'] = Session.merge(session['user'])
                 collection.modifier = session['user']
-                collectionDict = collection.getFullDict()
-                backupCollection(collectionDict)
-                updateCollectionsThatReferenceThisCollection(collection,
-                                                self.queryBuilder, deleted=True)
+                collection_dict = collection.get_full_dict()
+                backup_collection(collection_dict)
+                update_collections_that_reference_this_collection(collection,
+                                                self.query_builder, deleted=True)
                 Session.delete(collection)
                 Session.commit()
-                return collectionDict
+                return collection_dict
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
@@ -335,16 +335,16 @@ class OldcollectionsController(BaseController):
             collections actions.
 
         """
-        collection = h.eagerloadCollection(Session.query(Collection),
-                                           eagerloadForms=True).get(id)
+        collection = h.eagerload_collection(Session.query(Collection),
+                                           eagerload_forms=True).get(id)
         if collection:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            if h.userIsAuthorizedToAccessModel(user, collection, unrestrictedUsers):
-                return collection.getFullDict()
+            if h.user_is_authorized_to_access_model(user, collection, unrestricted_users):
+                return collection.get_full_dict()
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
@@ -373,21 +373,21 @@ class OldcollectionsController(BaseController):
            This action can be thought of as a combination of
            :func:`CollectionsController.show` and
            :func:`CollectionsController.new`.  See
-           :func:`getNewEditCollectionData` to understand how the query string
+           :func:`get_new_edit_collection_data` to understand how the query string
            parameters can affect the contents of the lists in the ``data``
            dictionary.
 
         """
-        collection = h.eagerloadCollection(Session.query(Collection)).get(id)
+        collection = h.eagerload_collection(Session.query(Collection)).get(id)
         if collection:
-            unrestrictedUsers = h.getUnrestrictedUsers()
-            if h.userIsAuthorizedToAccessModel(
-                                session['user'], collection, unrestrictedUsers):
-                data = getNewEditCollectionData(request.GET)
+            unrestricted_users = h.get_unrestricted_users()
+            if h.user_is_authorized_to_access_model(
+                                session['user'], collection, unrestricted_users):
+                data = get_new_edit_collection_data(request.GET)
                 return {'data': data, 'collection': collection}
             else:
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
         else:
             response.status_int = 404
             return {'error': 'There is no collection with id %s' % id}
@@ -403,29 +403,29 @@ class OldcollectionsController(BaseController):
             collection whose history is requested.
         :returns: a dictionary of the form::
 
-                {"collection": { ... }, "previousVersions": [ ... ]}
+                {"collection": { ... }, "previous_versions": [ ... ]}
 
             where the value of the ``collection`` key is the collection whose
-            history is requested and the value of the ``previousVersions`` key
+            history is requested and the value of the ``previous_versions`` key
             is a list of dictionaries representing previous versions of the
             collection.
 
         """
-        collection, previousVersions = h.getModelAndPreviousVersions('Collection', id)
-        if collection or previousVersions:
-            unrestrictedUsers = h.getUnrestrictedUsers()
+        collection, previous_versions = h.get_model_and_previous_versions('Collection', id)
+        if collection or previous_versions:
+            unrestricted_users = h.get_unrestricted_users()
             user = session['user']
-            accessible = h.userIsAuthorizedToAccessModel
-            unrestrictedPreviousVersions = [cb for cb in previousVersions
-                                    if accessible(user, cb, unrestrictedUsers)]
-            collectionIsRestricted = collection and not accessible(user, collection, unrestrictedUsers)
-            previousVersionsAreRestricted = previousVersions and not unrestrictedPreviousVersions
-            if collectionIsRestricted or previousVersionsAreRestricted :
+            accessible = h.user_is_authorized_to_access_model
+            unrestricted_previous_versions = [cb for cb in previous_versions
+                                    if accessible(user, cb, unrestricted_users)]
+            collection_is_restricted = collection and not accessible(user, collection, unrestricted_users)
+            previous_versions_are_restricted = previous_versions and not unrestricted_previous_versions
+            if collection_is_restricted or previous_versions_are_restricted :
                 response.status_int = 403
-                return h.unauthorizedMsg
+                return h.unauthorized_msg
             else :
                 return {'collection': collection,
-                        'previousVersions': unrestrictedPreviousVersions}
+                        'previous_versions': unrestricted_previous_versions}
         else:
             response.status_int = 404
             return {'error': 'No collections or collection backups match %s' % id}
@@ -435,16 +435,16 @@ class OldcollectionsController(BaseController):
 # Backup collection
 ################################################################################
 
-def backupCollection(collectionDict):
+def backup_collection(collection_dict):
     """Backup a collection.
 
-    :param dict formDict: a representation of a collection model.
+    :param dict form_dict: a representation of a collection model.
     :returns: ``None``
 
     """
-    collectionBackup = CollectionBackup()
-    collectionBackup.vivify(collectionDict)
-    Session.add(collectionBackup)
+    collection_backup = CollectionBackup()
+    collection_backup.vivify(collection_dict)
+    Session.add(collection_backup)
 
 
 ################################################################################
@@ -453,15 +453,15 @@ def backupCollection(collectionDict):
 
 # The following set of functions generate data from the references in the contents
 # attribute of a collection.  The two primary tasks are to generate values for
-# the 'forms' and 'contentsUnpacked' attributes of the collection.  The three
-# "public" functions are getCollectionsReferenced, addFormIdsListToValues and
-# addContentsUnpackedToValues.  getCollectionsReferenced raises errors if
+# the 'forms' and 'contents_unpacked' attributes of the collection.  The three
+# "public" functions are get_collections_referenced, add_form_ids_list_to_values and
+# add_contents_unpacked_to_values.  get_collections_referenced raises errors if
 # collection references are invalid and returns a dict from reference ids to
-# collection objects, which dict is used by addContentsUnpackedToValues, the
+# collection objects, which dict is used by add_contents_unpacked_to_values, the
 # output of the latter being used to generate the list of referenced forms.
 
-def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None,
-                             collectionId=None, patt=None):
+def get_collections_referenced(contents, user=None, unrestricted_users=None,
+                             collection_id=None, patt=None):
     """Return the collections (recursively) referenced by the input ``contents`` value.
     
     That is, return all of the collections referenced in the input ``contents``
@@ -469,73 +469,73 @@ def getCollectionsReferenced(contents, user=None, unrestrictedUsers=None,
 
     :param unicode contents: the value of the ``contents`` attribute of a collection.
     :param user: the user model who made the request.
-    :param list unrestrictedUsers: the unrestricted user models of the application.
-    :param int collectionId: the ``id`` value of a collection.
+    :param list unrestricted_users: the unrestricted user models of the application.
+    :param int collection_id: the ``id`` value of a collection.
     :param patt: a compiled regular expression object.
     :returns: a dictionary whose keys are collection ``id`` values and whose
         values are collection models.
 
     """
-    patt = patt or re.compile(h.collectionReferencePattern)
-    collectionsReferenced = dict([(int(id), getCollection(int(id), user, unrestrictedUsers))
+    patt = patt or re.compile(h.collection_reference_pattern)
+    collections_referenced = dict([(int(id), get_collection(int(id), user, unrestricted_users))
                                   for id in patt.findall(contents)])
-    temp = collectionsReferenced.copy()
-    if collectionId in collectionsReferenced:
-        raise CircularCollectionReferenceError(collectionId)
-    [collectionsReferenced.update(getCollectionsReferenced(
-        collectionsReferenced[id].contents, user, unrestrictedUsers, collectionId, patt))
+    temp = collections_referenced.copy()
+    if collection_id in collections_referenced:
+        raise CircularCollectionReferenceError(collection_id)
+    [collections_referenced.update(get_collections_referenced(
+        collections_referenced[id].contents, user, unrestricted_users, collection_id, patt))
      for id in temp]
-    return collectionsReferenced
+    return collections_referenced
 
-def addFormIdsListToValues(values):
+def add_form_ids_list_to_values(values):
     """Add a list of referenced form ids to values.
     
     :param dict values: data for creating or updating a collection
     :returns: ``values`` with a ``'forms'`` key whose value is a list of id integers.
 
     """
-    contentsUnpacked = getUnicode('contentsUnpacked', values)
-    values['forms'] = [int(id) for id in h.formReferencePattern.findall(contentsUnpacked)]
+    contents_unpacked = get_unicode('contents_unpacked', values)
+    values['forms'] = [int(id) for id in h.form_reference_pattern.findall(contents_unpacked)]
     return values
 
-def addContentsUnpackedToValues(values, collectionsReferenced):
-    """Add a ``'contentsUnpacked'`` value to values and return values.
+def add_contents_unpacked_to_values(values, collections_referenced):
+    """Add a ``'contents_unpacked'`` value to values and return values.
     
     :param dict values: data for creating a collection.
-    :param dict collectionsReferenced: keys are collection ``id`` values and 
+    :param dict collections_referenced: keys are collection ``id`` values and 
         values are collection models.
     :returns: ``values`` updated.
 
     """
-    contents = getUnicode('contents', values)
-    values['contentsUnpacked'] = generateContentsUnpacked(contents, collectionsReferenced)
+    contents = get_unicode('contents', values)
+    values['contents_unpacked'] = generate_contents_unpacked(contents, collections_referenced)
     return values
 
-def getCollectionsReferencedInContents(collection, collectionsReferenced):
+def get_collections_referenced_in_contents(collection, collections_referenced):
     """Get the immediately referenced collections of a collection.
     
     :param collection: a collection model.
-    :param dict collectionsReferenced: keys are collection ``id`` values and 
+    :param dict collections_referenced: keys are collection ``id`` values and 
         values are collection models.
     :returns: a list of collection models; useful in determining whether
         directly referenced collections are restricted.
 
     """
-    return [collectionsReferenced[int(id)]
-            for id in h.collectionReferencePattern.findall(collection.contents)]
+    return [collections_referenced[int(id)]
+            for id in h.collection_reference_pattern.findall(collection.contents)]
 
-def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwargs):
+def update_collections_that_reference_this_collection(collection, query_builder, **kwargs):
     """Update all collections that reference the input collection.
     
     :param collection: a collection model.
-    :param queryBuilder: an :class:`SQLAQueryBuilder` instance.
+    :param query_builder: an :class:`SQLAQueryBuilder` instance.
     :param bool kwargs['contents_changed']: indicates whether the input
         collection's ``contents`` value has changed.
     :param bool kwargs['deleted']: indicates whether the input collection has
         just been deleted.
     :returns: ``None``
 
-    Update the ``contents``, ``contentsUnpacked``, ``html`` and/or ``form``
+    Update the ``contents``, ``contents_unpacked``, ``html`` and/or ``form``
     attributes of every collection that references the input collection plus all
     of the collections that reference those collections, etc.  This function is
     called upon successful update and delete requests.
@@ -543,81 +543,81 @@ def updateCollectionsThatReferenceThisCollection(collection, queryBuilder, **kwa
     If the contents of the ``collection`` have changed (i.e.,
     ``kwargs['contents_changed']==True``) , then retrieve all collections
     that reference ``collection`` and all collections that reference those
-    referers, etc., and update their ``contentsUnpacked``, ``html`` and
+    referers, etc., and update their ``contents_unpacked``, ``html`` and
     ``forms`` attributes.
 
     If the ``collection`` has been deleted (i.e., ``kwargs['deleted']==True``),
     then recursively retrieve all collections referencing ``collection`` and
-    update their ``contents``, ``contentsUnpacked``, ``html`` and ``forms``
+    update their ``contents``, ``contents_unpacked``, ``html`` and ``forms``
     attributes.
 
     If ``collection`` has just been tagged as restricted (i.e.,
     ``kwargs['restricted']==True``), then recursively restrict all collections
     that reference it.
 
-    In all cases, update the ``datetimeModified`` value of every collection that
+    In all cases, update the ``datetime_modified`` value of every collection that
     recursively references ``collection``.
 
     """
-    def updateContentsUnpackedEtc(collection, **kwargs):
+    def update_contents_unpacked_etc(collection, **kwargs):
         deleted = kwargs.get('deleted', False)
-        collectionId = kwargs.get('collectionId')
+        collection_id = kwargs.get('collection_id')
         if deleted:
-            collection.contents = removeReferencesToThisCollection(collection.contents, collectionId)
-        collectionsReferenced = getCollectionsReferenced(collection.contents)
-        collection.contentsUnpacked = generateContentsUnpacked(
-                                    collection.contents, collectionsReferenced)
-        collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
-                                                  collection.markupLanguage)
+            collection.contents = remove_references_to_this_collection(collection.contents, collection_id)
+        collections_referenced = get_collections_referenced(collection.contents)
+        collection.contents_unpacked = generate_contents_unpacked(
+                                    collection.contents, collections_referenced)
+        collection.html = h.get_HTML_from_contents(collection.contents_unpacked,
+                                                  collection.markup_language)
         collection.forms = [Session.query(Form).get(int(id)) for id in
-                    h.formReferencePattern.findall(collection.contentsUnpacked)]
-    def updateModificationValues(collection, now):
-        collection.datetimeModified = now
+                    h.form_reference_pattern.findall(collection.contents_unpacked)]
+    def update_modification_values(collection, now):
+        collection.datetime_modified = now
         session['user'] = Session.merge(session['user'])
         collection.modifier = session['user']
     restricted = kwargs.get('restricted', False)
     contents_changed = kwargs.get('contents_changed', False)
     deleted = kwargs.get('deleted', False)
     if restricted or contents_changed or deleted:
-        collectionsReferencingThisCollection = getCollectionsReferencingThisCollection(
-            collection, queryBuilder)
-        collectionsReferencingThisCollectionDicts = [c.getFullDict() for c in
-                                        collectionsReferencingThisCollection]
+        collections_referencing_this_collection = get_collections_referencing_this_collection(
+            collection, query_builder)
+        collections_referencing_this_collection_dicts = [c.get_full_dict() for c in
+                                        collections_referencing_this_collection]
         now = h.now()
         if restricted:
-            restrictedTag = h.getRestrictedTag()
-            [c.tags.append(restrictedTag) for c in collectionsReferencingThisCollection]
+            restricted_tag = h.get_restricted_tag()
+            [c.tags.append(restricted_tag) for c in collections_referencing_this_collection]
         if contents_changed:
-            [updateContentsUnpackedEtc(c) for c in collectionsReferencingThisCollection]
+            [update_contents_unpacked_etc(c) for c in collections_referencing_this_collection]
         if deleted:
-            [updateContentsUnpackedEtc(c, collectionId=collection.id, deleted=True)
-             for c in collectionsReferencingThisCollection]
-        [updateModificationValues(c, now) for c in collectionsReferencingThisCollection]
-        [backupCollection(cd) for cd in collectionsReferencingThisCollectionDicts]
-        Session.add_all(collectionsReferencingThisCollection)
+            [update_contents_unpacked_etc(c, collection_id=collection.id, deleted=True)
+             for c in collections_referencing_this_collection]
+        [update_modification_values(c, now) for c in collections_referencing_this_collection]
+        [backup_collection(cd) for cd in collections_referencing_this_collection_dicts]
+        Session.add_all(collections_referencing_this_collection)
         Session.commit()
 
-def getCollectionsReferencingThisCollection(collection, queryBuilder):
+def get_collections_referencing_this_collection(collection, query_builder):
     """Return all collections that recursively reference ``collection``.
     
     That is, return all collections that reference ``collection`` plus all
     collections that reference those referencing collections, etc.
     
     :param collection: a collection model object.
-    :param queryBuilder: an :class:`SQLAQueryBuilder` instance.
+    :param query_builder: an :class:`SQLAQueryBuilder` instance.
     :returns: a list of collection models.
 
     """
-    patt = h.collectionReferencePattern.pattern.replace(
+    patt = h.collection_reference_pattern.pattern.replace(
         '\d+', str(collection.id)).replace('\\', '')
     query = {'filter': ['Collection', 'contents', 'regex', patt]}
-    result = queryBuilder.getSQLAQuery(query).all()
+    result = query_builder.get_SQLA_query(query).all()
     for c in result[:]:
-        result += getCollectionsReferencingThisCollection(c, queryBuilder)
+        result += get_collections_referencing_this_collection(c, query_builder)
     return result
 
 
-def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
+def update_collection_by_deletion_of_referenced_form(collection, referenced_form):
     """Update a collection based on the deletion of a form it references.
 
     This function is called in the :class:`FormsController` when a form is
@@ -626,51 +626,51 @@ def updateCollectionByDeletionOfReferencedForm(collection, referencedForm):
     the collections that reference them, and so on.
     
     :param collection: a collection model object.
-    :param referencedForm: a form model object.
+    :param referenced_form: a form model object.
     :returns: ``None``.
 
     """
-    collectionDict = collection.getFullDict()
-    collection.contents = removeReferencesToThisForm(collection.contents, referencedForm.id)
-    collectionsReferenced = getCollectionsReferenced(collection.contents)
-    collection.contentsUnpacked = generateContentsUnpacked(
-                                collection.contents, collectionsReferenced)
-    collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
-                                              collection.markupLanguage)
-    collection.datetimeModified = datetime.datetime.utcnow()
-    backupCollection(collectionDict)
-    updateCollectionsThatReferenceThisCollection(
-        collection, OldcollectionsController.queryBuilder, contents_changed=True)
+    collection_dict = collection.get_full_dict()
+    collection.contents = remove_references_to_this_form(collection.contents, referenced_form.id)
+    collections_referenced = get_collections_referenced(collection.contents)
+    collection.contents_unpacked = generate_contents_unpacked(
+                                collection.contents, collections_referenced)
+    collection.html = h.get_HTML_from_contents(collection.contents_unpacked,
+                                              collection.markup_language)
+    collection.datetime_modified = datetime.datetime.utcnow()
+    backup_collection(collection_dict)
+    update_collections_that_reference_this_collection(
+        collection, OldcollectionsController.query_builder, contents_changed=True)
     Session.add(collection)
     Session.commit()
 
-def removeReferencesToThisForm(contents, formId):
+def remove_references_to_this_form(contents, form_id):
     """Remove references to a form from the ``contents`` value of another collection.
 
     :param unicode contents: the value of the ``contents`` attribute of a collection.
-    :param int formId: an ``id`` value of a form.
+    :param int form_id: an ``id`` value of a form.
     :returns: the modified ``contents`` string.
 
     """
-    #patt = re.compile('[Ff]orm\[(%d)\]' % formId)
-    patt = re.compile(h.formReferencePattern.pattern.replace('\d+',
-                                                        str(formId)))
+    #patt = re.compile('[Ff]orm\[(%d)\]' % form_id)
+    patt = re.compile(h.form_reference_pattern.pattern.replace('\d+',
+                                                        str(form_id)))
     return patt.sub('', contents)
 
-def removeReferencesToThisCollection(contents, collectionId):
+def remove_references_to_this_collection(contents, collection_id):
     """Remove references to a collection from the ``contents`` value of another collection.
     
     :param unicode contents: the value of the ``contents`` attribute of a collection.
-    :param int collectionId: an ``id`` value of a collection.
+    :param int collection_id: an ``id`` value of a collection.
     :returns: the modified ``contents`` string.
 
     """
-    #patt = re.compile('[cC]ollection[\[\(](%d)[\]\)]' % collectionId)
-    patt = re.compile(h.collectionReferencePattern.pattern.replace('\d+',
-                                                        str(collectionId)))
+    #patt = re.compile('[cC]ollection[\[\(](%d)[\]\)]' % collection_id)
+    patt = re.compile(h.collection_reference_pattern.pattern.replace('\d+',
+                                                        str(collection_id)))
     return patt.sub('', contents)
 
-def getUnicode(key, dict_):
+def get_unicode(key, dict_):
     """Return ``dict_[key]``, making sure it defaults to a unicode object."""
     value = dict_.get(key, u'')
     if isinstance(value, unicode):
@@ -679,39 +679,39 @@ def getUnicode(key, dict_):
         return unicode(value)
     return u''
 
-def getContents(collectionId, collectionsReferenced):
-    """Return the ``contents`` value of the collection with ``collectionId`` as its ``id`` value.
+def get_contents(collection_id, collections_referenced):
+    """Return the ``contents`` value of the collection with ``collection_id`` as its ``id`` value.
 
-    :param int collectionId: the ``id`` value of a collection model.
-    :param dict collectionsReferenced: the collections (recursively) referenced by a collection.
+    :param int collection_id: the ``id`` value of a collection model.
+    :param dict collections_referenced: the collections (recursively) referenced by a collection.
     :returns: the contents of a collection, or a warning message.
 
     """
-    return getattr(collectionsReferenced[collectionId],
+    return getattr(collections_referenced[collection_id],
                    u'contents',
-                   u'Collection %d has no contents.' % collectionId)
+                   u'Collection %d has no contents.' % collection_id)
 
-def generateContentsUnpacked(contents, collectionsReferenced, patt=None):
-    """Generate the ``contentsUnpacked`` value of a collection.
+def generate_contents_unpacked(contents, collections_referenced, patt=None):
+    """Generate the ``contents_unpacked`` value of a collection.
     
     :param unicode contents: the value of the ``contents`` attribute of a collection
-    :param dict collectionsReferenced: the collection models referenced by a
+    :param dict collections_referenced: the collection models referenced by a
         collection; keys are collection ``id`` values.
     :param patt: a compiled regexp pattern object that matches collection references.
-    :returns: a unicode object as a value for the ``contentsUnpacked`` attribute
+    :returns: a unicode object as a value for the ``contents_unpacked`` attribute
         of a collection model.
 
     .. note::
     
         Circular, invalid and unauthorized reference chains are caught in the
-        generation of ``collectionsReferenced``.
+        generation of ``collections_referenced``.
 
     """
-    patt = patt or re.compile(h.collectionReferencePattern)
+    patt = patt or re.compile(h.collection_reference_pattern)
     return patt.sub(
-        lambda m: generateContentsUnpacked(
-            getContents(int(m.group(1)), collectionsReferenced),
-            collectionsReferenced, patt),
+        lambda m: generate_contents_unpacked(
+            get_contents(int(m.group(1)), collections_referenced),
+            collections_referenced, patt),
         contents
     )
 
@@ -725,33 +725,33 @@ class InvalidCollectionReferenceError(Exception):
 class UnauthorizedCollectionReferenceError(Exception):
     pass
 
-def getCollection(collectionId, user, unrestrictedUsers):
-    """Return the collection such that ``collection.id==collectionId``.
+def get_collection(collection_id, user, unrestricted_users):
+    """Return the collection such that ``collection.id==collection_id``.
 
     If the collection does not exist or if ``user`` is not authorized to access
     it, raise an appropriate error.
 
-    :param int collectionId: the ``id`` value of a collection.
+    :param int collection_id: the ``id`` value of a collection.
     :param user: a user model of the logged in user.
-    :param list unrestrictedUsers: the unrestricted users of the system.
+    :param list unrestricted_users: the unrestricted users of the system.
     :return: a collection model object.
 
     """
-    collection = Session.query(Collection).get(collectionId)
+    collection = Session.query(Collection).get(collection_id)
     if collection:
-        if user is None or unrestrictedUsers is None or \
-        h.userIsAuthorizedToAccessModel(user, collection, unrestrictedUsers):
+        if user is None or unrestricted_users is None or \
+        h.user_is_authorized_to_access_model(user, collection, unrestricted_users):
             return collection
         else:
-            raise UnauthorizedCollectionReferenceError(collectionId)
-    raise InvalidCollectionReferenceError(collectionId)
+            raise UnauthorizedCollectionReferenceError(collection_id)
+    raise InvalidCollectionReferenceError(collection_id)
 
 
 ################################################################################
 # Get data for requests to /collections/new and /collections/{id}/edit requests
 ################################################################################
 
-def getNewEditCollectionData(GET_params):
+def get_new_edit_collection_data(GET_params):
     """Return the data necessary to create a new OLD collection or update an existing one.
     
     :param GET_params: the ``request.GET`` dictionary-like object generated by
@@ -764,12 +764,12 @@ def getNewEditCollectionData(GET_params):
     valid ISO 8601 datetime) add the appropriate list of objects to the return
     dictionary.  If the value of a key is a valid ISO 8601 datetime string, add
     the corresponding list of objects *only* if the datetime does *not* match
-    the most recent ``datetimeModified`` value of the resource.  That is, a
+    the most recent ``datetime_modified`` value of the resource.  That is, a
     non-matching datetime indicates that the requester has out-of-date data.
 
     """
     # Map param names to the OLD model objects from which they are derived.
-    paramName2ModelName = {
+    param_name2model_name = {
         'speakers': 'Speaker',
         'users': 'User',
         'tags': 'Tag',
@@ -779,16 +779,16 @@ def getNewEditCollectionData(GET_params):
     # map_ maps param names to functions that retrieve the appropriate data
     # from the db.
     map_ = {
-        'speakers': h.getMiniDictsGetter('Speaker'),
-        'users': h.getMiniDictsGetter('User'),
-        'tags': h.getMiniDictsGetter('Tag'),
-        'sources': h.getMiniDictsGetter('Source')
+        'speakers': h.get_mini_dicts_getter('Speaker'),
+        'users': h.get_mini_dicts_getter('User'),
+        'tags': h.get_mini_dicts_getter('Tag'),
+        'sources': h.get_mini_dicts_getter('Source')
     }
 
     # result is initialized as a dict with empty list values.
     result = dict([(key, []) for key in map_])
-    result['collectionTypes'] = h.collectionTypes
-    result['markupLanguages'] = h.markupLanguages
+    result['collection_types'] = h.collection_types
+    result['markup_languages'] = h.markup_languages
 
     # There are GET params, so we are selective in what we return.
     if GET_params:
@@ -796,16 +796,16 @@ def getNewEditCollectionData(GET_params):
             val = GET_params.get(key)
             # Proceed so long as val is not an empty string.
             if val:
-                valAsDatetimeObj = h.datetimeString2datetime(val)
-                if valAsDatetimeObj:
+                val_as_datetime_obj = h.datetime_string2datetime(val)
+                if val_as_datetime_obj:
                     # Value of param is an ISO 8601 datetime string that
-                    # does not match the most recent datetimeModified of the
+                    # does not match the most recent datetime_modified of the
                     # relevant model in the db: therefore we return a list
                     # of objects/dicts.  If the datetimes do match, this
                     # indicates that the requester's own stores are
                     # up-to-date so we return nothing.
-                    if valAsDatetimeObj != h.getMostRecentModificationDatetime(
-                    paramName2ModelName[key]):
+                    if val_as_datetime_obj != h.get_most_recent_modification_datetime(
+                    param_name2model_name[key]):
                         result[key] = map_[key]()
                 else:
                     result[key] = map_[key]()
@@ -821,11 +821,11 @@ def getNewEditCollectionData(GET_params):
 # Collection Create & Update Functions
 ################################################################################
 
-def createNewCollection(data, collectionsReferenced):
+def create_new_collection(data, collections_referenced):
     """Create a new collection.
 
     :param dict data: the collection to be created.
-    :param dict collectionsReferenced: the collection models recursively referenced in ``data['contents']``.
+    :param dict collections_referenced: the collection models recursively referenced in ``data['contents']``.
     :returns: an SQLAlchemy model object representing the collection.
 
     """
@@ -837,14 +837,14 @@ def createNewCollection(data, collectionsReferenced):
     collection.type = h.normalize(data['type'])
     collection.url = h.normalize(data['url'])
     collection.description = h.normalize(data['description'])
-    collection.markupLanguage = h.normalize(data['markupLanguage'])
+    collection.markup_language = h.normalize(data['markup_language'])
     collection.contents = h.normalize(data['contents'])
-    collection.contentsUnpacked = h.normalize(data['contentsUnpacked'])
-    collection.html = h.getHTMLFromContents(collection.contentsUnpacked,
-                                            collection.markupLanguage)
+    collection.contents_unpacked = h.normalize(data['contents_unpacked'])
+    collection.html = h.get_HTML_from_contents(collection.contents_unpacked,
+                                            collection.markup_language)
 
-    # User-inputted date: dateElicited
-    collection.dateElicited = data['dateElicited']
+    # User-inputted date: date_elicited
+    collection.date_elicited = data['date_elicited']
 
     # Many-to-One
     if data['elicitor']:
@@ -861,31 +861,31 @@ def createNewCollection(data, collectionsReferenced):
 
     # Restrict the entire collection if it is associated to restricted forms or
     # files or if it references a restricted collection in its contents field.
-    immediatelyReferencedCollections = getCollectionsReferencedInContents(
-                                            collection, collectionsReferenced)
-    tags = [f.tags for f in collection.files + collection.forms + immediatelyReferencedCollections]
-    tags = [tag for tagList in tags for tag in tagList]
-    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-    if restrictedTags:
-        restrictedTag = restrictedTags[0]
-        if restrictedTag not in collection.tags:
-            collection.tags.append(restrictedTag)
+    immediately_referenced_collections = get_collections_referenced_in_contents(
+                                            collection, collections_referenced)
+    tags = [f.tags for f in collection.files + collection.forms + immediately_referenced_collections]
+    tags = [tag for tag_list in tags for tag in tag_list]
+    restricted_tags = [tag for tag in tags if tag.name == u'restricted']
+    if restricted_tags:
+        restricted_tag = restricted_tags[0]
+        if restricted_tag not in collection.tags:
+            collection.tags.append(restricted_tag)
 
     # OLD-generated Data
     now = datetime.datetime.utcnow()
-    collection.datetimeEntered = now
-    collection.datetimeModified = now
+    collection.datetime_entered = now
+    collection.datetime_modified = now
     collection.enterer = collection.modifier = session['user']
 
     return collection
 
 
-def updateCollection(collection, data, collectionsReferenced):
+def update_collection(collection, data, collections_referenced):
     """Update a collection model.
 
     :param collection: the collection model to be updated.
     :param dict data: representation of the updated collection.
-    :param dict collectionsReferenced: the collection models recursively referenced in ``data['contents']``.
+    :param dict collections_referenced: the collection models recursively referenced in ``data['contents']``.
     :returns: a 3-tuple where the second and third elements are invariable
         booleans indicating whether the collection has become restricted or has
         had its ``contents`` value changed as a result of the update,
@@ -898,60 +898,60 @@ def updateCollection(collection, data, collectionsReferenced):
     contents_changed = False
 
     # Unicode Data
-    changed = h.setAttr(collection, 'title', h.normalize(data['title']), changed)
-    changed = h.setAttr(collection, 'type', h.normalize(data['type']), changed)
-    changed = h.setAttr(collection, 'url', h.normalize(data['url']), changed)
-    changed = h.setAttr(collection, 'description', h.normalize(data['description']), changed)
-    changed = h.setAttr(collection, 'markupLanguage', h.normalize(data['markupLanguage']), changed)
-    submittedContents = h.normalize(data['contents'])
-    if collection.contents != submittedContents:
-        collection.contents = submittedContents
+    changed = h.set_attr(collection, 'title', h.normalize(data['title']), changed)
+    changed = h.set_attr(collection, 'type', h.normalize(data['type']), changed)
+    changed = h.set_attr(collection, 'url', h.normalize(data['url']), changed)
+    changed = h.set_attr(collection, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(collection, 'markup_language', h.normalize(data['markup_language']), changed)
+    submitted_contents = h.normalize(data['contents'])
+    if collection.contents != submitted_contents:
+        collection.contents = submitted_contents
         contents_changed = changed = True
-    changed = h.setAttr(collection, 'contentsUnpacked', h.normalize(data['contentsUnpacked']), changed)
-    changed = h.setAttr(collection, 'html', h.getHTMLFromContents(collection.contentsUnpacked,
-                                                      collection.markupLanguage), changed)
+    changed = h.set_attr(collection, 'contents_unpacked', h.normalize(data['contents_unpacked']), changed)
+    changed = h.set_attr(collection, 'html', h.get_HTML_from_contents(collection.contents_unpacked,
+                                                      collection.markup_language), changed)
 
-    # User-entered date: dateElicited
-    changed = h.setAttr(collection, 'dateElicited', data['dateElicited'], changed)
+    # User-entered date: date_elicited
+    changed = h.set_attr(collection, 'date_elicited', data['date_elicited'], changed)
 
     # Many-to-One Data
-    changed = h.setAttr(collection, 'elicitor', data['elicitor'], changed)
-    changed = h.setAttr(collection, 'speaker', data['speaker'], changed)
-    changed = h.setAttr(collection, 'source', data['source'], changed)
+    changed = h.set_attr(collection, 'elicitor', data['elicitor'], changed)
+    changed = h.set_attr(collection, 'speaker', data['speaker'], changed)
+    changed = h.set_attr(collection, 'source', data['source'], changed)
 
     # Many-to-Many Data: files, forms & tags
     # Update only if the user has made changes.
-    filesToAdd = [f for f in data['files'] if f]
-    formsToAdd = [f for f in data['forms'] if f]
-    tagsToAdd = [t for t in data['tags'] if t]
+    files_to_add = [f for f in data['files'] if f]
+    forms_to_add = [f for f in data['forms'] if f]
+    tags_to_add = [t for t in data['tags'] if t]
 
-    if set(filesToAdd) != set(collection.files):
-        collection.files = filesToAdd
+    if set(files_to_add) != set(collection.files):
+        collection.files = files_to_add
         changed = True
 
-    if set(formsToAdd) != set(collection.forms):
-        collection.forms = formsToAdd
+    if set(forms_to_add) != set(collection.forms):
+        collection.forms = forms_to_add
         changed = True
 
     # Restrict the entire collection if it is associated to restricted forms or
     # files or if it references a restricted collection.
-    tags = [f.tags for f in collection.files + collection.forms + collectionsReferenced.values()]
-    tags = [tag for tagList in tags for tag in tagList]
-    restrictedTags = [tag for tag in tags if tag.name == u'restricted']
-    if restrictedTags:
-        restrictedTag = restrictedTags[0]
-        if restrictedTag not in tagsToAdd:
-            tagsToAdd.append(restrictedTag)
+    tags = [f.tags for f in collection.files + collection.forms + collections_referenced.values()]
+    tags = [tag for tag_list in tags for tag in tag_list]
+    restricted_tags = [tag for tag in tags if tag.name == u'restricted']
+    if restricted_tags:
+        restricted_tag = restricted_tags[0]
+        if restricted_tag not in tags_to_add:
+            tags_to_add.append(restricted_tag)
 
-    if set(tagsToAdd) != set(collection.tags):
-        if u'restricted' in [t.name for t in tagsToAdd] and \
+    if set(tags_to_add) != set(collection.tags):
+        if u'restricted' in [t.name for t in tags_to_add] and \
         u'restricted' not in [t.name for t in collection.tags]:
             restricted = True
-        collection.tags = tagsToAdd
+        collection.tags = tags_to_add
         changed = True
 
     if changed:
-        collection.datetimeModified = datetime.datetime.utcnow()
+        collection.datetime_modified = datetime.datetime.utcnow()
         session['user'] = Session.merge(session['user'])
         collection.modifier = session['user']
         return collection, restricted, contents_changed

@@ -32,31 +32,31 @@ class TestTagsController(TestController):
 
     #@nottest
     def test_index(self):
-        """Tests that GET /tags returns an array of all tags and that orderBy and pagination parameters work correctly."""
+        """Tests that GET /tags returns an array of all tags and that order_by and pagination parameters work correctly."""
 
         # Add 100 tags.
-        def createTagFromIndex(index):
+        def create_tag_from_index(index):
             tag = model.Tag()
             tag.name = u'tag%d' % index
             tag.description = u'description %d' % index
             return tag
-        tags = [createTagFromIndex(i) for i in range(1, 101)]
+        tags = [create_tag_from_index(i) for i in range(1, 101)]
         Session.add_all(tags)
         Session.commit()
-        tags = h.getTags(True)
-        tagsCount = len(tags)
+        tags = h.get_tags(True)
+        tags_count = len(tags)
 
         # Test that GET /tags gives us all of the tags.
         response = self.app.get(url('tags'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == tagsCount
+        assert len(resp) == tags_count
         assert resp[0]['name'] == u'tag1'
         assert resp[0]['id'] == tags[0].id
         assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 23, 'page': 3}
+        paginator = {'items_per_page': 23, 'page': 3}
         response = self.app.get(url('tags'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -64,57 +64,57 @@ class TestTagsController(TestController):
         assert resp['items'][0]['name'] == tags[46].name
         assert response.content_type == 'application/json'
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'Tag', 'orderByAttribute': 'name',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('tags'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'Tag', 'order_by_attribute': 'name',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('tags'), order_by_params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = sorted([t.name for t in tags], reverse=True)
-        assert resultSet == [t['name'] for t in resp]
+        result_set = sorted([t.name for t in tags], reverse=True)
+        assert result_set == [t['name'] for t in resp]
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'Tag', 'orderByAttribute': 'name',
-                     'orderByDirection': 'desc', 'itemsPerPage': 23, 'page': 3}
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'Tag', 'order_by_attribute': 'name',
+                     'order_by_direction': 'desc', 'items_per_page': 23, 'page': 3}
         response = self.app.get(url('tags'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resultSet[46] == resp['items'][0]['name']
+        assert result_set[46] == resp['items'][0]['name']
         assert response.content_type == 'application/json'
 
-        # Expect a 400 error when the orderByDirection param is invalid
-        orderByParams = {'orderByModel': 'Tag', 'orderByAttribute': 'name',
-                     'orderByDirection': 'descending'}
-        response = self.app.get(url('tags'), orderByParams, status=400,
+        # Expect a 400 error when the order_by_direction param is invalid
+        order_by_params = {'order_by_model': 'Tag', 'order_by_attribute': 'name',
+                     'order_by_direction': 'descending'}
+        response = self.app.get(url('tags'), order_by_params, status=400,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-        # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
+        # Expect the default BY id ASCENDING ordering when the order_by_model/Attribute
         # param is invalid.
-        orderByParams = {'orderByModel': 'Tagist', 'orderByAttribute': 'nominal',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('tags'), orderByParams,
+        order_by_params = {'order_by_model': 'Tagist', 'order_by_attribute': 'nominal',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('tags'), order_by_params,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp[0]['id'] == tags[0].id
 
         # Expect a 400 error when the paginator GET params are empty
         # or are integers less than 1
-        paginator = {'itemsPerPage': u'a', 'page': u''}
+        paginator = {'items_per_page': u'a', 'page': u''}
         response = self.app.get(url('tags'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
+        assert resp['errors']['items_per_page'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
         assert response.content_type == 'application/json'
 
-        paginator = {'itemsPerPage': 0, 'page': -1}
+        paginator = {'items_per_page': 0, 'page': -1}
         response = self.app.get(url('tags'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
+        assert resp['errors']['items_per_page'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
@@ -124,14 +124,14 @@ class TestTagsController(TestController):
         or returns an appropriate error if the input is invalid.
         """
 
-        originalTagCount = Session.query(Tag).count()
+        original_tag_count = Session.query(Tag).count()
 
         # Create a valid one
         params = json.dumps({'name': u'tag', 'description': u'Described.'})
         response = self.app.post(url('tags'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        newTagCount = Session.query(Tag).count()
-        assert newTagCount == originalTagCount + 1
+        new_tag_count = Session.query(Tag).count()
+        assert new_tag_count == original_tag_count + 1
         assert resp['name'] == u'tag'
         assert resp['description'] == u'Described.'
         assert response.content_type == 'application/json'
@@ -174,32 +174,32 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        tagCount = Session.query(Tag).count()
-        tagId = resp['id']
-        originalDatetimeModified = resp['datetimeModified']
+        tag_count = Session.query(Tag).count()
+        tag_id = resp['id']
+        original_datetime_modified = resp['datetime_modified']
 
         # Update the tag
-        sleep(1)    # sleep for a second to ensure that MySQL registers a different datetimeModified for the update
+        sleep(1)    # sleep for a second to ensure that MySQL registers a different datetime_modified for the update
         params = json.dumps({'name': u'name', 'description': u'More content-ful description.'})
-        response = self.app.put(url('tag', id=tagId), params, self.json_headers,
+        response = self.app.put(url('tag', id=tag_id), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        datetimeModified = resp['datetimeModified']
-        newTagCount = Session.query(Tag).count()
-        assert tagCount == newTagCount
-        assert datetimeModified != originalDatetimeModified
+        datetime_modified = resp['datetime_modified']
+        new_tag_count = Session.query(Tag).count()
+        assert tag_count == new_tag_count
+        assert datetime_modified != original_datetime_modified
         assert response.content_type == 'application/json'
 
         # Attempt an update with no new input and expect to fail
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        response = self.app.put(url('tag', id=tagId), params, self.json_headers,
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        response = self.app.put(url('tag', id=tag_id), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        tagCount = newTagCount
-        newTagCount = Session.query(Tag).count()
-        ourTagDatetimeModified = Session.query(Tag).get(tagId).datetimeModified
-        assert ourTagDatetimeModified.isoformat() == datetimeModified
-        assert tagCount == newTagCount
+        tag_count = new_tag_count
+        new_tag_count = Session.query(Tag).count()
+        our_tag_datetime_modified = Session.query(Tag).get(tag_id).datetime_modified
+        assert our_tag_datetime_modified.isoformat() == datetime_modified
+        assert tag_count == new_tag_count
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
@@ -212,21 +212,21 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        tagCount = Session.query(Tag).count()
-        tagId = resp['id']
+        tag_count = Session.query(Tag).count()
+        tag_id = resp['id']
 
         # Now delete the tag
-        response = self.app.delete(url('tag', id=tagId), headers=self.json_headers,
+        response = self.app.delete(url('tag', id=tag_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        newTagCount = Session.query(Tag).count()
-        assert newTagCount == tagCount - 1
-        assert resp['id'] == tagId
+        new_tag_count = Session.query(Tag).count()
+        assert new_tag_count == tag_count - 1
+        assert resp['id'] == tag_id
         assert response.content_type == 'application/json'
 
         # Trying to get the deleted tag from the db should return None
-        deletedTag = Session.query(Tag).get(tagId)
-        assert deletedTag == None
+        deleted_tag = Session.query(Tag).get(tag_id)
+        assert deleted_tag == None
 
         # Delete with an invalid id
         id = 9999999999999
@@ -251,14 +251,14 @@ class TestTagsController(TestController):
         form.tags.append(tag)
         Session.add_all([form, tag])
         Session.commit()
-        formId = form.id
-        tagId = tag.id
-        response = self.app.delete(url('tag', id=tagId),
+        form_id = form.id
+        tag_id = tag.id
+        response = self.app.delete(url('tag', id=tag_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        deletedTag = Session.query(Tag).get(tagId)
-        form = Session.query(model.Form).get(formId)
+        deleted_tag = Session.query(Tag).get(tag_id)
+        form = Session.query(model.Form).get(form_id)
         assert response.content_type == 'application/json'
-        assert deletedTag == None
+        assert deleted_tag == None
         assert form.tags == []
 
     #@nottest
@@ -270,7 +270,7 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        tagId = resp['id']
+        tag_id = resp['id']
 
         # Try to get a tag using an invalid id
         id = 100000000000
@@ -288,7 +288,7 @@ class TestTagsController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid id
-        response = self.app.get(url('tag', id=tagId), headers=self.json_headers,
+        response = self.app.get(url('tag', id=tag_id), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['name'] == u'name'
@@ -309,10 +309,10 @@ class TestTagsController(TestController):
         response = self.app.post(url('tags'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        tagId = resp['id']
+        tag_id = resp['id']
 
         # Not logged in: expect 401 Unauthorized
-        response = self.app.get(url('edit_tag', id=tagId), status=401)
+        response = self.app.get(url('edit_tag', id=tag_id), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
         assert response.content_type == 'application/json'
@@ -332,7 +332,7 @@ class TestTagsController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid id
-        response = self.app.get(url('edit_tag', id=tagId),
+        response = self.app.get(url('edit_tag', id=tag_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['tag']['name'] == u'name'

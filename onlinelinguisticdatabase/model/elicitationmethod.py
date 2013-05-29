@@ -30,4 +30,4 @@ class ElicitationMethod(Base):
     id = Column(Integer, Sequence('elicitationmethod_seq_id', optional=True), primary_key=True)
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    datetimeModified = Column(DateTime, default=now)
+    datetime_modified = Column(DateTime, default=now)

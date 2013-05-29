@@ -18,14 +18,14 @@ image and audio files with reduced sizes.
 1. Image resizing using PIL
 2. wav-2-ogg conversion using ffmpeg
 
-The meta-function saveReducedCopy provides an interface to this functionality
+The meta-function save_reduced_copy provides an interface to this functionality
 that is used in the create action of the files controller.  It handles .wav and
 image files appropriately and returns None for other file types.
 """
 
 from paste.deploy.converters import asbool
 from subprocess import call
-from onlinelinguisticdatabase.lib.utils import ffmpegEncodes, getSubprocess, getOLDDirectoryPath
+from onlinelinguisticdatabase.lib.utils import ffmpeg_encodes, get_subprocess, get_OLD_directory_path
 import os
 try:
     import Image
@@ -36,19 +36,19 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def saveReducedCopy(file, config):
+def save_reduced_copy(file, config):
     """Save a smaller copy of the file in files/reduced_files.  Only works if
     the file is a .wav file or an image.  Returns None or the reduced file filename,
     depending on whether the reduction failed or succeeded, repectively.
     """
     if getattr(file, 'filename') and asbool(config.get('create_reduced_size_file_copies', 1)):
-        filesPath = getOLDDirectoryPath('files', config=config['app_conf'])
-        reducedFilesPath = os.path.join(filesPath, 'reduced_files')
-        if u'image' in file.MIMEtype:
-            return saveReducedSizeImage(file, filesPath, reducedFilesPath)
-        elif file.MIMEtype == u'audio/x-wav':
+        files_path = get_OLD_directory_path('files', config=config['app_conf'])
+        reduced_files_path = os.path.join(files_path, 'reduced_files')
+        if u'image' in file.MIME_type:
+            return save_reduced_size_image(file, files_path, reduced_files_path)
+        elif file.MIME_type == u'audio/x-wav':
             format_ = config.get('preferred_lossy_audio_format', 'ogg')
-            return saveWavAs(file, format_, filesPath, reducedFilesPath)
+            return save_wav_as(file, format_, files_path, reduced_files_path)
         else:
             return None
     return None
@@ -57,7 +57,7 @@ def saveReducedCopy(file, config):
 # Image Resizing using PIL
 ################################################################################
 
-def saveReducedSizeImage(file, filesPath, reducedFilesPath):
+def save_reduced_size_image(file, files_path, reduced_files_path):
     """This function saves a size-reduced copy of the image to
     files/reduced_files.  Input is an OLD file model object.  Image formats are
     retained.  If the file is already shorter or narrower than size (defaults to
@@ -66,14 +66,14 @@ def saveReducedSizeImage(file, filesPath, reducedFilesPath):
     PIL is not installed.
     """
     try:
-        inPath = os.path.join(filesPath, file.filename)
-        outPath = os.path.join(reducedFilesPath, file.filename)
+        in_path = os.path.join(files_path, file.filename)
+        out_path = os.path.join(reduced_files_path, file.filename)
         size = 500, 500
-        im = Image.open(inPath)
+        im = Image.open(in_path)
         if im.size[0] < size[0] or im.size[1] < size[1]:
             return None
         im.thumbnail(size, Image.ANTIALIAS)
-        im.save(outPath)
+        im.save(out_path)
         return file.filename
     except Exception, e:
         return None
@@ -82,23 +82,23 @@ def saveReducedSizeImage(file, filesPath, reducedFilesPath):
 # .wav-2-.ogg conversion using ffmpeg
 ################################################################################
 
-def saveWavAs(file, format_, filesPath, reducedFilesPath):
+def save_wav_as(file, format_, files_path, reduced_files_path):
     """Attempts to use ffmpeg to create a lossy copy of the contents of file in
     files/reduced_files according to the format (i.e., 'ogg' or 'mp3').
     """
     try:
-        if not ffmpegEncodes(format_):
+        if not ffmpeg_encodes(format_):
             format_ = 'ogg'     # .ogg is the default
-        if not ffmpegEncodes(format_):
+        if not ffmpeg_encodes(format_):
             return None
         else:
-            inPath = os.path.join(filesPath, file.filename)
-            outName = '%s.%s' % (os.path.splitext(file.filename)[0], format_)
-            outPath = os.path.join(reducedFilesPath, outName)
+            in_path = os.path.join(files_path, file.filename)
+            out_name = '%s.%s' % (os.path.splitext(file.filename)[0], format_)
+            out_path = os.path.join(reduced_files_path, out_name)
             with open(os.devnull, "w") as fnull:
-                result = call(['ffmpeg', '-i', inPath, outPath], stdout=fnull, stderr=fnull)
-            if os.path.isfile(outPath):
-                return outName
+                result = call(['ffmpeg', '-i', in_path, out_path], stdout=fnull, stderr=fnull)
+            if os.path.isfile(out_path):
+                return out_name
             return None
     except Exception, e:
         return None

@@ -51,7 +51,7 @@ class TagsController(BaseController):
 
     """
 
-    queryBuilder = SQLAQueryBuilder('Tag', config=config)
+    query_builder = SQLAQueryBuilder('Tag', config=config)
 
     @h.jsonify
     @h.restrict('GET')
@@ -65,14 +65,14 @@ class TagsController(BaseController):
 
         .. note::
 
-           See :func:`utils.addOrderBy` and :func:`utils.addPagination` for the
+           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
 
         """
         try:
             query = Session.query(Tag)
-            query = h.addOrderBy(query, dict(request.GET), self.queryBuilder)
-            return h.addPagination(query, dict(request.GET))
+            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            return h.add_pagination(query, dict(request.GET))
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -93,7 +93,7 @@ class TagsController(BaseController):
             schema = TagSchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            tag = createNewTag(data)
+            tag = create_new_tag(data)
             Session.add(tag)
             Session.commit()
             return tag
@@ -135,11 +135,11 @@ class TagsController(BaseController):
             try:
                 schema = TagSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                state = h.getStateObject(values)
+                state = h.get_state_object(values)
                 state.id = id
                 data = schema.to_python(values, state)
-                tag = updateTag(tag, data)
-                # tag will be False if there are no changes (cf. updateTag).
+                tag = update_tag(tag, data)
+                # tag will be False if there are no changes (cf. update_tag).
                 if tag:
                     Session.add(tag)
                     Session.commit()
@@ -230,7 +230,7 @@ class TagsController(BaseController):
 # Tag Create & Update Functions
 ################################################################################
 
-def createNewTag(data):
+def create_new_tag(data):
     """Create a new tag.
 
     :param dict data: the data for the tag to be created.
@@ -240,10 +240,10 @@ def createNewTag(data):
     tag = Tag()
     tag.name = h.normalize(data['name'])
     tag.description = h.normalize(data['description'])
-    tag.datetimeModified = datetime.datetime.utcnow()
+    tag.datetime_modified = datetime.datetime.utcnow()
     return tag
 
-def updateTag(tag, data):
+def update_tag(tag, data):
     """Update a tag.
 
     :param tag: the tag model to be updated.
@@ -253,9 +253,9 @@ def updateTag(tag, data):
 
     """
     changed = False
-    changed = h.setAttr(tag, 'name', h.normalize(data['name']), changed)
-    changed = h.setAttr(tag, 'description', h.normalize(data['description']), changed)
+    changed = h.set_attr(tag, 'name', h.normalize(data['name']), changed)
+    changed = h.set_attr(tag, 'description', h.normalize(data['description']), changed)
     if changed:
-        tag.datetimeModified = datetime.datetime.utcnow()
+        tag.datetime_modified = datetime.datetime.utcnow()
         return tag
     return changed

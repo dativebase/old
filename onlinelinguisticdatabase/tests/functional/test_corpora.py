@@ -32,36 +32,36 @@ class TestCorporaController(TestController):
 
     # Clear all models in the database except Language; recreate the corpora.
     def tearDown(self):
-        TestController.tearDown(self, dirsToDestroy=['user', 'corpus'])
+        TestController.tearDown(self, dirs_to_destroy=['user', 'corpus'])
 
     #@nottest
     def test_index(self):
-        """Tests that GET /corpora returns an array of all corpora and that orderBy and pagination parameters work correctly."""
+        """Tests that GET /corpora returns an array of all corpora and that order_by and pagination parameters work correctly."""
 
         # Add 100 corpora.
-        def createCorpusFromIndex(index):
+        def create_corpus_from_index(index):
             corpus = model.Corpus()
             corpus.name = u'Corpus %d' % index
             corpus.description = u'A corpus with %d rules' % index
             corpus.content = u'1'
             return corpus
-        corpora = [createCorpusFromIndex(i) for i in range(1, 101)]
+        corpora = [create_corpus_from_index(i) for i in range(1, 101)]
         Session.add_all(corpora)
         Session.commit()
-        corpora = h.getCorpora(True)
-        corporaCount = len(corpora)
+        corpora = h.get_corpora(True)
+        corpora_count = len(corpora)
 
         # Test that GET /corpora gives us all of the corpora.
         response = self.app.get(url('corpora'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == corporaCount
+        assert len(resp) == corpora_count
         assert resp[0]['name'] == u'Corpus 1'
         assert resp[0]['id'] == corpora[0].id
         assert response.content_type == 'application/json'
 
         # Test the paginator GET params.
-        paginator = {'itemsPerPage': 23, 'page': 3}
+        paginator = {'items_per_page': 23, 'page': 3}
         response = self.app.get(url('corpora'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -69,57 +69,57 @@ class TestCorporaController(TestController):
         assert resp['items'][0]['name'] == corpora[46].name
         assert response.content_type == 'application/json'
 
-        # Test the orderBy GET params.
-        orderByParams = {'orderByModel': 'Corpus', 'orderByAttribute': 'name',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('corpora'), orderByParams,
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'Corpus', 'order_by_attribute': 'name',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('corpora'), order_by_params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        resultSet = sorted(corpora, key=lambda c: c.name, reverse=True)
-        assert [c.id for c in resultSet] == [c['id'] for c in resp]
+        result_set = sorted(corpora, key=lambda c: c.name, reverse=True)
+        assert [c.id for c in result_set] == [c['id'] for c in resp]
         assert response.content_type == 'application/json'
 
-        # Test the orderBy *with* paginator.
-        params = {'orderByModel': 'Corpus', 'orderByAttribute': 'name',
-                     'orderByDirection': 'desc', 'itemsPerPage': 23, 'page': 3}
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'Corpus', 'order_by_attribute': 'name',
+                     'order_by_direction': 'desc', 'items_per_page': 23, 'page': 3}
         response = self.app.get(url('corpora'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resultSet[46].name == resp['items'][0]['name']
+        assert result_set[46].name == resp['items'][0]['name']
 
-        # Expect a 400 error when the orderByDirection param is invalid
-        orderByParams = {'orderByModel': 'Corpus', 'orderByAttribute': 'name',
-                     'orderByDirection': 'descending'}
-        response = self.app.get(url('corpora'), orderByParams, status=400,
+        # Expect a 400 error when the order_by_direction param is invalid
+        order_by_params = {'order_by_model': 'Corpus', 'order_by_attribute': 'name',
+                     'order_by_direction': 'descending'}
+        response = self.app.get(url('corpora'), order_by_params, status=400,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert resp['errors']['orderByDirection'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-        # Expect the default BY id ASCENDING ordering when the orderByModel/Attribute
+        # Expect the default BY id ASCENDING ordering when the order_by_model/Attribute
         # param is invalid.
-        orderByParams = {'orderByModel': 'Corpusist', 'orderByAttribute': 'nominal',
-                     'orderByDirection': 'desc'}
-        response = self.app.get(url('corpora'), orderByParams,
+        order_by_params = {'order_by_model': 'Corpusist', 'order_by_attribute': 'nominal',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('corpora'), order_by_params,
             headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp[0]['id'] == corpora[0].id
 
         # Expect a 400 error when the paginator GET params are empty
         # or are integers less than 1
-        paginator = {'itemsPerPage': u'a', 'page': u''}
+        paginator = {'items_per_page': u'a', 'page': u''}
         response = self.app.get(url('corpora'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter an integer value'
+        assert resp['errors']['items_per_page'] == u'Please enter an integer value'
         assert resp['errors']['page'] == u'Please enter a value'
         assert response.content_type == 'application/json'
 
-        paginator = {'itemsPerPage': 0, 'page': -1}
+        paginator = {'items_per_page': 0, 'page': -1}
         response = self.app.get(url('corpora'), paginator, headers=self.json_headers,
                                 extra_environ=self.extra_environ_view, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['itemsPerPage'] == u'Please enter a number that is 1 or greater'
+        assert resp['errors']['items_per_page'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
@@ -129,22 +129,22 @@ class TestCorporaController(TestController):
         or returns an appropriate error if the input is invalid.
 
         """
-        # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
-        def createFormFromIndex(index):
+        # Add 10 forms and use them to generate a valid value for ``test_corpus_content``
+        def create_form_from_index(index):
             form = model.Form()
             form.transcription = u'Form %d' % index
             translation = model.Translation()
             translation.transcription = u'Translation %d' % index
             form.translation = translation
             return form
-        forms = [createFormFromIndex(i) for i in range(1, 10)]
+        forms = [create_form_from_index(i) for i in range(1, 10)]
         Session.add_all(forms)
         Session.commit()
-        forms = h.getForms()
-        halfForms = forms[:5]
-        formIds = [form.id for form in forms]
-        halfFormIds = [form.id for form in halfForms]
-        testCorpusContent = u','.join(map(str, halfFormIds))
+        forms = h.get_forms()
+        half_forms = forms[:5]
+        form_ids = [form.id for form in forms]
+        half_form_ids = [form.id for form in half_forms]
+        test_corpus_content = u','.join(map(str, half_form_ids))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -156,15 +156,15 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
+        form_search_id = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent,
-            'formSearch': formSearchId
+            'content': test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
 
@@ -176,163 +176,163 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corporaPath) == []
-        originalCorpusCount = Session.query(Corpus).count()
+        assert os.listdir(self.corpora_path) == []
+        original_corpus_count = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusId = resp['id']
-        newCorpusCount = Session.query(Corpus).count()
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
-        assert newCorpusCount == originalCorpusCount + 1
+        corpus_id = resp['id']
+        new_corpus_count = Session.query(Corpus).count()
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
+        assert new_corpus_count == original_corpus_count + 1
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(formIds)
-        assert resp['formSearch']['id'] == formSearchId
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(form_ids)
+        assert resp['form_search']['id'] == form_search_id
 
-        # Invalid because ``formSearch`` refers to a non-existent form search.
-        params = self.corpusCreateParams.copy()
+        # Invalid because ``form_search`` refers to a non-existent form search.
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus Chi',
             'description': u'Covers a lot of the data, padre.',
-            'content': testCorpusContent,
-            'formSearch': 123456789
+            'content': test_corpus_content,
+            'form_search': 123456789
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert newCorpusCount == corpusCount
-        assert resp['errors']['formSearch'] == u'There is no form search with id 123456789.'
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert new_corpus_count == corpus_count
+        assert resp['errors']['form_search'] == u'There is no form search with id 123456789.'
         assert response.content_type == 'application/json'
 
         # Invalid because ``content`` refers to non-existent forms
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus Chi Squared',
             'description': u'Covers a lot of the data, padre.',
-            'content': testCorpusContent + u',123456789'
+            'content': test_corpus_content + u',123456789'
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert newCorpusCount == corpusCount
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert new_corpus_count == corpus_count
         #assert u'There is no form with id 123456789.' in resp['errors']['forms']
         assert resp['errors'] == 'At least one form id in the content was invalid.'
         assert response.content_type == 'application/json'
 
         # Invalid because name is not unique
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data, dude.',
-            'content': testCorpusContent
+            'content': test_corpus_content
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert newCorpusCount == corpusCount
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert new_corpus_count == corpus_count
         assert resp['errors']['name'] == u'The submitted value for Corpus.name is not unique.'
         assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'',
             'description': u'Covers a lot of the data, sista.',
-            'content': testCorpusContent
+            'content': test_corpus_content
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert newCorpusCount == corpusCount
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert new_corpus_count == corpus_count
         assert resp['errors']['name'] == u'Please enter a value'
         assert response.content_type == 'application/json'
 
         # Invalid because name must be a non-empty string
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': None,
             'description': u'Covers a lot of the data, young\'un.',
-            'content': testCorpusContent
+            'content': test_corpus_content
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert newCorpusCount == corpusCount
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert new_corpus_count == corpus_count
         assert resp['errors']['name'] == u'Please enter a value'
         assert response.content_type == 'application/json'
 
         # Invalid because name is too long.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': 'Corpus' * 200,
             'description': u'Covers a lot of the data, squirrel salad.',
-            'content': testCorpusContent
+            'content': test_corpus_content
         })
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert newCorpusCount == corpusCount
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert new_corpus_count == corpus_count
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
         # Create a corpus whose forms are specified in the content value.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus by contents',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent
+            'content': test_corpus_content
         })
         params = json.dumps(params)
-        originalCorpusCount = Session.query(Corpus).count()
+        original_corpus_count = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusId = resp['id']
-        newCorpusCount = Session.query(Corpus).count()
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
-        assert newCorpusCount == originalCorpusCount + 1
+        corpus_id = resp['id']
+        new_corpus_count = Session.query(Corpus).count()
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
+        assert new_corpus_count == original_corpus_count + 1
         assert resp['name'] == u'Corpus by contents'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(halfFormIds)
-        assert resp['formSearch'] == None
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(half_form_ids)
+        assert resp['form_search'] == None
 
     #@nottest
     def test_new(self):
         """Tests that GET /corpora/new returns data needed to create a new corpus."""
 
         # Create a tag
-        t = h.generateRestrictedTag()
+        t = h.generate_restricted_tag()
         Session.add(t)
         Session.commit()
 
@@ -349,10 +349,10 @@ class TestCorporaController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'tags': h.getMiniDictsGetter('Tag')(),
-            'users': h.getMiniDictsGetter('User')(),
-            'formSearches': h.getMiniDictsGetter('FormSearch')(),
-            'corpusFormats': h.corpusFormats.keys()
+            'tags': h.get_mini_dicts_getter('Tag')(),
+            'users': h.get_mini_dicts_getter('User')(),
+            'form_searches': h.get_mini_dicts_getter('FormSearch')(),
+            'corpus_formats': h.corpus_formats.keys()
         }
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
@@ -371,9 +371,9 @@ class TestCorporaController(TestController):
                                 extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         assert resp['users'] == data['users']
-        assert resp['formSearches'] == data['formSearches']
+        assert resp['form_searches'] == data['form_searches']
         assert resp['tags'] == data['tags']
-        assert resp['corpusFormats'] == data['corpusFormats']
+        assert resp['corpus_formats'] == data['corpus_formats']
         assert response.content_type == 'application/json'
 
         # GET /new_corpus with params.  Param values are treated as strings, not
@@ -383,48 +383,48 @@ class TestCorporaController(TestController):
         # 1. the param is not specified
         # 2. the value of the specified param is an empty string
         # 3. the value of the specified param is an ISO 8601 UTC datetime
-        #    string that matches the most recent datetimeModified value of the
+        #    string that matches the most recent datetime_modified value of the
         #    store in question.
         params = {
-            # Value is any string: 'formSearches' will be in response.
-            'formSearches': 'anything can go here!',
+            # Value is any string: 'form_searches' will be in response.
+            'form_searches': 'anything can go here!',
             # Value is ISO 8601 UTC datetime string that does not match the most
-            # recent Tag.datetimeModified value: 'tags' *will* be in
+            # recent Tag.datetime_modified value: 'tags' *will* be in
             # response.
             'tags': datetime.datetime.utcnow().isoformat(),
             # Value is ISO 8601 UTC datetime string that does match the most
-            # recent SyntacticCategory.datetimeModified value:
-            # 'syntacticCategories' will *not* be in response.
-            'users': h.getMostRecentModificationDatetime(
+            # recent SyntacticCategory.datetime_modified value:
+            # 'syntactic_categories' will *not* be in response.
+            'users': h.get_most_recent_modification_datetime(
                 'User').isoformat()
         }
         response = self.app.get(url('new_corpus'), params,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resp['formSearches'] == data['formSearches']
+        assert resp['form_searches'] == data['form_searches']
         assert resp['tags'] == data['tags']
         assert resp['users'] == []
-        assert resp['corpusFormats'] == data['corpusFormats']
+        assert resp['corpus_formats'] == data['corpus_formats']
 
     #@nottest
     def test_update(self):
         """Tests that PUT /corpora/id updates the corpus with id=id."""
 
-        # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
-        def createFormFromIndex(index):
+        # Add 10 forms and use them to generate a valid value for ``test_corpus_content``
+        def create_form_from_index(index):
             form = model.Form()
             form.transcription = u'Form %d' % index
             translation = model.Translation()
             translation.transcription = u'Translation %d' % index
             form.translation = translation
             return form
-        forms = [createFormFromIndex(i) for i in range(1, 10)]
+        forms = [create_form_from_index(i) for i in range(1, 10)]
         Session.add_all(forms)
         Session.commit()
-        forms = h.getForms()
-        formIds = [form.id for form in forms]
-        testCorpusContent = u','.join(map(str, formIds))
-        newTestCorpusContent = u','.join(map(str, formIds[:5]))
+        forms = h.get_forms()
+        form_ids = [form.id for form in forms]
+        test_corpus_content = u','.join(map(str, form_ids))
+        new_test_corpus_content = u','.join(map(str, form_ids[:5]))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -436,82 +436,82 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
+        form_search_id = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent,
-            'formSearch': formSearchId
+            'content': test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corporaPath) == []
-        originalCorpusCount = Session.query(Corpus).count()
+        assert os.listdir(self.corpora_path) == []
+        original_corpus_count = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusId = resp['id']
-        newCorpusCount = Session.query(Corpus).count()
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
-        originalDatetimeModified = resp['datetimeModified']
-        assert newCorpusCount == originalCorpusCount + 1
+        corpus_id = resp['id']
+        new_corpus_count = Session.query(Corpus).count()
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
+        original_datetime_modified = resp['datetime_modified']
+        assert new_corpus_count == original_corpus_count + 1
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(formIds)
-        assert resp['formSearch']['id'] == formSearchId
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(form_ids)
+        assert resp['form_search']['id'] == form_search_id
 
         # Update the corpus
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        origBackupCount = Session.query(CorpusBackup).count()
-        params = self.corpusCreateParams.copy()
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        orig_backup_count = Session.query(CorpusBackup).count()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.  Best yet!',
-            'content': newTestCorpusContent,        # Here is the change
-            'formSearch': formSearchId
+            'content': new_test_corpus_content,        # Here is the change
+            'form_search': form_search_id
         })
         params = json.dumps(params)
-        response = self.app.put(url('corpus', id=corpusId), params, self.json_headers,
+        response = self.app.put(url('corpus', id=corpus_id), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        newBackupCount = Session.query(CorpusBackup).count()
-        datetimeModified = resp['datetimeModified']
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        assert corpusCount == newCorpusCount
-        assert datetimeModified != originalDatetimeModified
+        new_backup_count = Session.query(CorpusBackup).count()
+        datetime_modified = resp['datetime_modified']
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        assert corpus_count == new_corpus_count
+        assert datetime_modified != original_datetime_modified
         assert resp['description'] == u'Covers a lot of the data.  Best yet!'
-        assert resp['content'] == newTestCorpusContent
+        assert resp['content'] == new_test_corpus_content
         assert response.content_type == 'application/json'
-        assert origBackupCount + 1 == newBackupCount
+        assert orig_backup_count + 1 == new_backup_count
         assert response.content_type == 'application/json'
         backup = Session.query(CorpusBackup).filter(
             CorpusBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(CorpusBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == originalDatetimeModified
-        assert backup.content == testCorpusContent
+        assert backup.datetime_modified.isoformat() == original_datetime_modified
+        assert backup.content == test_corpus_content
 
         # Attempt an update with no new input and expect to fail
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        response = self.app.put(url('corpus', id=corpusId), params, self.json_headers,
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        response = self.app.put(url('corpus', id=corpus_id), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        ourCorpusDatetimeModified = Session.query(Corpus).get(corpusId).datetimeModified
-        assert ourCorpusDatetimeModified.isoformat() == datetimeModified
-        assert corpusCount == newCorpusCount
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        our_corpus_datetime_modified = Session.query(Corpus).get(corpus_id).datetime_modified
+        assert our_corpus_datetime_modified.isoformat() == datetime_modified
+        assert corpus_count == new_corpus_count
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
@@ -519,24 +519,24 @@ class TestCorporaController(TestController):
     def test_delete(self):
         """Tests that DELETE /corpora/id deletes the corpus with id=id."""
 
-        # Count the original number of corpora and corpusBackups.
-        corpusCount = Session.query(Corpus).count()
-        corpusBackupCount = Session.query(CorpusBackup).count()
+        # Count the original number of corpora and corpus_backups.
+        corpus_count = Session.query(Corpus).count()
+        corpus_backup_count = Session.query(CorpusBackup).count()
 
-        # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
-        def createFormFromIndex(index):
+        # Add 10 forms and use them to generate a valid value for ``test_corpus_content``
+        def create_form_from_index(index):
             form = model.Form()
             form.transcription = u'Form %d' % index
             translation = model.Translation()
             translation.transcription = u'Translation %d' % index
             form.translation = translation
             return form
-        forms = [createFormFromIndex(i) for i in range(1, 10)]
+        forms = [create_form_from_index(i) for i in range(1, 10)]
         Session.add_all(forms)
         Session.commit()
-        forms = h.getForms()
-        formIds = [form.id for form in forms]
-        testCorpusContent = u','.join(map(str, formIds))
+        forms = h.get_forms()
+        form_ids = [form.id for form in forms]
+        test_corpus_content = u','.join(map(str, form_ids))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -548,69 +548,69 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
+        form_search_id = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent,
-            'formSearch': formSearchId
+            'content': test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corporaPath) == []
+        assert os.listdir(self.corpora_path) == []
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusId = resp['id']
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
+        corpus_id = resp['id']
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(formIds)
-        assert resp['formSearch']['id'] == formSearchId
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(form_ids)
+        assert resp['form_search']['id'] == form_search_id
 
-        # Now count the corpora and corpusBackups.
-        newCorpusCount = Session.query(Corpus).count()
-        newCorpusBackupCount = Session.query(CorpusBackup).count()
-        assert newCorpusCount == corpusCount + 1
-        assert newCorpusBackupCount == corpusBackupCount
+        # Now count the corpora and corpus_backups.
+        new_corpus_count = Session.query(Corpus).count()
+        new_corpus_backup_count = Session.query(CorpusBackup).count()
+        assert new_corpus_count == corpus_count + 1
+        assert new_corpus_backup_count == corpus_backup_count
 
         # Now delete the corpus
-        response = self.app.delete(url('corpus', id=corpusId), headers=self.json_headers,
+        response = self.app.delete(url('corpus', id=corpus_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusCount = newCorpusCount
-        newCorpusCount = Session.query(Corpus).count()
-        corpusBackupCount = newCorpusBackupCount
-        newCorpusBackupCount = Session.query(CorpusBackup).count()
-        assert newCorpusCount == corpusCount - 1
-        assert newCorpusBackupCount == corpusBackupCount + 1
-        assert resp['id'] == corpusId
+        corpus_count = new_corpus_count
+        new_corpus_count = Session.query(Corpus).count()
+        corpus_backup_count = new_corpus_backup_count
+        new_corpus_backup_count = Session.query(CorpusBackup).count()
+        assert new_corpus_count == corpus_count - 1
+        assert new_corpus_backup_count == corpus_backup_count + 1
+        assert resp['id'] == corpus_id
         assert response.content_type == 'application/json'
-        assert not os.path.exists(corpusDir)
-        assert resp['content'] == testCorpusContent
+        assert not os.path.exists(corpus_dir)
+        assert resp['content'] == test_corpus_content
 
         # Trying to get the deleted corpus from the db should return None
-        deletedCorpus = Session.query(Corpus).get(corpusId)
-        assert deletedCorpus == None
+        deleted_corpus = Session.query(Corpus).get(corpus_id)
+        assert deleted_corpus == None
 
         # The backed up corpus should have the deleted corpus's attributes
-        backedUpCorpus = Session.query(CorpusBackup).filter(
+        backed_up_corpus = Session.query(CorpusBackup).filter(
             CorpusBackup.UUID==unicode(resp['UUID'])).first()
-        assert backedUpCorpus.name == resp['name']
-        modifier = json.loads(unicode(backedUpCorpus.modifier))
-        assert modifier['firstName'] == u'Admin'
-        assert backedUpCorpus.datetimeEntered.isoformat() == resp['datetimeEntered']
-        assert backedUpCorpus.UUID == resp['UUID']
+        assert backed_up_corpus.name == resp['name']
+        modifier = json.loads(unicode(backed_up_corpus.modifier))
+        assert modifier['first_name'] == u'Admin'
+        assert backed_up_corpus.datetime_entered.isoformat() == resp['datetime_entered']
+        assert backed_up_corpus.UUID == resp['UUID']
 
         # Delete with an invalid id
         id = 9999999999999
@@ -630,20 +630,20 @@ class TestCorporaController(TestController):
     def test_show(self):
         """Tests that GET /corpora/id returns the corpus with id=id or an appropriate error."""
 
-        # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
-        def createFormFromIndex(index):
+        # Add 10 forms and use them to generate a valid value for ``test_corpus_content``
+        def create_form_from_index(index):
             form = model.Form()
             form.transcription = u'Form %d' % index
             translation = model.Translation()
             translation.transcription = u'Translation %d' % index
             form.translation = translation
             return form
-        forms = [createFormFromIndex(i) for i in range(1, 10)]
+        forms = [create_form_from_index(i) for i in range(1, 10)]
         Session.add_all(forms)
         Session.commit()
-        forms = h.getForms()
-        formIds = [form.id for form in forms]
-        testCorpusContent = u','.join(map(str, formIds))
+        forms = h.get_forms()
+        form_ids = [form.id for form in forms]
+        test_corpus_content = u','.join(map(str, form_ids))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -655,38 +655,38 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
+        form_search_id = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent,
-            'formSearch': formSearchId
+            'content': test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corporaPath) == []
-        originalCorpusCount = Session.query(Corpus).count()
+        assert os.listdir(self.corpora_path) == []
+        original_corpus_count = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusCount = Session.query(Corpus).count()
-        corpusId = resp['id']
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
+        corpus_count = Session.query(Corpus).count()
+        corpus_id = resp['id']
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(formIds)
-        assert resp['formSearch']['id'] == formSearchId
-        assert corpusCount == originalCorpusCount + 1
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(form_ids)
+        assert resp['form_search']['id'] == form_search_id
+        assert corpus_count == original_corpus_count + 1
 
         # Try to get a corpus using an invalid id
         id = 100000000000
@@ -704,12 +704,12 @@ class TestCorporaController(TestController):
         assert response.content_type == 'application/json'
 
         # Valid id
-        response = self.app.get(url('corpus', id=corpusId), headers=self.json_headers,
+        response = self.app.get(url('corpus', id=corpus_id), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert resp['content'] == testCorpusContent
+        assert resp['content'] == test_corpus_content
         assert response.content_type == 'application/json'
 
     #@nottest
@@ -721,20 +721,20 @@ class TestCorporaController(TestController):
         valid or invalid/unspecified, respectively.
         """
 
-        # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
-        def createFormFromIndex(index):
+        # Add 10 forms and use them to generate a valid value for ``test_corpus_content``
+        def create_form_from_index(index):
             form = model.Form()
             form.transcription = u'Form %d' % index
             translation = model.Translation()
             translation.transcription = u'Translation %d' % index
             form.translation = translation
             return form
-        forms = [createFormFromIndex(i) for i in range(1, 10)]
+        forms = [create_form_from_index(i) for i in range(1, 10)]
         Session.add_all(forms)
         Session.commit()
-        forms = h.getForms()
-        formIds = [form.id for form in forms]
-        testCorpusContent = u','.join(map(str, formIds))
+        forms = h.get_forms()
+        form_ids = [form.id for form in forms]
+        test_corpus_content = u','.join(map(str, form_ids))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -746,41 +746,41 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
+        form_search_id = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent,
-            'formSearch': formSearchId
+            'content': test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corporaPath) == []
-        originalCorpusCount = Session.query(Corpus).count()
+        assert os.listdir(self.corpora_path) == []
+        original_corpus_count = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusCount = Session.query(Corpus).count()
-        corpusId = resp['id']
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
+        corpus_count = Session.query(Corpus).count()
+        corpus_id = resp['id']
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(formIds)
-        assert resp['formSearch']['id'] == formSearchId
-        assert corpusCount == originalCorpusCount + 1
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(form_ids)
+        assert resp['form_search']['id'] == form_search_id
+        assert corpus_count == original_corpus_count + 1
 
         # Not logged in: expect 401 Unauthorized
-        response = self.app.get(url('edit_corpus', id=corpusId), status=401)
+        response = self.app.get(url('edit_corpus', id=corpus_id), status=401)
         resp = json.loads(response.body)
         assert resp['error'] == u'Authentication is required to access this resource.'
         assert response.content_type == 'application/json'
@@ -801,17 +801,17 @@ class TestCorporaController(TestController):
 
         # Get the data currently in the db (see websetup.py for the test data).
         data = {
-            'tags': h.getMiniDictsGetter('Tag')(),
-            'users': h.getMiniDictsGetter('User')(),
-            'formSearches': h.getMiniDictsGetter('FormSearch')(),
-            'corpusFormats': h.corpusFormats.keys()
+            'tags': h.get_mini_dicts_getter('Tag')(),
+            'users': h.get_mini_dicts_getter('User')(),
+            'form_searches': h.get_mini_dicts_getter('FormSearch')(),
+            'corpus_formats': h.corpus_formats.keys()
         }
         # JSON.stringify and then re-Python-ify the data.  This is what the data
         # should look like in the response to a simulated GET request.
         data = json.loads(json.dumps(data, cls=h.JSONOLDEncoder))
 
         # Valid id
-        response = self.app.get(url('edit_corpus', id=corpusId),
+        response = self.app.get(url('edit_corpus', id=corpus_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert resp['corpus']['name'] == u'Corpus'
@@ -823,30 +823,30 @@ class TestCorporaController(TestController):
         """Tests that GET /corpora/id/history returns the corpus with id=id and its previous incarnations.
         
         The JSON object returned is of the form
-        {'corpus': corpus, 'previousVersions': [...]}.
+        {'corpus': corpus, 'previous_versions': [...]}.
 
         """
 
-        users = h.getUsers()
-        contributorId = [u for u in users if u.role==u'contributor'][0].id
-        administratorId = [u for u in users if u.role==u'administrator'][0].id
+        users = h.get_users()
+        contributor_id = [u for u in users if u.role==u'contributor'][0].id
+        administrator_id = [u for u in users if u.role==u'administrator'][0].id
 
-        # Add 10 forms and use them to generate a valid value for ``testCorpusContent``
-        def createFormFromIndex(index):
+        # Add 10 forms and use them to generate a valid value for ``test_corpus_content``
+        def create_form_from_index(index):
             form = model.Form()
             form.transcription = u'Form %d' % index
             translation = model.Translation()
             translation.transcription = u'Translation %d' % index
             form.translation = translation
             return form
-        forms = [createFormFromIndex(i) for i in range(1, 10)]
+        forms = [create_form_from_index(i) for i in range(1, 10)]
         Session.add_all(forms)
         Session.commit()
-        forms = h.getForms()
-        formIds = [form.id for form in forms]
-        testCorpusContent = u','.join(map(str, formIds))
-        newTestCorpusContent = u','.join(map(str, formIds[:5]))
-        newestTestCorpusContent = u','.join(map(str, formIds[:4]))
+        forms = h.get_forms()
+        form_ids = [form.id for form in forms]
+        test_corpus_content = u','.join(map(str, form_ids))
+        new_test_corpus_content = u','.join(map(str, form_ids[:5]))
+        newest_test_corpus_content = u','.join(map(str, form_ids[:4]))
 
         # Create a form search model
         query = {'filter': ['Form', 'transcription', 'regex', u'[a-zA-Z]{3,}']}
@@ -858,207 +858,207 @@ class TestCorporaController(TestController):
         response = self.app.post(url('formsearches'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        formSearchId = resp['id']
+        form_search_id = resp['id']
 
         # Generate some valid corpus creation input parameters.
-        params = self.corpusCreateParams.copy()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.',
-            'content': testCorpusContent,
-            'formSearch': formSearchId
+            'content': test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
 
         # Successfully create a corpus as the admin
-        assert os.listdir(self.corporaPath) == []
-        originalCorpusCount = Session.query(Corpus).count()
+        assert os.listdir(self.corpora_path) == []
+        original_corpus_count = Session.query(Corpus).count()
         response = self.app.post(url('corpora'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        corpusCount = Session.query(Corpus).count()
-        corpusId = resp['id']
-        corpus = Session.query(Corpus).get(corpusId)
-        corpusFormIds = sorted([f.id for f in corpus.forms])
-        corpusDir = os.path.join(self.corporaPath, 'corpus_%d' % corpusId)
-        corpusDirContents = os.listdir(corpusDir)
-        originalDatetimeModified = resp['datetimeModified']
+        corpus_count = Session.query(Corpus).count()
+        corpus_id = resp['id']
+        corpus = Session.query(Corpus).get(corpus_id)
+        corpus_form_ids = sorted([f.id for f in corpus.forms])
+        corpus_dir = os.path.join(self.corpora_path, 'corpus_%d' % corpus_id)
+        corpus_dir_contents = os.listdir(corpus_dir)
+        original_datetime_modified = resp['datetime_modified']
         assert resp['name'] == u'Corpus'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert corpusDirContents == []
+        assert corpus_dir_contents == []
         assert response.content_type == 'application/json'
-        assert resp['content'] == testCorpusContent
-        assert corpusFormIds == sorted(formIds)
-        assert resp['formSearch']['id'] == formSearchId
-        assert corpusCount == originalCorpusCount + 1
+        assert resp['content'] == test_corpus_content
+        assert corpus_form_ids == sorted(form_ids)
+        assert resp['form_search']['id'] == form_search_id
+        assert corpus_count == original_corpus_count + 1
 
         # Update the corpus as the admin.
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        origBackupCount = Session.query(CorpusBackup).count()
-        params = self.corpusCreateParams.copy()
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        orig_backup_count = Session.query(CorpusBackup).count()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers a lot of the data.  Best yet!',
-            'content': newTestCorpusContent,
-            'formSearch': formSearchId
+            'content': new_test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
-        response = self.app.put(url('corpus', id=corpusId), params, self.json_headers,
+        response = self.app.put(url('corpus', id=corpus_id), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = json.loads(response.body)
-        newBackupCount = Session.query(CorpusBackup).count()
-        firstUpdateDatetimeModified = datetimeModified = resp['datetimeModified']
-        newCorpusCount = Session.query(Corpus).count()
-        assert corpusCount == newCorpusCount
-        assert datetimeModified != originalDatetimeModified
+        new_backup_count = Session.query(CorpusBackup).count()
+        first_update_datetime_modified = datetime_modified = resp['datetime_modified']
+        new_corpus_count = Session.query(Corpus).count()
+        assert corpus_count == new_corpus_count
+        assert datetime_modified != original_datetime_modified
         assert resp['description'] == u'Covers a lot of the data.  Best yet!'
-        assert resp['content'] == newTestCorpusContent
+        assert resp['content'] == new_test_corpus_content
         assert response.content_type == 'application/json'
-        assert origBackupCount + 1 == newBackupCount
+        assert orig_backup_count + 1 == new_backup_count
         backup = Session.query(CorpusBackup).filter(
             CorpusBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(CorpusBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == originalDatetimeModified
-        assert backup.content == testCorpusContent
-        assert json.loads(backup.modifier)['firstName'] == u'Admin'
+        assert backup.datetime_modified.isoformat() == original_datetime_modified
+        assert backup.content == test_corpus_content
+        assert json.loads(backup.modifier)['first_name'] == u'Admin'
         assert response.content_type == 'application/json'
 
         # Update the corpus as the contributor.
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetimeModified for the update
-        origBackupCount = Session.query(CorpusBackup).count()
-        params = self.corpusCreateParams.copy()
+        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        orig_backup_count = Session.query(CorpusBackup).count()
+        params = self.corpus_create_params.copy()
         params.update({
             'name': u'Corpus',
             'description': u'Covers even more data.  Better than ever!',
-            'content': newestTestCorpusContent,
-            'formSearch': formSearchId
+            'content': newest_test_corpus_content,
+            'form_search': form_search_id
         })
         params = json.dumps(params)
-        response = self.app.put(url('corpus', id=corpusId), params, self.json_headers,
+        response = self.app.put(url('corpus', id=corpus_id), params, self.json_headers,
                                  self.extra_environ_contrib)
         resp = json.loads(response.body)
-        backupCount = newBackupCount
-        newBackupCount = Session.query(CorpusBackup).count()
-        datetimeModified = resp['datetimeModified']
-        newCorpusCount = Session.query(Corpus).count()
-        assert corpusCount == newCorpusCount == 1
-        assert datetimeModified != originalDatetimeModified
+        backup_count = new_backup_count
+        new_backup_count = Session.query(CorpusBackup).count()
+        datetime_modified = resp['datetime_modified']
+        new_corpus_count = Session.query(Corpus).count()
+        assert corpus_count == new_corpus_count == 1
+        assert datetime_modified != original_datetime_modified
         assert resp['description'] == u'Covers even more data.  Better than ever!'
-        assert resp['content'] == newestTestCorpusContent
-        assert resp['modifier']['id'] == contributorId
+        assert resp['content'] == newest_test_corpus_content
+        assert resp['modifier']['id'] == contributor_id
         assert response.content_type == 'application/json'
-        assert backupCount + 1 == newBackupCount
+        assert backup_count + 1 == new_backup_count
         backup = Session.query(CorpusBackup).filter(
             CorpusBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(CorpusBackup.id)).first()
-        assert backup.datetimeModified.isoformat() == firstUpdateDatetimeModified
-        assert backup.content == newTestCorpusContent
-        assert json.loads(backup.modifier)['firstName'] == u'Admin'
+        assert backup.datetime_modified.isoformat() == first_update_datetime_modified
+        assert backup.content == new_test_corpus_content
+        assert json.loads(backup.modifier)['first_name'] == u'Admin'
         assert response.content_type == 'application/json'
 
         # Now get the history of this corpus.
         extra_environ = {'test.authentication.role': u'contributor',
-                         'test.applicationSettings': True}
+                         'test.application_settings': True}
         response = self.app.get(
-            url(controller='corpora', action='history', id=corpusId),
+            url(controller='corpora', action='history', id=corpus_id),
             headers=self.json_headers, extra_environ=extra_environ)
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert 'corpus' in resp
-        assert 'previousVersions' in resp
-        firstVersion = resp['previousVersions'][1]
-        secondVersion = resp['previousVersions'][0]
-        currentVersion = resp['corpus']
+        assert 'previous_versions' in resp
+        first_version = resp['previous_versions'][1]
+        second_version = resp['previous_versions'][0]
+        current_version = resp['corpus']
 
-        assert firstVersion['name'] == u'Corpus'
-        assert firstVersion['description'] == u'Covers a lot of the data.'
-        assert firstVersion['enterer']['id'] == administratorId
-        assert firstVersion['modifier']['id'] == administratorId
+        assert first_version['name'] == u'Corpus'
+        assert first_version['description'] == u'Covers a lot of the data.'
+        assert first_version['enterer']['id'] == administrator_id
+        assert first_version['modifier']['id'] == administrator_id
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
-        assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
+        assert first_version['datetime_modified'] <= second_version['datetime_modified']
 
-        assert secondVersion['name'] == u'Corpus'
-        assert secondVersion['description'] == u'Covers a lot of the data.  Best yet!'
-        assert secondVersion['content'] == newTestCorpusContent
-        assert secondVersion['enterer']['id'] == administratorId
-        assert secondVersion['modifier']['id'] == administratorId
-        assert secondVersion['datetimeModified'] <= currentVersion['datetimeModified']
+        assert second_version['name'] == u'Corpus'
+        assert second_version['description'] == u'Covers a lot of the data.  Best yet!'
+        assert second_version['content'] == new_test_corpus_content
+        assert second_version['enterer']['id'] == administrator_id
+        assert second_version['modifier']['id'] == administrator_id
+        assert second_version['datetime_modified'] <= current_version['datetime_modified']
 
-        assert currentVersion['name'] == u'Corpus'
-        assert currentVersion['description'] == u'Covers even more data.  Better than ever!'
-        assert currentVersion['content'] == newestTestCorpusContent
-        assert currentVersion['enterer']['id'] == administratorId
-        assert currentVersion['modifier']['id'] == contributorId
+        assert current_version['name'] == u'Corpus'
+        assert current_version['description'] == u'Covers even more data.  Better than ever!'
+        assert current_version['content'] == newest_test_corpus_content
+        assert current_version['enterer']['id'] == administrator_id
+        assert current_version['modifier']['id'] == contributor_id
 
         # Get the history using the corpus's UUID and expect it to be the same
         # as the one retrieved above
-        corpusUUID = resp['corpus']['UUID']
+        corpus_UUID = resp['corpus']['UUID']
         response = self.app.get(
-            url(controller='corpora', action='history', id=corpusUUID),
+            url(controller='corpora', action='history', id=corpus_UUID),
             headers=self.json_headers, extra_environ=extra_environ)
-        respUUID = json.loads(response.body)
-        assert resp == respUUID
+        resp_UUID = json.loads(response.body)
+        assert resp == resp_UUID
 
         # Attempt to call history with an invalid id and an invalid UUID and
         # expect 404 errors in both cases.
-        badId = 103
-        badUUID = str(uuid4())
+        bad_id = 103
+        bad_UUID = str(uuid4())
         response = self.app.get(
-            url(controller='corpora', action='history', id=badId),
+            url(controller='corpora', action='history', id=bad_id),
             headers=self.json_headers, extra_environ=extra_environ,
             status=404)
         resp = json.loads(response.body)
-        assert resp['error'] == u'No corpora or corpus backups match %d' % badId
+        assert resp['error'] == u'No corpora or corpus backups match %d' % bad_id
         response = self.app.get(
-            url(controller='corpora', action='history', id=badUUID),
+            url(controller='corpora', action='history', id=bad_UUID),
             headers=self.json_headers, extra_environ=extra_environ,
             status=404)
         resp = json.loads(response.body)
-        assert resp['error'] == u'No corpora or corpus backups match %s' % badUUID
+        assert resp['error'] == u'No corpora or corpus backups match %s' % bad_UUID
 
         # Now delete the corpus ...
-        response = self.app.delete(url('corpus', id=corpusId),
+        response = self.app.delete(url('corpus', id=corpus_id),
                         headers=self.json_headers, extra_environ=extra_environ)
 
         # ... and get its history again, this time using the corpus's UUID
         response = self.app.get(
-            url(controller='corpora', action='history', id=corpusUUID),
+            url(controller='corpora', action='history', id=corpus_UUID),
             headers=self.json_headers, extra_environ=extra_environ)
-        byUUIDResp = json.loads(response.body)
-        assert byUUIDResp['corpus'] == None
-        assert len(byUUIDResp['previousVersions']) == 3
-        firstVersion = byUUIDResp['previousVersions'][2]
-        secondVersion = byUUIDResp['previousVersions'][1]
-        thirdVersion = byUUIDResp['previousVersions'][0]
+        by_UUID_resp = json.loads(response.body)
+        assert by_UUID_resp['corpus'] == None
+        assert len(by_UUID_resp['previous_versions']) == 3
+        first_version = by_UUID_resp['previous_versions'][2]
+        second_version = by_UUID_resp['previous_versions'][1]
+        third_version = by_UUID_resp['previous_versions'][0]
 
-        assert firstVersion['name'] == u'Corpus'
-        assert firstVersion['description'] == u'Covers a lot of the data.'
-        assert firstVersion['enterer']['id'] == administratorId
-        assert firstVersion['modifier']['id'] == administratorId
+        assert first_version['name'] == u'Corpus'
+        assert first_version['description'] == u'Covers a lot of the data.'
+        assert first_version['enterer']['id'] == administrator_id
+        assert first_version['modifier']['id'] == administrator_id
         # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
         # so the test will fail/be inconsistent with <
-        assert firstVersion['datetimeModified'] <= secondVersion['datetimeModified']
+        assert first_version['datetime_modified'] <= second_version['datetime_modified']
 
-        assert secondVersion['name'] == u'Corpus'
-        assert secondVersion['description'] == u'Covers a lot of the data.  Best yet!'
-        assert secondVersion['content'] == newTestCorpusContent
-        assert secondVersion['enterer']['id'] == administratorId
-        assert secondVersion['modifier']['id'] == administratorId
-        assert secondVersion['datetimeModified'] <= thirdVersion['datetimeModified']
+        assert second_version['name'] == u'Corpus'
+        assert second_version['description'] == u'Covers a lot of the data.  Best yet!'
+        assert second_version['content'] == new_test_corpus_content
+        assert second_version['enterer']['id'] == administrator_id
+        assert second_version['modifier']['id'] == administrator_id
+        assert second_version['datetime_modified'] <= third_version['datetime_modified']
 
-        assert thirdVersion['name'] == u'Corpus'
-        assert thirdVersion['description'] == u'Covers even more data.  Better than ever!'
-        assert thirdVersion['content'] == newestTestCorpusContent
-        assert thirdVersion['enterer']['id'] == administratorId
-        assert thirdVersion['modifier']['id'] == contributorId
+        assert third_version['name'] == u'Corpus'
+        assert third_version['description'] == u'Covers even more data.  Better than ever!'
+        assert third_version['content'] == newest_test_corpus_content
+        assert third_version['enterer']['id'] == administrator_id
+        assert third_version['modifier']['id'] == contributor_id
 
         # Get the deleted corpus's history again, this time using its id.  The 
         # response should be the same as the response received using the UUID.
         response = self.app.get(
-            url(controller='corpora', action='history', id=corpusId),
+            url(controller='corpora', action='history', id=corpus_id),
             headers=self.json_headers, extra_environ=extra_environ)
-        byCorpusIdResp = json.loads(response.body)
-        assert byCorpusIdResp == byUUIDResp
+        by_corpus_id_resp = json.loads(response.body)
+        assert by_corpus_id_resp == by_UUID_resp
