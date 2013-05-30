@@ -582,9 +582,15 @@ class SQLAQueryBuilder(object):
             'modifier': {'foreign_model': 'User', 'type': 'scalar'},
             'datetime_entered': {'value_converter': '_get_datetime_value'},
             'datetime_modified': {'value_converter': '_get_datetime_value'},
-            'datetime_compiled': {'value_converter': '_get_datetime_value'},
             'compile_succeeded': {},
             'compile_message': {},
+            'compile_attempt': {},
+            'generate_attempt': {},
+            'extract_morphemes_from_rules_corpus': {},
+            'rules': {},
+            'script_type': {},
+            'lexicon_corpus': {'foreign_model': 'Corpus', 'type': 'scalar'},
+            'rules_corpus': {'foreign_model': 'Corpus', 'type': 'scalar'}
         },
         'MorphologyBackup': {
             'id': {},
@@ -596,9 +602,14 @@ class SQLAQueryBuilder(object):
             'modifier': {},
             'datetime_entered': {'value_converter': '_get_datetime_value'},
             'datetime_modified': {'value_converter': '_get_datetime_value'},
-            'datetime_compiled': {'value_converter': '_get_datetime_value'},
             'compile_succeeded': {},
             'compile_message': {},
+            'compile_attempt': {},
+            'generate_attempt': {},
+            'extract_morphemes_from_rules_corpus': {},
+            'script_type': {},
+            'lexicon_corpus': {},
+            'rules_corpus': {}
         },
         'Orthography': {
             'id': {},

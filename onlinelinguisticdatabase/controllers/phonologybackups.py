@@ -20,19 +20,11 @@
 """
 
 import logging
-import datetime
-import re
-import simplejson as json
-
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import PhonologyBackup
 
@@ -42,9 +34,9 @@ class PhonologybackupsController(BaseController):
     """Generate responses to requests on phonology backup resources.
 
     REST Controller styled on the Atom Publishing Protocol.
-    
+
     .. note::
-    
+
        The ``h.jsonify`` decorator converts the return value of the methods to
        JSON.
 
@@ -101,7 +93,7 @@ class PhonologybackupsController(BaseController):
     @h.authenticate
     def show(self, id):
         """Return a phonology backup.
-        
+
         :URL: ``GET /phonologybackups/id``
         :param str id: the ``id`` value of the phonology backup to be returned.
         :returns: a phonology backup model object.

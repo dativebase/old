@@ -141,6 +141,7 @@ def make_map(config):
     map.resource('formbackup', 'formbackups')       # read-only
     map.resource('language', 'languages')           # read-only
     map.resource('morphology', 'morphologies')
+    map.resource('morphologybackup', 'morphologybackups')       # read-only
     map.resource('orthography', 'orthographies')
     map.resource('page', 'pages')
     map.resource('phonology', 'phonologies')

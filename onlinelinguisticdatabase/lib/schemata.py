@@ -1069,6 +1069,9 @@ class ValidFormReferences(FancyValidator):
                 json.loads(values['form_search'].search)).all()
             return values
         form_references = list(set(h.get_form_references(values.get('content', u''))))
+        if not form_references:
+            values['forms'] = []
+            return values
         RDBMS = h.get_RDBMS_name(config=state.config)
         # SQLite will raise an SQLA OperationalError if in_() has too many parameters, so we make multiple queries:
         if RDBMS == 'sqlite':
