@@ -23,7 +23,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 log = logging.getLogger(__name__)
 
 class TestLoginController(TestController):
-    #@nottest
+    @nottest
     def test_authenticate(self):
         """Tests that POST /login/authenticate correctly handles authentication attempts."""
 
@@ -51,7 +51,7 @@ class TestLoginController(TestController):
         assert resp['errors']['username'] == 'Missing value'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_logout(self):
         """Tests that GET /login/logout logs the user out."""
 
@@ -70,7 +70,7 @@ class TestLoginController(TestController):
         assert resp['error'] == u'Authentication is required to access this resource.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_email_reset_password(self):
         """Tests that POST /login/email_reset_password sends a user a newly generated password.
 

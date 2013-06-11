@@ -13,12 +13,11 @@
 #  limitations under the License.
 
 """Setup the old application"""
-import logging, os, datetime
+import logging, os
 from shutil import copyfile
 import pylons.test
 from onlinelinguisticdatabase.config.environment import load_environment
 from onlinelinguisticdatabase.model.meta import Base, Session
-from onlinelinguisticdatabase import model
 import onlinelinguisticdatabase.lib.helpers as h
 
 log = logging.getLogger(__name__)

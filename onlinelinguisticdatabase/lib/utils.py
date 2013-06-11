@@ -186,31 +186,83 @@ def restrict(*methods):
 # File system functions
 ################################################################################
 
+map2directory = {
+    u'file': u'files',
+    u'files': u'files',
+    u'reduced_files': os.path.join(u'files', u'reduced_files'),
+    u'users': u'users',
+    u'user': u'users',
+    u'corpora': u'corpora',
+    u'corpus': u'corpora',
+    u'phonologies': u'phonologies',
+    u'phonology': u'phonologies',
+    u'morphologies': u'morphologies',
+    u'morphology': u'morphologies',
+    u'morphological_parsers': u'morphological_parsers',
+    u'morphologicalparsers': u'morphological_parsers',
+    u'morphologicalparser': u'morphological_parsers'
+}
+
+map2subdirectory = {
+    u'corpora': u'corpus',
+    u'corpus': u'corpus',
+    u'phonologies': u'phonology',
+    u'phonology': u'phonology',
+    u'morphologies': u'morphology',
+    u'morphology': u'morphology',
+    u'morphological_parsers': u'morphological_parser',
+    u'morphologicalparsers': u'morphological_parser',
+    u'morphologicalparser': u'morphological_parser'
+}
+
 def get_OLD_directory_path(directory_name, **kwargs):
-    """Return the absolute path to an OLD directory."""
+    """Return the absolute path to an OLD directory in /store."""
     try:
         config = get_config(**kwargs)
         store = config['permanent_store']
-        map_ = {
-            u'files': u'files',
-            u'reduced_files': os.path.join(u'files', u'reduced_files'),
-            u'users': u'users',
-            u'corpora': u'corpora',
-            u'phonologies': u'phonologies',
-            u'morphologies': u'morphologies'
-        }
-        return os.path.join(store, map_[directory_name])
+        return os.path.join(store, map2directory[directory_name])
     except Exception:
         return None
 
+def get_model_directory_path(model_object, config):
+    """Return the path to a model object's directory, e.g., <Morphology 1> will return /store/morphologies/morphology_1/ """
+    return os.path.join(get_OLD_directory_path(model_object.__tablename__, config=config),
+                        '%s_%d' % (map2subdirectory[model_object.__tablename__], model_object.id))
+
+def get_model_file_path(model_object, model_directory_path, file_type='script'):
+    """Return the path to a foma-based model's file of the given type.
+
+    :param model_object: a phonology, morphology or morphological parser model object.
+    :param str model_directory_path: the absolute path to the directory that houses the files 
+        of the foma-based model (i.e., phonology, morphology or morphophonology).
+    :param str file_type: one of 'script', 'binary', 'compiler' or 'log'.
+    :returns: an absolute path to the file of the supplied type for the model object given.
+
+    """
+    file_type2extension = {
+        'script': '.script',
+        'binary': '.foma',
+        'compiler': '.sh',
+        'log': '.log',
+        'lexicon': '.pickle',
+        'language_model': ''
+    }
+    tablename = model_object.__tablename__
+    if file_type == 'language_model':
+        script_name = {'morphologicalparser': 'language_model'}.get(tablename, tablename)
+    else:
+        script_name = {'morphologicalparser': 'morphophonology'}.get(tablename, tablename)
+    return os.path.join(model_directory_path,
+                '%s_%d%s' % (script_name, model_object.id, file_type2extension.get(file_type, '.script')))
+
 def create_OLD_directories(**kwargs):
     """Make all of the required OLD directories.
-    
+
     :param kwargs['config']: a Pylons config object.
     :param kwargs['config_filename']: the name of a config file, e.g., "test.ini"
 
     """
-    for directory_name in ('files', 'reduced_files', 'users', 'corpora', 'phonologies', 'morphologies'):
+    for directory_name in ('files', 'reduced_files', 'users', 'corpora', 'phonologies', 'morphologies', 'morphological_parsers'):
         make_directory_safely(get_OLD_directory_path(directory_name, **kwargs))
 
 
@@ -1549,12 +1601,27 @@ def get_subprocess(command):
     except OSError:
         return None
 
-def command_line_program_installed(command):
+def command_line_program_installed_bk(command):
     """Command is the list representing the command-line utility."""
     try:
         return bool(get_subprocess(command))
     except:
         return False
+
+def command_line_program_installed(program):
+    """Check if program is in the user's PATH
+
+    .. note::
+
+        I used to use Python subprocess to attempt to execute the program, but I think searching PATH is better.
+
+    """
+    for path in os.environ['PATH'].split(os.pathsep):
+        path = path.strip('"')
+        program_path = os.path.join(path, program)
+        if os.path.isfile(program_path) and os.access(program_path, os.X_OK):
+            return True
+    return False
 
 def ffmpeg_installed():
     """Check if the ffmpeg command-line utility is installed on the host.
@@ -1689,8 +1756,18 @@ def eagerload_phonology(query):
         subqueryload(model.Phonology.enterer),
         subqueryload(model.Phonology.modifier))
 
+def eagerload_morphological_parser(query):
+    return query.options(
+        subqueryload(model.MorphologicalParser.phonology),
+        subqueryload(model.MorphologicalParser.morphology),
+        subqueryload(model.MorphologicalParser.language_model),
+        subqueryload(model.MorphologicalParser.enterer),
+        subqueryload(model.MorphologicalParser.modifier))
+
 def eagerload_morphology(query):
     return query.options(
+        subqueryload(model.Morphology.lexicon_corpus),
+        subqueryload(model.Morphology.rules_corpus),
         subqueryload(model.Morphology.enterer),
         subqueryload(model.Morphology.modifier))
 
@@ -1720,7 +1797,8 @@ validation_values = (u'None', u'Warning', u'Error')
 # How long to wait (in seconds) before terminating a process that is trying to
 # compile a foma script.
 phonology_compile_timeout = 30
-morphology_compile_timeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile!
+morphology_compile_timeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile
+morphological_parser_compile_timeout = 60 * 60  # Give foma morphological parser scripts 60 minutes to compile
 
 # The word boundary symbol is used in foma FST scripts to denote the beginning or end of a word,
 # i.e., it can be referred to in phonological rules, e.g., define semivowelDrop glides -> 0 || "#" _;$
@@ -1902,3 +1980,64 @@ rare_delimiter = u'\u2980'
 def chunker(sequence, size):
     """Convert a sequence to a generator that yields subsequences of the sequence of size ``size``."""
     return (sequence[position:position + size] for position in xrange(0, len(sequence), size))
+
+
+ngram_start_symbol = u'START_SYMBOL'
+ngram_end_symbol = u'END_SYMBOL'
+
+def get_morpheme_splitter():
+    """Return a function that will split words into morphemes."""
+    morpheme_splitter = lambda x: [x] # default, word is morpheme
+    morpheme_delimiters = get_morpheme_delimiters()
+    if morpheme_delimiters:
+        morpheme_splitter = re.compile(u'([%s])' % ''.join([esc_RE_meta_chars(d) for d in morpheme_delimiters])).split
+    return morpheme_splitter
+
+def extract_word_pos_sequences(form, unknown_category, morpheme_splitter=None, extract_morphemes=False):
+    """Return the unique word-based pos sequences, as well as (possibly) the morphemes, implicit in the form.
+
+    :param form: a form model object
+    :param morpheme_splitter: callable that splits a strings into its morphemes and delimiters
+    :param str unknown_category: the string used in syntactic category strings when a morpheme-gloss pair is unknown
+    :param morphology: the morphology model object -- needed because its extract_morphemes_from_rules_corpus
+        attribute determines whether we return a list of morphemes.
+    :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes as (pos, (mb, mg)) tuples).
+
+    """
+    if not form.syntactic_category_string:
+        return None, None
+    morpheme_splitter = morpheme_splitter or get_morpheme_splitter()
+    pos_sequences = set()
+    morphemes = []
+    sc_words = form.syntactic_category_string.split()
+    mb_words = form.morpheme_break.split()
+    mg_words = form.morpheme_gloss.split()
+    for sc_word, mb_word, mg_word in zip(sc_words, mb_words, mg_words):
+        pos_sequence = tuple(morpheme_splitter(sc_word))
+        if unknown_category not in pos_sequence:
+            pos_sequences.add(pos_sequence)
+            if extract_morphemes:
+                morpheme_sequence = morpheme_splitter(mb_word)[::2]
+                gloss_sequence = morpheme_splitter(mg_word)[::2]
+                for pos, morpheme, gloss in zip(pos_sequence[::2], morpheme_sequence, gloss_sequence):
+                    morphemes.append((pos, (morpheme, gloss)))
+    return pos_sequences, morphemes
+
+def get_word_category_sequences(corpus):
+    """Return the category sequence types of validly morphologically analyzed words
+    in ``corpus`` as well as the exemplars ids of said types.  This is useful for getting
+    a sense of which word "templates" are common.
+
+    :returns: a list of 2-tuples of the form [(category_sequence, [id1, id2, ...]), ...]
+        ordered by the number of exemplar ids in the list that is the second member.
+
+    """
+    result = {}
+    morpheme_splitter = get_morpheme_splitter()
+    for form in corpus.forms:
+        category_sequences, morphemes = extract_word_pos_sequences(form, unknown_category, morpheme_splitter, extract_morphemes=False)
+        if category_sequences:
+            for category_sequence in category_sequences:
+                result.setdefault(category_sequence, []).append(form.id)
+    return sorted(result.items(), key=lambda t: len(t[1]), reverse=True)
+

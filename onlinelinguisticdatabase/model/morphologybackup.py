@@ -59,6 +59,7 @@ class MorphologyBackup(Base):
     compile_attempt = Column(Unicode(36))
     generate_attempt = Column(Unicode(36))
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
+    rules = Column(UnicodeText)
 
     def vivify(self, morphology_dict):
         """The vivify method gives life to a morphology_backup by specifying its
@@ -83,6 +84,7 @@ class MorphologyBackup(Base):
         self.compile_attempt = morphology_dict['compile_attempt']
         self.generate_attempt = morphology_dict['generate_attempt']
         self.extract_morphemes_from_rules_corpus = morphology_dict['extract_morphemes_from_rules_corpus']
+        self.rules = morphology_dict['rules']
 
     def get_dict(self):
         return {
@@ -102,5 +104,6 @@ class MorphologyBackup(Base):
             'compile_message': self.compile_message,
             'compile_attempt': self.compile_attempt,
             'generate_attempt': self.generate_attempt,
-            'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus
+            'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus,
+            'rules': self.rules
         }

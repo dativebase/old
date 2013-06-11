@@ -1054,6 +1054,8 @@ class MorphophonemicTranscriptionsSchema(Schema):
     filter_extra_fields = True
     transcriptions = ForEach(UnicodeString(), not_empty=True)
 
+TranscriptionsSchema = MorphophonemicTranscriptionsSchema
+
 class MorphemeSequencesSchema(Schema):
     """Validates input to ``morphologies/applydown/id``."""
     allow_extra_fields = True
@@ -1117,16 +1119,46 @@ class CorpusFormatSchema(Schema):
     filter_extra_fields = True
     format = OneOf(h.corpus_formats.keys(), not_empty=True)
 
+class MorphologyRules(UnicodeString):
+    def _to_python(self, value, state):
+        if value:
+            value = h.to_single_space(value)
+        return value
+
+class RulesOrRulesCorpus(FancyValidator):
+    messages = {'invalid': 'A value for either rules or rules_corpus must be specified.'}
+    def _to_python(self, values, state):
+        if values.get('rules') or values.get('rules_corpus'):
+            return values
+        else:
+            raise Invalid(self.message('invalid', state), values, state)
+
 class MorphologySchema(Schema):
     """MorphologySchema is a Schema for validating the data submitted to
     MorphologiesController (controllers/morphologies.py).
 
     """
+    chained_validators = [RulesOrRulesCorpus()]
     allow_extra_fields = True
     filter_extra_fields = True
     name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Morphology', attribute_name='name')
     description = UnicodeString()
     lexicon_corpus = ValidOLDModelObject(model_name='Corpus')
-    rules_corpus = ValidOLDModelObject(model_name='Corpus', not_empty=True)
+    rules_corpus = ValidOLDModelObject(model_name='Corpus')
     script_type = OneOf(h.morphology_script_types)
     extract_morphemes_from_rules_corpus = StringBoolean()
+    rules = MorphologyRules()
+
+class MorphologicalParserSchema(Schema):
+    """MorphologicalParserSchema is a Schema for validating the data submitted to
+    MorphologicalparsersController (controllers/morphologicalparsers.py).
+
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='MorphologicalParser', attribute_name='name')
+    description = UnicodeString()
+    phonology = ValidOLDModelObject(model_name='Phonology')
+    morphology = ValidOLDModelObject(model_name='Morphology', not_empty=True)
+    language_model = ValidOLDModelObject(model_name='Corpus', not_empty=True)
+

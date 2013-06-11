@@ -463,6 +463,25 @@ class CorporaController(BaseController):
             response.status_int = 404
             return {'error': 'There is no corpus with id %s' % id}
 
+    @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    def get_word_category_sequences(self, id):
+        """Return the category sequence types of validly morphologically analyzed words
+        in the corpus with ``id``, uncluding the id exemplars of said types.
+        """
+        corpus = Session.query(Corpus).get(id)
+        if corpus:
+            word_category_sequences = h.get_word_category_sequences(corpus)
+            minimum_token_count = int(request.GET.get('minimum_token_count', 0))
+            if minimum_token_count:
+                word_category_sequences = [(''.join(sequence), ids) for sequence, ids in word_category_sequences
+                        if len(ids) >= minimum_token_count]
+            return word_category_sequences
+        else:
+            response.status_int = 404
+            return {'error': 'There is no corpus with id %s' % id}
+
 def get_form_ids_from_tgrep2_output_line(line):
     try:
         return int(line.split('-')[1])

@@ -573,6 +573,39 @@ class SQLAQueryBuilder(object):
             'last_name': {},
             'role': {}
         },
+        'MorphologicalParser': {
+            'id': {},
+            'UUID': {},
+            'name': {},
+            'description': {},
+            'phonology': {'foreign_model': 'Phonology', 'type': 'scalar'},
+            'morphology': {'foreign_model': 'Morphology', 'type': 'scalar'},
+            'language_model': {'foreign_model': 'Corpus', 'type': 'scalar'},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'modifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'compile_succeeded': {},
+            'compile_message': {},
+            'compile_attempt': {},
+        },
+        'MorphologicalParserBackup': {
+            'id': {},
+            'morphologicalparser_id': {},
+            'UUID': {},
+            'name': {},
+            'description': {},
+            'phonology': {},
+            'morphology': {},
+            'language_model': {},
+            'enterer': {},
+            'modifier': {},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'compile_succeeded': {},
+            'compile_message': {},
+            'compile_attempt': {},
+        },
         'Morphology': {
             'id': {},
             'UUID': {},
@@ -588,6 +621,7 @@ class SQLAQueryBuilder(object):
             'generate_attempt': {},
             'extract_morphemes_from_rules_corpus': {},
             'rules': {},
+            'rules_generated': {},
             'script_type': {},
             'lexicon_corpus': {'foreign_model': 'Corpus', 'type': 'scalar'},
             'rules_corpus': {'foreign_model': 'Corpus', 'type': 'scalar'}
@@ -609,7 +643,8 @@ class SQLAQueryBuilder(object):
             'extract_morphemes_from_rules_corpus': {},
             'script_type': {},
             'lexicon_corpus': {},
-            'rules_corpus': {}
+            'rules_corpus': {},
+            'rules': {}
         },
         'Orthography': {
             'id': {},

@@ -86,6 +86,7 @@ class TestController(TestCase):
         self.loremipsum10000_path = os.path.join(self.test_datasets_path, 'loremipsum_10000.txt')
         self.users_path = h.get_OLD_directory_path('users', config=config)
         self.morphologies_path = h.get_OLD_directory_path('morphologies', config=config)
+        self.morphological_parsers_path = h.get_OLD_directory_path('morphological_parsers', config=config)
         self.phonologies_path = h.get_OLD_directory_path('phonologies', config=config)
         self.test_phonologies_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'phonologies')
@@ -103,6 +104,8 @@ class TestController(TestCase):
                 self.test_phonologies_path, 'test_phonology_no_tests.script')
         self.test_morphologies_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'morphologies')
+        self.test_morphophonologies_path = os.path.join(self.here, 'onlinelinguisticdatabase',
+                            'tests', 'data', 'morphophonologies')
 
     def __setcreateparams__(self):
 
@@ -244,7 +247,15 @@ class TestController(TestCase):
             'lexicon_corpus': u'',
             'rules_corpus': u'',
             'script_type': u'lexc',
-            'extract_morphemes_from_rules_corpus': False
+            'extract_morphemes_from_rules_corpus': False,
+            'rules': u''
+        }
+        self.morphological_parser_create_params = {
+            'name': u'',
+            'phonology': u'',
+            'morphology': u'',
+            'language_model': u'',
+            'description': u''
         }
         self.orthography_create_params = {
             'name': u'',
@@ -359,6 +370,7 @@ class TestController(TestCase):
                 'corpus': lambda: h.destroy_all_directories('corpora', 'test.ini'),
                 'phonology': lambda: h.destroy_all_directories('phonologies', 'test.ini'),
                 'morphology': lambda: h.destroy_all_directories('morphologies', 'test.ini'),
+                'morphological_parser': lambda: h.destroy_all_directories('morphological_parsers', 'test.ini')
             }.get(dir_name, lambda: None)()
 
         if del_global_app_set:

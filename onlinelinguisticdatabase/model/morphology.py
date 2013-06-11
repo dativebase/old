@@ -48,7 +48,8 @@ class Morphology(Base):
     compile_attempt = Column(Unicode(36)) # a UUID
     generate_attempt = Column(Unicode(36)) # a UUID
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
-    rules = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces
+    rules_generated = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces -- system-generated value
+    rules = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces -- user-generated value
 
     def get_dict(self):
         return {
@@ -68,5 +69,6 @@ class Morphology(Base):
             'compile_attempt': self.compile_attempt,
             'generate_attempt': self.generate_attempt,
             'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus,
-            'rules': self.rules
+            'rules': self.rules,
+            'rules_generated': self.rules_generated
         }

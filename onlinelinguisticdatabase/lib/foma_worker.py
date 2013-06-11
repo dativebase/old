@@ -42,6 +42,7 @@ import Queue
 import threading
 import logging
 import os
+import itertools
 import re
 import cPickle
 import codecs
@@ -98,10 +99,13 @@ def get_file_path(model_object, script_dir_path, file_type='script'):
         'binary': 'foma',
         'compiler': 'sh',
         'log': 'log',
-        'lexicon': 'pickle'
+        'lexicon': 'pickle',
+        'language_model': 'mlm'
     }
+    tablename = model_object.__tablename__
+    script_name = {'morphologicalparser': 'morphophonology'}.get(tablename, tablename)
     return os.path.join(script_dir_path,
-                '%s_%d.%s' % (model_object.__tablename__, model_object.id, ext_map.get(file_type, 'script')))
+                '%s_%d.%s' % (script_name, model_object.id, ext_map.get(file_type, 'script')))
 
 class Command(object):
     """Runs the input command ``cmd`` as a subprocess within a thread.
@@ -248,7 +252,7 @@ def generate_and_compile_morphology_script(**kwargs):
         'morpheme_delimiters': morpheme_delimiters
     })
     write_morphology_script_to_disk(**kwargs)
-    morphology.rules = u' '.join(map(u''.join, rules))
+    morphology.rules_generated = u' '.join(map(u''.join, rules))
     # pickle the lexicon dict
     lexicon_path = get_file_path(morphology, script_dir_path, 'lexicon')
     cPickle.dump(lexicon, open(lexicon_path, 'wb'))
@@ -259,6 +263,111 @@ def generate_and_compile_morphology_script(**kwargs):
     morphology.modifier_id = kwargs['user_id']
     morphology.datetime_modified = h.now()
     Session.commit()
+
+def create_morphological_parser_components(**kwargs):
+    """Write the parser's morphophonology FST script to file and compile it if ``compile_`` is True.
+    Generate the language model and pickle it.
+
+    """
+    morphological_parser_id = kwargs.get('morphological_parser_id')
+    script_dir_path = kwargs.get('script_dir_path')
+    morphology_dir_path = kwargs.get('morphology_dir_path')
+    log.warn('morphology_dir_path: %s' % morphology_dir_path)
+    morphological_parser = Session.query(model.MorphologicalParser).get(morphological_parser_id)
+    morpheme_delimiters = h.get_morpheme_delimiters()
+    kwargs.update({
+        'model_object': morphological_parser,
+        'morphological_parser': morphological_parser,
+        'script_path': h.get_model_file_path(morphological_parser, script_dir_path, 'script'),
+        'binary_path': h.get_model_file_path(morphological_parser, script_dir_path, 'binary'),
+        'compiler_path': h.get_model_file_path(morphological_parser, script_dir_path, 'compiler'),
+        'log_path': h.get_model_file_path(morphological_parser, script_dir_path, 'log'),
+        'language_model_path': h.get_model_file_path(morphological_parser, script_dir_path, 'language_model'),
+        'morpheme_delimiters': morpheme_delimiters
+    })
+    write_morphophonology_script_to_disk(**kwargs)
+    write_morphological_language_model_to_disk(**kwargs)
+    if kwargs.get('compile', True):
+        morphological_parser = compile_foma_script(**kwargs)
+        morphological_parser.compile_attempt = unicode(uuid4())
+    morphological_parser.generate_attempt = unicode(uuid4())
+    morphological_parser.modifier_id = kwargs['user_id']
+    morphological_parser.datetime_modified = h.now()
+    Session.commit()
+
+def write_morphological_language_model_to_disk(**kwargs):
+    """Use MITLM or CMU-Cambridge language model toolkits to generate a language model based on the language model corpus.
+
+    1. Generate a word corpus text file, i.e., a file where each line represents the morphological analysis
+       of a word as represented by space-delimited morphemes where a morpheme is a symbol-delimited form/gloss pair
+    2. Use MITLM to generate an ARPA-formatted language model from the word corpus file.
+    3. Parse the ARPA LM and save it as a cPickled Python dict.
+
+    """
+    morphological_parser = kwargs['morphological_parser']
+    language_model_path = kwargs['language_model_path']
+    morpheme_delimiters = kwargs['morpheme_delimiters']
+    language_model_text_path = '%s.txt' % language_model_path
+    splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
+    forms = morphological_parser.language_model.forms
+    # First we write a text file where each line is a word whose morphemes (m|g) are space-delimited
+    with codecs.open(language_model_text_path, mode='w', encoding='utf8') as f:
+        for form in forms:
+            if form.syntactic_category_string:
+                for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                    f.write('%s\n' % u' '.join('%s%s%s' % (morpheme, h.rare_delimiter, gloss) for morpheme, gloss in
+                        zip(re.split(splitter, morpheme_word), re.split(splitter, gloss_word))))
+    # Then we use MITLM to generate a language model in ARPA formatkk
+
+def _write_morphological_language_model_to_disk(**kwargs):
+    category_ngram_model = generate_category_ngram_model(**kwargs)
+    cPickle.dump(category_ngram_model, open(kwargs['language_model_path'], 'wb'))
+
+def generate_category_ngram_model(**kwargs):
+    """Return a dict mapping tuples of categories/delimiters/edge-symbols to probabilities.
+    P(M) = P(m1)P(m2|m1)P(m3|m2)
+    P(m_n|m_n-1) = C(m_n-1^n) / EwC(m_n-1^w)
+      = C(m_n-1^n) / C(m_n-1)
+      = probability of ('N', 'Agr') is the count of ('N', 'Agr') divided by the count of ('N')
+      = probability of ('N', '-', 'Agr') is the count of ('N', 'Agr') divided by the count of ('N')
+    TODO: NOTE: bigrams will not work when there are more than one type of morpheme delimiter since in
+    such cases delimiters will needs be treated like categories and hence trigrams will be necessary in 
+    order to make probabilistic dependencies between categories themselves.
+
+    """
+    morphological_parser = kwargs['morphological_parser']
+    language_model_corpus = morphological_parser.language_model
+    morphology = morphological_parser.morphology
+    lexicon_path = get_file_path(morphology, kwargs['morphology_dir_path'], 'lexicon')
+    log.debug('\n\nlexicon_path: %s\n\n\n' % lexicon_path)
+    lexicon = cPickle.load(open(lexicon_path, 'rb'))
+    morpheme_delimiters = kwargs['morpheme_delimiters']
+    categories = [h.ngram_start_symbol, h.ngram_end_symbol] + morpheme_delimiters + lexicon.keys()
+    #category_bigram_counts = dict((bigram, []) for bigram in itertools.product(categories, categories))
+    ngram_counts = {}
+    splitter = u'([%s])' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
+    for form in language_model_corpus.forms:
+        if form.syntactic_category_string:
+            for word in form.syntactic_category_string.split():
+                sequence = [h.ngram_start_symbol] + re.split(splitter, word) + [h.ngram_end_symbol]
+                for ngram in itertools.izip(sequence, sequence[1:]):
+                    try:
+                        ngram_counts[ngram] += 1
+                    except KeyError:
+                        ngram_counts[ngram] = 1
+    unigram_counts = {}
+    ngram_probabilities = {}
+    def get_unigram_count(unigram, unigram_counts, ngram_counts):
+        try:
+            return unigram_counts[unigram], unigram_counts
+        except KeyError:
+            unigram_count = unigram_counts[unigram] = sum(count for ngram, count in
+                    ngram_counts.iteritems() if ngram[0] == unigram)
+            return unigram_count, unigram_counts
+    for ngram, ngram_count in ngram_counts.iteritems():
+        unigram_count, unigram_counts = get_unigram_count(ngram[0], unigram_counts, ngram_counts)
+        ngram_probabilities[ngram] = ngram_count / float(unigram_count)
+    return ngram_probabilities
 
 def get_rules_and_lexicon(morphology, morpheme_delimiters):
     try:
@@ -287,35 +396,6 @@ def _get_rules_and_lexicon(morphology, morpheme_delimiters):
                     morphemes.append((pos, (morpheme, gloss)))
         return morphemes
 
-    def extract_word_pos_sequences(form, morpheme_splitter, unknown_category, morphology):
-        """Return the unique word-based pos sequences, as well as the morphemes, implicit in the form.
-
-        :param form: a form model object
-        :param morpheme_splitter: callable that splits a strings into its morphemes and delimiters
-        :param str unknown_category: the string used in syntactic category strings when a morpheme-gloss pair is unknown
-        :param morphology: the morphology model object -- needed because its extract_morphemes_from_rules_corpus
-            attribute determines whether we return a list of morphemes.
-        :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes as (pos, (mb, mg)) tuples).
-
-        """
-        if not form.syntactic_category_string:
-            return None, None
-        pos_sequences = set()
-        morphemes = []
-        sc_words = form.syntactic_category_string.split()
-        mb_words = form.morpheme_break.split()
-        mg_words = form.morpheme_gloss.split()
-        for sc_word, mb_word, mg_word in zip(sc_words, mb_words, mg_words):
-            pos_sequence = tuple(morpheme_splitter(sc_word))
-            if unknown_category not in pos_sequence:
-                pos_sequences.add(pos_sequence)
-                if morphology.extract_morphemes_from_rules_corpus:
-                    morpheme_sequence = morpheme_splitter(mb_word)[::2]
-                    gloss_sequence = morpheme_splitter(mg_word)[::2]
-                    for pos, morpheme, gloss in zip(pos_sequence[::2], morpheme_sequence, gloss_sequence):
-                        morphemes.append((pos, (morpheme, gloss)))
-        return pos_sequences, morphemes
-
     def filter_invalid_sequences(pos_sequences, morphemes, morphology, morpheme_delimiters):
         """Remove category sequences from pos_sequences if they contain categories not listed as 
         keys of the morphemes dict or if they contain delimiters not listed in morpheme_delimiters.
@@ -334,25 +414,31 @@ def _get_rules_and_lexicon(morphology, morpheme_delimiters):
 
     unknown_category = h.unknown_category
     # Get a function that will split words into morphemes
-    morpheme_splitter = lambda x: [x] # default, word is morpheme
-    if morpheme_delimiters:
-        morpheme_splitter = re.compile(u'([%s])' % ''.join([h.esc_RE_meta_chars(d) for d in morpheme_delimiters])).split
+    morpheme_splitter = h.get_morpheme_splitter()
     # Get the unique morphemes from the lexicon corpus
     morphemes = {}
     if (morphology.lexicon_corpus and
-        morphology.lexicon_corpus.id != morphology.rules_corpus.id):
+        (not morphology.rules_corpus or
+        morphology.lexicon_corpus.id != morphology.rules_corpus.id)):
         for form in morphology.lexicon_corpus.forms:
             new_morphemes = extract_morphemes_from_form(form, morpheme_splitter, unknown_category)
             for pos, data in new_morphemes:
                 morphemes.setdefault(pos, set()).add(data)
-    # Get the pos strings (and morphemes) from the words in the rules corpus
+    # Get the pos sequences (and morphemes) from the use-specified ``rules`` string value or else from the 
+    # words in the rules corpus.
     pos_sequences = set()
-    for form in morphology.rules_corpus.forms:
-        new_pos_sequences, new_morphemes = extract_word_pos_sequences(form, morpheme_splitter, unknown_category, morphology)
-        if new_pos_sequences:
-            pos_sequences |= new_pos_sequences
-            for pos, data in new_morphemes:
-                morphemes.setdefault(pos, set()).add(data)
+    if morphology.rules:
+        for pos_sequence_string in morphology.rules.split():
+            pos_sequence = tuple(morpheme_splitter(pos_sequence_string))
+            pos_sequences.add(pos_sequence)
+    else:
+        for form in morphology.rules_corpus.forms:
+            new_pos_sequences, new_morphemes = h.extract_word_pos_sequences(form, unknown_category,
+                                morpheme_splitter, morphology.extract_morphemes_from_rules_corpus)
+            if new_pos_sequences:
+                pos_sequences |= new_pos_sequences
+                for pos, data in new_morphemes:
+                    morphemes.setdefault(pos, set()).add(data)
     pos_sequences = filter_invalid_sequences(pos_sequences, morphemes, morphology, morpheme_delimiters)
     # sort and delistify the rules and lexicon
     pos_sequences = sorted(pos_sequences)
@@ -406,6 +492,66 @@ def _write_morphology_script_to_disk(**kwargs):
         morphology_generator = get_morphology_generator(morphology, pos_sequences, morphemes, morpheme_delimiters)
         for line in morphology_generator:
             f.write(line)
+
+def write_morphophonology_script_to_disk(**kwargs):
+    try:
+        _write_morphophonology_script_to_disk(**kwargs)
+    except Exception:
+        pass
+
+def _write_morphophonology_script_to_disk(**kwargs):
+    """Write the foma FST script of the morphophonology to file.
+
+    Also create the morphophonology compiler shell script, i.e., ``morphophonology_<id>.sh``
+    which will be used to compile the morphophonology FST to a binary.
+
+    :param kwargs['morphological_parser']: a morphological parser model.
+    :param str kwargs['script_path']: absolute path to the parser's morphophonology script file.
+    :param str kwargs['binary_path']: absolute path to the parser's morphophonology binary foma file.
+    :param str kwargs['compiler_path']: absolute path to the shell script that compiles the script to the binary.
+    :returns: None
+
+    The morphophonology is defined via the following procedure:
+    1. load the lexc morphology and define 'morphology' from it OR copy the entire script of the regex morphology
+    2. copy in the phonology script, replacing 'define phonology ...' with 'define morphophonology .o. morphology ...'.
+
+    """
+
+    def generate_morphophonology(phonology_script):
+        """Return the phonology script with 'define phonology ...' replaced by 'define morphophonology morphology .o. ...'"""
+        phonology_definition_patt = re.compile('define( )+phonology( )+.+?[^%"];', re.DOTALL)
+        define_phonology_patt = re.compile('define( )+phonology')
+        if phonology_definition_patt.search(phonology_script):
+            return define_phonology_patt.sub('define morphophonology morphology .o. ', phonology_script)
+        return None
+
+    morphological_parser = kwargs['morphological_parser']
+    script_path = kwargs['script_path']
+    binary_path = kwargs['binary_path']
+    compiler_path = kwargs['compiler_path']
+    with open(compiler_path, 'w') as f:
+        f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" -e "save stack %s" -e "quit"' % (
+                    script_path, binary_path))
+    os.chmod(compiler_path, 0744)
+    morphology_script_path = get_file_path(morphological_parser.morphology, kwargs['morphology_dir_path'], 'script')
+    log.warn('morphology_script_path: %s' % morphology_script_path)
+    log.warn(os.path.isfile(morphology_script_path))
+    #get_file_path(model_object, script_dir_path, file_type='script'):
+    phonology_script = morphological_parser.phonology.script
+    morphophonology = generate_morphophonology(phonology_script)
+    if morphophonology:
+        with codecs.open(script_path, 'w', 'utf8') as f:
+            if morphological_parser.morphology.script_type == 'lexc':
+                f.write('read lexc %s\n\n' % morphology_script_path)
+                f.write('define morphology;\n\n')
+            else:
+                f.write('source %s\n\n' % morphology_script_path)
+            f.write('define morphology "%s" morphology "%s";\n\n' % (h.word_boundary_symbol, h.word_boundary_symbol))
+            f.write('%s\n' % morphophonology)
+    else:
+        with codecs.open(script_path, 'w', 'utf8') as f:
+            # Default morphophonology is the identity function.
+            f.write('define morphophonology ?*;\n')
 
 def get_morphology_generator(morphology, pos_sequences, morphemes, morpheme_delimiters):
     """Return a generator that yields lines of a foma morphology script.
@@ -464,15 +610,18 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters)
                 yield u'%s%s%s:%s %s;\n' % (form, h.rare_delimiter, gloss, form, next_class)
         yield u'\n\n'
 
-    glosses = set()
-    for morphemes_list in morphemes.values():
-        for form, gloss in morphemes_list:
-            glosses.add(gloss)
-    glosses = map(h.escape_foma_reserved_symbols, glosses)
-    yield u'Multichar_Symbols %s\n' % glosses[0]
-    for gloss in glosses[1:]:
-        yield u'  %s\n' % gloss
-    yield u'\n\n\n'
+    # I was declaring all morpheme glosses as multi-character symbols in the lexc foma script but
+    # this was causing issues in accuracy as well as efficiency of compilation.  I don't quite know why...
+    #glosses = set()
+    #for morphemes_list in morphemes.values():
+    #    for form, gloss in morphemes_list:
+    #        glosses.add(gloss)
+    #glosses = map(h.escape_foma_reserved_symbols, glosses)
+    #yield u'Multichar_Symbols %s\n' % glosses[0]
+    #for gloss in glosses[1:]:
+    #    yield u'  %s\n' % gloss
+    #yield u'\n\n\n'
+
     roots = []
     continuation_classes = set()
     for sequence in pos_sequences:

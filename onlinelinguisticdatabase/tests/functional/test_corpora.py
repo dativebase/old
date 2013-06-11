@@ -34,7 +34,7 @@ class TestCorporaController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['user', 'corpus'])
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /corpora returns an array of all corpora and that order_by and pagination parameters work correctly."""
 
@@ -123,7 +123,7 @@ class TestCorporaController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /corpora creates a new corpus
         or returns an appropriate error if the input is invalid.
@@ -327,7 +327,7 @@ class TestCorporaController(TestController):
         assert corpus_form_ids == sorted(half_form_ids)
         assert resp['form_search'] == None
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /corpora/new returns data needed to create a new corpus."""
 
@@ -406,7 +406,7 @@ class TestCorporaController(TestController):
         assert resp['users'] == []
         assert resp['corpus_formats'] == data['corpus_formats']
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /corpora/id updates the corpus with id=id."""
 
@@ -515,7 +515,7 @@ class TestCorporaController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /corpora/id deletes the corpus with id=id."""
 
@@ -626,7 +626,7 @@ class TestCorporaController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /corpora/id returns the corpus with id=id or an appropriate error."""
 
@@ -712,7 +712,7 @@ class TestCorporaController(TestController):
         assert resp['content'] == test_corpus_content
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /corpora/id/edit returns a JSON object of data necessary to edit the corpus with id=id.
 
@@ -818,7 +818,7 @@ class TestCorporaController(TestController):
         assert resp['data'] == data
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_history(self):
         """Tests that GET /corpora/id/history returns the corpus with id=id and its previous incarnations.
         

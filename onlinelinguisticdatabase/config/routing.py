@@ -59,6 +59,8 @@ def make_map(config):
 
     # CUSTOM ROUTES HERE
     map.connect('/collections/{id}/history', controller='oldcollections', action='history')
+    map.connect('/corpora/{id}/get_word_category_sequences', controller='corpora', action='get_word_category_sequences',
+                conditions=dict(method='GET'))
     map.connect('/corpora/{id}', controller='corpora', action='search',
                 conditions=dict(method='SEARCH'))
     map.connect('/corpora/{id}/history', controller='corpora', action='history')
@@ -80,6 +82,17 @@ def make_map(config):
     map.connect('/login/authenticate', controller='login', action='authenticate')
     map.connect('/login/logout', controller='login', action='logout')
     map.connect('/login/email_reset_password', controller='login', action='email_reset_password')
+    map.connect('/morphologicalparsers/{id}/applydown', controller='morphologicalparsers',
+                action='applydown', conditions=dict(method='PUT'))
+    map.connect('/morphologicalparsers/{id}/applyup', controller='morphologicalparsers',
+                action='applyup', conditions=dict(method='PUT'))
+    map.connect('/morphologicalparsers/{id}/generate', controller='morphologicalparsers',
+                action='generate', conditions=dict(method='PUT'))
+    map.connect('/morphologicalparsers/{id}/generate_and_compile', controller='morphologicalparsers',
+                action='generate_and_compile', conditions=dict(method='PUT'))
+    map.connect('/morphologicalparsers/{id}/history', controller='morphologicalparsers', action='history')
+    map.connect('/morphologicalparsers/{id}/servecompiled', controller='morphologicalparsers',
+                action='servecompiled', conditions=dict(method='GET'))
     map.connect('/morphologies/{id}/applydown', controller='morphologies',
                 action='applydown', conditions=dict(method='PUT'))
     map.connect('/morphologies/{id}/applyup', controller='morphologies',
@@ -140,6 +153,8 @@ def make_map(config):
     map.resource('formsearch', 'formsearches')
     map.resource('formbackup', 'formbackups')       # read-only
     map.resource('language', 'languages')           # read-only
+    map.resource('morphologicalparser', 'morphologicalparsers')
+    map.resource('morphologicalparserbackup', 'morphologicalparserbackups')       # read-only
     map.resource('morphology', 'morphologies')
     map.resource('morphologybackup', 'morphologybackups')       # read-only
     map.resource('orthography', 'orthographies')

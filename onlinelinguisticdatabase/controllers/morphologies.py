@@ -22,6 +22,7 @@
 import logging
 import simplejson as json
 import os
+import re
 import cPickle
 from uuid import uuid4
 import codecs
@@ -208,6 +209,7 @@ class MorphologiesController(BaseController):
         :URL: ``GET /morphologies/id``
         :param str id: the ``id`` value of the morphology to be returned.
         :GET param str script: if set to '1', the script will be returned with the morphology
+        :GET param str lexicon: if set to '1', the lexicon (dict) will be returned with the morphology
         :returns: a morphology model object.
 
         """
@@ -246,7 +248,7 @@ class MorphologiesController(BaseController):
 
             where the value of the ``morphology`` key is a dictionary
             representation of the morphology and the value of the ``data`` key
-            is an empty dictionary.
+            is a list of corpora in the database.
 
         """
         morphology = h.eagerload_morphology(Session.query(Morphology)).get(id)
@@ -418,6 +420,7 @@ class MorphologiesController(BaseController):
             response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}
 
+        
 def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new morphology or edit one."""
     model_name_map = {'corpora': 'Corpus'}
@@ -461,6 +464,7 @@ def create_new_morphology(data):
     morphology.rules_corpus = data['rules_corpus']
     morphology.script_type = data['script_type']
     morphology.extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus']
+    morphology.rules = data['rules']
     return morphology
 
 def update_morphology(morphology, data):
@@ -479,6 +483,7 @@ def update_morphology(morphology, data):
     changed = h.set_attr(morphology, 'rules_corpus', data['rules_corpus'], changed)
     changed = h.set_attr(morphology, 'script_type', data['script_type'], changed)
     changed = h.set_attr(morphology, 'extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
+    changed = h.set_attr(morphology, 'rules', data['rules'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']

@@ -31,7 +31,7 @@ class TestMorphologybackupsController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['morphology'])
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that ``GET /morphologybackups`` behaves correctly.
         """

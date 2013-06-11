@@ -15,7 +15,6 @@
 """Model model"""
 
 import simplejson as json
-import datetime
 import logging
 log = logging.getLogger(__name__)
 
@@ -32,13 +31,15 @@ class Model(object):
         'elicitationmethod': ['id', 'name'],
         'file': ['id', 'name', 'filename', 'MIME_type', 'size', 'url', 'lossy_filename'],
         'formsearch': ['id', 'name'],
-        'translation': ['id', 'transcription', 'grammaticality'],
+        'morphology': ['id', 'name'],
         'orthography': ['id', 'name', 'orthography', 'lowercase', 'initial_glottal_stops'],
+        'phonology': ['id', 'name'],
         'source': ['id', 'type', 'key', 'journal', 'editor', 'chapter', 'pages',
             'publisher', 'booktitle', 'school', 'institution', 'year', 'author', 'title', 'note'],
         'speaker': ['id', 'first_name', 'last_name', 'dialect'],
         'syntacticcategory': ['id', 'name'],
         'tag': ['id', 'name'],
+        'translation': ['id', 'transcription', 'grammaticality'],
         'user': ['id', 'first_name', 'last_name', 'role']
     }
 

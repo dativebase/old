@@ -42,7 +42,7 @@ class TestPagesController(TestController):
         ''
     ])
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /pages returns an array of all pages and that order_by and pagination parameters work correctly."""
 
@@ -129,7 +129,7 @@ class TestPagesController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /pages creates a new page
         or returns an appropriate error if the input is invalid.
@@ -182,7 +182,7 @@ class TestPagesController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /pages/new returns the list of accepted markup languages."""
         response = self.app.get(url('new_page'), headers=self.json_headers,
@@ -191,7 +191,7 @@ class TestPagesController(TestController):
         assert resp == {'markup_languages': list(h.markup_languages)}
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /pages/id updates the page with id=id."""
 
@@ -241,7 +241,7 @@ class TestPagesController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /pages/id deletes the page with id=id."""
 
@@ -285,7 +285,7 @@ class TestPagesController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /pages/id returns the page with id=id or an appropriate error."""
 
@@ -324,7 +324,7 @@ class TestPagesController(TestController):
         assert resp['content'] == self.md_contents
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /pages/id/edit returns a JSON object of data necessary to edit the page with id=id.
 

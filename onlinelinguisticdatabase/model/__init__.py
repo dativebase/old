@@ -28,6 +28,8 @@ from onlinelinguisticdatabase.model.formbackup import FormBackup
 from onlinelinguisticdatabase.model.formsearch import FormSearch
 from onlinelinguisticdatabase.model.translation import Translation
 from onlinelinguisticdatabase.model.language import Language
+from onlinelinguisticdatabase.model.morphologicalparser import MorphologicalParser
+from onlinelinguisticdatabase.model.morphologicalparserbackup import MorphologicalParserBackup
 from onlinelinguisticdatabase.model.morphology import Morphology
 from onlinelinguisticdatabase.model.morphologybackup import MorphologyBackup
 from onlinelinguisticdatabase.model.orthography import Orthography
@@ -42,9 +44,10 @@ from onlinelinguisticdatabase.model.user import User, UserForm
 
 __all__ = ['Session', 'Base', 'ApplicationSettings', 'Collection', 'CollectionBackup', 
         'Corpus', 'CorpusFile', 'CorpusBackup', 'ElicitationMethod', 'File', 'Form', 
-        'FormFile', 'FormBackup', 'FormSearch', 'Translation', 'Language', 'Morphology',
-        'MorphologyBackup', 'Orthography', 'Page', 'Phonology', 'PhonologyBackup',
-        'Source', 'Speaker', 'SyntacticCategory', 'Tag', 'User', 'UserForm']
+        'FormFile', 'FormBackup', 'FormSearch', 'Translation', 'Language', 'MorphologicalParser',
+        'MorphologicalParserBackup', 'Morphology', 'MorphologyBackup', 'Orthography', 'Page',
+        'Phonology', 'PhonologyBackup', 'Source', 'Speaker', 'SyntacticCategory', 'Tag', 'User',
+        'UserForm']
 
 def init_model(engine):
     """Call me before using any of the tables or classes in the model"""
