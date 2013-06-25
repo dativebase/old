@@ -1011,7 +1011,7 @@ class TestFilesController(TestController):
             assert resp['enterer']['first_name'] == u'Admin'
             assert response.content_type == 'application/json'
             assert lossy_filename not in old_reduced_dir_list
-            if self.create_reduced_size_file_copies and h.command_line_program_installed(['ffmpeg']):
+            if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
                 assert resp['lossy_filename'] == lossy_filename
                 assert lossy_filename in new_reduced_dir_list
             else:
@@ -1039,7 +1039,7 @@ class TestFilesController(TestController):
             assert resp['enterer']['first_name'] == u'Admin'
             assert response.content_type == 'application/json'
             assert lossy_filename not in old_reduced_dir_list
-            if self.create_reduced_size_file_copies and h.command_line_program_installed(['ffmpeg']):
+            if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
                 assert resp['lossy_filename'] == lossy_filename
                 assert lossy_filename in new_reduced_dir_list
             else:
@@ -1569,7 +1569,7 @@ class TestFilesController(TestController):
 
         # Show that the child file still exists after the parent has been deleted.
         assert parent_filename in os.listdir(self.files_path)
-        if self.create_reduced_size_file_copies and h.command_line_program_installed(['ffmpeg']):
+        if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
             assert parent_lossy_filename in os.listdir(self.reduced_files_path)
         response = self.app.delete(url('file', id=parent_id), extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1976,7 +1976,7 @@ class TestFilesController(TestController):
         assert guess_type(wav_filename)[0] == response.headers['Content-Type']
 
         # Retrieve the reduced file data of the wav file created above.
-        if self.create_reduced_size_file_copies and h.command_line_program_installed(['ffmpeg']):
+        if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
             response = self.app.get(url(controller='files', action='serve_reduced', id=wav_file_id),
                 headers=self.json_headers, extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
@@ -1990,7 +1990,7 @@ class TestFilesController(TestController):
             assert response.content_type == 'application/json'
 
         # Retrieve the reduced file of the wav-subinterval-referencing file above
-        if self.create_reduced_size_file_copies and h.command_line_program_installed(['ffmpeg']):
+        if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
             response = self.app.get(url(controller='files', action='serve_reduced', id=sr_file_id),
                 headers=self.json_headers, extra_environ=extra_environ_admin)
             sr_response_base64 = b64encode(response.body)
@@ -2224,7 +2224,7 @@ class TestFilesController(TestController):
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == u'Admin'
         assert new_file_count == file_count + 1
-        if self.create_reduced_size_file_copies and h.command_line_program_installed(['ffmpeg']):
+        if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
             assert resp['lossy_filename'] == lossy_filename
             assert resp['lossy_filename'] in os.listdir(self.reduced_files_path)
             assert get_size(wav_file_path) > get_size(lossy_file_path)

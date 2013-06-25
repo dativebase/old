@@ -59,6 +59,7 @@ def make_map(config):
 
     # CUSTOM ROUTES HERE
     map.connect('/collections/{id}/history', controller='oldcollections', action='history')
+
     map.connect('/corpora/{id}/get_word_category_sequences', controller='corpora', action='get_word_category_sequences',
                 conditions=dict(method='GET'))
     map.connect('/corpora/{id}', controller='corpora', action='search',
@@ -73,15 +74,27 @@ def make_map(config):
     map.connect('/corpora/{id}/writetofile', controller='corpora',
                 action='writetofile', conditions=dict(method='PUT'))
     map.connect('/corpora/new_search', controller='corpora', action='new_search')
+
     map.connect('/files/{id}/serve', controller='files', action='serve')
     map.connect('/files/{id}/serve_reduced', controller='files', action='serve_reduced')
+
     map.connect('/forms/{id}/history', controller='forms', action='history')
     map.connect('/forms/remember', controller='forms', action='remember')
     map.connect('/forms/update_morpheme_references', controller='forms',
                 action='update_morpheme_references', conditions=dict(method='PUT'))
+
     map.connect('/login/authenticate', controller='login', action='authenticate')
     map.connect('/login/logout', controller='login', action='logout')
     map.connect('/login/email_reset_password', controller='login', action='email_reset_password')
+
+    map.connect('/morphemelanguagemodels/{id}/compute_perplexity', controller='morphemelanguagemodels',
+                action='compute_perplexity', conditions=dict(method='PUT'))
+    map.connect('/morphemelanguagemodels/{id}/generate', controller='morphemelanguagemodels',
+                action='generate', conditions=dict(method='PUT'))
+    map.connect('/morphemelanguagemodels/{id}/history', controller='morphemelanguagemodels', action='history')
+    map.connect('/morphemelanguagemodels/{id}/get_probabilities', controller='morphemelanguagemodels',
+                action='get_probabilities', conditions=dict(method='PUT'))
+
     map.connect('/morphologicalparsers/{id}/applydown', controller='morphologicalparsers',
                 action='applydown', conditions=dict(method='PUT'))
     map.connect('/morphologicalparsers/{id}/applyup', controller='morphologicalparsers',
@@ -93,6 +106,7 @@ def make_map(config):
     map.connect('/morphologicalparsers/{id}/history', controller='morphologicalparsers', action='history')
     map.connect('/morphologicalparsers/{id}/servecompiled', controller='morphologicalparsers',
                 action='servecompiled', conditions=dict(method='GET'))
+
     map.connect('/morphologies/{id}/applydown', controller='morphologies',
                 action='applydown', conditions=dict(method='PUT'))
     map.connect('/morphologies/{id}/applyup', controller='morphologies',
@@ -104,6 +118,7 @@ def make_map(config):
     map.connect('/morphologies/{id}/history', controller='morphologies', action='history')
     map.connect('/morphologies/{id}/servecompiled', controller='morphologies',
                 action='servecompiled', conditions=dict(method='GET'))
+
     map.connect('/phonologies/{id}/applydown', controller='phonologies',
                 action='applydown', conditions=dict(method='PUT'))
     map.connect('/phonologies/{id}/compile', controller='phonologies',
@@ -153,6 +168,8 @@ def make_map(config):
     map.resource('formsearch', 'formsearches')
     map.resource('formbackup', 'formbackups')       # read-only
     map.resource('language', 'languages')           # read-only
+    map.resource('morphemelanguagemodel', 'morphemelanguagemodels')
+    map.resource('morphemelanguagemodelbackup', 'morphemelanguagemodelbackups')       # read-only
     map.resource('morphologicalparser', 'morphologicalparsers')
     map.resource('morphologicalparserbackup', 'morphologicalparserbackups')       # read-only
     map.resource('morphology', 'morphologies')

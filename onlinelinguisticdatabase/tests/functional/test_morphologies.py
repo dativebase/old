@@ -182,7 +182,8 @@ class TestMorphologiesController(TestController):
         assert resp['name'] == name
         assert resp['script_type'] == u'regex'
 
-        # Attempt to create a morphology with no rules corpus and expect to fail
+        # Attempt to create a morphology with no rules corpus and an invalid lexicon corpus;
+        # expect to be warned about the lexicon corpus but get no message about the rules corpus.
         params = self.morphology_create_params.copy()
         params.update({
             'name': u'Anonymous',
@@ -191,7 +192,6 @@ class TestMorphologiesController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin, 400)
         resp = json.loads(response.body)
-        assert resp['errors']['rules_corpus'] == u'Please enter a value'
         assert resp['errors']['lexicon_corpus'] == u'There is no corpus with id 123456789.'
 
         # Create a morphology with only a rules corpus
@@ -307,7 +307,7 @@ class TestMorphologiesController(TestController):
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
         assert morphology_binary_filename in morphology_dir_contents
         assert resp['modifier']['role'] == u'contributor'
-        rules = resp['rules']
+        rules = resp['rules_generated']
         assert u'D' in rules # cf. le
         assert u'N' in rules # cf. tortue
         assert u'D-PHI' in rules # cf. le-s
@@ -550,7 +550,7 @@ class TestMorphologiesController(TestController):
         morphology_binary_filename = 'morphology_%d.foma' % morphology_1_id
         morphology_dir_contents = os.listdir(morphology_dir)
         morphology_script = resp['script']
-        rules = resp['rules']
+        rules = resp['rules_generated']
         assert u'define morphology' in morphology_script
         assert u'(NCat)' in morphology_script # cf. tortue
         assert u'(DCat)' in morphology_script # cf. la

@@ -200,7 +200,10 @@ map2directory = {
     u'morphology': u'morphologies',
     u'morphological_parsers': u'morphological_parsers',
     u'morphologicalparsers': u'morphological_parsers',
-    u'morphologicalparser': u'morphological_parsers'
+    u'morphologicalparser': u'morphological_parsers',
+    u'morpheme_language_models': u'morpheme_language_models',
+    u'morphemelanguagemodels': u'morpheme_language_models',
+    u'morphemelanguagemodel': u'morpheme_language_models'
 }
 
 map2subdirectory = {
@@ -212,7 +215,10 @@ map2subdirectory = {
     u'morphology': u'morphology',
     u'morphological_parsers': u'morphological_parser',
     u'morphologicalparsers': u'morphological_parser',
-    u'morphologicalparser': u'morphological_parser'
+    u'morphologicalparser': u'morphological_parser',
+    u'morpheme_language_models': u'morpheme_language_model',
+    u'morphemelanguagemodels': u'morpheme_language_model',
+    u'morphemelanguagemodel': u'morpheme_language_model'
 }
 
 def get_OLD_directory_path(directory_name, **kwargs):
@@ -229,7 +235,7 @@ def get_model_directory_path(model_object, config):
     return os.path.join(get_OLD_directory_path(model_object.__tablename__, config=config),
                         '%s_%d' % (map2subdirectory[model_object.__tablename__], model_object.id))
 
-def get_model_file_path(model_object, model_directory_path, file_type='script'):
+def get_model_file_path(model_object, model_directory_path, file_type=None):
     """Return the path to a foma-based model's file of the given type.
 
     :param model_object: a phonology, morphology or morphological parser model object.
@@ -238,6 +244,10 @@ def get_model_file_path(model_object, model_directory_path, file_type='script'):
     :param str file_type: one of 'script', 'binary', 'compiler' or 'log'.
     :returns: an absolute path to the file of the supplied type for the model object given.
 
+    TODO: remove the model id suffix from the file name: redundant.  Will require fixes in the tests.
+    TODO: file_type now defaults to None so that extensionless paths can be returned -- make sure this
+        is not causing bugs.
+
     """
     file_type2extension = {
         'script': '.script',
@@ -245,15 +255,16 @@ def get_model_file_path(model_object, model_directory_path, file_type='script'):
         'compiler': '.sh',
         'log': '.log',
         'lexicon': '.pickle',
-        'language_model': ''
+        'lm_corpus': '.txt',
+        'arpa': '.lm',
+        'lm_trie': '.pickle',
+        'vocabulary': '.vocab'
     }
     tablename = model_object.__tablename__
-    if file_type == 'language_model':
-        script_name = {'morphologicalparser': 'language_model'}.get(tablename, tablename)
-    else:
-        script_name = {'morphologicalparser': 'morphophonology'}.get(tablename, tablename)
+    temp = {'morphologicalparser': 'morphophonology'}.get(tablename, tablename)
+    file_name = map2subdirectory.get(temp, temp)
     return os.path.join(model_directory_path,
-                '%s_%d%s' % (script_name, model_object.id, file_type2extension.get(file_type, '.script')))
+                '%s_%d%s' % (file_name, model_object.id, file_type2extension.get(file_type, '')))
 
 def create_OLD_directories(**kwargs):
     """Make all of the required OLD directories.
@@ -1229,6 +1240,9 @@ def date_string2date(date_string):
         return None
 
 
+def human_readable_seconds(seconds):
+    return u'%02dm%02ds' % (seconds / 60, seconds % 60)
+
 ################################################################################
 # Miscellaneous Functions & Classes
 ################################################################################
@@ -1632,7 +1646,7 @@ def ffmpeg_installed():
     try:
         return app_globals.ffmpeg_installed
     except AttributeError:
-        ffmpeg_installed = command_line_program_installed(['ffmpeg'])
+        ffmpeg_installed = command_line_program_installed('ffmpeg')
         app_globals.ffmpeg_installed = ffmpeg_installed
         return ffmpeg_installed
 
@@ -1643,13 +1657,13 @@ def foma_installed(force_check=False):
 
     """
     if force_check:
-        return command_line_program_installed(['foma']) and \
-            command_line_program_installed(['flookup'])
+        return command_line_program_installed('foma') and \
+            command_line_program_installed('flookup')
     try:
         return app_globals.foma_installed
     except AttributeError:
-        foma_installed = command_line_program_installed(['foma']) and \
-                        command_line_program_installed(['flookup'])
+        foma_installed = command_line_program_installed('foma') and \
+                        command_line_program_installed('flookup')
         app_globals.foma_installed = foma_installed
         return foma_installed
 
@@ -1756,6 +1770,13 @@ def eagerload_phonology(query):
         subqueryload(model.Phonology.enterer),
         subqueryload(model.Phonology.modifier))
 
+def eagerload_morpheme_language_model(query):
+    return query.options(
+        subqueryload(model.MorphemeLanguageModel.corpus),
+        subqueryload(model.MorphemeLanguageModel.vocabulary_morphology),
+        subqueryload(model.MorphemeLanguageModel.enterer),
+        subqueryload(model.MorphemeLanguageModel.modifier))
+
 def eagerload_morphological_parser(query):
     return query.options(
         subqueryload(model.MorphologicalParser.phonology),
@@ -1799,6 +1820,7 @@ validation_values = (u'None', u'Warning', u'Error')
 phonology_compile_timeout = 30
 morphology_compile_timeout = 60 * 30  # Give foma morphology scripts 30 minutes to compile
 morphological_parser_compile_timeout = 60 * 60  # Give foma morphological parser scripts 60 minutes to compile
+morpheme_language_model_generate_timeout = 60 * 15
 
 # The word boundary symbol is used in foma FST scripts to denote the beginning or end of a word,
 # i.e., it can be referred to in phonological rules, e.g., define semivowelDrop glides -> 0 || "#" _;$
@@ -2041,3 +2063,12 @@ def get_word_category_sequences(corpus):
                 result.setdefault(category_sequence, []).append(form.id)
     return sorted(result.items(), key=lambda t: len(t[1]), reverse=True)
 
+language_model_toolkits = {
+    'mitlm': {
+        'smoothing_algorithms': ['ML', 'FixKN', 'FixModKN', 'FixKNn', 'KN', 'ModKN', 'KNn'], # cf. http://code.google.com/p/mitlm/wiki/Tutorial
+        'executable': 'estimate-ngram'
+    }
+}
+
+lm_start = u'<s>'
+lm_end = u'</s>'

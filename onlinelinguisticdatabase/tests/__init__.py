@@ -25,6 +25,8 @@ setup-app`) and provides the base testing objects.
 import StringIO
 import gzip
 import os
+import simplejson as json
+from time import sleep
 import webtest
 from paste.deploy import appconfig
 from unittest import TestCase
@@ -88,6 +90,7 @@ class TestController(TestCase):
         self.morphologies_path = h.get_OLD_directory_path('morphologies', config=config)
         self.morphological_parsers_path = h.get_OLD_directory_path('morphological_parsers', config=config)
         self.phonologies_path = h.get_OLD_directory_path('phonologies', config=config)
+        self.morpheme_language_models_path = h.get_OLD_directory_path('morpheme_language_models', config=config)
         self.test_phonologies_path = os.path.join(self.here, 'onlinelinguisticdatabase',
                             'tests', 'data', 'phonologies')
         self.test_phonology_script_path = os.path.join(
@@ -241,6 +244,15 @@ class TestController(TestCase):
             'description': u'',
             'searcher': u''
         }
+        self.morpheme_language_model_create_params = {
+            'name': u'',
+            'description': u'',
+            'corpus': u'',
+            'vocabulary_morphology': u'',
+            'toolkit': u'',
+            'order': u'',
+            'smoothing': u''
+        }
         self.morphology_create_params = {
             'name': u'',
             'description': u'',
@@ -370,7 +382,8 @@ class TestController(TestCase):
                 'corpus': lambda: h.destroy_all_directories('corpora', 'test.ini'),
                 'phonology': lambda: h.destroy_all_directories('phonologies', 'test.ini'),
                 'morphology': lambda: h.destroy_all_directories('morphologies', 'test.ini'),
-                'morphological_parser': lambda: h.destroy_all_directories('morphological_parsers', 'test.ini')
+                'morphological_parser': lambda: h.destroy_all_directories('morphological_parsers', 'test.ini'),
+                'morpheme_language_model': lambda: h.destroy_all_directories('morpheme_language_models', 'test.ini')
             }.get(dir_name, lambda: None)()
 
         if del_global_app_set:
@@ -384,6 +397,24 @@ class TestController(TestCase):
         new_valid_methods.append('SEARCH')
         new_valid_methods = tuple(new_valid_methods)
         webtest.lint.valid_methods = new_valid_methods
+
+    def poll(self, requester, changing_attr, changing_attr_originally, log, wait=2, vocal=True, task_descr='task'):
+        """Poll a resource by calling ``requester`` until the value of ``changing_attr`` no longer matches ``changing_attr_originally``.
+        """
+        seconds_elapsed = 0
+        while True:
+            response = requester()
+            resp = json.loads(response.body)
+            if changing_attr_originally != resp[changing_attr]:
+                if vocal:
+                    log.debug('Task terminated')
+                break
+            else:
+                if vocal:
+                    log.debug('Waiting for %s to terminate: %s' % (task_descr, h.human_readable_seconds(seconds_elapsed)))
+            sleep(wait)
+            seconds_elapsed = seconds_elapsed + wait
+        return resp
 
 def decompress_gzip_string(compressed_data):
     compressed_stream = StringIO.StringIO(compressed_data)

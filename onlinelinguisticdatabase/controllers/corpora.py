@@ -259,7 +259,7 @@ class CorporaController(BaseController):
     @h.authenticate
     def show(self, id):
         """Return a corpus.
-        
+
         :URL: ``GET /corpora/id``
         :param str id: the ``id`` value of the corpus to be returned.
         :returns: a corpus model object.

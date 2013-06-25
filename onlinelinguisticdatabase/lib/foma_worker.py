@@ -12,14 +12,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Foma worker thread and queue for the OLD.
+"""This module contains some multithreading worker and queue logic plus the functionality -- related
+to foma compilation ang LM estimation -- that the worther thread initiates.  Foma worker thread and queue for the OLD.
 
-The the foma worker compiles foma FST phonology, morphology (and morphophonology) scripts 
-in a separate thread from that processing the request thereby permitting an immediate 
-response to the user.
+The the foma worker compiles foma FST phonology, morphology and morphophonology scripts
+and estimates morpheme language models.  Having a worker perform these tasks in a separate
+thread from that processing the request allows us to immediately respond to the user.
 
 The foma worker can only run a callable that is a global in
-:mod:`onlinelinguisticdatabase.lib.foma_worker` and which takes keyword arguments. 
+:mod:`onlinelinguisticdatabase.lib.foma_worker` and which takes keyword arguments.
 Example usage::
 
     from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
@@ -42,7 +43,6 @@ import Queue
 import threading
 import logging
 import os
-import itertools
 import re
 import cPickle
 import codecs
@@ -55,15 +55,22 @@ from uuid import uuid4
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model.meta import Session
 import onlinelinguisticdatabase.model as model
+import onlinelinguisticdatabase.lib.simplelm as simplelm
 from subprocess import Popen, PIPE
 from signal import SIGKILL
+import random
 
 log = logging.getLogger(__name__)
 
 foma_worker_q = Queue.Queue()
 
+################################################################################
+# WORKER
+################################################################################
+
 class FomaWorkerThread(threading.Thread):
-    """Define the foma worker."""
+    """Define the foma worker.
+    """
     def run(self):
         while True:
             msg = foma_worker_q.get()
@@ -74,38 +81,15 @@ class FomaWorkerThread(threading.Thread):
             foma_worker_q.task_done()
 
 def start_foma_worker():
-    """Called in :mod:`onlinelinguisticdatabase.config.environment.py`."""
+    """Called in :mod:`onlinelinguisticdatabase.config.environment.py`.
+    """
     foma_worker = FomaWorkerThread()
     foma_worker.setDaemon(True)
     foma_worker.start()
 
-
 ################################################################################
-# Foma Compile Functions
+# SUBPROCESS CONTROL
 ################################################################################
-
-def get_file_path(model_object, script_dir_path, file_type='script'):
-    """Return the path to a foma-based model's file of the given type.
-
-    :param model_object: a phonology or morphology model object.
-    :param str script_dir_path: the absolute path to the directory that houses the foma 
-        script of the phonology or morphology
-    :param str file_type: one of 'script', 'binary', 'compiler' or 'log'.
-    :returns: an absolute path to the file of the supplied type for the model object given.
-
-    """
-    ext_map = {
-        'script': 'script',
-        'binary': 'foma',
-        'compiler': 'sh',
-        'log': 'log',
-        'lexicon': 'pickle',
-        'language_model': 'mlm'
-    }
-    tablename = model_object.__tablename__
-    script_name = {'morphologicalparser': 'morphophonology'}.get(tablename, tablename)
-    return os.path.join(script_dir_path,
-                '%s_%d.%s' % (script_name, model_object.id, ext_map.get(file_type, 'script')))
 
 class Command(object):
     """Runs the input command ``cmd`` as a subprocess within a thread.
@@ -161,16 +145,9 @@ class Command(object):
         stdout, stderr = p.communicate()
         return [int(p) for p in stdout.split()]
 
-def compile_phonology_script(**kwargs):
-    """Compile the foma script of a phonology and save it to the db with values that indicating compilation success."""
-    phonology_id = kwargs['phonology_id']
-    phonology = Session.query(model.Phonology).get(phonology_id)
-    kwargs['model_object'] = phonology
-    phonology = compile_foma_script(**kwargs)
-    phonology.datetime_modified = h.now()
-    phonology.modifier_id = kwargs['user_id']
-    phonology.compile_attempt = unicode(uuid4())
-    Session.commit()
+################################################################################
+# FOMA
+################################################################################
 
 def compile_foma_script(**kwargs):
     """Compile the foma script of an OLD model (a phonology or a morphology).
@@ -190,9 +167,9 @@ def compile_foma_script(**kwargs):
     verification_string = kwargs.get('verification_string')
     script_dir_path = kwargs.get('script_dir_path')
     timeout = kwargs.get('timeout', 30)
-    compiler_path = kwargs.get('compiler_path', get_file_path(model_object, script_dir_path, 'compiler'))
-    binary_path = kwargs.get('binary_path', get_file_path(model_object, script_dir_path, 'binary'))
-    log_path = kwargs.get('log_path', get_file_path(model_object, script_dir_path, 'log'))
+    compiler_path = kwargs.get('compiler_path', h.get_model_file_path(model_object, script_dir_path, 'compiler'))
+    binary_path = kwargs.get('binary_path', h.get_model_file_path(model_object, script_dir_path, 'binary'))
+    log_path = kwargs.get('log_path', h.get_model_file_path(model_object, script_dir_path, 'log'))
     binary_mod_time = h.get_modification_time(binary_path)
     try:
         command = Command([compiler_path], log_path)
@@ -224,45 +201,25 @@ def compile_foma_script(**kwargs):
             pass
     return model_object
 
-def generate_and_compile_morphology_script(**kwargs):
-    """Generate a foma script for a morphology and (optionally) compile it.
+################################################################################
+# PHONOLOGY
+################################################################################
 
-    :param bool compile: if True, the script will be generated *and* compiled.
-    :param int morphology_id: id of a morphology.
-    :param str script_dir_path: absolute path to directory for saving script, e.g., /home/old/store/morphologies/morphology_26.
-    :param int user_id: id of the user model performing the generation/compilation.
-    :param str verification_string: subsequence of stdout to expect from foma compilation attempt.
-    :param float timeout: how many seconds to wait before killing the foma compile process.
-
+def compile_phonology_script(**kwargs):
+    """Compile the foma script of a phonology and save it to the db with values that indicating compilation success.
     """
-    morphology_id = kwargs.get('morphology_id')
-    script_dir_path = kwargs.get('script_dir_path')
-    morphology = Session.query(model.Morphology).get(morphology_id)
-    morpheme_delimiters = h.get_morpheme_delimiters()
-    rules, lexicon = get_rules_and_lexicon(morphology, morpheme_delimiters)
-    kwargs.update({
-        'model_object': morphology,
-        'morphology': morphology,
-        'script_path': get_file_path(morphology, script_dir_path, 'script'),
-        'binary_path': get_file_path(morphology, script_dir_path, 'binary'),
-        'compiler_path': get_file_path(morphology, script_dir_path, 'compiler'),
-        'log_path': get_file_path(morphology, script_dir_path, 'log'),
-        'pos_sequences': rules,
-        'morphemes': lexicon,
-        'morpheme_delimiters': morpheme_delimiters
-    })
-    write_morphology_script_to_disk(**kwargs)
-    morphology.rules_generated = u' '.join(map(u''.join, rules))
-    # pickle the lexicon dict
-    lexicon_path = get_file_path(morphology, script_dir_path, 'lexicon')
-    cPickle.dump(lexicon, open(lexicon_path, 'wb'))
-    if kwargs.get('compile', True):
-        morphology = compile_foma_script(**kwargs)
-        morphology.compile_attempt = unicode(uuid4())
-    morphology.generate_attempt = unicode(uuid4())
-    morphology.modifier_id = kwargs['user_id']
-    morphology.datetime_modified = h.now()
+    phonology_id = kwargs['phonology_id']
+    phonology = Session.query(model.Phonology).get(phonology_id)
+    kwargs['model_object'] = phonology
+    phonology = compile_foma_script(**kwargs)
+    phonology.datetime_modified = h.now()
+    phonology.modifier_id = kwargs['user_id']
+    phonology.compile_attempt = unicode(uuid4())
     Session.commit()
+
+################################################################################
+# MORPHOLOGICAL PARSER (MORPHOPHONOLOGY)
+################################################################################
 
 def create_morphological_parser_components(**kwargs):
     """Write the parser's morphophonology FST script to file and compile it if ``compile_`` is True.
@@ -286,7 +243,6 @@ def create_morphological_parser_components(**kwargs):
         'morpheme_delimiters': morpheme_delimiters
     })
     write_morphophonology_script_to_disk(**kwargs)
-    write_morphological_language_model_to_disk(**kwargs)
     if kwargs.get('compile', True):
         morphological_parser = compile_foma_script(**kwargs)
         morphological_parser.compile_attempt = unicode(uuid4())
@@ -295,79 +251,109 @@ def create_morphological_parser_components(**kwargs):
     morphological_parser.datetime_modified = h.now()
     Session.commit()
 
-def write_morphological_language_model_to_disk(**kwargs):
-    """Use MITLM or CMU-Cambridge language model toolkits to generate a language model based on the language model corpus.
+def write_morphophonology_script_to_disk(**kwargs):
+    try:
+        _write_morphophonology_script_to_disk(**kwargs)
+    except Exception:
+        pass
 
-    1. Generate a word corpus text file, i.e., a file where each line represents the morphological analysis
-       of a word as represented by space-delimited morphemes where a morpheme is a symbol-delimited form/gloss pair
-    2. Use MITLM to generate an ARPA-formatted language model from the word corpus file.
-    3. Parse the ARPA LM and save it as a cPickled Python dict.
+def _write_morphophonology_script_to_disk(**kwargs):
+    """Write the foma FST script of the morphophonology to file.
 
-    """
-    morphological_parser = kwargs['morphological_parser']
-    language_model_path = kwargs['language_model_path']
-    morpheme_delimiters = kwargs['morpheme_delimiters']
-    language_model_text_path = '%s.txt' % language_model_path
-    splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
-    forms = morphological_parser.language_model.forms
-    # First we write a text file where each line is a word whose morphemes (m|g) are space-delimited
-    with codecs.open(language_model_text_path, mode='w', encoding='utf8') as f:
-        for form in forms:
-            if form.syntactic_category_string:
-                for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                    f.write('%s\n' % u' '.join('%s%s%s' % (morpheme, h.rare_delimiter, gloss) for morpheme, gloss in
-                        zip(re.split(splitter, morpheme_word), re.split(splitter, gloss_word))))
-    # Then we use MITLM to generate a language model in ARPA formatkk
+    Also create the morphophonology compiler shell script, i.e., ``morphophonology_<id>.sh``
+    which will be used to compile the morphophonology FST to a binary.
 
-def _write_morphological_language_model_to_disk(**kwargs):
-    category_ngram_model = generate_category_ngram_model(**kwargs)
-    cPickle.dump(category_ngram_model, open(kwargs['language_model_path'], 'wb'))
+    :param kwargs['morphological_parser']: a morphological parser model.
+    :param str kwargs['script_path']: absolute path to the parser's morphophonology script file.
+    :param str kwargs['binary_path']: absolute path to the parser's morphophonology binary foma file.
+    :param str kwargs['compiler_path']: absolute path to the shell script that compiles the script to the binary.
+    :returns: None
 
-def generate_category_ngram_model(**kwargs):
-    """Return a dict mapping tuples of categories/delimiters/edge-symbols to probabilities.
-    P(M) = P(m1)P(m2|m1)P(m3|m2)
-    P(m_n|m_n-1) = C(m_n-1^n) / EwC(m_n-1^w)
-      = C(m_n-1^n) / C(m_n-1)
-      = probability of ('N', 'Agr') is the count of ('N', 'Agr') divided by the count of ('N')
-      = probability of ('N', '-', 'Agr') is the count of ('N', 'Agr') divided by the count of ('N')
-    TODO: NOTE: bigrams will not work when there are more than one type of morpheme delimiter since in
-    such cases delimiters will needs be treated like categories and hence trigrams will be necessary in 
-    order to make probabilistic dependencies between categories themselves.
+    The morphophonology is defined via the following procedure:
+    1. load the lexc morphology and define 'morphology' from it OR copy the entire script of the regex morphology
+    2. copy in the phonology script, replacing 'define phonology ...' with 'define morphophonology .o. morphology ...'.
 
     """
+
+    def generate_morphophonology(phonology_script):
+        """Return the phonology script with 'define phonology ...' replaced by 'define morphophonology morphology .o. ...'"""
+        phonology_definition_patt = re.compile('define( )+phonology( )+.+?[^%"];', re.DOTALL)
+        define_phonology_patt = re.compile('define( )+phonology')
+        if phonology_definition_patt.search(phonology_script):
+            return define_phonology_patt.sub('define morphophonology morphology .o. ', phonology_script)
+        return None
+
     morphological_parser = kwargs['morphological_parser']
-    language_model_corpus = morphological_parser.language_model
-    morphology = morphological_parser.morphology
-    lexicon_path = get_file_path(morphology, kwargs['morphology_dir_path'], 'lexicon')
-    log.debug('\n\nlexicon_path: %s\n\n\n' % lexicon_path)
-    lexicon = cPickle.load(open(lexicon_path, 'rb'))
-    morpheme_delimiters = kwargs['morpheme_delimiters']
-    categories = [h.ngram_start_symbol, h.ngram_end_symbol] + morpheme_delimiters + lexicon.keys()
-    #category_bigram_counts = dict((bigram, []) for bigram in itertools.product(categories, categories))
-    ngram_counts = {}
-    splitter = u'([%s])' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
-    for form in language_model_corpus.forms:
-        if form.syntactic_category_string:
-            for word in form.syntactic_category_string.split():
-                sequence = [h.ngram_start_symbol] + re.split(splitter, word) + [h.ngram_end_symbol]
-                for ngram in itertools.izip(sequence, sequence[1:]):
-                    try:
-                        ngram_counts[ngram] += 1
-                    except KeyError:
-                        ngram_counts[ngram] = 1
-    unigram_counts = {}
-    ngram_probabilities = {}
-    def get_unigram_count(unigram, unigram_counts, ngram_counts):
-        try:
-            return unigram_counts[unigram], unigram_counts
-        except KeyError:
-            unigram_count = unigram_counts[unigram] = sum(count for ngram, count in
-                    ngram_counts.iteritems() if ngram[0] == unigram)
-            return unigram_count, unigram_counts
-    for ngram, ngram_count in ngram_counts.iteritems():
-        unigram_count, unigram_counts = get_unigram_count(ngram[0], unigram_counts, ngram_counts)
-        ngram_probabilities[ngram] = ngram_count / float(unigram_count)
-    return ngram_probabilities
+    script_path = kwargs['script_path']
+    binary_path = kwargs['binary_path']
+    compiler_path = kwargs['compiler_path']
+    with open(compiler_path, 'w') as f:
+        f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" -e "save stack %s" -e "quit"' % (
+                    script_path, binary_path))
+    os.chmod(compiler_path, 0744)
+    morphology_script_path = h.get_model_file_path(morphological_parser.morphology, kwargs['morphology_dir_path'], 'script')
+    log.warn('morphology_script_path: %s' % morphology_script_path)
+    log.warn(os.path.isfile(morphology_script_path))
+    #h.get_model_file_path(model_object, script_dir_path, file_type='script'):
+    phonology_script = morphological_parser.phonology.script
+    morphophonology = generate_morphophonology(phonology_script)
+    if morphophonology:
+        with codecs.open(script_path, 'w', 'utf8') as f:
+            if morphological_parser.morphology.script_type == 'lexc':
+                f.write('read lexc %s\n\n' % morphology_script_path)
+                f.write('define morphology;\n\n')
+            else:
+                f.write('source %s\n\n' % morphology_script_path)
+            f.write('define morphology "%s" morphology "%s";\n\n' % (h.word_boundary_symbol, h.word_boundary_symbol))
+            f.write('%s\n' % morphophonology)
+    else:
+        with codecs.open(script_path, 'w', 'utf8') as f:
+            # Default morphophonology is the identity function.
+            f.write('define morphophonology ?*;\n')
+
+################################################################################
+# MORPHOLOGY
+################################################################################
+
+def generate_and_compile_morphology_script(**kwargs):
+    """Generate a foma script for a morphology and (optionally) compile it.
+
+    :param bool compile: if True, the script will be generated *and* compiled.
+    :param int morphology_id: id of a morphology.
+    :param str script_dir_path: absolute path to directory for saving script, e.g., /home/old/store/morphologies/morphology_26.
+    :param int user_id: id of the user model performing the generation/compilation.
+    :param str verification_string: subsequence of stdout to expect from foma compilation attempt.
+    :param float timeout: how many seconds to wait before killing the foma compile process.
+
+    """
+    morphology_id = kwargs.get('morphology_id')
+    script_dir_path = kwargs.get('script_dir_path')
+    morphology = Session.query(model.Morphology).get(morphology_id)
+    morpheme_delimiters = h.get_morpheme_delimiters()
+    rules, lexicon = get_rules_and_lexicon(morphology, morpheme_delimiters)
+    kwargs.update({
+        'model_object': morphology,
+        'morphology': morphology,
+        'script_path': h.get_model_file_path(morphology, script_dir_path, 'script'),
+        'binary_path': h.get_model_file_path(morphology, script_dir_path, 'binary'),
+        'compiler_path': h.get_model_file_path(morphology, script_dir_path, 'compiler'),
+        'log_path': h.get_model_file_path(morphology, script_dir_path, 'log'),
+        'pos_sequences': rules,
+        'morphemes': lexicon,
+        'morpheme_delimiters': morpheme_delimiters
+    })
+    write_morphology_script_to_disk(**kwargs)
+    morphology.rules_generated = u' '.join(map(u''.join, rules))
+    # pickle the lexicon dict
+    lexicon_path = h.get_model_file_path(morphology, script_dir_path, 'lexicon')
+    cPickle.dump(lexicon, open(lexicon_path, 'wb'))
+    if kwargs.get('compile', True):
+        morphology = compile_foma_script(**kwargs)
+        morphology.compile_attempt = unicode(uuid4())
+    morphology.generate_attempt = unicode(uuid4())
+    morphology.modifier_id = kwargs['user_id']
+    morphology.datetime_modified = h.now()
+    Session.commit()
 
 def get_rules_and_lexicon(morphology, morpheme_delimiters):
     try:
@@ -492,66 +478,6 @@ def _write_morphology_script_to_disk(**kwargs):
         morphology_generator = get_morphology_generator(morphology, pos_sequences, morphemes, morpheme_delimiters)
         for line in morphology_generator:
             f.write(line)
-
-def write_morphophonology_script_to_disk(**kwargs):
-    try:
-        _write_morphophonology_script_to_disk(**kwargs)
-    except Exception:
-        pass
-
-def _write_morphophonology_script_to_disk(**kwargs):
-    """Write the foma FST script of the morphophonology to file.
-
-    Also create the morphophonology compiler shell script, i.e., ``morphophonology_<id>.sh``
-    which will be used to compile the morphophonology FST to a binary.
-
-    :param kwargs['morphological_parser']: a morphological parser model.
-    :param str kwargs['script_path']: absolute path to the parser's morphophonology script file.
-    :param str kwargs['binary_path']: absolute path to the parser's morphophonology binary foma file.
-    :param str kwargs['compiler_path']: absolute path to the shell script that compiles the script to the binary.
-    :returns: None
-
-    The morphophonology is defined via the following procedure:
-    1. load the lexc morphology and define 'morphology' from it OR copy the entire script of the regex morphology
-    2. copy in the phonology script, replacing 'define phonology ...' with 'define morphophonology .o. morphology ...'.
-
-    """
-
-    def generate_morphophonology(phonology_script):
-        """Return the phonology script with 'define phonology ...' replaced by 'define morphophonology morphology .o. ...'"""
-        phonology_definition_patt = re.compile('define( )+phonology( )+.+?[^%"];', re.DOTALL)
-        define_phonology_patt = re.compile('define( )+phonology')
-        if phonology_definition_patt.search(phonology_script):
-            return define_phonology_patt.sub('define morphophonology morphology .o. ', phonology_script)
-        return None
-
-    morphological_parser = kwargs['morphological_parser']
-    script_path = kwargs['script_path']
-    binary_path = kwargs['binary_path']
-    compiler_path = kwargs['compiler_path']
-    with open(compiler_path, 'w') as f:
-        f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" -e "save stack %s" -e "quit"' % (
-                    script_path, binary_path))
-    os.chmod(compiler_path, 0744)
-    morphology_script_path = get_file_path(morphological_parser.morphology, kwargs['morphology_dir_path'], 'script')
-    log.warn('morphology_script_path: %s' % morphology_script_path)
-    log.warn(os.path.isfile(morphology_script_path))
-    #get_file_path(model_object, script_dir_path, file_type='script'):
-    phonology_script = morphological_parser.phonology.script
-    morphophonology = generate_morphophonology(phonology_script)
-    if morphophonology:
-        with codecs.open(script_path, 'w', 'utf8') as f:
-            if morphological_parser.morphology.script_type == 'lexc':
-                f.write('read lexc %s\n\n' % morphology_script_path)
-                f.write('define morphology;\n\n')
-            else:
-                f.write('source %s\n\n' % morphology_script_path)
-            f.write('define morphology "%s" morphology "%s";\n\n' % (h.word_boundary_symbol, h.word_boundary_symbol))
-            f.write('%s\n' % morphophonology)
-    else:
-        with codecs.open(script_path, 'w', 'utf8') as f:
-            # Default morphophonology is the identity function.
-            f.write('define morphophonology ?*;\n')
 
 def get_morphology_generator(morphology, pos_sequences, morphemes, morpheme_delimiters):
     """Return a generator that yields lines of a foma morphology script.
@@ -726,3 +652,270 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
     for line in get_word_formation_rules_generator(pos_sequences):
         yield line
 
+################################################################################
+# MORPHEME LANGUAGE MODEL
+################################################################################
+
+def write_morpheme_language_model_files(**kwargs):
+    """Using the morpheme language model, write the following files to disk:
+
+    - morpheme language model corpus: a corpus of words, one word per line, morphemes space-delimited (parseable by toolkit ngram estimator).
+    - morpheme language model in ARPA format -- generated by LM toolkit from corpus file (and vocabulary file).
+    - morpheme language model as a Python simplelm.LMTree instance, pickled.
+
+    'script_dir_path': morpheme_language_model_dir_path, 'user_id': session['user'].id,
+    'verification_string': verification_string, 'timeout': h.morpheme_language_model_generate_timeout}
+    """
+    morpheme_language_model = Session.query(model.MorphemeLanguageModel).\
+            get(kwargs['morpheme_language_model_id'])
+    morpheme_language_model_path = kwargs['morpheme_language_model_path']
+    morpheme_delimiters = h.get_morpheme_delimiters()
+    language_model_pickle_path = h.get_model_file_path(morpheme_language_model,
+            morpheme_language_model_path, file_type='lm_trie')
+    pickle_path_mod_time = h.get_modification_time(language_model_pickle_path)
+    toolkit_executable = h.language_model_toolkits[morpheme_language_model.toolkit]['executable']
+    try:
+        language_model_corpus_path = write_language_model_corpus(morpheme_language_model,
+                morpheme_language_model_path, morpheme_delimiters)
+        if h.command_line_program_installed(toolkit_executable):
+            language_model_arpa_path, arpa_written = write_arpa_language_model(morpheme_language_model,
+                    language_model_corpus_path, **kwargs)
+            if arpa_written:
+                arpa2pickle(language_model_arpa_path, language_model_pickle_path)
+        if h.get_modification_time(language_model_pickle_path) != pickle_path_mod_time:
+            morpheme_language_model.generate_succeeded = True
+            morpheme_language_model.generate_message = u'Language model successfully generated.'
+        else:
+            morpheme_language_model.generate_succeeded = False
+            morpheme_language_model.generate_message = u'A new language model pickle file was not written.'
+    except Exception, e:
+        morpheme_language_model.generate_succeeded = False
+        morpheme_language_model.generate_message = u'The attempt to write a language model file to disk raised an error: %s.' % e
+    morpheme_language_model.generate_attempt = unicode(uuid4())
+    morpheme_language_model.modifier_id = kwargs['user_id']
+    morpheme_language_model.datetime_modified = h.now()
+    Session.commit()
+
+def write_language_model_corpus(morpheme_language_model, morpheme_language_model_path, morpheme_delimiters):
+    """Write a word corpus text file using the LM's corpus where each line is a word whose morphemes (in m|g format) are space-delimited.
+
+    :param instance morpheme_language_model: a morpheme language model object.
+    :param str morpheme_language_model_path: absolute path to the directory of the morpheme LM.
+    :param list morpheme_delimiters: the morpheme delimiters of the application as saved in the settngs.
+    :returns: the path to the LM corpus file just written.
+
+    TODO: make LM corpus files restricted if they contain words from restricted forms (cf. the corpus_file_object restriction in the corpus controller)
+
+    """
+    language_model_corpus_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='lm_corpus')
+    splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
+    corpus = morpheme_language_model.corpus
+    forms = corpus.forms
+    with codecs.open(language_model_corpus_path, mode='w', encoding='utf8') as f:
+        if corpus.form_search:
+            for form in forms:
+                if form.syntactic_category_string:
+                    for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                        f.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+        else:
+            form_references = h.get_form_references(corpus.content)
+            forms = dict((f.id, f) for f in forms)
+            for id in form_references:
+                form = forms[id]
+                if form.syntactic_category_string:
+                    for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                        f.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+    return language_model_corpus_path
+
+def write_arpa_language_model(morpheme_language_model, language_model_corpus_path, **kwargs):
+    """Write ``morpheme_language_model.lm`` to disk: this is the ARPA-formatted LM generated by the toolkit from the corpus file.
+
+    :param instance morpheme_language_model: the morpheme language model model object.
+    :param str morpheme_language_model_path: the absolute path to the directory holding the LM's files.
+    :param str language_model_corpus_path: the absolute path to the corpus file of the LM.
+    :returns: the path to the LM ARPA file if generated, else ``None``.
+
+    """
+    timeout = kwargs['timeout']
+    verification_string = kwargs['verification_string']
+    morpheme_language_model_path = kwargs['morpheme_language_model_path']
+    language_model_arpa_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='arpa')
+    lm_arpa_mod_time = h.get_modification_time(language_model_arpa_path)
+    log_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='log')
+    if morpheme_language_model.toolkit == 'mitlm':
+        order = str(morpheme_language_model.order)
+        smoothing = morpheme_language_model.smoothing or 'ModKN'
+        cmd = ['estimate-ngram', '-o', order, '-s', smoothing,
+                '-t', language_model_corpus_path, '-wl', language_model_arpa_path]
+        if morpheme_language_model.vocabulary_morphology:
+            morphology_path = kwargs['morphology_path']
+            vocabulary_path = write_vocabulary(morpheme_language_model, morpheme_language_model_path, morphology_path)
+            if vocabulary_path:
+                cmd += ['-v', vocabulary_path]
+    try:
+        command = Command(cmd, log_path)
+        returncode, output = command.run(timeout=timeout)
+        if (verification_string in output and returncode == 0 and os.path.isfile(language_model_arpa_path) and
+        (lm_arpa_mod_time != h.get_modification_time(language_model_arpa_path))):
+            return language_model_arpa_path, True
+        else:
+            return language_model_arpa_path, False
+    except Exception:
+        return language_model_arpa_path, False
+
+def arpa2pickle(arpa_file_path, pickle_file_path):
+    """Load the contents of an ARPA-formatted LM file into a ``simplelm.LMTree`` instance and pickle it.
+
+    :param str arpa_file_path: absolute path to the ARPA-formatted LM file.
+    :param str pickle_file_path: absolute path to the .pickle file that will be written.
+    :returns: None
+
+    """
+    language_model_trie = simplelm.load_arpa(arpa_file_path, 'utf8')
+    cPickle.dump(language_model_trie, open(pickle_file_path, 'wb'))
+
+def write_vocabulary(morpheme_language_model, morpheme_language_model_path, morphology_path):
+    """Write the lexicon of ``vocabulary_morphology`` to file in the language model's directory and return the path.
+
+    The format of the vocabulary file written is the same as the output of MITLM's
+    ``estimate-ngram -t corpus -write-vocab vocab``, i.e., one word/morpheme per line.
+
+    :param instance vocabulary_morphology: a morphology model object.
+    :param str morpheme_language_model_path: absolute path the morpheme language model's directory.
+    :returns: the path to the newly written vocabulary file or ``None`` if it could not be written.
+
+    """
+    vocabulary_morphology = morpheme_language_model.vocabulary_morphology
+    vocabulary_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='vocabulary')
+    morphology_lexicon_path = h.get_model_file_path(vocabulary_morphology, morphology_path, file_type='lexicon')
+    if not os.path.isfile(morphology_lexicon_path):
+        return None
+    lexicon = cPickle.load(open(morphology_lexicon_path, 'rb'))
+    with codecs.open(vocabulary_path, mode='w', encoding='utf8') as f:
+        f.write(u'%s\n' % h.lm_start)    # write <s> as a vocabulary item
+        for morpheme_list in lexicon.values():
+            for morpheme_form, morpheme_gloss in morpheme_list:
+                f.write(u'%s%s%s\n' % (morpheme_form, h.rare_delimiter, morpheme_gloss))
+        f.write(u'\n')
+    return vocabulary_path
+
+def evaluate_morpheme_language_model(**kwargs):
+    """Use the LM toolkit to calculate the perplexity of the LM by dividing its corpus of words into
+    training and test sets.
+    """
+    morpheme_language_model = Session.query(model.MorphemeLanguageModel).\
+            get(kwargs['morpheme_language_model_id'])
+    toolkit_executable = h.language_model_toolkits[morpheme_language_model.toolkit]['executable']
+    kwargs['morpheme_language_model'] = morpheme_language_model
+    kwargs['n'] = 5 # number of test/training set pairs to create
+    try:
+        if h.command_line_program_installed(toolkit_executable):
+            perplexity = compute_perplexity(**kwargs)
+            if perplexity:
+                morpheme_language_model.perplexity = perplexity
+                morpheme_language_model.perplexity_computed = True
+            else:
+                morpheme_language_model.perplexity = None
+                morpheme_language_model.perplexity_computed = False
+        else:
+            morpheme_language_model.perplexity = None
+            morpheme_language_model.perplexity_computed = False
+    except Exception:
+        morpheme_language_model.perplexity = None
+        morpheme_language_model.perplexity_computed = False
+    morpheme_language_model.perplexity_attempt = unicode(uuid4())
+    morpheme_language_model.modifier_id = kwargs['user_id']
+    morpheme_language_model.datetime_modified = h.now()
+    Session.commit()
+
+def compute_perplexity(**kwargs):
+    morpheme_language_model = kwargs['morpheme_language_model']
+    morpheme_language_model_path = kwargs['morpheme_language_model_path']
+    timeout = kwargs['timeout']
+    n = kwargs['n']
+    log_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='log')
+    # estimate-ngram -t training_set_path -wl training_set_lm_path -eval-perp test_set_path
+    perplexities = []
+    temp_paths = []
+    morpheme_delimiters = h.get_morpheme_delimiters()
+    splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
+    if morpheme_language_model.toolkit == 'mitlm':
+        for i in range(1, n + 1):
+            training_set_path, test_set_path, training_set_lm_path = write_training_test_sets(
+                morpheme_language_model, morpheme_language_model_path, i, splitter)
+            temp_paths += [training_set_path, test_set_path, training_set_lm_path]
+            order = str(morpheme_language_model.order)
+            smoothing = morpheme_language_model.smoothing or 'ModKN'
+            cmd = ['estimate-ngram', '-o', order, '-s', smoothing, '-t', training_set_path,
+                   '-wl', training_set_lm_path, '-eval-perp', test_set_path]
+            if morpheme_language_model.vocabulary_morphology:
+                vocabulary_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='vocabulary')
+                if not os.path.isfile(vocabulary_path):
+                    return None
+                cmd += ['-v', vocabulary_path]
+            try:
+                command = Command(cmd, log_path)
+                returncode, output = command.run(timeout=timeout)
+                if returncode == 0 and os.path.isfile(training_set_lm_path):
+                    perplexities.append(extract_perplexity(output))
+            except Exception:
+                pass
+    for path in temp_paths:
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+    perplexities = filter(None, perplexities)
+    if perplexities:
+        return sum(perplexities) / len(perplexities)
+    else:
+        return None
+
+def extract_perplexity(output):
+    """Extract the perplexity value from the output of MITLM
+    """
+    try:
+        last_line = output.splitlines()[-1]
+        return float(last_line.split()[-1])
+    except Exception:
+        return None
+
+def get_lm_corpus_entry(morpheme_word, gloss_word, splitter):
+    """Return a string of morphemes space-delimited in m|g format where "|" is ``h.rare_delimiter``.
+    """
+    return '%s\n' % u' '.join('%s%s%s' % (morpheme, h.rare_delimiter, gloss) for morpheme, gloss in
+        zip(re.split(splitter, morpheme_word), re.split(splitter, gloss_word)))
+
+def write_training_test_sets(morpheme_language_model, morpheme_language_model_path, i, splitter):
+    template_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path)
+    test_set_path = '%s_test_%s.txt' % (template_path, i)
+    training_set_path = '%s_training_%s.txt' % (template_path, i)
+    training_set_lm_path = '%s_training_%s.lm' % (template_path, i)
+    corpus = morpheme_language_model.corpus
+    forms = corpus.forms
+    population = range(1, 11)
+    test_index = random.choice(population)
+    with codecs.open(training_set_path, mode='w', encoding='utf8') as f_training:
+        with codecs.open(test_set_path, mode='w', encoding='utf8') as f_test:
+            if corpus.form_search:
+                for form in forms:
+                    if form.syntactic_category_string:
+                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                            r = random.choice(population)
+                            if r == test_index:
+                                f_test.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+                            else:
+                                f_training.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+            else:
+                form_references = h.get_form_references(corpus.content)
+                forms = dict((f.id, f) for f in forms)
+                for id in form_references:
+                    form = forms[id]
+                    if form.syntactic_category_string:
+                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                            r = random.choice(population)
+                            if r == test_index:
+                                f_test.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+                            else:
+                                f_training.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+    return training_set_path, test_set_path, training_set_lm_path

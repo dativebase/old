@@ -573,6 +573,34 @@ class SQLAQueryBuilder(object):
             'last_name': {},
             'role': {}
         },
+        'MorphemeLanguageModel': {
+            'id': {},
+            'UUID': {},
+            'name': {},
+            'description': {},
+            'corpus': {},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'modifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'estimation_succeeded': {},
+            'estimation_message': {},
+            'estimation_attempt': {}
+        },
+        'MorphemeLanguageModelBackup': {
+            'id': {},
+            'UUID': {},
+            'name': {},
+            'description': {},
+            'corpus': {},
+            'enterer': {},
+            'modifier': {},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'estimation_succeeded': {},
+            'estimation_message': {},
+            'estimation_attempt': {}
+        },
         'MorphologicalParser': {
             'id': {},
             'UUID': {},

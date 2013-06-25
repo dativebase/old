@@ -235,7 +235,7 @@ class FormsearchesController(BaseController):
     @h.authenticate
     def show(self, id):
         """Return a form search.
-        
+
         :URL: ``GET /formsearches/id``
         :param str id: the ``id`` value of the form search to be returned.
         :returns: a form search model object.

@@ -31,7 +31,7 @@ class TestMorphologybackupsController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['morphology'])
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that ``GET /morphologybackups`` behaves correctly.
         """
@@ -75,7 +75,8 @@ class TestMorphologybackupsController(TestController):
         assert 'morphology_%d.script' % morphology_id not in morphology_dir_contents # generate has not yet been requested.
         assert response.content_type == 'application/json'
         assert resp['script_type'] == u'lexc'
-        assert resp['rules'] == None
+        assert resp['rules'] == u''
+        assert resp['rules_generated'] == None
         assert resp['generate_attempt'] == None
 
         # Update the morphology as the admin to create a morphology backup.

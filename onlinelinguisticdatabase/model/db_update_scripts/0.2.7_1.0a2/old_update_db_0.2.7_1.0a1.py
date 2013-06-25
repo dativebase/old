@@ -409,6 +409,7 @@ CREATE TABLE `morphology` (
   `generate_attempt` varchar(36) DEFAULT NULL,
   `extract_morphemes_from_rules_corpus` tinyint(1) DEFAULT NULL,
   `rules` text,
+  `rules_generated` text,
   PRIMARY KEY (`id`),
   KEY `lexicon_corpus_id` (`lexicon_corpus_id`),
   KEY `rules_corpus_id` (`rules_corpus_id`),
@@ -434,6 +435,7 @@ CREATE TABLE `morphologybackup` (
   `compile_attempt` varchar(36) DEFAULT NULL,
   `generate_attempt` varchar(36) DEFAULT NULL,
   `extract_morphemes_from_rules_corpus` tinyint(1) DEFAULT NULL,
+  `rules` text,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 

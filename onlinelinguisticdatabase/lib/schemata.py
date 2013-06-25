@@ -1162,3 +1162,26 @@ class MorphologicalParserSchema(Schema):
     morphology = ValidOLDModelObject(model_name='Morphology', not_empty=True)
     language_model = ValidOLDModelObject(model_name='Corpus', not_empty=True)
 
+class ValidSmoothing(FancyValidator):
+    messages = {'invalid smoothing': 'The LM toolkit %(toolkit)s implements no such smoothing algorithm %(smoothing)s.'}
+    def _to_python(self, values, state):
+        if values.get('smoothing') and values['smoothing'] not in h.language_model_toolkits[values['toolkit']]['smoothing_algorithms']:
+            raise Invalid(self.message('invalid smoothing', state, toolkit=values['toolkit'], smoothing=values['smoothing']), values, state)
+        else:
+            return values
+
+class MorphemeLanguageModelSchema(Schema):
+    """MorphemeLanguageModel is a Schema for validating the data submitted to
+    MorphemelanguagemodelsController (controllers/morphemelanguagemodels.py).
+
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    chained_validators = [ValidSmoothing()]
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='MorphemeLanguageModel', attribute_name='name')
+    description = UnicodeString()
+    corpus = ValidOLDModelObject(model_name='Corpus', not_empty=True)
+    vocabulary_morphology = ValidOLDModelObject(model_name='Morphology')
+    toolkit = OneOf(h.language_model_toolkits.keys(), not_empty=True)
+    order = Int(min=2, max=5)
+    smoothing = UnicodeString(max=30)

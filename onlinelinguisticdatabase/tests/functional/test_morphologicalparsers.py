@@ -31,8 +31,8 @@ from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
 
 log = logging.getLogger(__name__)
 
-class TestMorphologiesController(TestController):
-    """Tests the morphologies controller.  WARNING: the tests herein are pretty messy.  The higher 
+class TestMorphologicalparsersController(TestController):
+    """Tests the morphologicalparsers controller.  WARNING: the tests herein are pretty messy.  The higher 
     ordered tests will fail if the previous tests have not been run.
 
     """
@@ -708,7 +708,7 @@ define phonology eDrop .o. breakDrop;
         assert resp[ms3] == [None]
         assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)]
 
-    #@nottest
+    @nottest
     def test_i_large_datasets(self):
         """Tests that morphological parser functionality works with large datasets.
 
