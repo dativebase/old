@@ -20,6 +20,7 @@
 """
 
 import logging
+import cPickle
 import simplejson as json
 import os
 from uuid import uuid4
@@ -34,6 +35,7 @@ from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import MorphologicalParserSchema, TranscriptionsSchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
+import onlinelinguisticdatabase.lib.simplelm as simplelm
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import MorphologicalParser, MorphologicalParserBackup
 from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
@@ -277,7 +279,7 @@ class MorphologicalparsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def generate_and_compile(self, id):
-        """Generate the morphological parser's script, its language model and compile it as a foma FST.
+        """Generate the morphological parser's morphophonology script and compile it as a foma FST.
 
         :URL: ``PUT /morphologicalparsers/generate_and_compile/id``
         :param str id: the ``id`` value of the morphologicalparser whose script will be compiled.
@@ -298,7 +300,7 @@ class MorphologicalparsersController(BaseController):
     @h.authenticate
     @h.authorize(['administrator', 'contributor'])
     def generate(self, id):
-        """Generate the morphological parser's script and language model -- do not compile it.
+        """Generate the morphological parser's morphophonology script but do not compile it.
 
         :URL: ``PUT /morphologicalparsers/generate/id``
         :param str id: the ``id`` value of the morphological parser whose script will be compiled.
@@ -328,7 +330,8 @@ class MorphologicalparsersController(BaseController):
                     return forward(FileApp(foma_file_path))
                 else:
                     response.status_int = 400
-                    return json.dumps({'error': 'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
+                    return json.dumps({'error': 'The morphophonology foma script of '
+                        'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
             else:
                 response.status_int = 400
                 return json.dumps({'error': 'Foma and flookup are not installed.'})
@@ -404,7 +407,8 @@ class MorphologicalparsersController(BaseController):
                         return {'errors': e.unpack_errors()}
                 else:
                     response.status_int = 400
-                    return {'error': 'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id}
+                    return json.dumps({'error': 'The morphophonology foma script of '
+                        'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
             else:
                 response.status_int = 400
                 return {'error': 'Foma and flookup are not installed.'}
@@ -412,6 +416,75 @@ class MorphologicalparsersController(BaseController):
             response.status_int = 404
             return {'error': 'There is no morphological parser with id %s' % id}
 
+    @h.jsonify
+    @h.restrict('PUT')
+    @h.authenticate
+    def parse(self, id):
+        """Parse the input word transcriptions using the morphological parser with id=``id``.
+
+        :param str id: the ``id`` value of the morphological parser that will be used.
+        :Request body: JSON object of the form ``{'transcriptions': [t1, t2, ...]}``.
+        :returns: if the morphological parser exists and foma is installed, a JSON object
+            of the form ``{t1: p1, t2: p2, ...}`` where ``t1`` and ``t2`` are transcriptions
+            of words from the request body and ``p1`` and ``p2`` are the most probable morphological
+            parsers of t1 and t2.
+
+        """
+        morphological_parser = Session.query(MorphologicalParser).get(id)
+        if not morphological_parser:
+            response.status_int = 404
+            return {'error': 'There is no morphological parser with id %s' % id}
+        if not h.foma_installed():
+            response.status_int = 400
+            return {'error': 'Foma and flookup are not installed.'}
+        morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
+        morphological_parser_binary_path = h.get_model_file_path(morphological_parser, morphological_parser_dir_path, file_type='binary')
+        if not os.path.isfile(morphological_parser_binary_path):
+            response.status_int = 400
+            return json.dumps({'error': 'The morphophonology foma script of '
+                'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
+        morpheme_language_model_dir_path = h.get_model_directory_path(morphological_parser.language_model, config)
+        lm_pickle_path = h.get_model_file_path(morphological_parser.language_model, morpheme_language_model_dir_path,
+                file_type='lm_trie')
+        if not os.path.isfile(lm_pickle_path):
+            response.status_int = 404
+            return {'error': 'The morpheme language model was not written to disk.'}
+        try:
+            lm_trie = cPickle.load(open(lm_pickle_path, 'rb'))
+        except Exception:
+            response.status_int = 400
+            return {'error': 'An error occurred while trying to retrieve the language model.'}
+        try:
+            morpheme_splitter = h.get_morpheme_splitter()
+            inputs = json.loads(unicode(request.body, request.charset))
+            schema = TranscriptionsSchema
+            inputs = schema.to_python(inputs)
+            candidates = foma_apply('up', inputs['transcriptions'], morphological_parser,
+                                        morphological_parser_binary_path, session['user'])
+            return dict((transcription, get_most_probable_parse(lm_trie, candidate_parses, morpheme_splitter))
+                          for transcription, candidate_parses in candidates.iteritems())
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except Invalid, e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+
+def get_most_probable_parse(language_model_trie, candidates, morpheme_splitter):
+    """Return the most probable parse from within the list of parses in candidates.
+
+    :param instance language_model_trie: a simplm.LMTrie instance encoding a morpheme LM.
+    :param list candidates: candidate parses as strings of morphemes and delimiters.
+    :param func morpheme_splitter: function that splits a string into morphemes and delimiters.
+    :returns: the candidate parse (as a string) with the greatest probability.
+
+    """
+    candidates_probs = []
+    for candidate in candidates:
+        morpheme_sequence = [h.lm_start] + morpheme_splitter(candidate)[::2] + [h.lm_end]
+        candidates_probs.append((candidate, simplelm.compute_sentence_prob(language_model_trie, morpheme_sequence)))
+    candidates_probs.sort(key=lambda x: x[1])
+    return candidates_probs[-1][0]
 
 def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new morphological parser or edit one."""

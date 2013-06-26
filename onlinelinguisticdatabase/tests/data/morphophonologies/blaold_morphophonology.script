@@ -2,6 +2,8 @@ read lexc /home/joel/onlinelinguisticdatabase/store/morphologies/morphology_1/mo
 
 define morphology;
 
+define morphology "#" morphology "#";
+
 ################################################################################
 # The phonological rules of Frantz (1997) as FSTs
 ################################################################################

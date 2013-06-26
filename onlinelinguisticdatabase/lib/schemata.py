@@ -1160,7 +1160,7 @@ class MorphologicalParserSchema(Schema):
     description = UnicodeString()
     phonology = ValidOLDModelObject(model_name='Phonology')
     morphology = ValidOLDModelObject(model_name='Morphology', not_empty=True)
-    language_model = ValidOLDModelObject(model_name='Corpus', not_empty=True)
+    language_model = ValidOLDModelObject(model_name='MorphemeLanguageModel', not_empty=True)
 
 class ValidSmoothing(FancyValidator):
     messages = {'invalid smoothing': 'The LM toolkit %(toolkit)s implements no such smoothing algorithm %(smoothing)s.'}

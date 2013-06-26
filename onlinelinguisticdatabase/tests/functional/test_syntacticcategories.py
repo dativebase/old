@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 class TestSyntacticcategoriesController(TestController):
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /syntacticcategories returns an array of all syntactic categories and that order_by and pagination parameters work correctly."""
 
@@ -119,7 +119,7 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /syntacticcategories creates a new syntactic category
         or returns an appropriate error if the input is invalid.
@@ -164,7 +164,7 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['errors']['type'] == u"Value must be one of: lexical; phrasal; sentential (not u'spatial')"
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /syntacticcategories/new returns an empty JSON object."""
         response = self.app.get(url('new_syntacticcategory'), headers=self.json_headers,
@@ -173,7 +173,7 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['syntactic_category_types'] == list(h.syntactic_category_types)
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /syntacticcategories/id updates the syntacticcategory with id=id."""
 
@@ -211,7 +211,7 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /syntacticcategories/id deletes the syntactic_category with id=id."""
 
@@ -250,7 +250,7 @@ class TestSyntacticcategoriesController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /syntacticcategories/id returns the syntactic category with id=id or an appropriate error."""
 
@@ -284,7 +284,7 @@ class TestSyntacticcategoriesController(TestController):
         assert resp['description'] == u'description'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /syntacticcategories/id/edit returns a JSON object of data necessary to edit the syntactic category with id=id.
 
@@ -329,7 +329,7 @@ class TestSyntacticcategoriesController(TestController):
         assert response.content_type == 'application/json'
 
 
-    @nottest
+    #@nottest
     def test_category_percolation(self):
         """Tests that changes to a category's name and deletion of a category trigger updates to forms containing morphemes of that category.
         """

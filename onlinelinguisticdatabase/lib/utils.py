@@ -1852,7 +1852,7 @@ def foma_output_file2dict(file_, remove_word_boundaries=True):
         if line:
             i, o = map(remover, line.split('\t')[:2])
             result.setdefault(i, []).append({u'+?': None}.get(o, o))
-    return result
+    return dict((k, filter(None, v)) for k, v in result.iteritems())
 
 # Cf. http://code.google.com/p/foma/wiki/RegularExpressionReference#Reserved_symbols
 foma_reserved_symbols = [u'\u0021', u'\u0022', u'\u0023', u'\u0024', u'\u0025',

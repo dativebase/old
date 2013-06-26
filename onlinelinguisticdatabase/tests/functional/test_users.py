@@ -32,7 +32,7 @@ class TestUsersController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['user'])
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /users returns an array of all users and that order_by and pagination parameters work correctly."""
 
@@ -126,7 +126,7 @@ class TestUsersController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /users creates a new user
         or returns an appropriate error if the input is invalid.
@@ -573,7 +573,7 @@ class TestUsersController(TestController):
         assert resp['output_orthography']['id'] == orthography2_id
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /users/new returns the data necessary to create a new user.
 
@@ -664,7 +664,7 @@ class TestUsersController(TestController):
         assert resp['markup_languages'] == data['markup_languages']
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /users/id updates the user with id=id."""
 
@@ -854,7 +854,7 @@ class TestUsersController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /users/id deletes the user with id=id."""
 
@@ -961,7 +961,7 @@ class TestUsersController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /users/id returns the user with id=id or an appropriate error."""
 
@@ -1014,7 +1014,7 @@ class TestUsersController(TestController):
         assert resp['email'] == u'john.doe@gmail.com'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /users/id/edit returns a JSON object of data necessary to edit the user with id=id.
 

@@ -35,7 +35,7 @@ class TestCorporaLargeController(TestController):
     def tearDown(self):
         pass
 
-    @nottest
+    #@nottest
     def test_aaa_initialize(self):
         """Initialize the database using pseudo-data generated from random lorem ipsum sentences.
 
@@ -274,7 +274,7 @@ class TestCorporaLargeController(TestController):
             filter(model.Form.tags.any(model.Tag.name==u'restricted')).first()
         assert a_form_id == restricted_form.id
 
-    @nottest
+    #@nottest
     def test_writetofile_all_sentences(self):
         """Tests file writing/retrieval of a corpus containing all sentences.
 
@@ -598,7 +598,7 @@ class TestCorporaLargeController(TestController):
             resp = json.loads(response.body)
             assert resp == []
 
-    @nottest
+    #@nottest
     def test_search(self):
         """Tests that corpora search works correctly.
 
@@ -695,7 +695,7 @@ class TestCorporaLargeController(TestController):
         resp = json.loads(response.body)
         assert resp == {'search_parameters': h.get_search_parameters(SQLAQueryBuilder('Form'))}
 
-    @nottest
+    #@nottest
     def test_writetofile_content_specified(self):
         """Tests file writing/retrieval of a corpus whose forms are specified in the ``content`` attribute.
 
@@ -842,7 +842,7 @@ class TestCorporaLargeController(TestController):
         assert not os.path.exists(corpus_tbk_t2c_path)
         assert not os.path.exists(corpus_tbk_gzipped_path)
 
-    @nottest
+    #@nottest
     def test_zzz_cleanup(self):
         """Clean up after the tests."""
         # Destruction

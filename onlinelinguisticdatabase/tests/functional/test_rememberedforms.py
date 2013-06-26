@@ -159,7 +159,7 @@ class TestRememberedformsController(TestController):
         pass
 
     # The initialize "test" needs to run before all others
-    @nottest
+    #@nottest
     def test_a_initialize(self):
         """Initialize the database for /rememberedforms tests."""
         h.clear_all_models()
@@ -179,7 +179,7 @@ class TestRememberedformsController(TestController):
         Session.add(application_settings)
         Session.commit()
 
-    @nottest
+    #@nottest
     # The update test needs to run before the show and search tests.
     def test_b_update(self):
         """Tests that PUT /rememberedforms/id correctly updates the set of forms remembered by the user with id=id."""
@@ -352,7 +352,7 @@ class TestRememberedformsController(TestController):
         assert response.content_type == 'application/json'
         assert set(form_ids_for_admin) == set([f['id'] for f in resp])
 
-    @nottest
+    #@nottest
     def test_c_show(self):
         """Tests that GET /rememberedforms/id returns an array of the forms remembered by the user with id=id."""
         forms = json.loads(json.dumps(h.get_forms(), cls=h.JSONOLDEncoder))
@@ -467,7 +467,7 @@ class TestRememberedformsController(TestController):
         assert response.content_type == 'application/json'
         assert set([f['id'] for f in result_set]) == set([f['id'] for f in resp])
 
-    @nottest
+    #@nottest
     def test_d_search(self):
         """Tests that SEARCH /rememberedforms/id returns an array of the forms remembered by the user with id=id that match the search criteria.
 
@@ -583,7 +583,7 @@ class TestRememberedformsController(TestController):
         assert response.content_type == 'application/json'
         assert resp
 
-    @nottest
+    #@nottest
     def test_e_cleanup(self):
         """Clean up the database after /rememberedforms tests."""
 

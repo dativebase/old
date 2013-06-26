@@ -52,7 +52,7 @@ class TestMorphemelanguagemodelsController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    @nottest
+    #@nottest
     def test_a_create(self):
         """Tests that POST /morphemelanguagemodels creates a new morphology.
 
@@ -276,7 +276,7 @@ class TestMorphemelanguagemodelsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors'] == u'The LM toolkit mitlm implements no such smoothing algorithm strawberry.'
 
-    @nottest
+    #@nottest
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
 
@@ -322,7 +322,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_d_show(self):
         """Tests that GET /morphemelanguagemodels/id returns the morpheme_language_model with id=id or an appropriate error."""
 
@@ -351,7 +351,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['description'] == morpheme_language_models[0].description
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_e_new_edit(self):
         """Tests that GET /morphemelanguagemodels/new and GET /morphemelanguagemodels/id/edit return the data needed to create or update a morpheme_language_model.
 
@@ -399,7 +399,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert len(resp['data']['toolkits'].keys()) == len(toolkits.keys())
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_f_update(self):
         """Tests that PUT /morphemelanguagemodels/id updates the morpheme_language_model with id=id."""
 
@@ -459,7 +459,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_g_history(self):
         """Tests that GET /morphemelanguagemodels/id/history returns the morpheme_language_model with id=id and its previous incarnations.
 
@@ -503,7 +503,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    @nottest
+    #@nottest
     def test_i_large_datasets(self):
         """Tests that morpheme language model functionality works with large datasets.
 
@@ -915,10 +915,18 @@ class TestMorphemelanguagemodelsController(TestController):
         log.debug('Perplexity of Blackfoot LM %s (%s sentence corpus, ModKN, n=3, fixed vocabulary, corpus weighted towards nit-ihpiyi): %s' %
                 (morpheme_language_model_id, word_count, newest_perplexity))
 
+        # Finally, load the original database back in so that subsequent tests can work.
+        with open(tmp_script_path, 'w') as tmpscript:
+            tmpscript.write('#!/bin/sh\nmysql -u %s -p%s %s < %s' % (username, password, db_name, backup_dump_file_path))
+        with open(os.devnull, "w") as fnull:
+            call([tmp_script_path], stdout=fnull, stderr=fnull)
+        os.remove(tmp_script_path)
+        os.remove(backup_dump_file_path)
+
         sleep(1) # If I don't sleep here I get an odd thread-related error (conditional upon
         # this being the last test to be run, I think)...
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 

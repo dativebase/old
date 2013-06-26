@@ -31,6 +31,16 @@ from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
 
 log = logging.getLogger(__name__)
 
+
+def pretty_parses(parses):
+    result = []
+    for parse in parses:
+        tmp = parse.split('-')
+        tmp = [x.split(u'\u2980') for x in tmp]
+        tmp = zip(*tmp)
+        result.append('%s %s' % (u'-'.join(tmp[0]), u'-'.join(tmp[1])))
+    return result
+
 class TestMorphologicalparsersController(TestController):
     """Tests the morphologicalparsers controller.  WARNING: the tests herein are pretty messy.  The higher 
     ordered tests will fail if the previous tests have not been run.
@@ -55,7 +65,7 @@ class TestMorphologicalparsersController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    @nottest
+    #@nottest
     def test(self):
         """General purpose test for morphological parsers.
         """
@@ -220,7 +230,7 @@ class TestMorphologicalparsersController(TestController):
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
         assert morphology_binary_filename in morphology_dir_contents
         assert resp['modifier']['role'] == u'contributor'
-        rules = resp['rules']
+        rules = resp['rules_generated']
         assert u'D' in rules # cf. le
         assert u'N' in rules # cf. tortue
         assert u'D-PHI' in rules # cf. le-s
@@ -261,25 +271,55 @@ define phonology eDrop .o. breakDrop;
         resp = json.loads(response.body)
         phonology_id = resp['id']
 
+        # Create a morpheme language model
+        name = u'Morpheme language model'
+        params = self.morpheme_language_model_create_params.copy()
+        params.update({
+            'name': name,
+            'corpus': rules_corpus_id,
+            'toolkit': 'mitlm'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphemelanguagemodels'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morpheme_language_model_id = resp['id']
+        assert resp['name'] == name
+        assert resp['toolkit'] == u'mitlm'
+        assert resp['order'] == 3
+        assert resp['smoothing'] == u'' # The ModKN smoothing algorithm is the implicit default with MITLM
+
+        # Generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
+        assert resp['generate_message'] == u'Language model successfully generated.'
+
+        # Create the morphological parser
+
         # Create a morphological parser for toy french
         params = self.morphological_parser_create_params.copy()
         params.update({
             'name': u'Morphological parser for toy French',
             'phonology': phonology_id,
             'morphology': morphology_id,
-            'language_model': rules_corpus_id
+            'language_model': morpheme_language_model_id
         })
         params = json.dumps(params)
         response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphological_parser_id = resp['id']
 
-        # Generate the parser's morphophonology FST, compile it and generate the morphemic language model
+        # Generate the parser's morphophonology FST and compile it.
         response = self.app.put(url(controller='morphologicalparsers', action='generate_and_compile',
             id=morphological_parser_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         morphological_parser_compile_attempt = resp['compile_attempt']
-        log.debug(resp)
 
         # Poll ``GET /morphologicalparsers/morphological_parser_id`` until ``compile_attempt`` has changed.
         while True:
@@ -292,423 +332,28 @@ define phonology eDrop .o. breakDrop;
             else:
                 log.debug('Waiting for morphological parser %d to compile ...' % morphological_parser_id)
             sleep(1)
-        log.debug(resp)
 
-    @nottest
-    def test_c_index(self):
-        """Tests that GET /morphologies returns all morphology resources."""
-
-        morphologies = Session.query(Morphology).all()
-
-        # Get all morphologies
-        response = self.app.get(url('morphologies'), headers=self.json_headers, extra_environ=self.extra_environ_view)
+        # Test applyup on the mophological parser's morphophonology FST
+        transcription1 = u'tombait'
+        transcription1_correct_parse = u'tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)
+        transcription2 = u'tombeait'
+        params = json.dumps({'transcriptions': [transcription1, transcription2]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applyup',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp) == 3
+        assert transcription1_correct_parse in resp[transcription1]
+        assert len(resp[transcription1]) == 1
+        assert resp[transcription2] == []
 
-        # Test the paginator GET params.
-        paginator = {'items_per_page': 1, 'page': 1}
-        response = self.app.get(url('morphologies'), paginator, headers=self.json_headers,
-                                extra_environ=self.extra_environ_view)
+        # Test how well the morphological parser parses some test words.
+        params = json.dumps({'transcriptions': [transcription1]})
+        response = self.app.put(url(controller='morphologicalparsers', action='parse',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert len(resp['items']) == 1
-        assert resp['items'][0]['name'] == morphologies[0].name
-        assert response.content_type == 'application/json'
+        # There is only one possible parse for transcription 1 -- it is de facto the most probable
+        assert resp[transcription1] == transcription1_correct_parse
 
-        # Test the order_by GET params.
-        order_by_params = {'order_by_model': 'Morphology', 'order_by_attribute': 'id',
-                     'order_by_direction': 'desc'}
-        response = self.app.get(url('morphologies'), order_by_params,
-                        headers=self.json_headers, extra_environ=self.extra_environ_view)
-        resp = json.loads(response.body)
-        assert resp[0]['id'] == morphologies[-1].id
-        assert response.content_type == 'application/json'
-
-        # Test the order_by *with* paginator.
-        params = {'order_by_model': 'Morphology', 'order_by_attribute': 'id',
-                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
-        response = self.app.get(url('morphologies'), params,
-                        headers=self.json_headers, extra_environ=self.extra_environ_view)
-        resp = json.loads(response.body)
-        assert morphologies[0].name == resp['items'][0]['name']
-
-        # Expect a 400 error when the order_by_direction param is invalid
-        order_by_params = {'order_by_model': 'Morphology', 'order_by_attribute': 'name',
-                     'order_by_direction': 'descending'}
-        response = self.app.get(url('morphologies'), order_by_params, status=400,
-            headers=self.json_headers, extra_environ=self.extra_environ_view)
-        resp = json.loads(response.body)
-        assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
-        assert response.content_type == 'application/json'
-
-    @nottest
-    def test_d_show(self):
-        """Tests that GET /morphologies/id returns the morphology with id=id or an appropriate error."""
-
-        morphologies = Session.query(Morphology).all()
-
-        # Try to get a morphology using an invalid id
-        id = 100000000000
-        response = self.app.get(url('morphology', id=id),
-            headers=self.json_headers, extra_environ=self.extra_environ_admin,
-            status=404)
-        resp = json.loads(response.body)
-        assert u'There is no morphology with id %s' % id in json.loads(response.body)['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('morphology', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
-        # Valid id
-        response = self.app.get(url('morphology', id=morphologies[0].id), headers=self.json_headers,
-                                extra_environ=self.extra_environ_admin)
-        resp = json.loads(response.body)
-        assert resp['name'] == morphologies[0].name
-        assert resp['description'] == morphologies[0].description
-        assert response.content_type == 'application/json'
-
-    @nottest
-    def test_e_new_edit(self):
-        """Tests that GET /morphologies/new and GET /morphologies/id/edit return the data needed to create or update a morphology.
-
-        """
-
-        morphologies = Session.query(Morphology).all()
-
-        # Test GET /morphologies/new
-        response = self.app.get(url('new_morphology'), headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        resp = json.loads(response.body)
-        assert len(resp['corpora']) == 3
-
-        # Not logged in: expect 401 Unauthorized
-        response = self.app.get(url('edit_morphology', id=morphologies[0].id), status=401)
-        resp = json.loads(response.body)
-        assert resp['error'] == u'Authentication is required to access this resource.'
-        assert response.content_type == 'application/json'
-
-        # Invalid id
-        id = 9876544
-        response = self.app.get(url('edit_morphology', id=id),
-            headers=self.json_headers, extra_environ=self.extra_environ_admin,
-            status=404)
-        assert u'There is no morphology with id %s' % id in json.loads(response.body)['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('edit_morphology', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert json.loads(response.body)['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
-        # Valid id
-        response = self.app.get(url('edit_morphology', id=morphologies[0].id),
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        resp = json.loads(response.body)
-        assert resp['morphology']['name'] == morphologies[0].name
-        assert len(resp['data']['corpora']) == 3
-        assert response.content_type == 'application/json'
-
-    @nottest
-    def test_f_update(self):
-        """Tests that PUT /morphologies/id updates the morphology with id=id."""
-
-        foma_installed = h.foma_installed(force_check=True)
-
-        morphologies = [json.loads(json.dumps(m, cls=h.JSONOLDEncoder))
-            for m in Session.query(Morphology).all()]
-        morphology_id = morphologies[0]['id']
-        morphology_1_name = morphologies[0]['name']
-        morphology_1_description = morphologies[0]['description']
-        morphology_1_modified = morphologies[0]['datetime_modified']
-        morphology_1_rules_corpus_id = morphologies[0]['rules_corpus']['id']
-        morphology_1_lexicon_corpus_id = morphologies[0]['lexicon_corpus']['id']
-        morphology_count = len(morphologies)
-        morphology_1_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_id)
-        morphology_1_script_path = os.path.join(morphology_1_dir, 'morphology_%d.script' % morphology_id)
-        morphology_1_script = u''
-        if foma_installed:
-            morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
-
-        # Update the first morphology.  This will create the second backup for this morphology,
-        # the first having been created by the successful compile attempt in test_compile.
-        original_backup_count = Session.query(MorphologyBackup).count()
-        params = self.morphology_create_params.copy()
-        params.update({
-            'name': morphology_1_name,
-            'description': u'New description',
-            'rules_corpus': morphology_1_rules_corpus_id,
-            'lexicon_corpus': morphology_1_lexicon_corpus_id,
-            'script_type': u'regex'
-        })
-        params = json.dumps(params)
-        response = self.app.put(url('morphology', id=morphology_id), params, self.json_headers,
-                                 self.extra_environ_admin)
-        resp = json.loads(response.body)
-        new_backup_count = Session.query(MorphologyBackup).count()
-        datetime_modified = resp['datetime_modified']
-        new_morphology_count = Session.query(Morphology).count()
-        if foma_installed:
-            updated_morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
-        else:
-            updated_morphology_1_script = u''
-        assert morphology_count == new_morphology_count
-        assert datetime_modified != morphology_1_modified
-        assert resp['description'] == u'New description'
-        assert updated_morphology_1_script == morphology_1_script
-        assert response.content_type == 'application/json'
-        assert original_backup_count + 1 == new_backup_count
-        backup = Session.query(MorphologyBackup).filter(
-            MorphologyBackup.UUID==unicode(
-            resp['UUID'])).order_by(
-            desc(MorphologyBackup.id)).first()
-        assert backup.datetime_modified.isoformat() == morphology_1_modified
-        assert backup.description == morphology_1_description
-        assert response.content_type == 'application/json'
-
-        # Attempt an update with no new input and expect to fail
-        response = self.app.put(url('morphology', id=morphology_id), params, self.json_headers,
-                                 self.extra_environ_admin, status=400)
-        resp = json.loads(response.body)
-        morphology_count = new_morphology_count
-        new_morphology_count = Session.query(Morphology).count()
-        our_morphology_datetime_modified = Session.query(Morphology).get(morphology_id).datetime_modified
-        assert our_morphology_datetime_modified.isoformat() == datetime_modified
-        assert morphology_count == new_morphology_count
-        assert resp['error'] == u'The update request failed because the submitted data were not new.'
-        assert response.content_type == 'application/json'
-
-        # Create a new sentential form that implies a new morphological rule: V-PHI
-        S = Session.query(model.SyntacticCategory).filter(model.SyntacticCategory.name==u'S').first()
-        form_create_params = ('Les fourmis tombes.', 'le-s fourmi-s tombe-s', 'the-PL ant-PL fall-PL', 'The ants fallings.', S.id)
-        self.create_form(*form_create_params)
-
-        # Another attempt at updating will still fail because the form just created will not have
-        # updated the rules corpus of the morphology
-        response = self.app.put(url('morphology', id=morphology_id), params, self.json_headers,
-                                 self.extra_environ_admin, status=400)
-        resp = json.loads(response.body)
-        morphology_count = new_morphology_count
-        new_morphology_count = Session.query(Morphology).count()
-        our_morphology_datetime_modified = Session.query(Morphology).get(morphology_id).datetime_modified
-        assert our_morphology_datetime_modified.isoformat() == datetime_modified
-        assert morphology_count == new_morphology_count
-        assert resp['error'] == u'The update request failed because the submitted data were not new.'
-        assert response.content_type == 'application/json'
-
-        # Now update the rules corpus
-        rules_corpus = Session.query(model.Corpus).get(morphology_1_rules_corpus_id)
-        corpus_create_params = self.corpus_create_params.copy()
-        corpus_create_params.update({
-            'name': rules_corpus.name,
-            'description': rules_corpus.description,
-            'content': rules_corpus.content,
-            'form_search': rules_corpus.form_search.id
-        })
-        corpus_create_params = json.dumps(corpus_create_params)
-        self.app.put(url('corpus', id=morphology_1_rules_corpus_id), corpus_create_params, self.json_headers, self.extra_environ_admin)
-
-        # If we now perform a compile request on the morphology, we will get an updated script.
-        # This will also result in the generation of a new morphology backup.
-        if h.foma_installed(force_check=True):
-            response = self.app.put(url(controller='morphologies', action='generate_and_compile',
-                        id=morphology_id), headers=self.json_headers,
-                        extra_environ=self.extra_environ_contrib)
-            resp = json.loads(response.body)
-            compile_attempt = resp['compile_attempt']
-            while True:
-                response = self.app.get(url('morphology', id=morphology_id),
-                            headers=self.json_headers, extra_environ=self.extra_environ_contrib)
-                resp = json.loads(response.body)
-                if compile_attempt != resp['compile_attempt']:
-                    log.debug('Compile attempt for morphology %d has terminated.' % morphology_id)
-                    break
-                else:
-                    log.debug('Waiting for morphology %d to compile ...' % morphology_id)
-                sleep(1)
-            updated_morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
-            assert morphology_1_script != updated_morphology_1_script
-            assert u'define morphology' in updated_morphology_1_script
-            assert u'(NCat)' in updated_morphology_1_script # cf. tortue
-            assert u'(DCat)' in updated_morphology_1_script # cf. la
-            assert u'(NCat "-" PHICat)' in updated_morphology_1_script # cf. chien-s
-            assert u'(DCat "-" PHICat)' in updated_morphology_1_script # cf. le-s
-            assert u'(VCat "-" AGRCat)' in updated_morphology_1_script # cf. nage-aient, parle-ait
-            assert u'c h i e n "%sdog":0' % h.rare_delimiter in updated_morphology_1_script
-            assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rare_delimiter in updated_morphology_1_script
-            assert u'(VCat "-" PHICat)' in updated_morphology_1_script # THIS IS THE NEW PART
-            assert u'(VCat "-" PHICat)' not in morphology_1_script # THIS IS THE NEW PART
-
-    @nottest
-    def test_g_history(self):
-        """Tests that GET /morphologies/id/history returns the morphology with id=id and its previous incarnations.
-
-        The JSON object returned is of the form
-        {'morphology': morphology, 'previous_versions': [...]}.
-
-        """
-
-        foma_installed = h.foma_installed(force_check=True)
-        if foma_installed:
-            # Note: compilation requests no longer result in the creation of backups.
-            # Ignore the above assertions that they do.
-            morphology_1_backup_count = 2
-        else:
-            morphology_1_backup_count = 1
-
-        morphologies = Session.query(Morphology).all()
-        morphology_id = morphologies[0].id
-        morphology_1_UUID = morphologies[0].UUID
-
-        # Now get the history of the first morphology (which was updated twice in ``test_update``.
-        response = self.app.get(
-            url(controller='morphologies', action='history', id=morphology_id),
-            headers=self.json_headers, extra_environ=self.extra_environ_view_appset)
-        resp = json.loads(response.body)
-        assert response.content_type == 'application/json'
-        assert 'morphology' in resp
-        assert 'previous_versions' in resp
-        assert len(resp['previous_versions']) == morphology_1_backup_count
-        if foma_installed:
-            assert resp['previous_versions'][0]['extract_morphemes_from_rules_corpus'] == True
-            assert resp['previous_versions'][1]['extract_morphemes_from_rules_corpus'] == False
-
-        # Get the same history as above, except use the UUID
-        response = self.app.get(
-            url(controller='morphologies', action='history', id=morphology_1_UUID),
-            headers=self.json_headers, extra_environ=self.extra_environ_view_appset)
-        resp = json.loads(response.body)
-        assert response.content_type == 'application/json'
-        assert 'morphology' in resp
-        assert 'previous_versions' in resp
-        assert len(resp['previous_versions']) == morphology_1_backup_count
-
-        # Attempt to get the history with an invalid id and expect to fail
-        response = self.app.get(
-            url(controller='morphologies', action='history', id=123456789),
-            headers=self.json_headers, extra_environ=self.extra_environ_view_appset, status=404)
-        resp = json.loads(response.body)
-        assert response.content_type == 'application/json'
-        assert resp['error'] == u'No morphologies or morphology backups match 123456789'
-
-        # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
-
-    @nottest
-    def test_h_lexc_scripts(self):
-        """Tests that morphologies written in the lexc formalism work as expected."""
-
-        if not h.foma_installed(force_check=True):
-            return
-
-        morphologies = [json.loads(json.dumps(m, cls=h.JSONOLDEncoder))
-            for m in Session.query(Morphology).all()]
-        morphology_id = morphologies[0]['id']
-        morphology_1_name = morphologies[0]['name']
-        morphology_1_description = morphologies[0]['description']
-        morphology_1_modified = morphologies[0]['datetime_modified']
-        morphology_1_compile_attempt = morphologies[0]['compile_attempt']
-        morphology_1_rules_corpus_id = morphologies[0]['rules_corpus']['id']
-        morphology_1_lexicon_corpus_id = morphologies[0]['lexicon_corpus']['id']
-        morphology_count = len(morphologies)
-        morphology_1_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_id)
-        morphology_1_script_path = os.path.join(morphology_1_dir, 'morphology_%d.script' % morphology_id)
-        morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
-
-        # Update morphology 1 by making it into a lexc script
-        orig_backup_count = Session.query(MorphologyBackup).count()
-        params = self.morphology_create_params.copy()
-        params.update({
-            'name': morphology_1_name,
-            'description': morphology_1_description,
-            'rules_corpus': morphology_1_rules_corpus_id,
-            'lexicon_corpus': morphology_1_lexicon_corpus_id,
-            'script_type': u'lexc'
-        })
-        params = json.dumps(params)
-        response = self.app.put(url('morphology', id=morphology_id), params, self.json_headers,
-                                 self.extra_environ_admin)
-        resp = json.loads(response.body)
-        new_backup_count = Session.query(MorphologyBackup).count()
-        datetime_modified = resp['datetime_modified']
-        new_morphology_count = Session.query(Morphology).count()
-        assert new_backup_count == orig_backup_count + 1
-        assert new_morphology_count == morphology_count
-        assert resp['script_type'] == u'lexc'
-        assert datetime_modified > morphology_1_modified
-
-        # Before we compile, save the previous script and its compiled version, just for testing
-        # NOTE: I compared the compiled regexes generated from the two different types of scripts
-        # generated for the same morphology: foma did *not* evaluate them as equivalent.  I do not know
-        # what to make of this at this point ...
-        morphology_path = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_id)
-        #morphology_script_path = os.path.join(morphology_path, 'morphology_%d.script' % morphology_id)
-        #morphology_script_backup_path = os.path.join(morphology_path, 'morphology_%d_backup.script' % morphology_id)
-        morphology_binary_path = os.path.join(morphology_path, 'morphology_%d.foma' % morphology_id)
-        #morphology_binary_backup_path = os.path.join(morphology_path, 'morphology_%d_backup.foma' % morphology_id)
-        #copyfileobj(open(morphology_script_path, 'rb'), open(morphology_script_backup_path, 'wb'))
-        #copyfileobj(open(morphology_binary_path, 'rb'), open(morphology_binary_backup_path, 'wb'))
-
-        # Compile the morphology and get an altogether new script, i.e., one in the lexc formalism this time
-        response = self.app.put(url(controller='morphologies', action='generate_and_compile',
-                    id=morphology_id), headers=self.json_headers,
-                    extra_environ=self.extra_environ_contrib)
-
-        # Poll ``GET /morphologies/morphology_id`` until ``compile_attempt`` has changed.
-        while True:
-            response = self.app.get(url('morphology', id=morphology_id),
-                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
-            resp = json.loads(response.body)
-            if morphology_1_compile_attempt != resp['compile_attempt']:
-                log.debug('Compile attempt for morphology %d has terminated.' % morphology_id)
-                break
-            else:
-                log.debug('Waiting for morphology %d to compile ...' % morphology_id)
-            sleep(1)
-
-        updated_morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
-        assert updated_morphology_1_script != morphology_1_script
-        assert resp['compile_succeeded'] == True
-        assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
-        assert u'define morphology' not in updated_morphology_1_script
-        assert u'define morphology' in morphology_1_script
-        assert resp['modifier']['role'] == u'contributor'
-
-        # Get the compiled foma script.
-        response = self.app.get(url(controller='morphologies', action='servecompiled',
-            id=morphology_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        foma_file = open(morphology_binary_path, 'rb')
-        foma_file_content = foma_file.read()
-        assert foma_file_content == response.body
-        assert response.content_type == u'application/octet-stream'
-
-        # Test applydown with multiple morpheme sequences.
-        ms1 = u'chien%sdog-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        ms2 = u'tombe%sfall-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        ms3 = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3]})
-        response = self.app.put(url(controller='morphologies', action='applydown',
-                    id=morphology_id), params, self.json_headers, self.extra_environ_admin)
-        resp = json.loads(response.body)
-        assert resp[ms1] == [u'chien-s']
-        assert resp[ms2] == [u'tombe-s']
-        assert resp[ms3] == [None]
-
-        # Test applyup with multiple input sequences
-        ms1 = u'vache-s'
-        ms2 = u'cheval'
-        ms3 = u'vache-ait'
-        ms4 = u'tombe-ait'
-        params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3, ms4]})
-        response = self.app.put(url(controller='morphologies', action='applyup',
-                    id=morphology_id), params, self.json_headers, self.extra_environ_admin)
-        resp = json.loads(response.body)
-        assert resp[ms1] == ['vache%scow-s%sPL' % (h.rare_delimiter, h.rare_delimiter)]
-        assert resp[ms2] == ['cheval%shorse' % h.rare_delimiter]
-        assert resp[ms3] == [None]
-        assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)]
-
-    @nottest
+    #@nottest
     def test_i_large_datasets(self):
         """Tests that morphological parser functionality works with large datasets.
 
@@ -738,8 +383,8 @@ define phonology eDrop .o. breakDrop;
         # The ``precompiled_morphophonology`` variable holds the name of a compiled foma FST that
         # maps surface representations to sequences of morphemes.  A file with this name should be
         # present in /tests/data/morphophonologies or else the variable should be set to None.
-        pregenerated_morphophonology = None # 'blaold_morphophonology.script'
-        precompiled_morphophonology = None # 'blaold_morphophonology.foma'
+        pregenerated_morphophonology = 'blaold_morphophonology.script'
+        precompiled_morphophonology = 'blaold_morphophonology.foma'
 
         # Here we load a whole database from the mysqpl dump file specified in ``tests/data/datasets/<old_dump_file>``.
         old_dump_file_path = os.path.join(self.test_datasets_path, old_dump_file)
@@ -834,22 +479,20 @@ define phonology eDrop .o. breakDrop;
         lexicon_corpus_id = json.loads(response.body)['id']
 
         # Create a rules corpus
+
+        # Create a corpus of forms containing words -- to be used to estimate ngram probabilities
         # The goal here is to exclude things that look like words but are not really words, i.e., 
-        # morphemes; as a heuristic we search for forms categorized as 'sent' or whose transcription
-        # value contains a space.
+        # morphemes; as a heuristic we search for grammatical forms categorized as 'sent' or whose
+        # transcription value contains a space or a dash.
         query = {'filter': ['and', [['or', [['Form', 'syntactic_category', 'name', '=', u'sent'],
-                                            ['Form', 'transcription', 'like', '% %']]],
+                                            ['Form', 'morpheme_break', 'like', '% %'],
+                                            ['Form', 'morpheme_break', 'like', '%-%']]],
+                                   ['Form', 'syntactic_category_string', '!=', None],
                                    ['Form', 'grammaticality', '=', '']]]}
-        #query = {'filter': ['Form', 'syntactic_category_string', '=', 'agra-vai']}
-        smaller_query_for_rapid_testing = {'filter': ['and', [
-                                ['or', [['Form', 'syntactic_category', 'name', '=', u'sent'],
-                                        ['Form', 'transcription', 'like', '% %']]],
-                                ['Form', 'id', '<', 23000],
-                                ['Form', 'id', '>', 22000]]]}
         params = self.form_search_create_params.copy()
         params.update({
             'name': u'Find Blackfoot sentences',
-            'description': u'Returns all sentential forms',
+            'description': u'Returns all forms containing words',
             'search': query
         })
         params = json.dumps(params)
@@ -864,22 +507,19 @@ define phonology eDrop .o. breakDrop;
         response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
         rules_corpus_id = json.loads(response.body)['id']
 
-        # Now we reduce the number of category-based word-formation rules by extracting all such
-        # rules implicit in the rules corpus that have only one token.  With the Blackfoot database and the
-        # rules corpus form search defined above, this removes more than 1000 sequences from the just over
-        # 1,800 that are currently generated, a not insubstantial reduction in complexity of the resulting morphology FST.
+        # Now we reduce the number of category-based word-formation rules by removing all such
+        # rules implicit in the rules corpus that have fewer than two exemplar tokens.
 
         # Get the category sequence types of all of the words in the rules corpus ordered by their counts, minus
-        # those with only one count..
-        minimum_token_count = 5
+        # those with fewer than ``minimum_token_count`` counts.
+        minimum_token_count = 2
         params = {'minimum_token_count': minimum_token_count}
         response = self.app.get(url(controller='corpora', action='get_word_category_sequences', id=rules_corpus_id),
                 params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
 
-        log.debug(len(resp))
         word_category_sequences = u' '.join([word_category_sequence for word_category_sequence, ids in resp])
-        word_category_sequences = u'agra-vai vai-agrb'
+        #word_category_sequences = u'agra-vai vai-agrb'
 
         # Now create a morphology using the lexicon and rules defined by word_category_sequences
         name = u'Morphology of Blackfoot'
@@ -922,6 +562,39 @@ define phonology eDrop .o. breakDrop;
             seconds_elapsed = seconds_elapsed + wait
 
         ################################################################################
+        # MORPHEME LANGUAGE MODEL
+        ################################################################################
+
+        # Create a morpheme language model
+        name = u'Blackfoot morpheme language model'
+        params = self.morpheme_language_model_create_params.copy()
+        params.update({
+            'name': name,
+            'corpus': rules_corpus_id,
+            'toolkit': 'mitlm'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphemelanguagemodels'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morpheme_language_model_id = resp['id']
+        assert resp['name'] == name
+        assert resp['toolkit'] == u'mitlm'
+        assert resp['order'] == 3
+        assert resp['smoothing'] == u'' # The ModKN smoothing algorithm is the implicit default with MITLM
+
+        # Generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
+        assert resp['generate_message'] == u'Language model successfully generated.'
+
+        ################################################################################
         # MORPHOLOGICAL PARSER
         ################################################################################
 
@@ -931,7 +604,7 @@ define phonology eDrop .o. breakDrop;
             'name': u'Morphological parser for Blackfoot',
             'phonology': phonology_id,
             'morphology': morphology_id,
-            'language_model': rules_corpus_id
+            'language_model': morpheme_language_model_id
         })
         params = json.dumps(params)
         response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
@@ -988,9 +661,36 @@ define phonology eDrop .o. breakDrop;
                     id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert transcription1_correct_parse in resp[transcription1]
+        #log.debug('These are the parses for %s:' % transcription1)
+        #log.debug(u'\n'.join(pretty_parses(resp[transcription1])))
         assert transcription2_correct_parse in resp[transcription2]
+        #log.debug('These are the parses for %s:' % transcription2)
+        #log.debug(u'\n'.join(pretty_parses(resp[transcription2])))
 
-    @nottest
+        # Test how well the morphological parser parses some test words.
+        params = json.dumps({'transcriptions': [transcription1, transcription2]})
+        response = self.app.put(url(controller='morphologicalparsers', action='parse',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp[transcription1] == transcription1_correct_parse
+        # aaniit will have waaniit 'scatter' as its most likely parse and the correct parse waanii-t 'say-IMP'
+        # as its second most likely...
+        assert resp[transcription2] != transcription2_correct_parse
+
+        # Finally, load the original database back in so that subsequent tests can work.
+        with open(tmp_script_path, 'w') as tmpscript:
+            tmpscript.write('#!/bin/sh\nmysql -u %s -p%s %s < %s' % (username, password, db_name, backup_dump_file_path))
+        with open(os.devnull, "w") as fnull:
+            call([tmp_script_path], stdout=fnull, stderr=fnull)
+        os.remove(tmp_script_path)
+        os.remove(backup_dump_file_path)
+
+        # Write tests for index, show, new/edit, update and history
+        # The morpho parser as currently implemented encodes only a small subset of Bf morphology -- enlarge it!
+        # Implement category-based class LMs and test them against morpheme-based ones.
+        # Build multiple Bf morphological parsers and test them out, find the best one, write a paper on it!
+
+    #@nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 

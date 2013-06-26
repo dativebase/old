@@ -35,7 +35,7 @@ class TestPhonologybackupsController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['phonology'])
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that ``GET /phonologybackups`` behaves correctly.
         """

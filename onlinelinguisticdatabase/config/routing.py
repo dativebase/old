@@ -104,6 +104,8 @@ def make_map(config):
     map.connect('/morphologicalparsers/{id}/generate_and_compile', controller='morphologicalparsers',
                 action='generate_and_compile', conditions=dict(method='PUT'))
     map.connect('/morphologicalparsers/{id}/history', controller='morphologicalparsers', action='history')
+    map.connect('/morphologicalparsers/{id}/parse', controller='morphologicalparsers', action='parse', 
+                conditions=dict(method='PUT'))
     map.connect('/morphologicalparsers/{id}/servecompiled', controller='morphologicalparsers',
                 action='servecompiled', conditions=dict(method='GET'))
 

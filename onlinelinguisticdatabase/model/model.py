@@ -31,6 +31,7 @@ class Model(object):
         'elicitationmethod': ['id', 'name'],
         'file': ['id', 'name', 'filename', 'MIME_type', 'size', 'url', 'lossy_filename'],
         'formsearch': ['id', 'name'],
+        'morphemelanguagemodel': ['id', 'name'],
         'morphology': ['id', 'name'],
         'orthography': ['id', 'name', 'orthography', 'lowercase', 'initial_glottal_stops'],
         'phonology': ['id', 'name'],

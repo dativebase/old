@@ -229,7 +229,6 @@ def create_morphological_parser_components(**kwargs):
     morphological_parser_id = kwargs.get('morphological_parser_id')
     script_dir_path = kwargs.get('script_dir_path')
     morphology_dir_path = kwargs.get('morphology_dir_path')
-    log.warn('morphology_dir_path: %s' % morphology_dir_path)
     morphological_parser = Session.query(model.MorphologicalParser).get(morphological_parser_id)
     morpheme_delimiters = h.get_morpheme_delimiters()
     kwargs.update({
@@ -292,8 +291,6 @@ def _write_morphophonology_script_to_disk(**kwargs):
                     script_path, binary_path))
     os.chmod(compiler_path, 0744)
     morphology_script_path = h.get_model_file_path(morphological_parser.morphology, kwargs['morphology_dir_path'], 'script')
-    log.warn('morphology_script_path: %s' % morphology_script_path)
-    log.warn(os.path.isfile(morphology_script_path))
     #h.get_model_file_path(model_object, script_dir_path, file_type='script'):
     phonology_script = morphological_parser.phonology.script
     morphophonology = generate_morphophonology(phonology_script)
