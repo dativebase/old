@@ -50,7 +50,7 @@ class TestMorphologiesController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    #@nottest
+    @nottest
     def test_a_create(self):
         """Tests that POST /morphologies creates a new morphology.
 
@@ -221,7 +221,7 @@ class TestMorphologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['script_type'] == u'regex'
 
-    #@nottest
+    @nottest
     def test_b_compile(self):
         """Tests that PUT /morphologies/id/generate_and_compile generates and compiles the foma script of the morphology with id.
 
@@ -571,7 +571,7 @@ class TestMorphologiesController(TestController):
         assert u'V-AGR' in rules # cf. nage-aient, parle-ait
         assert [u'chat', u'cat'] in resp['lexicon']['N']
 
-    #@nottest
+    @nottest
     def test_c_index(self):
         """Tests that GET /morphologies returns all morphology resources."""
 
@@ -617,7 +617,7 @@ class TestMorphologiesController(TestController):
         assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_d_show(self):
         """Tests that GET /morphologies/id returns the morphology with id=id or an appropriate error."""
 
@@ -646,7 +646,7 @@ class TestMorphologiesController(TestController):
         assert resp['description'] == morphologies[0].description
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_e_new_edit(self):
         """Tests that GET /morphologies/new and GET /morphologies/id/edit return the data needed to create or update a morphology.
 
@@ -687,7 +687,7 @@ class TestMorphologiesController(TestController):
         assert len(resp['data']['corpora']) == 3
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_f_update(self):
         """Tests that PUT /morphologies/id updates the morphology with id=id."""
 
@@ -817,7 +817,7 @@ class TestMorphologiesController(TestController):
             assert u'(VCat "-" PHICat)' in updated_morphology_1_script # THIS IS THE NEW PART
             assert u'(VCat "-" PHICat)' not in morphology_1_script # THIS IS THE NEW PART
 
-    #@nottest
+    @nottest
     def test_g_history(self):
         """Tests that GET /morphologies/id/history returns the morphology with id=id and its previous incarnations.
 
@@ -871,7 +871,7 @@ class TestMorphologiesController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    #@nottest
+    @nottest
     def test_h_lexc_scripts(self):
         """Tests that morphologies written in the lexc formalism work as expected."""
 
@@ -985,7 +985,7 @@ class TestMorphologiesController(TestController):
         assert resp[ms3] == []
         assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)]
 
-    #@nottest
+    @nottest
     def test_i_large_morphologies(self):
         """Tests that morphology functionality works with large datasets.
 
@@ -1515,7 +1515,7 @@ class TestMorphologiesController(TestController):
         os.remove(tmp_script_path)
         os.remove(backup_dump_file_path)
 
-    #@nottest
+    @nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 

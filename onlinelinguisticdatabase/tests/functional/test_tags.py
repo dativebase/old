@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 class TestTagsController(TestController):
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /tags returns an array of all tags and that order_by and pagination parameters work correctly."""
 
@@ -118,7 +118,7 @@ class TestTagsController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /tags creates a new tag
         or returns an appropriate error if the input is invalid.
@@ -156,7 +156,7 @@ class TestTagsController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /tags/new returns an empty JSON object."""
         response = self.app.get(url('new_tag'), headers=self.json_headers,
@@ -165,7 +165,7 @@ class TestTagsController(TestController):
         assert resp == {}
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /tags/id updates the tag with id=id."""
 
@@ -203,7 +203,7 @@ class TestTagsController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /tags/id deletes the tag with id=id."""
 
@@ -261,7 +261,7 @@ class TestTagsController(TestController):
         assert deleted_tag == None
         assert form.tags == []
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /tags/id returns the tag with id=id or an appropriate error."""
 
@@ -295,7 +295,7 @@ class TestTagsController(TestController):
         assert resp['description'] == u'description'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /tags/id/edit returns a JSON object of data necessary to edit the tag with id=id.
 

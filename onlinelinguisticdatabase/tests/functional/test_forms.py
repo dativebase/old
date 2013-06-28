@@ -40,7 +40,7 @@ class TestFormsController(TestController):
         TestController.tearDown(self, dirs_to_clear=['reduced_files_path', 'files_path'],
                 del_global_app_set=True)
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET /forms returns a JSON array of forms with expected values."""
 
@@ -278,7 +278,7 @@ class TestFormsController(TestController):
         assert resp['errors']['items_per_page'] == u'Please enter a number that is 1 or greater'
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
 
-    #@nottest
+    @nottest
     def test_create(self):
         """Tests that POST /forms correctly creates a new form."""
 
@@ -457,7 +457,7 @@ class TestFormsController(TestController):
         assert 'N-?' in resp['syntactic_category_string'] and \
             '?-Num' in resp['syntactic_category_string']
 
-    #@nottest
+    @nottest
     def test_create_invalid(self):
         """Tests that POST /forms with invalid input returns an appropriate error."""
 
@@ -616,7 +616,7 @@ class TestFormsController(TestController):
         assert resp['source']['year'] == source_year    # etc. ...
         assert new_form_count == form_count + 1
 
-    #@nottest
+    @nottest
     def test_create_with_inventory_validation(self):
         """Tests that POST /forms correctly applies inventory-based validation on form creation attempts."""
 
@@ -799,7 +799,7 @@ class TestFormsController(TestController):
         assert u'errors' not in resp
         assert form_count == 3
 
-    #@nottest
+    @nottest
     def test_relational_attribute_creation(self):
         """Tests that POST/PUT create and update many-to-many data correctly."""
 
@@ -904,7 +904,7 @@ class TestFormsController(TestController):
         assert u'There is no tag with id 9875.' in resp['errors']['tags']
         assert u'Please enter an integer value' in resp['errors']['tags']
 
-    #@nottest
+    @nottest
     def test_relational_restrictions(self):
         """Tests that the restricted tag works correctly with respect to relational attributes of forms.
 
@@ -1057,7 +1057,7 @@ class TestFormsController(TestController):
         assert response.content_type == 'application/json'
         assert resp['error'] == u'You are not authorized to access this resource.'
 
-    #@nottest
+    @nottest
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for creating a new OLD form.
 
@@ -1153,7 +1153,7 @@ class TestFormsController(TestController):
         assert resp['users'] == []
         assert resp['sources'] == []
 
-    #@nottest
+    @nottest
     def test_update(self):
         """Tests that PUT /forms/id correctly updates an existing form."""
 
@@ -1359,7 +1359,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['speaker']['first_name'] == speaker.first_name
 
-    #@nottest
+    @nottest
     def test_delete(self):
         """Tests that DELETE /forms/id deletes the form with id=id and returns a JSON representation.
 
@@ -1494,7 +1494,7 @@ class TestFormsController(TestController):
         assert json.loads(response.body)['error'] == \
             'The resource could not be found.'
 
-    #@nottest
+    @nottest
     def test_delete_foreign_word(self):
         """Tests that DELETE /forms/id on a foreign word updates the global Inventory objects correctly."""
 
@@ -1559,7 +1559,7 @@ class TestFormsController(TestController):
         application_settings = response.g.application_settings
         assert 'test_delete_transcription' not in application_settings.orthographic_inventory.input_list
 
-    #@nottest
+    @nottest
     def test_show(self):
         """Tests that GET /forms/id returns a JSON form object, null or 404
         depending on whether the id is valid, invalid or unspecified,
@@ -1681,7 +1681,7 @@ class TestFormsController(TestController):
         response = self.app.get(url('form', id=restricted_form_id),
                         headers=self.json_headers, extra_environ=extra_environ)
 
-    #@nottest
+    @nottest
     def test_edit(self):
         """Tests that GET /forms/id/edit returns a JSON object of data necessary to edit the form with id=id.
         
@@ -1815,7 +1815,7 @@ class TestFormsController(TestController):
         assert u'There is no form with id %s' % id in json.loads(response.body)[
             'error']
 
-    #@nottest
+    @nottest
     def test_history(self):
         """Tests that GET /forms/id/history returns the form with id=id and its previous incarnations.
         
@@ -2140,7 +2140,7 @@ class TestFormsController(TestController):
             u'2nd form restricted'
         assert resp['form']['transcription'] == u'2nd form unrestricted updated'
 
-    #@nottest
+    @nottest
     def test_remember(self):
         """Tests that POST /forms/remember correctly saves the input list of forms to the logged in user's remembered_forms list.
         """
@@ -2263,7 +2263,7 @@ class TestFormsController(TestController):
         assert len(viewer.remembered_forms) == 2
         assert form1_id not in [f.id for id in viewer.remembered_forms]
 
-    #@nottest
+    @nottest
     def _test_update_morpheme_references(self):
         """Tests that GET /forms/update_morpheme_references correctly updates the morpheme references.
         
@@ -2457,7 +2457,7 @@ class TestFormsController(TestController):
         assert [json.loads(f.modifier)['role'] for f in form_backups] == [
             u'administrator', u'administrator']
 
-    #@nottest
+    @nottest
     def test_new_search(self):
         """Tests that GET /forms/new_search returns the search parameters for searching the forms resource."""
         query_builder = SQLAQueryBuilder('Form')
@@ -2466,7 +2466,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['search_parameters'] == h.get_search_parameters(query_builder)
 
-    #@nottest
+    @nottest
     def test_create_restricted(self):
         """Tests what happens when a restricted user restricts a form.
 
@@ -2526,7 +2526,7 @@ class TestFormsController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'You are not authorized to access this resource.'
 
-    #@nottest
+    @nottest
     def test_normalization(self):
         """Tests that unicode input data are normalized and so too are search patterns."""
 
@@ -2577,7 +2577,7 @@ class TestFormsController(TestController):
         assert sorted([f['id'] for f in resp]) == sorted([combining_form_id, precomposed_form_id])
 
 
-    #@nottest
+    @nottest
     def test_lexical_percolation(self):
         """Tests that creation, updating and deletion of a lexical forms percolates up to the phrasal forms containing them.
         """
@@ -2927,7 +2927,7 @@ class TestFormsController(TestController):
         assert resp['morpheme_gloss_ids'] == xyz_morpheme_gloss_ids
         assert resp['break_gloss_category'] == u'x|7|Num=y|8|?-z|9|?'
 
-    #@nottest
+    @nottest
     def test_morphemic_analysis_compilation(self):
         """Tests the behaviour of compile_morphemic_analysis in the forms controller.
 

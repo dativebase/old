@@ -17,8 +17,8 @@
 .. module:: morphemelanguagemodels
    :synopsis: Contains the morpheme language models controller and its auxiliary functions.
 
-TODO: permit choice of morpheme vs category-based language models
 TODO: some kind of export or serve function to get the output file of the LM toolkit
+TODO: permit choice of morpheme vs category-based language models
 TODO: some kind of get_probability action that returns the probability of a word/sequence of morphemes based on the language model
 TODO: should have an attribute that allows the creation of class-based (i.e., category-based) LMs.
 
@@ -372,6 +372,41 @@ class MorphemelanguagemodelsController(BaseController):
             'args': args
         })
         return morpheme_language_model
+
+    @h.restrict('GET')
+    @h.authenticate_with_JSON
+    def serve_arpa(self, id):
+        """Serve the generated ARPA file of the morpheme language model.
+
+        :URL: ``PUT /morphologies/serve_arpa/id``
+        :param str id: the ``id`` value of a morpheme language model.
+        :returns: a stream of bytes -- the ARPA file of the LM.
+
+        """
+        morpheme_language_model = Session.query(MorphemeLanguageModel).get(id)
+        if morpheme_language_model:
+            lm_directory_path = h.get_model_directory_path(morpheme_language_model, config)
+            lm_arpa_path = h.get_model_file_path(morpheme_language_model, lm_directory_path, file_type='arpa')
+            if os.path.isfile(lm_arpa_path):
+                if authorized_to_access_arpa_file(session['user'], morpheme_language_model):
+                    return forward(FileApp(lm_arpa_path, content_type='text/plain'))
+                else:
+                    response.status_int = 403
+                    return json.dumps(h.unauthorized_msg)
+            else:
+                response.status_int = 404
+                return json.dumps({'error':
+                    'The ARPA file for morpheme language model %s has not been compiled yet.' % id})
+        else:
+            response.status_int = 404
+            return json.dumps({'error': 'There is no morpheme language model with id %s' % id})
+
+def authorized_to_access_arpa_file(user, morpheme_language_model):
+    """Return True if user is authorized to access the ARPA file of the morpheme LM."""
+    if (morpheme_language_model.restricted and user.role != u'administrator' and
+    user not in h.get_unrestricted_users()):
+        return False
+    return True
 
 def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new morpheme language model or edit one."""

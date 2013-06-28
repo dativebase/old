@@ -94,6 +94,8 @@ def make_map(config):
     map.connect('/morphemelanguagemodels/{id}/history', controller='morphemelanguagemodels', action='history')
     map.connect('/morphemelanguagemodels/{id}/get_probabilities', controller='morphemelanguagemodels',
                 action='get_probabilities', conditions=dict(method='PUT'))
+    map.connect('/morphemelanguagemodels/{id}/serve_arpa', controller='morphemelanguagemodels',
+                action='serve_arpa', conditions=dict(method='GET'))
 
     map.connect('/morphologicalparsers/{id}/applydown', controller='morphologicalparsers',
                 action='applydown', conditions=dict(method='PUT'))

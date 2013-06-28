@@ -112,13 +112,9 @@ class TestMorphemelanguagemodelsController(TestController):
         for tuple_ in dataset:
             self.create_form(*map(unicode, tuple_))
 
-        # Restrict the first sentence -- relevant for testing the restriction percolation into LMs.
+        # Create the restricted tag
         restricted_tag = h.generate_restricted_tag()
         Session.add(restricted_tag)
-        sentence1 = Session.query(model.Form).filter(model.Form.syntactic_category.has(
-            model.SyntacticCategory.name==u'S')).all()[0]
-        sentence1.tags.append(restricted_tag)
-        Session.commit()
 
         # Create a form search that finds sentences
         query = {'filter': ['Form', 'syntactic_category', 'name', '=', u'S']}
@@ -158,7 +154,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['toolkit'] == u'mitlm'
         assert resp['order'] == 3
         assert resp['smoothing'] == u'' # The ModKN smoothing algorithm is the implicit default with MITLM
-        assert resp['restricted'] == False # It won't be restricted yet because we haven't yet generated its files.
+        assert resp['restricted'] == False
 
         # Attempt to compute the perplexity of the LM before its files have been generated.  Expect this
         # to work: perplexity generation creates its own pairs of test/training sets.
@@ -174,6 +170,12 @@ class TestMorphemelanguagemodelsController(TestController):
         perplexity = resp['perplexity']
         log.debug('Perplexity of super toy french (6 sentence corpus, ModKN, n=3): %s' % perplexity)
 
+        # Attempt to get the ARPA file of the LM before it exists and expect to fail.
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert resp['error'] == 'The ARPA file for morpheme language model %d has not been compiled yet.' % morpheme_language_model_id
+
         # Generate the files of the language model
         response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
@@ -185,7 +187,46 @@ class TestMorphemelanguagemodelsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
         assert resp['generate_message'] == u'Language model successfully generated.'
-        assert resp['restricted'] == True # post file generation the LM should be restricted because of the restricted Form.
+        assert resp['restricted'] == False
+
+        # Get the ARPA file of the LM as a viewer.
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_view)
+        assert response.content_type == u'text/plain'
+        assert 'parle%sspeak' % h.rare_delimiter in response.body
+
+        # Restrict the first sentential form -- relevant for testing the restriction percolation into LMs.
+        sentence1 = Session.query(model.Form).filter(model.Form.syntactic_category.has(
+            model.SyntacticCategory.name==u'S')).all()[0]
+        sentence1.tags.append(restricted_tag)
+        Session.commit()
+
+        # Again generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
+        assert resp['generate_message'] == u'Language model successfully generated.'
+        assert resp['restricted'] == True # post file generation the LM should now be restricted because of the restricted Form.
+
+        # Attempt to get the ARPA file of the newly restricted LM as a viewer but expect to fail this time.
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_view, status=403)
+        resp = json.loads(response.body)
+        assert response.content_type == u'application/json'
+        assert resp == h.unauthorized_msg
+
+        # Attempt to get the ARPA file of the LM as an administrator and expect to succeed.
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        assert response.content_type == u'text/plain'
+        assert resp == h.unauthorized_msg
+        assert 'parle%sspeak' % h.rare_delimiter in response.body
 
         # Get some probabilities
         likely_word = u'chat%scat s%sPL' % (h.rare_delimiter, h.rare_delimiter)
@@ -286,7 +327,7 @@ class TestMorphemelanguagemodelsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors'] == u'The LM toolkit mitlm implements no such smoothing algorithm strawberry.'
 
-    #@nottest
+    @nottest
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
 
@@ -332,7 +373,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_d_show(self):
         """Tests that GET /morphemelanguagemodels/id returns the morpheme_language_model with id=id or an appropriate error."""
 
@@ -361,7 +402,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['description'] == morpheme_language_models[0].description
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_e_new_edit(self):
         """Tests that GET /morphemelanguagemodels/new and GET /morphemelanguagemodels/id/edit return the data needed to create or update a morpheme_language_model.
 
@@ -409,7 +450,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert len(resp['data']['toolkits'].keys()) == len(toolkits.keys())
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_f_update(self):
         """Tests that PUT /morphemelanguagemodels/id updates the morpheme_language_model with id=id."""
 
@@ -469,7 +510,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_g_history(self):
         """Tests that GET /morphemelanguagemodels/id/history returns the morpheme_language_model with id=id and its previous incarnations.
 
@@ -513,7 +554,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    #@nottest
+    @nottest
     def test_i_large_datasets(self):
         """Tests that morpheme language model functionality works with large datasets.
 
@@ -936,7 +977,7 @@ class TestMorphemelanguagemodelsController(TestController):
         sleep(1) # If I don't sleep here I get an odd thread-related error (conditional upon
         # this being the last test to be run, I think)...
 
-    #@nottest
+    @nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 

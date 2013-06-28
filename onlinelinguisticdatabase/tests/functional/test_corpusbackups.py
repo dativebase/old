@@ -36,7 +36,7 @@ class TestCorpusbackupsController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['corpus'])
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that GET & SEARCH /corpusbackups behave correctly.
         """
@@ -260,7 +260,7 @@ class TestCorpusbackupsController(TestController):
         assert json.loads(response.body)['error'] == u'This resource is read-only.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_new_search(self):
         """Tests that GET /corpusbackups/new_search returns the search parameters for searching the corpus backups resource."""
         query_builder = SQLAQueryBuilder('CorpusBackup')
