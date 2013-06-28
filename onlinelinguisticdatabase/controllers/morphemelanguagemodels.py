@@ -303,7 +303,7 @@ class MorphemelanguagemodelsController(BaseController):
     @h.restrict('PUT')
     @h.authenticate
     def get_probabilities(self, id):
-        """Return the probability of each sequence of morhpemes passed in the JSON PUT params.
+        """Return the probability of each sequence of morphemes passed in the JSON PUT params.
 
         :param list morpheme_sequences: space-delimited morphemes in morpheme_form|morpheme_gloss
             format wherer "|" is actually ``h.rare_delimiter``.

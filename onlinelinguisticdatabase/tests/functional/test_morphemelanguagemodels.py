@@ -112,6 +112,14 @@ class TestMorphemelanguagemodelsController(TestController):
         for tuple_ in dataset:
             self.create_form(*map(unicode, tuple_))
 
+        # Restrict the first sentence -- relevant for testing the restriction percolation into LMs.
+        restricted_tag = h.generate_restricted_tag()
+        Session.add(restricted_tag)
+        sentence1 = Session.query(model.Form).filter(model.Form.syntactic_category.has(
+            model.SyntacticCategory.name==u'S')).all()[0]
+        sentence1.tags.append(restricted_tag)
+        Session.commit()
+
         # Create a form search that finds sentences
         query = {'filter': ['Form', 'syntactic_category', 'name', '=', u'S']}
         params = self.form_search_create_params.copy()
@@ -150,6 +158,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['toolkit'] == u'mitlm'
         assert resp['order'] == 3
         assert resp['smoothing'] == u'' # The ModKN smoothing algorithm is the implicit default with MITLM
+        assert resp['restricted'] == False # It won't be restricted yet because we haven't yet generated its files.
 
         # Attempt to compute the perplexity of the LM before its files have been generated.  Expect this
         # to work: perplexity generation creates its own pairs of test/training sets.
@@ -176,6 +185,7 @@ class TestMorphemelanguagemodelsController(TestController):
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
         assert resp['generate_message'] == u'Language model successfully generated.'
+        assert resp['restricted'] == True # post file generation the LM should be restricted because of the restricted Form.
 
         # Get some probabilities
         likely_word = u'chat%scat s%sPL' % (h.rare_delimiter, h.rare_delimiter)

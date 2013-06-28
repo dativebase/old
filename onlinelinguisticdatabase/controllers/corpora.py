@@ -502,14 +502,14 @@ def write_to_file(corpus, format_):
     associate it to the corpus model (if necessary).
 
     :param corpus: a corpus model.
-    :param str format_: the form of the file to be written.
+    :param str format_: the format of the file to be written.
     :returns: the corpus modified appropriately (assuming success)
     :side effects: may write (a) file(s) to disk and update/create a corpus file model.
 
     .. note::
-    
+
         It may be desirable/necessary to perform the corpus file writing
-        asynchronously using a dedicated corpus-file-worker.  
+        asynchronously using a dedicated corpus-file-worker.
 
     """
 

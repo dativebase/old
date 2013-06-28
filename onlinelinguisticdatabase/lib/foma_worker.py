@@ -700,18 +700,21 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
     :param str morpheme_language_model_path: absolute path to the directory of the morpheme LM.
     :param list morpheme_delimiters: the morpheme delimiters of the application as saved in the settngs.
     :returns: the path to the LM corpus file just written.
-
-    TODO: make LM corpus files restricted if they contain words from restricted forms (cf. the corpus_file_object restriction in the corpus controller)
+    :side effects: if the LM's corpus contains restricted forms, set the ``restricted`` attribute 
+        to ``True``.  This will prevent restricted users from accessing the source files.
 
     """
     language_model_corpus_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='lm_corpus')
     splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
     corpus = morpheme_language_model.corpus
     forms = corpus.forms
+    restricted = False
     with codecs.open(language_model_corpus_path, mode='w', encoding='utf8') as f:
         if corpus.form_search:
             for form in forms:
                 if form.syntactic_category_string:
+                    if not restricted and "restricted" in [t.name for t in form.tags]:
+                        restricted = True
                     for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
                         f.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
         else:
@@ -720,8 +723,12 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
             for id in form_references:
                 form = forms[id]
                 if form.syntactic_category_string:
+                    if not restricted and "restricted" in [t.name for t in form.tags]:
+                        restricted = True
                     for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
                         f.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+    if restricted:
+        morpheme_language_model.restricted = True
     return language_model_corpus_path
 
 def write_arpa_language_model(morpheme_language_model, language_model_corpus_path, **kwargs):

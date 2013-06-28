@@ -53,6 +53,7 @@ class MorphemeLanguageModel(Base):
     smoothing = Column(Unicode(30))
     vocabulary_morphology_id = Column(Integer, ForeignKey('morphology.id'))
     vocabulary_morphology = relation('Morphology') # if specified, LM will use the lexicon of the morphology as the fixed vocabulary
+    restricted = Column(Boolean, default=False)
 
     def get_dict(self):
         return {
@@ -74,6 +75,7 @@ class MorphemeLanguageModel(Base):
             'toolkit': self.toolkit,
             'order': self.order,
             'smoothing': self.smoothing,
-            'vocabulary_morphology': self.get_mini_dict_for(self.vocabulary_morphology)
+            'vocabulary_morphology': self.get_mini_dict_for(self.vocabulary_morphology),
+            'restricted': self.restricted
         }
 
