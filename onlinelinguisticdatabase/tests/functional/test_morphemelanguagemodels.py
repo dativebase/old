@@ -52,7 +52,7 @@ class TestMorphemelanguagemodelsController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    #@nottest
+    @nottest
     def test_a_create(self):
         """Tests that POST /morphemelanguagemodels creates a new morphology.
 
@@ -214,7 +214,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['generate_message'] == u'Language model successfully generated.'
         assert resp['restricted'] == True # post file generation the LM should now be restricted because of the restricted Form.
 
-        # Attempt to get the ARPA file of the newly restricted LM as a viewer but expect to fail this time.
+        # Attempt to get the ARPA file of the LM as a viewer but expect to fail this time.
         response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_view, status=403)
         resp = json.loads(response.body)

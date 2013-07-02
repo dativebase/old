@@ -17,10 +17,8 @@
 .. module:: morphemelanguagemodels
    :synopsis: Contains the morpheme language models controller and its auxiliary functions.
 
-TODO: some kind of export or serve function to get the output file of the LM toolkit
+TODO: write tests for REST parts of parsers
 TODO: permit choice of morpheme vs category-based language models
-TODO: some kind of get_probability action that returns the probability of a word/sequence of morphemes based on the language model
-TODO: should have an attribute that allows the creation of class-based (i.e., category-based) LMs.
 
 """
 

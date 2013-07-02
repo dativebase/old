@@ -14,20 +14,18 @@
 
 import logging
 import os
-import sys
 import codecs
 from shutil import copyfileobj
-from time import time
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
-from sqlalchemy.sql import desc
 from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 from subprocess import call
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
+from onlinelinguisticdatabase.model import MorphologicalParser, MorphologicalParserBackup
+from sqlalchemy.sql import desc
 
 log = logging.getLogger(__name__)
 
@@ -65,8 +63,8 @@ class TestMorphologicalparsersController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    @nottest
-    def test(self):
+    #@nottest
+    def test_a_general(self):
         """General purpose test for morphological parsers.
         """
 
@@ -353,7 +351,276 @@ define phonology eDrop .o. breakDrop;
         # There is only one possible parse for transcription 1 -- it is de facto the most probable
         assert resp[transcription1] == transcription1_correct_parse
 
-    @nottest
+        # Create two more identical morphological parsers for later tests.
+        params = self.morphological_parser_create_params.copy()
+        params.update({
+            'name': u'Morphological parser for toy French 2',
+            'phonology': phonology_id,
+            'morphology': morphology_id,
+            'language_model': morpheme_language_model_id
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
+
+        params = self.morphological_parser_create_params.copy()
+        params.update({
+            'name': u'Morphological parser for toy French 3',
+            'phonology': phonology_id,
+            'morphology': morphology_id,
+            'language_model': morpheme_language_model_id
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
+
+        # Test that GET /morphologicalparsers returns all morphological parser resources.
+
+        morphological_parsers = Session.query(MorphologicalParser).all()
+
+        # Get all morphological parsers
+        response = self.app.get(url('morphologicalparsers'), headers=self.json_headers, extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert len(resp) == 3
+
+        # Test the paginator GET params.
+        paginator = {'items_per_page': 1, 'page': 1}
+        response = self.app.get(url('morphologicalparsers'), paginator, headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert len(resp['items']) == 1
+        assert resp['items'][0]['name'] == morphological_parsers[0].name
+        assert response.content_type == 'application/json'
+
+        # Test the order_by GET params.
+        order_by_params = {'order_by_model': 'MorphologicalParser', 'order_by_attribute': 'id',
+                     'order_by_direction': 'desc'}
+        response = self.app.get(url('morphologicalparsers'), order_by_params,
+                        headers=self.json_headers, extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp[0]['id'] == morphological_parsers[-1].id
+        assert response.content_type == 'application/json'
+
+        # Test the order_by *with* paginator.
+        params = {'order_by_model': 'MorphologicalParser', 'order_by_attribute': 'id',
+                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
+        response = self.app.get(url('morphologicalparsers'), params,
+                        headers=self.json_headers, extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert morphological_parsers[0].name == resp['items'][0]['name']
+
+        # Expect a 400 error when the order_by_direction param is invalid
+        order_by_params = {'order_by_model': 'MorphologicalParser', 'order_by_attribute': 'name',
+                     'order_by_direction': 'descending'}
+        response = self.app.get(url('morphologicalparsers'), order_by_params, status=400,
+            headers=self.json_headers, extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
+        assert response.content_type == 'application/json'
+
+        # Test that GET /morphologicalparsers/<id> works correctly.
+
+        # Try to get a morphological parser using an invalid id
+        id = 100000000000
+        response = self.app.get(url('morphologicalparser', id=id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert u'There is no morphological parser with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
+
+        # No id
+        response = self.app.get(url('morphologicalparser', id=''), status=404,
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
+
+        # Valid id
+        response = self.app.get(url('morphologicalparser', id=morphological_parsers[0].id), headers=self.json_headers,
+                                extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['name'] == morphological_parsers[0].name
+        assert resp['description'] == morphological_parsers[0].description
+        assert response.content_type == 'application/json'
+
+        # Tests that GET /morphologicalparsers/new and GET /morphologicalparsers/id/edit return 
+        # the data needed to create or update a morphological parser.
+
+        # Test GET /morphologicalparsers/new
+        response = self.app.get(url('new_morphologicalparser'), headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert len(resp['phonologies']) == 1
+        assert len(resp['morphologies']) == 1
+        assert len(resp['morpheme_language_models']) == 1
+
+        # Not logged in: expect 401 Unauthorized
+        response = self.app.get(url('edit_morphologicalparser', id=morphological_parsers[0].id), status=401)
+        resp = json.loads(response.body)
+        assert resp['error'] == u'Authentication is required to access this resource.'
+        assert response.content_type == 'application/json'
+
+        # Invalid id
+        id = 9876544
+        response = self.app.get(url('edit_morphologicalparser', id=id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin,
+            status=404)
+        assert u'There is no morphological parser with id %s' % id in json.loads(response.body)['error']
+        assert response.content_type == 'application/json'
+
+        # No id
+        response = self.app.get(url('edit_morphologicalparser', id=''), status=404,
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        assert json.loads(response.body)['error'] == 'The resource could not be found.'
+        assert response.content_type == 'application/json'
+
+        # Valid id
+        response = self.app.get(url('edit_morphologicalparser', id=morphological_parsers[0].id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['morphological_parser']['name'] == morphological_parsers[0].name
+        assert len(resp['data']['phonologies']) == 1
+        assert len(resp['data']['morphologies']) == 1
+        assert len(resp['data']['morpheme_language_models']) == 1
+        assert response.content_type == 'application/json'
+
+        # Tests that PUT /morphologicalparsers/id updates the morphological parser with id=id.
+
+        foma_installed = h.foma_installed(force_check=True)
+
+        morphological_parsers = [json.loads(json.dumps(m, cls=h.JSONOLDEncoder))
+            for m in Session.query(MorphologicalParser).all()]
+        morphological_parser_1_id = morphological_parsers[0]['id']
+        morphological_parser_1_name = morphological_parsers[0]['name']
+        morphological_parser_1_description = morphological_parsers[0]['description']
+        morphological_parser_1_modified = morphological_parsers[0]['datetime_modified']
+        morphological_parser_1_phonology_id = morphological_parsers[0]['phonology']['id']
+        morphological_parser_1_morphology_id = morphological_parsers[0]['morphology']['id']
+        morphological_parser_1_lm_id = morphological_parsers[0]['language_model']['id']
+        morphological_parser_count = len(morphological_parsers)
+        morphological_parser_1_dir = os.path.join(self.morphological_parsers_path, 'morphological_parser_%d' % morphological_parser_1_id)
+        morphological_parser_1_morphophonology_path = os.path.join(
+                morphological_parser_1_dir, 'morphophonology_%d.script' % morphological_parser_1_id)
+        if foma_installed:
+            morphology_1_morphophonology = codecs.open(morphological_parser_1_morphophonology_path,
+                    mode='r', encoding='utf8').read()
+
+        # Update the first morphological parser.
+        original_backup_count = Session.query(MorphologicalParserBackup).count()
+        params = self.morphology_create_params.copy()
+        params.update({
+            'name': morphological_parser_1_name,
+            'description': u'New description',
+            'phonology': morphological_parser_1_phonology_id,
+            'morphology': morphological_parser_1_morphology_id,
+            'language_model': morphological_parser_1_lm_id
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('morphologicalparser', id=morphological_parser_1_id), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        new_backup_count = Session.query(MorphologicalParserBackup).count()
+        datetime_modified = resp['datetime_modified']
+        new_morphological_parser_count = Session.query(MorphologicalParser).count()
+        assert morphological_parser_count == new_morphological_parser_count
+        assert datetime_modified != morphological_parser_1_modified
+        assert resp['description'] == u'New description'
+        assert response.content_type == 'application/json'
+        assert original_backup_count + 1 == new_backup_count
+        backup = Session.query(MorphologicalParserBackup).filter(
+            MorphologicalParserBackup.UUID==unicode(
+            resp['UUID'])).order_by(
+            desc(MorphologicalParserBackup.id)).first()
+        assert backup.datetime_modified.isoformat() == morphological_parser_1_modified
+        assert backup.description == morphological_parser_1_description
+        assert response.content_type == 'application/json'
+
+        # Attempt an update with no new input and expect to fail
+        response = self.app.put(url('morphologicalparser', id=morphological_parser_1_id), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        morphological_parser_count = new_morphological_parser_count
+        new_morphological_parser_count = Session.query(MorphologicalParser).count()
+        our_morphological_parser_datetime_modified = Session.query(
+                MorphologicalParser).get(morphological_parser_1_id).datetime_modified
+        assert our_morphological_parser_datetime_modified.isoformat() == datetime_modified
+        assert morphological_parser_count == new_morphological_parser_count
+        assert resp['error'] == u'The update request failed because the submitted data were not new.'
+        assert response.content_type == 'application/json'
+
+        # Update the first morphological parser again.
+        original_backup_count = new_backup_count
+        params = self.morphology_create_params.copy()
+        params.update({
+            'name': morphological_parser_1_name,
+            'description': u'Newer description',
+            'phonology': morphological_parser_1_phonology_id,
+            'morphology': morphological_parser_1_morphology_id,
+            'language_model': morphological_parser_1_lm_id
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('morphologicalparser', id=morphological_parser_1_id), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        new_backup_count = Session.query(MorphologicalParserBackup).count()
+        datetime_modified = resp['datetime_modified']
+        morphological_parser_count = new_morphological_parser_count
+        new_morphological_parser_count = Session.query(MorphologicalParser).count()
+        assert morphological_parser_count == new_morphological_parser_count
+        assert resp['description'] == u'Newer description'
+        assert response.content_type == 'application/json'
+        assert original_backup_count + 1 == new_backup_count
+        backup = Session.query(MorphologicalParserBackup).filter(
+            MorphologicalParserBackup.UUID==unicode(
+            resp['UUID'])).order_by(
+            desc(MorphologicalParserBackup.id)).first()
+        assert backup.datetime_modified.isoformat() == our_morphological_parser_datetime_modified.isoformat()
+        assert backup.description == u'New description'
+        assert response.content_type == 'application/json'
+
+        # Tests that GET /morphologicalparsers//id/history returns the morphological parser with id=id and its previous incarnations.
+
+        morphological_parser_1_backup_count = Session.query(MorphologicalParserBackup).count() # there should only be backups of parser #1
+        morphological_parsers = Session.query(MorphologicalParser).all()
+        morphological_parser_1_id = morphological_parsers[0].id
+        morphological_parser_1_UUID = morphological_parsers[0].UUID
+
+        # Now get the history of the first morphological parser (which was updated twice in ``test_update``.
+        response = self.app.get(
+            url(controller='morphologicalparsers', action='history', id=morphological_parser_1_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_view_appset)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert 'morphological_parser' in resp
+        assert 'previous_versions' in resp
+        assert len(resp['previous_versions']) == morphological_parser_1_backup_count
+
+        # Get the same history as above, except use the UUID
+        response = self.app.get(
+            url(controller='morphologicalparsers', action='history', id=morphological_parser_1_UUID),
+            headers=self.json_headers, extra_environ=self.extra_environ_view_appset)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert 'morphological_parser' in resp
+        assert 'previous_versions' in resp
+        assert len(resp['previous_versions']) == morphological_parser_1_backup_count
+
+        # Attempt to get the history with an invalid id and expect to fail
+        response = self.app.get(
+            url(controller='morphologicalparsers', action='history', id=123456789),
+            headers=self.json_headers, extra_environ=self.extra_environ_view_appset, status=404)
+        resp = json.loads(response.body)
+        assert response.content_type == 'application/json'
+        assert resp['error'] == u'No morphological parsers or morphological parser backups match 123456789'
+
+        # Test morphological parser deletion.
+
+        assert u'morphophonology_%s.script' % morphological_parser_1_id in os.listdir(morphological_parser_1_dir)
+        assert u'morphophonology_%s.foma' % morphological_parser_1_id in os.listdir(morphological_parser_1_dir)
+        response = self.app.delete(url('morphologicalparser', id=morphological_parser_1_id),
+                                   headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert not os.path.exists(morphological_parser_1_dir)
+        assert resp['description'] == u'Newer description'
+        assert resp['phonology']['id'] == morphological_parser_1_phonology_id
+
+    #@nottest
     def test_i_large_datasets(self):
         """Tests that morphological parser functionality works with large datasets.
 
@@ -685,12 +952,10 @@ define phonology eDrop .o. breakDrop;
         os.remove(tmp_script_path)
         os.remove(backup_dump_file_path)
 
-        # Write tests for index, show, new/edit, update and history
-        # The morpho parser as currently implemented encodes only a small subset of Bf morphology -- enlarge it!
         # Implement category-based class LMs and test them against morpheme-based ones.
         # Build multiple Bf morphological parsers and test them out, find the best one, write a paper on it!
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 

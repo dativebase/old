@@ -14,10 +14,8 @@
 
 import logging
 import os
-import sys
 import codecs
 from shutil import copyfileobj
-from time import time
 import simplejson as json
 from time import sleep
 from nose.tools import nottest

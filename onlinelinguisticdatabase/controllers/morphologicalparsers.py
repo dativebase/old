@@ -488,9 +488,13 @@ def get_most_probable_parse(language_model_trie, candidates, morpheme_splitter):
 
 def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new morphological parser or edit one."""
-    model_name_map = {'corpora': 'Corpus', 'phonologies': 'Phonology', 'morphologies': 'Morphology'}
+    model_name_map = {
+        'morpheme_language_models': 'MorphemeLanguageModel',
+        'phonologies': 'Phonology',
+        'morphologies': 'Morphology'
+    }
     getter_map = {
-        'corpora': h.get_mini_dicts_getter('Corpus'),
+        'morpheme_language_models': h.get_mini_dicts_getter('MorphemeLanguageModel'),
         'phonologies': h.get_mini_dicts_getter('Phonology'),
         'morphologies': h.get_mini_dicts_getter('Morphology')
     }
