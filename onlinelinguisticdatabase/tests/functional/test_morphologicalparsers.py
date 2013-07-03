@@ -63,7 +63,7 @@ class TestMorphologicalparsersController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    #@nottest
+    @nottest
     def test_a_general(self):
         """General purpose test for morphological parsers.
         """
@@ -620,7 +620,7 @@ define phonology eDrop .o. breakDrop;
         assert resp['description'] == u'Newer description'
         assert resp['phonology']['id'] == morphological_parser_1_phonology_id
 
-    #@nottest
+    @nottest
     def test_i_large_datasets(self):
         """Tests that morphological parser functionality works with large datasets.
 
@@ -955,7 +955,7 @@ define phonology eDrop .o. breakDrop;
         # Implement category-based class LMs and test them against morpheme-based ones.
         # Build multiple Bf morphological parsers and test them out, find the best one, write a paper on it!
 
-    #@nottest
+    @nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 
