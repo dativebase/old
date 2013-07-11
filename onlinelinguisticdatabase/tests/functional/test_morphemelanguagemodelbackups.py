@@ -31,7 +31,7 @@ class TestMorphemelanguagemodelbackupsController(TestController):
     def tearDown(self):
         TestController.tearDown(self, dirs_to_destroy=['morpheme_language_model'])
 
-    #@nottest
+    @nottest
     def test_index(self):
         """Tests that ``GET /morphemelanguagemodelbackups`` behaves correctly.
         """

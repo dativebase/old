@@ -438,7 +438,8 @@ class MorphologicalparsersController(BaseController):
             response.status_int = 400
             return {'error': 'Foma and flookup are not installed.'}
         morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-        morphological_parser_binary_path = h.get_model_file_path(morphological_parser, morphological_parser_dir_path, file_type='binary')
+        morphological_parser_binary_path = h.get_model_file_path(morphological_parser,
+                morphological_parser_dir_path, file_type='binary')
         if not os.path.isfile(morphological_parser_binary_path):
             response.status_int = 400
             return json.dumps({'error': 'The morphophonology foma script of '

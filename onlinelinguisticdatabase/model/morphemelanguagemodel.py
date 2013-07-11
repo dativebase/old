@@ -54,6 +54,7 @@ class MorphemeLanguageModel(Base):
     vocabulary_morphology_id = Column(Integer, ForeignKey('morphology.id'))
     vocabulary_morphology = relation('Morphology') # if specified, LM will use the lexicon of the morphology as the fixed vocabulary
     restricted = Column(Boolean, default=False)
+    categorial = Column(Boolean, default=False) # if True, the model will be built over sequences of categories, not morphemes
 
     def get_dict(self):
         return {
@@ -76,6 +77,7 @@ class MorphemeLanguageModel(Base):
             'order': self.order,
             'smoothing': self.smoothing,
             'vocabulary_morphology': self.get_mini_dict_for(self.vocabulary_morphology),
-            'restricted': self.restricted
+            'restricted': self.restricted,
+            'categorial': self.categorial
         }
 

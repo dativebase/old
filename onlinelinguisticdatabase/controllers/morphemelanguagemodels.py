@@ -315,7 +315,8 @@ class MorphemelanguagemodelsController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
                 splitter = re.compile('\s+')
-                morpheme_sequences = [(morpheme_sequence, [h.lm_start] + splitter.split(morpheme_sequence) + [h.lm_end])
+                morpheme_sequences = [(morpheme_sequence,
+                                       [h.lm_start] + splitter.split(morpheme_sequence) + [h.lm_end])
                         for morpheme_sequence in data['morpheme_sequences']]
                 morpheme_language_model_dir_path = h.get_model_directory_path(morpheme_language_model, config)
                 lm_pickle_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_dir_path, file_type='lm_trie')
@@ -454,6 +455,7 @@ def create_new_morpheme_language_model(data):
     morpheme_language_model.toolkit = data['toolkit']
     morpheme_language_model.order = data['order']
     morpheme_language_model.smoothing = data['smoothing']
+    morpheme_language_model.categorial = data['categorial']
     return morpheme_language_model
 
 def update_morpheme_language_model(morpheme_language_model, data):
@@ -473,6 +475,7 @@ def update_morpheme_language_model(morpheme_language_model, data):
     changed = h.set_attr(morpheme_language_model, 'toolkit', data['toolkit'], changed)
     changed = h.set_attr(morpheme_language_model, 'order', data['order'], changed)
     changed = h.set_attr(morpheme_language_model, 'smoothing', data['smoothing'], changed)
+    changed = h.set_attr(morpheme_language_model, 'categorial', data['categorial'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morpheme_language_model.modifier = session['user']

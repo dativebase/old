@@ -1185,3 +1185,4 @@ class MorphemeLanguageModelSchema(Schema):
     toolkit = OneOf(h.language_model_toolkits.keys(), not_empty=True)
     order = Int(min=2, max=5)
     smoothing = UnicodeString(max=30)
+    categorial = StringBoolean()

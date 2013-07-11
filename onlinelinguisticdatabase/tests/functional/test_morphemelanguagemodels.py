@@ -193,7 +193,8 @@ class TestMorphemelanguagemodelsController(TestController):
         response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_view)
         assert response.content_type == u'text/plain'
-        assert 'parle%sspeak' % h.rare_delimiter in response.body
+        arpa = unicode(response.body, encoding='utf8')
+        assert u'parle%sspeak' % h.rare_delimiter in arpa
 
         # Restrict the first sentential form -- relevant for testing the restriction percolation into LMs.
         sentence1 = Session.query(model.Form).filter(model.Form.syntactic_category.has(
@@ -225,8 +226,8 @@ class TestMorphemelanguagemodelsController(TestController):
         response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         assert response.content_type == u'text/plain'
-        assert resp == h.unauthorized_msg
-        assert 'parle%sspeak' % h.rare_delimiter in response.body
+        arpa = unicode(response.body, encoding='utf8')
+        assert 'parle%sspeak' % h.rare_delimiter in arpa
 
         # Get some probabilities
         likely_word = u'chat%scat s%sPL' % (h.rare_delimiter, h.rare_delimiter)
@@ -282,7 +283,7 @@ class TestMorphemelanguagemodelsController(TestController):
         # Compute the perplexity of the language model just created/generated.  This request will cause
         # the system to automatically split the corpus of the LM into 5 distinct, randomly generated
         # training (90%) and test (10%) sets and compute the perplexity of each test set according to 
-        # the LM generated from its training set and return the average of these 5 perplexity calculations..
+        # the LM generated from its training set and return the average of these 5 perplexity calculations.
         response = self.app.put(url(controller='morphemelanguagemodels', action='compute_perplexity', id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -327,6 +328,84 @@ class TestMorphemelanguagemodelsController(TestController):
         resp = json.loads(response.body)
         assert resp['errors'] == u'The LM toolkit mitlm implements no such smoothing algorithm strawberry.'
 
+        # Create a category-based morpheme language model.
+        name = u'Category-based mMorpheme language model'
+        params = self.morpheme_language_model_create_params.copy()
+        params.update({
+            'categorial': True,
+            'name': name,
+            'corpus': sentential_corpus_id,
+            'toolkit': 'mitlm',
+            'order': 4,
+            'smoothing': 'FixKN'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphemelanguagemodels'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morpheme_language_model_id = resp['id']
+        assert resp['name'] == name
+        assert resp['toolkit'] == u'mitlm'
+        assert resp['order'] == 4
+        assert resp['smoothing'] == u'FixKN'
+        assert resp['categorial'] == True
+
+        # Generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1,
+                vocal=True, task_descr='generate categorial MLM')
+
+        # Get the ARPA file of the LM.
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        assert response.content_type == u'text/plain'
+        arpa = unicode(response.body, encoding='utf8')
+
+        # The ARPA-formatted LM file will contain (at least) these category-based bi/trigrams:
+        assert u'D PHI' in arpa
+        assert u'N PHI' in arpa
+        assert u'V AGR' in arpa
+        assert u'<s> V AGR' in arpa
+
+        # Get the probabilities of our likely and unlikely words based on their category
+        likely_word = u'N PHI'
+        unlikely_word = u'PHI N'
+        ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
+        response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities',
+            id=morpheme_language_model_id), ms_params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        likely_word_log_prob = resp[likely_word]
+        unlikely_word_log_prob = resp[unlikely_word]
+        assert likely_word_log_prob > unlikely_word_log_prob
+
+        # Compute the perplexity of the category-based language model.
+        response = self.app.put(url(controller='morphemelanguagemodels', action='compute_perplexity',
+            id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_perplexity_attempt = resp['perplexity_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until perplexity_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'perplexity_attempt', lm_perplexity_attempt, log, wait=1, vocal=False)
+        perplexity = resp['perplexity']
+        log.debug('Perplexity of super toy french (6 sentence corpus, category-based, FixKN, n=4): %s' % perplexity)
+
+        # TODO: alter morphological_parser so that it can handle category-based LMs
+            # morphologies need to include category names on the lower side of the tape
+            # morpheme language models need to range over m|g|c triples, not just m|g doubles.
+            # get_most_probable_parse in morphologicalparsers controller needs minor tweaking.
+        # TODO: look into backoff to category: implementation via another LM toolkit order_by
+        #  roll my own by creating two LMs (one categorial, one not) and synthesizing them
+        # TODO: parse Blackfoot and report on results.
+
     @nottest
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
@@ -336,7 +415,7 @@ class TestMorphemelanguagemodelsController(TestController):
         # Get all morpheme_language_models
         response = self.app.get(url('morphemelanguagemodels'), headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == 2
+        assert len(resp) == 3
 
         # Test the paginator GET params.
         paginator = {'items_per_page': 1, 'page': 1}
@@ -358,7 +437,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Test the order_by *with* paginator.
         params = {'order_by_model': 'MorphemeLanguageModel', 'order_by_attribute': 'id',
-                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 2}
+                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
         response = self.app.get(url('morphemelanguagemodels'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -554,7 +633,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    @nottest
+    #@nottest
     def test_i_large_datasets(self):
         """Tests that morpheme language model functionality works with large datasets.
 
@@ -616,7 +695,7 @@ class TestMorphemelanguagemodelsController(TestController):
         # Create a corpus of forms containing words -- to be used to estimate ngram probabilities
         # The goal here is to exclude things that look like words but are not really words, i.e., 
         # morphemes; as a heuristic we search for grammatical forms categorized as 'sent' or whose
-        # transcription value contains a space or a dash.
+        # transcription value contains a space or a hyphen-minus.
         query = {'filter': ['and', [['or', [['Form', 'syntactic_category', 'name', '=', u'sent'],
                                             ['Form', 'morpheme_break', 'like', '% %'],
                                             ['Form', 'morpheme_break', 'like', '%-%']]],
@@ -639,6 +718,10 @@ class TestMorphemelanguagemodelsController(TestController):
         params = json.dumps(params)
         response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
         words_corpus_id = json.loads(response.body)['id']
+
+        ################################################################################
+        # LM 1 -- trigram, ModKN
+        ################################################################################
 
         # Now create a morpheme language model using the corpus of forms containing words
         # Note that the default smoothing algorithm will be ModKN and the order will be 3
@@ -702,7 +785,72 @@ class TestMorphemelanguagemodelsController(TestController):
             morpheme_language_model_id, word_count, perplexity))
 
         ################################################################################
-        # MORPHOLOGY
+        # LM 2 -- trigram, ModKN, category-based
+        ################################################################################
+
+        # Recreate the above-created LM except make it category-based.
+        name = u'Category-based morpheme language model for Blackfoot'
+        params = self.morpheme_language_model_create_params.copy()
+        params.update({
+            'categorial': True,
+            'name': name,
+            'corpus': words_corpus_id,
+            'toolkit': u'mitlm'
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphemelanguagemodels'), params, self.json_headers, self.extra_environ_admin_appset)
+        resp = json.loads(response.body)
+        morpheme_language_model_id = resp['id']
+        assert resp['name'] == name
+        assert resp['toolkit'] == u'mitlm'
+
+        # Generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log)
+        assert resp['generate_message'] == u'Language model successfully generated.'
+
+        # Get some probabilities: agra-vai should be more probable than vai-agra
+        likely_category_word = u'agra vai'
+        unlikely_category_word = u'vai agra'
+        ms_params = json.dumps({'morpheme_sequences': [likely_category_word, unlikely_category_word]})
+        response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities', id=morpheme_language_model_id),
+            ms_params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        likely_category_word_log_prob = resp[likely_category_word]
+        unlikely_category_word_log_prob = resp[unlikely_category_word]
+        assert pow(10, likely_category_word_log_prob) > pow(10, unlikely_category_word_log_prob)
+
+        # Compute the perplexity of the LM 
+        response = self.app.put(url(controller='morphemelanguagemodels', action='compute_perplexity', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_perplexity_attempt = resp['perplexity_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until perplexity_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'perplexity_attempt', lm_perplexity_attempt, log)
+        category_based_perplexity = resp['perplexity']
+
+        # count how many words constitute the corpus.
+        lm_corpus_path = os.path.join(self.morpheme_language_models_path, 'morpheme_language_model_%s' % morpheme_language_model_id,
+                'morpheme_language_model_%s.txt' % morpheme_language_model_id)
+        word_count = 0
+        with codecs.open(lm_corpus_path, encoding='utf8') as f:
+            for line in f:
+                word_count += 1
+        log.debug('Perplexity of Blackfoot category-based LM %s (%s sentence corpus, ModKN, n=3): %s' % (
+            morpheme_language_model_id, word_count, category_based_perplexity))
+
+        ################################################################################
+        # MORPHOLOGY -- we'll use it to specify a fixed vocabulary for subsequent LMs.
         ################################################################################
 
         # Create a form search that finds lexical items (i.e., Blackfoot morphemes) and make a corpus out of it.
@@ -735,9 +883,9 @@ class TestMorphemelanguagemodelsController(TestController):
         response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
         lexicon_corpus_id = json.loads(response.body)['id']
 
-        # Create a corpus of forms containing blackfoot words and use it to create a corpus of word-containing forms.
-        # The goal here is to find forms that are explicitly sentences or that contain spaces or morpheme 
-        # delimiters in their morpheme break fields.
+        # Create a form search of forms containing blackfoot words and use it to create a corpus of
+        # word-containing forms.  The goal here is to find forms that are explicitly sentences or that
+        # contain spaces or morpheme delimiters in their morpheme break fields.
         query = {'filter': ['and', [['or', [['Form', 'syntactic_category', 'name', '=', u'sent'],
                                             ['Form', 'morpheme_break', 'like', '%-%'],
                                             ['Form', 'morpheme_break', 'like', '% %']]],
@@ -822,7 +970,7 @@ class TestMorphemelanguagemodelsController(TestController):
         # vocabulary.
 
         ################################################################################
-        # LANGUAGE MODEL (AGAIN)
+        # LM 3 -- trigram, ModKN, fixed vocab
         ################################################################################
 
         # Create the morpheme language model with a vocabulary_morphology value
@@ -883,8 +1031,76 @@ class TestMorphemelanguagemodelsController(TestController):
         log.debug('Perplexity of Blackfoot LM %s (%s sentence corpus, ModKN, n=3, fixed vocabulary): %s' % (
             morpheme_language_model_id, word_count, new_perplexity))
 
+        ################################################################################
+        # LM 4 -- trigram, ModKN, fixed vocab, categorial
+        ################################################################################
+
+        # Create a fixed vocabulary LM that is category-based.
+        name = u'Categorial morpheme language model for Blackfoot with fixed vocabulary'
+        params = self.morpheme_language_model_create_params.copy()
+        params.update({
+            'name': name,
+            'corpus': words_corpus_id,
+            'toolkit': u'mitlm',
+            'vocabulary_morphology': morphology_id,
+            'categorial': True
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphemelanguagemodels'), params, self.json_headers, self.extra_environ_admin_appset)
+        resp = json.loads(response.body)
+        morpheme_language_model_id = resp['id']
+        assert resp['name'] == name
+        assert resp['toolkit'] == u'mitlm'
+        assert resp['vocabulary_morphology']['name'] == morphology_name
+
+        # Generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate', id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log)
+
+        # Get some probabilities: agra-vai should be more probable than vai-agra
+        ms_params = json.dumps({'morpheme_sequences': [likely_category_word, unlikely_category_word]})
+        response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities', id=morpheme_language_model_id),
+            ms_params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        new_likely_category_word_log_prob = resp[likely_category_word]
+        new_unlikely_category_word_log_prob = resp[unlikely_category_word]
+        assert pow(10, new_likely_category_word_log_prob) > pow(10, new_unlikely_category_word_log_prob)
+        assert new_unlikely_category_word_log_prob != unlikely_category_word_log_prob
+        assert new_likely_category_word_log_prob != likely_category_word_log_prob
+
+        # Compute the perplexity of the LM 
+        response = self.app.put(url(controller='morphemelanguagemodels', action='compute_perplexity',
+            id=morpheme_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_perplexity_attempt = resp['perplexity_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until perplexity_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=morpheme_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'perplexity_attempt', lm_perplexity_attempt, log,
+            task_descr='GET PERPLEXITY OF LM %s' % morpheme_language_model_id)
+        new_category_based_perplexity = resp['perplexity']
+
+        assert new_category_based_perplexity < category_based_perplexity
+        log.debug('Perplexity of Blackfoot LM %s (%s sentence corpus, ModKN, n=3, '
+            'fixed vocabulary, category-based): %s' % (
+            morpheme_language_model_id, word_count, new_category_based_perplexity))
+
+        ################################################################################
+        # LM 5 -- trigram, ModKN, fixed vocab, corpus weighted towards 'nit-ihpiyi'
+        ################################################################################
+
         # Create a language model built on a corpus that contains multiple tokens of certain
-        # forms.  This allows us to tinker with the probabilities.
+        # forms.  This allows us to tinker with the probabilities.  In this specific case,
+        # I stack the corpus with forms containing 'nit|1-ihpiyi|dance'.
 
         # First get the ids of the forms in the corpus
         query = json.dumps({'query': {'filter': ['Form', 'corpora', 'id', '=', words_corpus_id]}})
@@ -966,6 +1182,7 @@ class TestMorphemelanguagemodelsController(TestController):
         log.debug('Perplexity of Blackfoot LM %s (%s sentence corpus, ModKN, n=3, fixed vocabulary, corpus weighted towards nit-ihpiyi): %s' %
                 (morpheme_language_model_id, word_count, newest_perplexity))
 
+        """
         # Finally, load the original database back in so that subsequent tests can work.
         with open(tmp_script_path, 'w') as tmpscript:
             tmpscript.write('#!/bin/sh\nmysql -u %s -p%s %s < %s' % (username, password, db_name, backup_dump_file_path))
@@ -974,6 +1191,7 @@ class TestMorphemelanguagemodelsController(TestController):
         os.remove(tmp_script_path)
         os.remove(backup_dump_file_path)
 
+        """
         sleep(1) # If I don't sleep here I get an odd thread-related error (conditional upon
         # this being the last test to be run, I think)...
 

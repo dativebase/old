@@ -251,7 +251,8 @@ class TestController(TestCase):
             'vocabulary_morphology': u'',
             'toolkit': u'',
             'order': u'',
-            'smoothing': u''
+            'smoothing': u'',
+            'categorial': False
         }
         self.morphology_create_params = {
             'name': u'',

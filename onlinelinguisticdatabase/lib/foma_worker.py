@@ -13,11 +13,11 @@
 #  limitations under the License.
 
 """This module contains some multithreading worker and queue logic plus the functionality -- related
-to foma compilation ang LM estimation -- that the worther thread initiates.  Foma worker thread and queue for the OLD.
+to foma compilation ang LM estimation -- that the worther thread initiates.
 
 The the foma worker compiles foma FST phonology, morphology and morphophonology scripts
 and estimates morpheme language models.  Having a worker perform these tasks in a separate
-thread from that processing the request allows us to immediately respond to the user.
+thread from that processing the HTTP request allows us to immediately respond to the user.
 
 The foma worker can only run a callable that is a global in
 :mod:`onlinelinguisticdatabase.lib.foma_worker` and which takes keyword arguments.
@@ -694,7 +694,11 @@ def write_morpheme_language_model_files(**kwargs):
     Session.commit()
 
 def write_language_model_corpus(morpheme_language_model, morpheme_language_model_path, morpheme_delimiters):
-    """Write a word corpus text file using the LM's corpus where each line is a word whose morphemes (in m|g format) are space-delimited.
+    """Write a word corpus text file using the LM's corpus where each line is a word.
+
+    If the LM is categorial, the word is represented as a space-delimited list of category names
+    corresponding to the categories of the morphemes of the word; otherwise, it is represented as 
+    a space-delimited list of morphemes in shape|gloss format.
 
     :param instance morpheme_language_model: a morpheme language model object.
     :param str morpheme_language_model_path: absolute path to the directory of the morpheme LM.
@@ -704,7 +708,8 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
         to ``True``.  This will prevent restricted users from accessing the source files.
 
     """
-    language_model_corpus_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='lm_corpus')
+    language_model_corpus_path = h.get_model_file_path(morpheme_language_model,
+            morpheme_language_model_path, file_type='lm_corpus')
     splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
     corpus = morpheme_language_model.corpus
     forms = corpus.forms
@@ -715,8 +720,12 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
                 if form.syntactic_category_string:
                     if not restricted and "restricted" in [t.name for t in form.tags]:
                         restricted = True
-                    for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                        f.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+                    if morpheme_language_model.categorial:
+                        for category_word in form.syntactic_category_string.split():
+                            f.write(get_lm_category_corpus_entry(category_word, splitter))
+                    else:
+                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                            f.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
         else:
             form_references = h.get_form_references(corpus.content)
             forms = dict((f.id, f) for f in forms)
@@ -725,8 +734,12 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
                 if form.syntactic_category_string:
                     if not restricted and "restricted" in [t.name for t in form.tags]:
                         restricted = True
-                    for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                        f.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+                    if morpheme_language_model.categorial:
+                        for category_word in form.syntactic_category_string.split():
+                            f.write(get_lm_category_corpus_entry(category_word, splitter))
+                    else:
+                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                            f.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
     if restricted:
         morpheme_language_model.restricted = True
     return language_model_corpus_path
@@ -779,7 +792,7 @@ def arpa2pickle(arpa_file_path, pickle_file_path):
     cPickle.dump(language_model_trie, open(pickle_file_path, 'wb'))
 
 def write_vocabulary(morpheme_language_model, morpheme_language_model_path, morphology_path):
-    """Write the lexicon of ``vocabulary_morphology`` to file in the language model's directory and return the path.
+    """Write the lexicon of the LM's vocabulary morphology to file in the language model's directory and return the path.
 
     The format of the vocabulary file written is the same as the output of MITLM's
     ``estimate-ngram -t corpus -write-vocab vocab``, i.e., one word/morpheme per line.
@@ -794,18 +807,23 @@ def write_vocabulary(morpheme_language_model, morpheme_language_model_path, morp
     morphology_lexicon_path = h.get_model_file_path(vocabulary_morphology, morphology_path, file_type='lexicon')
     if not os.path.isfile(morphology_lexicon_path):
         return None
+    # A pickled morphology lexicon is a dict with categories as keys and lists of
+    # (morpheme_form, morpheme_gloss) tuples as values.
     lexicon = cPickle.load(open(morphology_lexicon_path, 'rb'))
     with codecs.open(vocabulary_path, mode='w', encoding='utf8') as f:
         f.write(u'%s\n' % h.lm_start)    # write <s> as a vocabulary item
-        for morpheme_list in lexicon.values():
-            for morpheme_form, morpheme_gloss in morpheme_list:
-                f.write(u'%s%s%s\n' % (morpheme_form, h.rare_delimiter, morpheme_gloss))
+        if morpheme_language_model.categorial:
+            for category in lexicon:
+                f.write(u'%s\n' % category)
+        else:
+            for morpheme_list in lexicon.values():
+                for morpheme_form, morpheme_gloss in morpheme_list:
+                    f.write(u'%s%s%s\n' % (morpheme_form, h.rare_delimiter, morpheme_gloss))
         f.write(u'\n')
     return vocabulary_path
 
 def evaluate_morpheme_language_model(**kwargs):
-    """Use the LM toolkit to calculate the perplexity of the LM by dividing its corpus of words into
-    training and test sets.
+    """Evaluate the LM by attempting to calculate its perplexity and changing some attribute values to reflect the attempt.
     """
     morpheme_language_model = Session.query(model.MorphemeLanguageModel).\
             get(kwargs['morpheme_language_model_id'])
@@ -833,6 +851,13 @@ def evaluate_morpheme_language_model(**kwargs):
     Session.commit()
 
 def compute_perplexity(**kwargs):
+    """Compute the perplexity of ``kwargs['morpheme_language_model']`` and return it.
+
+    The method used is to create ``kwargs['n']`` training/test set pairs, compute the perplexity
+    of each test set based on an LM generated from its training set and return the average
+    perplexity value.
+
+    """
     morpheme_language_model = kwargs['morpheme_language_model']
     morpheme_language_model_path = kwargs['morpheme_language_model_path']
     timeout = kwargs['timeout']
@@ -840,7 +865,7 @@ def compute_perplexity(**kwargs):
     log_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path, file_type='log')
     # estimate-ngram -t training_set_path -wl training_set_lm_path -eval-perp test_set_path
     perplexities = []
-    temp_paths = []
+    temp_paths = [] # will hold the paths to all the temporary files that we delete below.
     morpheme_delimiters = h.get_morpheme_delimiters()
     splitter = u'[%s]' % ''.join(map(h.esc_RE_meta_chars, morpheme_delimiters))
     if morpheme_language_model.toolkit == 'mitlm':
@@ -884,13 +909,35 @@ def extract_perplexity(output):
     except Exception:
         return None
 
-def get_lm_corpus_entry(morpheme_word, gloss_word, splitter):
-    """Return a string of morphemes space-delimited in m|g format where "|" is ``h.rare_delimiter``.
+def get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter):
+    """Return a string of morphemes, space-delimited in m|g format where "|" is ``h.rare_delimiter``.
+
+    :param func splitter: function that splits words into their component morphemes.
+
     """
     return '%s\n' % u' '.join('%s%s%s' % (morpheme, h.rare_delimiter, gloss) for morpheme, gloss in
         zip(re.split(splitter, morpheme_word), re.split(splitter, gloss_word)))
 
+def get_lm_category_corpus_entry(category_word, splitter):
+    """Return a string of morpheme category names, space-delimited.
+
+    :param func splitter: function that splits words into their component morphemes.
+
+    """
+    return u'%s\n' % u' '.join(re.split(splitter, category_word))
+
 def write_training_test_sets(morpheme_language_model, morpheme_language_model_path, i, splitter):
+    """Divide the words implicit in the LM's corpus into randomly sampled training and test sets and write them to disk with the suffix ``i``.
+    Use the toolkit of the morpheme language model to generate an ARPA-formatted LM for the training set.
+
+    :param instance morpheme_language_model: a LM model object.
+    :param str morpheme_language_model_path: absolute path to the LM's directory.
+    :param int i: index used in naming the test and training sets.
+    :param func splitter: function that splits a word into its component morphemes.
+    :returns: a triple of strings: the absolute paths to the training and test sets and
+      the path to the training set's ARPA-formatted LM.
+
+    """
     template_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_path)
     test_set_path = '%s_test_%s.txt' % (template_path, i)
     training_set_path = '%s_training_%s.txt' % (template_path, i)
@@ -904,22 +951,38 @@ def write_training_test_sets(morpheme_language_model, morpheme_language_model_pa
             if corpus.form_search:
                 for form in forms:
                     if form.syntactic_category_string:
-                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                            r = random.choice(population)
-                            if r == test_index:
-                                f_test.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
-                            else:
-                                f_training.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+                        if morpheme_language_model.categorial:
+                            for category_word in form.syntactic_category_string.split():
+                                r = random.choice(population)
+                                if r == test_index:
+                                    f_test.write(get_lm_category_corpus_entry(category_word, splitter))
+                                else:
+                                    f_training.write(get_lm_category_corpus_entry(category_word, splitter))
+                        else:
+                            for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                                r = random.choice(population)
+                                if r == test_index:
+                                    f_test.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                                else:
+                                    f_training.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
             else:
                 form_references = h.get_form_references(corpus.content)
                 forms = dict((f.id, f) for f in forms)
                 for id in form_references:
                     form = forms[id]
                     if form.syntactic_category_string:
-                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                            r = random.choice(population)
-                            if r == test_index:
-                                f_test.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
-                            else:
-                                f_training.write(get_lm_corpus_entry(morpheme_word, gloss_word, splitter))
+                        if morpheme_language_model.categorial:
+                            for category_word in form.syntactic_category_string.split():
+                                r = random.choice(population)
+                                if r == test_index:
+                                    f_test.write(get_lm_category_corpus_entry(category_word, splitter))
+                                else:
+                                    f_training.write(get_lm_category_corpus_entry(category_word, splitter))
+                        else:
+                            for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                                r = random.choice(population)
+                                if r == test_index:
+                                    f_test.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                                else:
+                                    f_training.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
     return training_set_path, test_set_path, training_set_lm_path

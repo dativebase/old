@@ -51,6 +51,7 @@ class MorphemeLanguageModelBackup(Base):
     smoothing = Column(Unicode(30))
     vocabulary_morphology = Column(UnicodeText)
     restricted = Column(Boolean)
+    categorial = Column(Boolean)
 
     def vivify(self, morpheme_language_model_dict):
         """The vivify method gives life to a morpheme language model backup by specifying its
@@ -78,6 +79,7 @@ class MorphemeLanguageModelBackup(Base):
         self.smoothing = morpheme_language_model_dict['smoothing']
         self.vocabulary_morphology = unicode(json.dumps(morpheme_language_model_dict['vocabulary_morphology']))
         self.restricted = morpheme_language_model_dict['restricted']
+        self.categorial = morpheme_language_model_dict['categorial']
 
     def get_dict(self):
         return {
@@ -101,6 +103,7 @@ class MorphemeLanguageModelBackup(Base):
             'order': self.order,
             'smoothing': self.smoothing,
             'vocabulary_morphology': self.json_loads(self.vocabulary_morphology),
-            'restricted': self.restricted
+            'restricted': self.restricted,
+            'categorial': self.categorial
         }
 
