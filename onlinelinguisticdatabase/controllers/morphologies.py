@@ -465,6 +465,7 @@ def create_new_morphology(data):
     morphology.script_type = data['script_type']
     morphology.extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus']
     morphology.rules = data['rules']
+    morphology.rich_morphemes = data['rich_morphemes']
     return morphology
 
 def update_morphology(morphology, data):
@@ -484,6 +485,7 @@ def update_morphology(morphology, data):
     changed = h.set_attr(morphology, 'script_type', data['script_type'], changed)
     changed = h.set_attr(morphology, 'extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
     changed = h.set_attr(morphology, 'rules', data['rules'], changed)
+    changed = h.set_attr(morphology, 'rich_morphemes', data['rich_morphemes'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']

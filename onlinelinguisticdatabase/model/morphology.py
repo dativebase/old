@@ -50,6 +50,7 @@ class Morphology(Base):
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
     rules_generated = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces -- system-generated value
     rules = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces -- user-generated value
+    rich_morphemes = Column(Boolean, default=False) # if True, m=<f|g|c>, else m=f
 
     def get_dict(self):
         return {
@@ -70,5 +71,6 @@ class Morphology(Base):
             'generate_attempt': self.generate_attempt,
             'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus,
             'rules': self.rules,
-            'rules_generated': self.rules_generated
+            'rules_generated': self.rules_generated,
+            'rich_morphemes': self.rich_morphemes
         }

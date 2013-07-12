@@ -328,6 +328,11 @@ def generate_and_compile_morphology_script(**kwargs):
     morphology = Session.query(model.Morphology).get(morphology_id)
     morpheme_delimiters = h.get_morpheme_delimiters()
     rules, lexicon = get_rules_and_lexicon(morphology, morpheme_delimiters)
+    if morphology.rich_morphemes:
+        # If necessary, create a dictionary interface to the lexicon and pickle it
+        dictionary = get_dictionary(lexicon)
+        dictionary_path = h.get_model_file_path(morphology, script_dir_path, 'dictionary')
+        cPickle.dump(dictionary, open(dictionary_path, 'wb'))
     kwargs.update({
         'model_object': morphology,
         'morphology': morphology,
@@ -351,6 +356,23 @@ def generate_and_compile_morphology_script(**kwargs):
     morphology.modifier_id = kwargs['user_id']
     morphology.datetime_modified = h.now()
     Session.commit()
+
+def get_dictionary(lexicon):
+    """Return a dictionary of lexical items, i.e., a mapping from morpheme forms to lists of gloss, category 2-tuples.
+
+    :param dict lexicon: keys are categories and values are lists of 2-tuples of the form <form, gloss>.
+
+    This function need only be called if ``rich_morphemes`` is set to ``False``, in which case 
+    the morphology will parse, e.g., chien-s to chien-s and the dictionary will be needed
+    to ambiguate the parse into richer representations, e.g.,
+    ['chien|dog|N-s|PL|Num', 'chien|dog|N-s|plrl|Phi'].
+
+    """
+    dictionary = {}
+    for category, data in lexicon.iteritems():
+        for form, gloss in data:
+            dictionary.setdefault(form, []).append((gloss, category))
+    return dictionary
 
 def get_rules_and_lexicon(morphology, morpheme_delimiters):
     try:
@@ -486,12 +508,14 @@ def get_morphology_generator(morphology, pos_sequences, morphemes, morpheme_deli
     :returns: generator object that yields lines of a foma morphology script
 
     """
+    rich_morphemes = morphology.rich_morphemes
     if morphology.script_type == 'lexc':
-        return get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters)
+        return get_lexc_morphology_generator(morphemes, pos_sequences,
+                morpheme_delimiters, rich_morphemes)
     else:
-        return get_regex_morphology_generator(morphemes, pos_sequences)
+        return get_regex_morphology_generator(morphemes, pos_sequences, rich_morphemes)
 
-def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters):
+def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters, rich_morphemes):
     """Return a generator that yields lines of a foma script representing the morphology using the lexc formalism,
     cf. https://code.google.com/p/foma/wiki/MorphologicalAnalysisTutorial.
 
@@ -505,23 +529,23 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters)
     as the following continuation classes MD5('-V-Agr') MD5('V-Agr') MD5('-Agr') MD5('Agr')
 
     """
-    def pos_sequence_2_lexicon_name(pos_sequence, morpheme_delimiters):
+    def pos_sequence_2_lexicon_name(pos_sequence):
         """Return a foma lexc lexicon name for the tuple of categories and delimiters; output is an MD5 hash."""
         return hashlib.md5(u''.join(pos_sequence).encode('utf8')).hexdigest()
 
-    def get_lexicon_entries_generator(pos_sequence, morphemes, morpheme_delimiters):
+    def get_lexicon_entries_generator(pos_sequence, morphemes, morpheme_delimiters, rich_morphemes):
         """Return a generator that yields a line for each entry in a lexc LEXICON based on a POS sequence.
 
         :param tuple pos_sequence: something like ('N', '-', 'Ninf') or ('-', 'Ninf').
         :param dict morphemes: {'N': [(u'chien', u'dog'), (u'chat', u'cat'), ...], 'V': ...}
         :param list morpheme_delimiters: the morpheme delimiters defined in the application settings.
-        :yields: lines that compries the entries in a foma lexc LEXICON declaration.
+        :yields: lines that comprise the entries in a foma lexc LEXICON declaration.
 
         """
         if len(pos_sequence) == 1:
             next_class = u'#'
         else:
-            next_class = pos_sequence_2_lexicon_name(pos_sequence[1:], morpheme_delimiters)
+            next_class = pos_sequence_2_lexicon_name(pos_sequence[1:])
         first_element = pos_sequence[0]
         if first_element in morpheme_delimiters:
             yield u'%s %s;\n' % (first_element, next_class)
@@ -529,8 +553,14 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters)
             our_morphemes = morphemes.get(first_element, [])
             for form, gloss in our_morphemes:
                 form = h.escape_foma_reserved_symbols(form)
-                gloss = h.escape_foma_reserved_symbols(gloss)
-                yield u'%s%s%s:%s %s;\n' % (form, h.rare_delimiter, gloss, form, next_class)
+                # Rich morphemes means m=<f|g|c>, impoverished means m=f
+                if rich_morphemes:
+                    gloss = h.escape_foma_reserved_symbols(gloss)
+                    category_name = h.escape_foma_reserved_symbols(first_element)
+                    yield u'%s%s%s%s%s:%s %s;\n' % (form, h.rare_delimiter, gloss, h.rare_delimiter,
+                        category_name, form, next_class)
+                else:
+                    yield u'%s %s;\n' % (form, next_class)
         yield u'\n\n'
 
     # I was declaring all morpheme glosses as multi-character symbols in the lexc foma script but
@@ -548,7 +578,7 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters)
     roots = []
     continuation_classes = set()
     for sequence in pos_sequences:
-        roots.append(pos_sequence_2_lexicon_name(sequence, morpheme_delimiters))
+        roots.append(pos_sequence_2_lexicon_name(sequence))
         for index in range(len(sequence)):
             continuation_classes.add(sequence[index:])
     continuation_classes = sorted(continuation_classes, key=len, reverse=True)
@@ -557,11 +587,12 @@ def get_lexc_morphology_generator(morphemes, pos_sequences, morpheme_delimiters)
         yield '%s ;\n' % root
     yield u'\n\n'
     for continuation_class in continuation_classes:
-        yield u'LEXICON %s\n\n' % pos_sequence_2_lexicon_name(continuation_class, morpheme_delimiters)
-        for line in get_lexicon_entries_generator(continuation_class, morphemes, morpheme_delimiters):
+        yield u'LEXICON %s\n\n' % pos_sequence_2_lexicon_name(continuation_class)
+        for line in get_lexicon_entries_generator(continuation_class, morphemes,
+                morpheme_delimiters, rich_morphemes):
             yield line
 
-def get_regex_morphology_generator(morphemes, pos_sequences):
+def get_regex_morphology_generator(morphemes, pos_sequences, rich_morphemes):
     """Return a generator that yields lines of a foma script representing the morphology using standard regular expressions.
     Contrast this with the lexc approach utilized by ``get_lexc_morphology_generator``.
 
@@ -570,7 +601,18 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
     :yields: lines of a regex foma script
 
     """
-    def get_lexicon_generator(morphemes):
+
+    def get_morpheme_representation(rich_morphemes, **kwargs):
+        """Return a rich representation of the morpheme-as-FST (i.e., <f|g|c>:f) or an impoverished one (i.e., f:f).
+        """
+        if rich_morphemes:
+            return u'%s "%s%s%s%s":0' % (
+                u' '.join(map(h.escape_foma_reserved_symbols, list(kwargs['mb']))),
+                kwargs['delimiter'], kwargs['mg'], kwargs['delimiter'], kwargs['pos'])
+        else:
+            return u' '.join(map(h.escape_foma_reserved_symbols, list(kwargs['mb'])))
+
+    def get_lexicon_generator(morphemes, rich_morphemes):
         """Return a generator that yields lines of a foma script defining a lexicon.
 
         :param morphemes: dict from category names to lists of (mb, mg) tuples.
@@ -580,8 +622,8 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
 
             The presence of a form of category N with a morpheme break value of 'chien' and
             a morpheme gloss value of 'dog' will result in the regex defined as 'N' having
-            'c h i e n "|dog":0' as one of its disjuncts.  This is a transducer that maps
-            'chien|dog' to 'chien', i.e,. '"|dog"' is a multi-character symbol that is mapped
+            'c h i e n "|dog|N":0' as one of its disjuncts.  This is a transducer that maps
+            'chien|dog|N' to 'chien', i.e,. '"|dog|N"' is a multi-character symbol that is mapped
             to the null symbol, i.e., '0'.  Note also that the vertical bar '|' character is 
             not actually used -- the delimiter character is actually that defined in ``utils.rare_delimiter``
             which, by default, is U+2980 'TRIPLE VERTICAL BAR DELIMITER'.
@@ -594,10 +636,10 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
                 yield u'define %s [\n' % foma_regex_name
                 if data:
                     for mb, mg in data[:-1]:
-                        yield u'    %s "%s%s":0 |\n' % (
-                            u' '.join(map(h.escape_foma_reserved_symbols, list(mb))), delimiter, mg)
-                    yield u'    %s "%s%s":0 \n' % (
-                        u' '.join(map(h.escape_foma_reserved_symbols, list(data[-1][0]))), delimiter, data[-1][1])
+                        yield u'    %s |\n' % get_morpheme_representation(
+                                rich_morphemes, mb=mb, mg=mg, pos=pos, delimiter=delimiter)
+                    yield u'    %s \n' % get_morpheme_representation(
+                            rich_morphemes, mb=data[-1][0], mg=data[-1][1], pos=pos, delimiter=delimiter)
                 yield u'];\n\n'
 
     def get_valid_foma_regex_name(candidate):
@@ -643,7 +685,7 @@ def get_regex_morphology_generator(morphemes, pos_sequences):
             yield u'    (%s) \n' % foma_disjuncts[-1]
         yield u');\n\n'
 
-    for line in get_lexicon_generator(morphemes):
+    for line in get_lexicon_generator(morphemes, rich_morphemes):
         yield line
     yield u'\n\n'
     for line in get_word_formation_rules_generator(pos_sequences):

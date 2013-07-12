@@ -402,7 +402,7 @@ class TestMorphemelanguagemodelsController(TestController):
             # morphologies need to include category names on the lower side of the tape
             # morpheme language models need to range over m|g|c triples, not just m|g doubles.
             # get_most_probable_parse in morphologicalparsers controller needs minor tweaking.
-        # TODO: look into backoff to category: implementation via another LM toolkit order_by
+        # TODO: look into backoff to category: implementation via another LM toolkit or
         #  roll my own by creating two LMs (one categorial, one not) and synthesizing them
         # TODO: parse Blackfoot and report on results.
 
@@ -633,7 +633,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    #@nottest
+    @nottest
     def test_i_large_datasets(self):
         """Tests that morpheme language model functionality works with large datasets.
 

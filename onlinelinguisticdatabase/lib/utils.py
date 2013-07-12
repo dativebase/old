@@ -238,6 +238,9 @@ def get_model_directory_path(model_object, config):
 def get_model_file_path(model_object, model_directory_path, file_type=None):
     """Return the path to a foma-based model's file of the given type.
 
+    This function serves to provide a consistent interface for retrieving file paths for
+    parser-related files.
+
     :param model_object: a phonology, morphology or morphological parser model object.
     :param str model_directory_path: the absolute path to the directory that houses the files 
         of the foma-based model (i.e., phonology, morphology or morphophonology).
@@ -255,6 +258,7 @@ def get_model_file_path(model_object, model_directory_path, file_type=None):
         'compiler': '.sh',
         'log': '.log',
         'lexicon': '.pickle',
+        'dictionary': '_dictionary.pickle',
         'lm_corpus': '.txt',
         'arpa': '.lm',
         'lm_trie': '.pickle',

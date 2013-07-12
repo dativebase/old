@@ -1148,6 +1148,7 @@ class MorphologySchema(Schema):
     script_type = OneOf(h.morphology_script_types)
     extract_morphemes_from_rules_corpus = StringBoolean()
     rules = MorphologyRules()
+    rich_morphemes = StringBoolean()
 
 class MorphologicalParserSchema(Schema):
     """MorphologicalParserSchema is a Schema for validating the data submitted to

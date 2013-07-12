@@ -15,6 +15,7 @@
 import logging
 import os
 import codecs
+import cPickle
 from shutil import copyfileobj
 import simplejson as json
 from time import sleep
@@ -48,7 +49,7 @@ class TestMorphologiesController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    @nottest
+    #@nottest
     def test_a_create(self):
         """Tests that POST /morphologies creates a new morphology.
 
@@ -219,7 +220,7 @@ class TestMorphologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['script_type'] == u'regex'
 
-    @nottest
+    #@nottest
     def test_b_compile(self):
         """Tests that PUT /morphologies/id/generate_and_compile generates and compiles the foma script of the morphology with id.
 
@@ -298,9 +299,9 @@ class TestMorphologiesController(TestController):
         assert u'(NCat "-" PHICat)' in morphology_script # cf. chien-s
         assert u'(DCat "-" PHICat)' in morphology_script # cf. le-s
         assert u'(VCat "-" AGRCat)' in morphology_script # cf. nage-aient, parle-ait
-        assert u'c h a t "%scat":0' % h.rare_delimiter not in morphology_script # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
-        assert u'c h i e n "%sdog":0' % h.rare_delimiter in morphology_script
-        assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rare_delimiter in morphology_script
+        assert u'c h a t "%scat%sN":0' % (h.rare_delimiter, h.rare_delimiter) not in morphology_script # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
+        assert u'c h i e n "%sdog%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
+        assert u'b e \u0301 c a s s e "%swoodcock%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
         assert resp['compile_succeeded'] == True
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
         assert morphology_binary_filename in morphology_dir_contents
@@ -374,7 +375,8 @@ class TestMorphologiesController(TestController):
         # Note that the value of the ``transcriptions`` key can be a string or a list of strings.
 
         # Test applydown with a valid form|gloss-form|gloss sequence.
-        morpheme_sequence = u'chien%sdog-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
+        morpheme_sequence = u'chien%sdog%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter,
+                h.rare_delimiter, h.rare_delimiter)
         params = json.dumps({'morpheme_sequences': morpheme_sequence})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=morphology_1_id), params, self.json_headers, self.extra_environ_admin)
@@ -390,7 +392,8 @@ class TestMorphologiesController(TestController):
         assert not [fn for fn in morphology_dir_contents if fn.startswith('apply_')]
 
         # Test applydown with an invalid form|gloss-form|gloss sequence.
-        invalid_morpheme_sequence = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
+        invalid_morpheme_sequence = u'e\u0301cureuil%ssquirrel%sN-s%sPL%sPHI' % (
+                h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)
         params = json.dumps({'morpheme_sequences': invalid_morpheme_sequence})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=morphology_1_id), params, self.json_headers, self.extra_environ_admin)
@@ -401,8 +404,8 @@ class TestMorphologiesController(TestController):
         assert resp[invalid_morpheme_sequence] == []
 
         # Test applydown with multiple morpheme sequences.
-        ms1 = u'chien%sdog-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        ms2 = u'tombe%sfall-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
+        ms1 = u'chien%sdog%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)
+        ms2 = u'tombe%sfall%sV-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)
         params = json.dumps({'morpheme_sequences': [ms1, ms2]})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=morphology_1_id), params, self.json_headers, self.extra_environ_admin)
@@ -422,7 +425,8 @@ class TestMorphologiesController(TestController):
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % morphology_1_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert resp[morpheme_sequence] == ['chien%sdog-s%sPL' % (h.rare_delimiter, h.rare_delimiter)]
+        assert resp[morpheme_sequence] == ['chien%sdog%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter,
+            h.rare_delimiter, h.rare_delimiter)]
 
         # Test applyup with multiple input sequences
         ms1 = u'vache-s'
@@ -434,11 +438,14 @@ class TestMorphologiesController(TestController):
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=morphology_1_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resp[ms1] == ['vache%scow-s%sPL' % (h.rare_delimiter, h.rare_delimiter)]
-        assert resp[ms2] == ['cheval%shorse' % h.rare_delimiter]
+        assert resp[ms1] == ['vache%scow%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, 
+            h.rare_delimiter, h.rare_delimiter)]
+        assert resp[ms2] == ['cheval%shorse%sN' % (h.rare_delimiter, h.rare_delimiter)]
         assert resp[ms3] == []
-        assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)]
-        assert resp[ms5] == ['poule!t%schicken-s%sPL' % (h.rare_delimiter, h.rare_delimiter)]
+        assert resp[ms4] == ['tombe%sfall%sV-ait%s3SG.IMPV%sAGR' % (h.rare_delimiter, h.rare_delimiter,
+            h.rare_delimiter, h.rare_delimiter)]
+        assert resp[ms5] == ['poule!t%schicken%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, 
+            h.rare_delimiter, h.rare_delimiter)]
 
         # Compile the second morphology's script (the one with only a rules corpus)
         response = self.app.put(url(controller='morphologies', action='generate_and_compile',
@@ -475,8 +482,8 @@ class TestMorphologiesController(TestController):
         assert u'(DCat "-" PHICat)' in morphology_script # cf. le-s
         assert u'(VCat "-" AGRCat)' in morphology_script # cf. nage-aient, parle-ait
         # Note the change in the following two assertions from above.
-        assert u'c h i e n "%sdog":0' % h.rare_delimiter not in morphology_script
-        assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rare_delimiter not in morphology_script
+        assert u'c h i e n "%sdog%sN":0' % (h.rare_delimiter, h.rare_delimiter) not in morphology_script
+        assert u'b e \u0301 c a s s e "%swoodcock%sN":0' % (h.rare_delimiter, h.rare_delimiter) not in morphology_script
 
         # Compile the third morphology's script (the one with an empty rules corpus)
         # This one will not compile.
@@ -555,9 +562,9 @@ class TestMorphologiesController(TestController):
         assert u'(NCat "-" PHICat)' in morphology_script # cf. chien-s
         assert u'(DCat "-" PHICat)' in morphology_script # cf. le-s
         assert u'(VCat "-" AGRCat)' in morphology_script # cf. nage-aient, parle-ait
-        assert u'c h a t "%scat":0' % h.rare_delimiter in morphology_script # HERE IS THE CHANGE!
-        assert u'c h i e n "%sdog":0' % h.rare_delimiter in morphology_script
-        assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rare_delimiter in morphology_script
+        assert u'c h a t "%scat%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script # HERE IS THE CHANGE!
+        assert u'c h i e n "%sdog%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
+        assert u'b e \u0301 c a s s e "%swoodcock%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
         assert resp['compile_succeeded'] == True
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
         assert morphology_binary_filename in morphology_dir_contents
@@ -569,7 +576,7 @@ class TestMorphologiesController(TestController):
         assert u'V-AGR' in rules # cf. nage-aient, parle-ait
         assert [u'chat', u'cat'] in resp['lexicon']['N']
 
-    @nottest
+    #@nottest
     def test_c_index(self):
         """Tests that GET /morphologies returns all morphology resources."""
 
@@ -615,7 +622,7 @@ class TestMorphologiesController(TestController):
         assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_d_show(self):
         """Tests that GET /morphologies/id returns the morphology with id=id or an appropriate error."""
 
@@ -644,7 +651,7 @@ class TestMorphologiesController(TestController):
         assert resp['description'] == morphologies[0].description
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_e_new_edit(self):
         """Tests that GET /morphologies/new and GET /morphologies/id/edit return the data needed to create or update a morphology.
 
@@ -685,7 +692,7 @@ class TestMorphologiesController(TestController):
         assert len(resp['data']['corpora']) == 3
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_f_update(self):
         """Tests that PUT /morphologies/id updates the morphology with id=id."""
 
@@ -810,12 +817,12 @@ class TestMorphologiesController(TestController):
             assert u'(NCat "-" PHICat)' in updated_morphology_1_script # cf. chien-s
             assert u'(DCat "-" PHICat)' in updated_morphology_1_script # cf. le-s
             assert u'(VCat "-" AGRCat)' in updated_morphology_1_script # cf. nage-aient, parle-ait
-            assert u'c h i e n "%sdog":0' % h.rare_delimiter in updated_morphology_1_script
-            assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rare_delimiter in updated_morphology_1_script
+            assert u'c h i e n "%sdog%sN":0' % (h.rare_delimiter, h.rare_delimiter) in updated_morphology_1_script
+            assert u'b e \u0301 c a s s e "%swoodcock%sN":0' % (h.rare_delimiter, h.rare_delimiter) in updated_morphology_1_script
             assert u'(VCat "-" PHICat)' in updated_morphology_1_script # THIS IS THE NEW PART
             assert u'(VCat "-" PHICat)' not in morphology_1_script # THIS IS THE NEW PART
 
-    @nottest
+    #@nottest
     def test_g_history(self):
         """Tests that GET /morphologies/id/history returns the morphology with id=id and its previous incarnations.
 
@@ -869,7 +876,7 @@ class TestMorphologiesController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    @nottest
+    #@nottest
     def test_h_lexc_scripts(self):
         """Tests that morphologies written in the lexc formalism work as expected."""
 
@@ -958,9 +965,10 @@ class TestMorphologiesController(TestController):
         assert response.content_type == u'application/octet-stream'
 
         # Test applydown with multiple morpheme sequences.
-        ms1 = u'chien%sdog-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        ms2 = u'tombe%sfall-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        ms3 = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
+        ms1 = u'chien%sdog%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)
+        ms2 = u'tombe%sfall%sV-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)
+        ms3 = u'e\u0301cureuil%ssquirrel%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, 
+                h.rare_delimiter, h.rare_delimiter)
         params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3]})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=morphology_1_id), params, self.json_headers, self.extra_environ_admin)
@@ -978,12 +986,13 @@ class TestMorphologiesController(TestController):
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=morphology_1_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert resp[ms1] == ['vache%scow-s%sPL' % (h.rare_delimiter, h.rare_delimiter)]
-        assert resp[ms2] == ['cheval%shorse' % h.rare_delimiter]
+        assert resp[ms1] == ['vache%scow%sN-s%sPL%sPHI' % (h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)]
+        assert resp[ms2] == ['cheval%shorse%sN' % (h.rare_delimiter, h.rare_delimiter)]
         assert resp[ms3] == []
-        assert resp[ms4] == ['tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)]
+        assert resp[ms4] == ['tombe%sfall%sV-ait%s3SG.IMPV%sAGR' % (h.rare_delimiter, h.rare_delimiter,
+            h.rare_delimiter, h.rare_delimiter)]
 
-    @nottest
+    #@nottest
     def test_i_large_morphologies(self):
         """Tests that morphology functionality works with large datasets.
 
@@ -1022,10 +1031,10 @@ class TestMorphologiesController(TestController):
         # These files, if specified, should be present in /tests/data/morphologies.
         # Specifying these variables sidesteps the lengthy compilation process, if desired.  Set these variables to None
         # if you want the compilation, i.e., want to regenerate the values.
-        pregenerated_lexc_morphology = 'blaold_morphology_lexc.script'
-        precompiled_lexc_morphology = 'blaold_morphology_lexc.foma'
-        pregenerated_regex_morphology = 'blaold_morphology_regex.script'
-        precompiled_regex_morphology = 'blaold_morphology_regex.foma'
+        pregenerated_lexc_morphology = None # 'blaold_morphology_lexc.script'
+        precompiled_lexc_morphology = None # 'blaold_morphology_lexc.foma'
+        pregenerated_regex_morphology = None # 'blaold_morphology_regex.script'
+        precompiled_regex_morphology = None # 'blaold_morphology_regex.foma'
 
         # Here we load a whole database from the mysqpl dump file specified in ``tests/data/datasets/<old_dump_file>``.
         old_dump_file_path = os.path.join(self.test_datasets_path, old_dump_file)
@@ -1235,6 +1244,43 @@ class TestMorphologiesController(TestController):
         assert new_script_len < original_script_len
         assert new_lexical_items_count < original_lexical_items_count
 
+        ################################################################################
+        # NEW -- this will GREATLY reduce compilation time
+        ################################################################################
+
+        # Rich morphemes will make the morphology FSTs much slower to compile
+        rich_morphemes = False
+
+        # Generate a list of X number of morphotactic rules: alter X to alter compile time
+        rules_generated = resp['rules_generated']
+        first_100_rules = u' '.join(rules_generated.split()[:100])
+        crucial_rules = u'agra-vai vai vta-thm-agrb PN'
+        rules_specified = u'%s %s' % (first_100_rules, crucial_rules)
+
+        # Update the morphology by specifying the rules explicitly: a very restricted morphotactics.
+        name = u'Morphology of Blackfoot'
+        params = self.morphology_create_params.copy()
+        params.update({
+            'name': name,
+            'lexicon_corpus': lexicon_corpus_id,
+            'rules': rules_specified,
+            'script_type': u'lexc',
+            'extract_morphemes_from_rules_corpus': False,
+            'rich_morphemes': rich_morphemes
+        })
+        params = json.dumps(params)
+        response = self.app.put(url('morphology', id=large_morphology_id), params, self.json_headers, self.extra_environ_admin_appset)
+        resp = json.loads(response.body)
+        large_morphology_id = resp['id']
+        assert resp['name'] == name
+        assert resp['script_type'] == u'lexc'
+        log.debug('rich_morphemes')
+        log.debug(resp['rich_morphemes'])
+
+        ################################################################################
+        # END NEW
+        ################################################################################
+
         # Compile the morphology's script (if necessary, cf. precompiled_lexc_morphology and pregenerated_lexc_morphology)
         morphology_directory = os.path.join(self.morphologies_path, 'morphology_%d' % large_morphology_id)
         morphology_binary_filename = 'morphology_%d.foma' % large_morphology_id
@@ -1283,6 +1329,20 @@ class TestMorphologiesController(TestController):
             assert morphology_binary_filename in morphology_dir_contents
             assert resp['modifier']['role'] == u'contributor'
 
+        # If ``rich_morphemes`` is set to False, expect to find a pickled dictionary interface 
+        # to the morphology's lexicon in its directory.
+        if not resp['rich_morphemes']:
+            large_morphology = Session.query(model.Morphology).get(large_morphology_id)
+            morphology_dir_path = os.path.join(self.morphologies_path,
+                                            'morphology_%d' % large_morphology_id)
+            dictionary_path = h.get_model_file_path(large_morphology, morphology_dir_path, 'dictionary')
+            assert os.path.isfile(dictionary_path)
+            dictionary = cPickle.load(open(dictionary_path, 'rb'))
+            first_key = dictionary.keys()[0]
+            assert type(dictionary[first_key]) == list
+            log.debug(first_key)
+            log.debug(dictionary[first_key])
+
         # Get the morphology again, this time requesting the lexicon attribute
         response = self.app.get(url('morphology', id=large_morphology_id), params={'lexicon': u'1'},
                     headers=self.json_headers, extra_environ=self.extra_environ_contrib)
@@ -1305,33 +1365,40 @@ class TestMorphologiesController(TestController):
         # Note that the value of the ``transcriptions`` key can be a string or a list of strings.
         seqs = (
             (
-                u'ipommo%stransfer.title.to-oki%sINV-wa%s3SG' % (h.rare_delimiter, h.rare_delimiter, h.rare_delimiter),
+                u'ipommo%stransfer.title.to%svta-oki%sINV%sthm-wa%s3SG%sagrb' % (
+                    h.rare_delimiter, h.rare_delimiter, h.rare_delimiter,
+                    h.rare_delimiter, h.rare_delimiter, h.rare_delimiter),
                 u'ipommo-oki-wa'
             ),
-            (u'Joel%sJoel' % h.rare_delimiter, u'Joel'),
+            (u'Joel%sJoel%sPN' % (h.rare_delimiter, h.rare_delimiter), u'Joel'),
             (
-                u'kit%s2-sska\u0301akanii%sagree' % (h.rare_delimiter, h.rare_delimiter),
+                u'kit%s2%sagra-sska\u0301akanii%sagree%svai' % (
+                    h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter),
                 u'kit-sska\u0301akanii'
             )
         )
 
         # Test applydown with a valid morpheme sequence.
-        params = json.dumps({'morpheme_sequences': seqs[0][0]})
+        morpheme_sequence_1 = rich_morphemes and seqs[0][0] or seqs[0][1]
+        phoneme_sequence_1 = seqs[0][1]
+        params = json.dumps({'morpheme_sequences': morpheme_sequence_1})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % large_morphology_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert seqs[0][1] in resp[seqs[0][0]]
+        assert phoneme_sequence_1 in resp[morpheme_sequence_1]
 
         # Make sure the temporary morphologization files have been deleted.
         assert not [fn for fn in morphology_dir_contents if fn.startswith('inputs_')]
         assert not [fn for fn in morphology_dir_contents if fn.startswith('outputs_')]
         assert not [fn for fn in morphology_dir_contents if fn.startswith('apply_')]
 
-        # Test applydown with an invalid form|gloss-form|gloss sequence.
-        invalid_morpheme_sequence = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
+        # Test applydown with an invalid morpheme sequence.
+        invalid_morpheme_sequence = (rich_morphemes and u'e\u0301cureuil%ssquirrel%sN-s%sPL%sAGR' % (
+                h.rare_delimiter, h.rare_delimiter, h.rare_delimiter, h.rare_delimiter)
+                or u'e\u0301cureuil-s')
         params = json.dumps({'morpheme_sequences': invalid_morpheme_sequence})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
@@ -1342,47 +1409,52 @@ class TestMorphologiesController(TestController):
         assert resp[invalid_morpheme_sequence] == []
 
         # Test applydown with multiple morpheme sequences.
-        ms1 = seqs[0][0]
-        ms2 = seqs[1][0]
-        ms3 = seqs[2][0]
-        params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3]})
+        morpheme_sequence_2 = rich_morphemes and seqs[1][0] or seqs[1][1]
+        phoneme_sequence_2 = seqs[1][1]
+        morpheme_sequence_3 = rich_morphemes and seqs[2][0] or seqs[2][1]
+        phoneme_sequence_3 = seqs[2][1]
+        params = json.dumps({'morpheme_sequences': [morpheme_sequence_1, morpheme_sequence_2, morpheme_sequence_3]})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % large_morphology_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert seqs[0][1] in resp[ms1]
-        assert seqs[1][1] in resp[ms2]
-        assert seqs[2][1] in resp[ms3]
+        assert phoneme_sequence_1 in resp[morpheme_sequence_1]
+        assert phoneme_sequence_2 in resp[morpheme_sequence_2]
+        assert phoneme_sequence_3 in resp[morpheme_sequence_3]
 
         # Test applyup
-        params = json.dumps({'morpheme_sequences': seqs[0][1]})
+        params = json.dumps({'morpheme_sequences': phoneme_sequence_1})
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % large_morphology_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert seqs[0][0] in resp[seqs[0][1]]
+        assert morpheme_sequence_1 in resp[phoneme_sequence_1]
 
         # Test applyup with multiple input sequences
-        params = json.dumps({'morpheme_sequences': [seqs[0][1], seqs[1][1], seqs[2][1]]})
+        params = json.dumps({'morpheme_sequences': [phoneme_sequence_1, phoneme_sequence_2, phoneme_sequence_3]})
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert seqs[0][0] in resp[seqs[0][1]]
-        assert seqs[1][0] in resp[seqs[1][1]]
-        assert seqs[2][0] in resp[seqs[2][1]]
+        assert morpheme_sequence_1 in resp[phoneme_sequence_1]
+        assert morpheme_sequence_2 in resp[phoneme_sequence_2]
+        assert morpheme_sequence_3 in resp[phoneme_sequence_3]
+
+        # HERE I AM!
 
         # Now update the morphology so that its script will be generated as a regex.
         params = self.morphology_create_params.copy()
         params.update({
             'name': name,
             'lexicon_corpus': lexicon_corpus_id,
-            'rules_corpus': rules_corpus_id,
+            #'rules_corpus': rules_corpus_id,
+            'rules': rules_specified, # specify the rules explicitly: a very restricted morphotactics.
             'script_type': u'regex',
-            'exctract_morphemes_from_rules_corpus': False
+            'exctract_morphemes_from_rules_corpus': False,
+            'rich_morphemes': rich_morphemes
         })
         params = json.dumps(params)
         response = self.app.put(url('morphology', id=large_morphology_id), params,
@@ -1390,6 +1462,7 @@ class TestMorphologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['name'] == name
         assert resp['script_type'] == u'regex'
+        assert resp['rich_morphemes'] == rich_morphemes
 
         # Compile the morphology's script (if necessary, cf. precompiled_regex_morphology and pregenerated_regex_morphology)
         try:
@@ -1446,14 +1519,14 @@ class TestMorphologiesController(TestController):
         # The same tests we ran with the lexc version of the morphology should also work with this version:
 
         # Test applydown with a valid morpheme sequence.
-        params = json.dumps({'morpheme_sequences': seqs[0][0]})
+        params = json.dumps({'morpheme_sequences': morpheme_sequence_1})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % large_morphology_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert seqs[0][1] in resp[seqs[0][0]]
+        assert phoneme_sequence_1 in resp[morpheme_sequence_1]
 
         # Make sure the temporary morphologization files have been deleted.
         assert not [fn for fn in morphology_dir_contents if fn.startswith('inputs_')]
@@ -1461,7 +1534,6 @@ class TestMorphologiesController(TestController):
         assert not [fn for fn in morphology_dir_contents if fn.startswith('apply_')]
 
         # Test applydown with an invalid form|gloss-form|gloss sequence.
-        invalid_morpheme_sequence = u'e\u0301cureuil%ssquirrel-s%sPL' % (h.rare_delimiter, h.rare_delimiter)
         params = json.dumps({'morpheme_sequences': invalid_morpheme_sequence})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
@@ -1472,38 +1544,35 @@ class TestMorphologiesController(TestController):
         assert resp[invalid_morpheme_sequence] == []
 
         # Test applydown with multiple morpheme sequences.
-        ms1 = seqs[0][0]
-        ms2 = seqs[1][0]
-        ms3 = seqs[2][0]
-        params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3]})
+        params = json.dumps({'morpheme_sequences': [morpheme_sequence_1, morpheme_sequence_2, morpheme_sequence_3]})
         response = self.app.put(url(controller='morphologies', action='applydown',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % large_morphology_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert seqs[0][1] in resp[ms1]
-        assert seqs[1][1] in resp[ms2]
-        assert seqs[2][1] in resp[ms3]
+        assert phoneme_sequence_1 in resp[morpheme_sequence_1]
+        assert phoneme_sequence_2 in resp[morpheme_sequence_2]
+        assert phoneme_sequence_3 in resp[morpheme_sequence_3]
 
         # Test applyup
-        params = json.dumps({'morpheme_sequences': seqs[0][1]})
+        params = json.dumps({'morpheme_sequences': phoneme_sequence_1})
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_dir_path = os.path.join(self.morphologies_path,
                                         'morphology_%d' % large_morphology_id)
         morphology_dir_contents = os.listdir(morphology_dir_path)
-        assert seqs[0][0] in resp[seqs[0][1]]
+        assert morpheme_sequence_1 in resp[phoneme_sequence_1]
 
         # Test applyup with multiple input sequences
-        params = json.dumps({'morpheme_sequences': [seqs[0][1], seqs[1][1], seqs[2][1]]})
+        params = json.dumps({'morpheme_sequences': [phoneme_sequence_1, phoneme_sequence_2, phoneme_sequence_3]})
         response = self.app.put(url(controller='morphologies', action='applyup',
                     id=large_morphology_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert seqs[0][0] in resp[seqs[0][1]]
-        assert seqs[1][0] in resp[seqs[1][1]]
-        assert seqs[2][0] in resp[seqs[2][1]]
+        assert morpheme_sequence_1 in resp[phoneme_sequence_1]
+        assert morpheme_sequence_2 in resp[phoneme_sequence_2]
+        assert morpheme_sequence_3 in resp[phoneme_sequence_3]
 
         # Finally, load the original database back in so that subsequent tests can work.
         with open(tmp_script_path, 'w') as tmpscript:
@@ -1513,7 +1582,7 @@ class TestMorphologiesController(TestController):
         os.remove(tmp_script_path)
         os.remove(backup_dump_file_path)
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 
