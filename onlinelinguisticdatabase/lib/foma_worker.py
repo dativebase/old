@@ -766,8 +766,10 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
                         for category_word in form.syntactic_category_string.split():
                             f.write(get_lm_category_corpus_entry(category_word, splitter))
                     else:
-                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                            f.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                        for morpheme_word, gloss_word, category_word in zip(form.morpheme_break.split(),
+                            form.morpheme_gloss.split(), form.syntactic_category_string.split()):
+                            f.write(get_lm_morpheme_corpus_entry(
+                                morpheme_word, gloss_word, category_word, splitter))
         else:
             form_references = h.get_form_references(corpus.content)
             forms = dict((f.id, f) for f in forms)
@@ -780,8 +782,10 @@ def write_language_model_corpus(morpheme_language_model, morpheme_language_model
                         for category_word in form.syntactic_category_string.split():
                             f.write(get_lm_category_corpus_entry(category_word, splitter))
                     else:
-                        for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
-                            f.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                        for morpheme_word, gloss_word, category_word in zip(form.morpheme_break.split(),
+                            form.morpheme_gloss.split(), form.syntactic_category_string.split()):
+                            f.write(get_lm_morpheme_corpus_entry(
+                                morpheme_word, gloss_word, category_word, splitter))
     if restricted:
         morpheme_language_model.restricted = True
     return language_model_corpus_path
@@ -858,9 +862,9 @@ def write_vocabulary(morpheme_language_model, morpheme_language_model_path, morp
             for category in lexicon:
                 f.write(u'%s\n' % category)
         else:
-            for morpheme_list in lexicon.values():
+            for category, morpheme_list in lexicon.iteritems():
                 for morpheme_form, morpheme_gloss in morpheme_list:
-                    f.write(u'%s%s%s\n' % (morpheme_form, h.rare_delimiter, morpheme_gloss))
+                    f.write(u'%s\n' % h.rare_delimiter.join([morpheme_form, morpheme_gloss, category]))
         f.write(u'\n')
     return vocabulary_path
 
@@ -951,14 +955,16 @@ def extract_perplexity(output):
     except Exception:
         return None
 
-def get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter):
-    """Return a string of morphemes, space-delimited in m|g format where "|" is ``h.rare_delimiter``.
+def get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, category_word, splitter):
+    """Return a string of morphemes, space-delimited in m|g|c format where "|" is ``h.rare_delimiter``.
 
     :param func splitter: function that splits words into their component morphemes.
 
     """
-    return '%s\n' % u' '.join('%s%s%s' % (morpheme, h.rare_delimiter, gloss) for morpheme, gloss in
-        zip(re.split(splitter, morpheme_word), re.split(splitter, gloss_word)))
+    return '%s\n' % u' '.join('%s%s%s%s%s' % (
+        morpheme, h.rare_delimiter, gloss, h.rare_delimiter, category)
+        for morpheme, gloss, category in
+        zip(re.split(splitter, morpheme_word), re.split(splitter, gloss_word), re.split(splitter, category_word)))
 
 def get_lm_category_corpus_entry(category_word, splitter):
     """Return a string of morpheme category names, space-delimited.
@@ -1001,12 +1007,15 @@ def write_training_test_sets(morpheme_language_model, morpheme_language_model_pa
                                 else:
                                     f_training.write(get_lm_category_corpus_entry(category_word, splitter))
                         else:
-                            for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                            for morpheme_word, gloss_word, category_word in zip(form.morpheme_break.split(),
+                                form.morpheme_gloss.split(), form.syntactic_category_string.split()):
                                 r = random.choice(population)
                                 if r == test_index:
-                                    f_test.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                                    f_test.write(get_lm_morpheme_corpus_entry(
+                                        morpheme_word, gloss_word, category_word, splitter))
                                 else:
-                                    f_training.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                                    f_training.write(get_lm_morpheme_corpus_entry(
+                                        morpheme_word, gloss_word, category_word, splitter))
             else:
                 form_references = h.get_form_references(corpus.content)
                 forms = dict((f.id, f) for f in forms)
@@ -1021,10 +1030,13 @@ def write_training_test_sets(morpheme_language_model, morpheme_language_model_pa
                                 else:
                                     f_training.write(get_lm_category_corpus_entry(category_word, splitter))
                         else:
-                            for morpheme_word, gloss_word in zip(form.morpheme_break.split(), form.morpheme_gloss.split()):
+                            for morpheme_word, gloss_word, category_word in zip(form.morpheme_break.split(),
+                                form.morpheme_gloss.split(), form.syntactic_category_string.split()):
                                 r = random.choice(population)
                                 if r == test_index:
-                                    f_test.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                                    f_test.write(get_lm_morpheme_corpus_entry(
+                                        morpheme_word, gloss_word, category_word, splitter))
                                 else:
-                                    f_training.write(get_lm_morpheme_corpus_entry(morpheme_word, gloss_word, splitter))
+                                    f_training.write(get_lm_morpheme_corpus_entry(
+                                        morpheme_word, gloss_word, category_word, splitter))
     return training_set_path, test_set_path, training_set_lm_path

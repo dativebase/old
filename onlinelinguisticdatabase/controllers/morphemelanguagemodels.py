@@ -330,6 +330,7 @@ class MorphemelanguagemodelsController(BaseController):
                         return {'error': 'An error occurred while trying to generate probabilities.'}
                 else:
                     response.status_int = 404
+                    log.warn(lm_pickle_path)
                     return {'error': 'The morpheme language model was not written to disk.'}
             except h.JSONDecodeError:
                 response.status_int = 400

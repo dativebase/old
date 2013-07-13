@@ -52,7 +52,7 @@ class TestMorphemelanguagemodelsController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    @nottest
+    #@nottest
     def test_a_create(self):
         """Tests that POST /morphemelanguagemodels creates a new morphology.
 
@@ -194,7 +194,7 @@ class TestMorphemelanguagemodelsController(TestController):
             {}, self.json_headers, self.extra_environ_view)
         assert response.content_type == u'text/plain'
         arpa = unicode(response.body, encoding='utf8')
-        assert u'parle%sspeak' % h.rare_delimiter in arpa
+        assert h.rare_delimiter.join([u'parle', u'speak', u'V']) in arpa
 
         # Restrict the first sentential form -- relevant for testing the restriction percolation into LMs.
         sentence1 = Session.query(model.Form).filter(model.Form.syntactic_category.has(
@@ -227,11 +227,15 @@ class TestMorphemelanguagemodelsController(TestController):
             {}, self.json_headers, self.extra_environ_admin)
         assert response.content_type == u'text/plain'
         arpa = unicode(response.body, encoding='utf8')
-        assert 'parle%sspeak' % h.rare_delimiter in arpa
+        assert h.rare_delimiter.join([u'parle', u'speak', u'V']) in arpa
 
         # Get some probabilities
-        likely_word = u'chat%scat s%sPL' % (h.rare_delimiter, h.rare_delimiter)
-        unlikely_word = u's%sPL chat%scat' % (h.rare_delimiter, h.rare_delimiter)
+        likely_word = u'%s %s' % (
+            h.rare_delimiter.join([u'chat', u'cat', u'N']),
+            h.rare_delimiter.join([u's', u'PL', u'PHI']))
+        unlikely_word = u'%s %s' % (
+            h.rare_delimiter.join([u's', u'PL', u'PHI']),
+            h.rare_delimiter.join([u'chat', u'cat', u'N']))
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities', id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
@@ -406,7 +410,7 @@ class TestMorphemelanguagemodelsController(TestController):
         #  roll my own by creating two LMs (one categorial, one not) and synthesizing them
         # TODO: parse Blackfoot and report on results.
 
-    @nottest
+    #@nottest
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
 
@@ -452,7 +456,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_d_show(self):
         """Tests that GET /morphemelanguagemodels/id returns the morpheme_language_model with id=id or an appropriate error."""
 
@@ -481,7 +485,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['description'] == morpheme_language_models[0].description
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_e_new_edit(self):
         """Tests that GET /morphemelanguagemodels/new and GET /morphemelanguagemodels/id/edit return the data needed to create or update a morpheme_language_model.
 
@@ -529,7 +533,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert len(resp['data']['toolkits'].keys()) == len(toolkits.keys())
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_f_update(self):
         """Tests that PUT /morphemelanguagemodels/id updates the morpheme_language_model with id=id."""
 
@@ -589,7 +593,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_g_history(self):
         """Tests that GET /morphemelanguagemodels/id/history returns the morpheme_language_model with id=id and its previous incarnations.
 
@@ -633,7 +637,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    @nottest
+    #@nottest
     def test_i_large_datasets(self):
         """Tests that morpheme language model functionality works with large datasets.
 
@@ -752,8 +756,12 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['generate_message'] == u'Language model successfully generated.'
 
         # Get some probabilities: nit-ihpiyi should be more probable than ihpiyi-nit
-        likely_word = u'nit%s1 ihpiyi%sdance' % (h.rare_delimiter, h.rare_delimiter)
-        unlikely_word = u'ihpiyi%sdance nit%s1' % (h.rare_delimiter, h.rare_delimiter)
+        likely_word = u'%s %s' % (
+            h.rare_delimiter.join([u'nit', u'1', u'agra']),
+            h.rare_delimiter.join([u'ihpiyi', u'dance', u'vai']))
+        unlikely_word = u'%s %s' % (
+            h.rare_delimiter.join([u'ihpiyi', u'dance', u'vai']),
+            h.rare_delimiter.join([u'nit', u'1', u'agra']))
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities', id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
@@ -1002,8 +1010,6 @@ class TestMorphemelanguagemodelsController(TestController):
         resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log)
 
         # Get some probabilities: nit-ihpiyi should be more probable than ihpiyi-nit
-        likely_word = u'nit%s1 ihpiyi%sdance' % (h.rare_delimiter, h.rare_delimiter)
-        unlikely_word = u'ihpiyi%sdance nit%s1' % (h.rare_delimiter, h.rare_delimiter)
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities', id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
@@ -1089,10 +1095,13 @@ class TestMorphemelanguagemodelsController(TestController):
             task_descr='GET PERPLEXITY OF LM %s' % morpheme_language_model_id)
         new_category_based_perplexity = resp['perplexity']
 
-        assert new_category_based_perplexity < category_based_perplexity
         log.debug('Perplexity of Blackfoot LM %s (%s sentence corpus, ModKN, n=3, '
             'fixed vocabulary, category-based): %s' % (
             morpheme_language_model_id, word_count, new_category_based_perplexity))
+        # The perplexity of this categorial LM should (and is usually, but not always) lower
+        # than the previous categorial one that did not have a fixed vocab.  As a result, the
+        # assertion below cannot be categorically relied upon.
+        #assert new_category_based_perplexity < (1 + category_based_perplexity)
 
         ################################################################################
         # LM 5 -- trigram, ModKN, fixed vocab, corpus weighted towards 'nit-ihpiyi'
@@ -1190,8 +1199,8 @@ class TestMorphemelanguagemodelsController(TestController):
             call([tmp_script_path], stdout=fnull, stderr=fnull)
         os.remove(tmp_script_path)
         os.remove(backup_dump_file_path)
-
         """
+
         sleep(1) # If I don't sleep here I get an odd thread-related error (conditional upon
         # this being the last test to be run, I think)...
 
