@@ -52,7 +52,7 @@ class TestMorphemelanguagemodelsController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    #@nottest
+    @nottest
     def test_a_create(self):
         """Tests that POST /morphemelanguagemodels creates a new morphology.
 
@@ -403,14 +403,21 @@ class TestMorphemelanguagemodelsController(TestController):
         log.debug('Perplexity of super toy french (6 sentence corpus, category-based, FixKN, n=4): %s' % perplexity)
 
         # TODO: alter morphological_parser so that it can handle category-based LMs
-            # morphologies need to include category names on the lower side of the tape
-            # morpheme language models need to range over m|g|c triples, not just m|g doubles.
-            # get_most_probable_parse in morphologicalparsers controller needs minor tweaking.
+            # X morphologies need to include category names on the lower side of the tape
+            # X morpheme language models need to range over m|g|c triples, not just m|g doubles.
+            # X m_parsers: parse action must ambiguate candidates, if not rich_morphemes
+            # X m_parsers: ensure that apply up/down returns/accepts impoverished morphemes when morphology is so specified.
+            # X get_most_probable_parse in morphologicalparsers controller needs minor tweaking.
+        # TODO: should users be able to manually cancel a compilation request?
+        # TODO: at the very least, the system should be able to tell them that a request is ongoing and
+            # they should not be able to re-request compilation in that case...
+        # TODO: alot of the code in foma_worker should be moved to a different location (e.g., the 
+           # relevant model objects and OO-ified.
         # TODO: look into backoff to category: implementation via another LM toolkit or
         #  roll my own by creating two LMs (one categorial, one not) and synthesizing them
         # TODO: parse Blackfoot and report on results.
 
-    #@nottest
+    @nottest
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
 
@@ -456,7 +463,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['errors']['order_by_direction'] == u"Value must be one of: asc; desc (not u'descending')"
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_d_show(self):
         """Tests that GET /morphemelanguagemodels/id returns the morpheme_language_model with id=id or an appropriate error."""
 
@@ -485,7 +492,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['description'] == morpheme_language_models[0].description
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_e_new_edit(self):
         """Tests that GET /morphemelanguagemodels/new and GET /morphemelanguagemodels/id/edit return the data needed to create or update a morpheme_language_model.
 
@@ -533,7 +540,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert len(resp['data']['toolkits'].keys()) == len(toolkits.keys())
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_f_update(self):
         """Tests that PUT /morphemelanguagemodels/id updates the morpheme_language_model with id=id."""
 
@@ -593,7 +600,7 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    #@nottest
+    @nottest
     def test_g_history(self):
         """Tests that GET /morphemelanguagemodels/id/history returns the morpheme_language_model with id=id and its previous incarnations.
 
@@ -637,7 +644,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # Further tests could be done ... cf. the tests on the history action of the phonologies controller ...
 
-    #@nottest
+    @nottest
     def test_i_large_datasets(self):
         """Tests that morpheme language model functionality works with large datasets.
 

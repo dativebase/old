@@ -1443,8 +1443,6 @@ class TestMorphologiesController(TestController):
         assert morpheme_sequence_2 in resp[phoneme_sequence_2]
         assert morpheme_sequence_3 in resp[phoneme_sequence_3]
 
-        # HERE I AM!
-
         # Now update the morphology so that its script will be generated as a regex.
         params = self.morphology_create_params.copy()
         params.update({

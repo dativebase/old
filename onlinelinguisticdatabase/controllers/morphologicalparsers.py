@@ -19,6 +19,7 @@
 
 """
 
+from itertools import product
 import logging
 import cPickle
 import simplejson as json
@@ -314,7 +315,7 @@ class MorphologicalparsersController(BaseController):
     @h.restrict('GET')
     @h.authenticate_with_JSON
     def servecompiled(self, id):
-        """Serve the compiled foma script of the morphological parser.
+        """Serve the compiled foma script of the morphophonology FST of the morphological parser.
 
         :URL: ``PUT /morphologicalparsers/servecompiled/id``
         :param str id: the ``id`` value of a morphological parser.
@@ -325,7 +326,8 @@ class MorphologicalparsersController(BaseController):
         if morphological_parser:
             if h.foma_installed():
                 morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-                foma_file_path  = h.get_model_file_path(morphological_parser, morphological_parser_dir_path, file_type='binary')
+                foma_file_path  = h.get_model_file_path(morphological_parser,
+                        morphological_parser_dir_path, file_type='binary')
                 if os.path.isfile(foma_file_path):
                     return forward(FileApp(foma_file_path))
                 else:
@@ -388,9 +390,11 @@ class MorphologicalparsersController(BaseController):
         morphological_parser = Session.query(MorphologicalParser).get(id)
         if morphological_parser:
             if h.foma_installed():
-                morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-                morphological_parser_binary_path = h.get_model_file_path(morphological_parser, morphological_parser_dir_path, file_type='binary')
-                if os.path.isfile(morphological_parser_binary_path):
+                morphological_parser_dir_path = h.get_model_directory_path(
+                        morphological_parser, config)
+                morphophonology_fst_binary_path = h.get_model_file_path(
+                        morphological_parser, morphological_parser_dir_path, file_type='binary')
+                if os.path.isfile(morphophonology_fst_binary_path):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         schema, key = {'up': (TranscriptionsSchema, 'transcriptions'),
@@ -398,7 +402,7 @@ class MorphologicalparsersController(BaseController):
                                         get(direction, (MorphemeSequencesSchema, 'morpheme_sequences'))
                         inputs = schema.to_python(inputs)
                         return foma_apply(direction, inputs[key], morphological_parser,
-                                                 morphological_parser_binary_path, session['user'])
+                                                 morphophonology_fst_binary_path, session['user'])
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
@@ -462,8 +466,13 @@ class MorphologicalparsersController(BaseController):
             inputs = schema.to_python(inputs)
             candidates = foma_apply('up', inputs['transcriptions'], morphological_parser,
                                         morphological_parser_binary_path, session['user'])
-            return dict((transcription, get_most_probable_parse(lm_trie, candidate_parses, morpheme_splitter))
-                          for transcription, candidate_parses in candidates.iteritems())
+            # Ambiguate candidates if morphology does not parse to rich morpheme representations.
+            if not morphological_parser.morphology.rich_morphemes:
+                candidates = ambiguate_candidates(candidates,
+                        morphological_parser.morphology, morpheme_splitter)
+            return dict((transcription, get_most_probable_parse(lm_trie, candidate_parses,
+                         morpheme_splitter, morphological_parser.language_model.categorial))
+                         for transcription, candidate_parses in candidates.iteritems())
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -471,7 +480,57 @@ class MorphologicalparsersController(BaseController):
             response.status_int = 400
             return {'errors': e.unpack_errors()}
 
-def get_most_probable_parse(language_model_trie, candidates, morpheme_splitter):
+def ambiguate_candidates(candidates, morphology, splitter):
+    """Return parse candidates with rich representations and ambiguated, if necessary.
+
+    Note that this is only necessary when ``morphology.rich_morphemes==False``.
+
+    :param dict candidates: keys are transcriptions and values are lists of strings representing
+        morphological parses.  Since they are being ambiguated, we should expect them to be flat
+        structures of morpheme forms delimited by the language's delimiters.
+    :param inst morphology: object associated to a pickled dictionary that maps morpheme 
+        forms to lists of (gloss, category) 2-tuples.
+    :returns: the list of candidates with rich representations and, if necessary, ambiguated.
+
+    """
+    def get_category(morpheme):
+        if type(morpheme) == list:
+            return morpheme[2]
+        return morpheme
+    def get_morpheme(morpheme):
+        if type(morpheme) == list:
+            return h.rare_delimiter.join(morpheme)
+        return morpheme
+    morphological_rules = morphology.rules_generated.split()
+    morphology_dir_path = h.get_model_directory_path(morphology, config)
+    dictionary_path = h.get_model_file_path(morphology, morphology_dir_path,
+        file_type='dictionary')
+    try:
+        dictionary = cPickle.load(open(dictionary_path, 'rb'))
+        new_candidates = {}
+        for transcription, candidate_list in candidates.iteritems():
+            new_candidate_list = set()
+            for candidate in candidate_list:
+                temp = []
+                morphemes = splitter(candidate)
+                for index, morpheme in enumerate(morphemes):
+                    if index % 2 == 0:
+                        homographs = [[morpheme, gloss, category]
+                                for gloss, category in dictionary[morpheme]]
+                        temp.append(homographs)
+                    else:
+                        temp.append(morpheme) # it's really a delimiter
+                for candidate in product(*temp):
+                    # Only add an ambiguated candidate if its category sequence accords with the morphology's rules
+                    if ''.join(get_category(x) for x in candidate) in morphological_rules:
+                        new_candidate_list.add(u''.join(get_morpheme(x) for x in candidate))
+            new_candidates[transcription] = list(new_candidate_list)
+        return new_candidates
+    except Exception:
+        log.warn('some kind of exception occured in morphologicalparsers.py ambiguate_candidates')
+        return dict((transcription, []) for transcription in candidates)
+
+def get_most_probable_parse(language_model_trie, candidates, morpheme_splitter, categorial_LM):
     """Return the most probable parse from within the list of parses in candidates.
 
     :param instance language_model_trie: a simplm.LMTrie instance encoding a morpheme LM.
@@ -482,8 +541,13 @@ def get_most_probable_parse(language_model_trie, candidates, morpheme_splitter):
     """
     candidates_probs = []
     for candidate in candidates:
-        morpheme_sequence = [h.lm_start] + morpheme_splitter(candidate)[::2] + [h.lm_end]
-        candidates_probs.append((candidate, simplelm.compute_sentence_prob(language_model_trie, morpheme_sequence)))
+        morpheme_sequence = morpheme_splitter(candidate)[::2]
+        if categorial_LM: # treat candidates as category sequences if LM is categorial
+            morpheme_sequence = [morpheme.split(h.rare_delimiter)[2]
+                    for morpheme in morpheme_sequence]
+        morpheme_sequence = [h.lm_start] + morpheme_sequence + [h.lm_end]
+        candidates_probs.append((candidate,
+            simplelm.compute_sentence_prob(language_model_trie, morpheme_sequence)))
     candidates_probs.sort(key=lambda x: x[1])
     return candidates_probs[-1][0]
 

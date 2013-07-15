@@ -290,8 +290,8 @@ def _write_morphophonology_script_to_disk(**kwargs):
         f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" -e "save stack %s" -e "quit"' % (
                     script_path, binary_path))
     os.chmod(compiler_path, 0744)
-    morphology_script_path = h.get_model_file_path(morphological_parser.morphology, kwargs['morphology_dir_path'], 'script')
-    #h.get_model_file_path(model_object, script_dir_path, file_type='script'):
+    morphology_script_path = h.get_model_file_path(morphological_parser.morphology,
+            kwargs['morphology_dir_path'], 'script')
     phonology_script = morphological_parser.phonology.script
     morphophonology = generate_morphophonology(phonology_script)
     if morphophonology:
@@ -328,7 +328,7 @@ def generate_and_compile_morphology_script(**kwargs):
     morphology = Session.query(model.Morphology).get(morphology_id)
     morpheme_delimiters = h.get_morpheme_delimiters()
     rules, lexicon = get_rules_and_lexicon(morphology, morpheme_delimiters)
-    if morphology.rich_morphemes:
+    if not morphology.rich_morphemes:
         # If necessary, create a dictionary interface to the lexicon and pickle it
         dictionary = get_dictionary(lexicon)
         dictionary_path = h.get_model_file_path(morphology, script_dir_path, 'dictionary')

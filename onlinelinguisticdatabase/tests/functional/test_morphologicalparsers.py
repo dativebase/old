@@ -63,9 +63,19 @@ class TestMorphologicalparsersController(TestController):
     def human_readable_seconds(self, seconds):
         return u'%02dm%02ds' % (seconds / 60, seconds % 60)
 
-    @nottest
+    #@nottest
     def test_a_general(self):
         """General purpose test for morphological parsers.
+
+        This is a lengthy, linear test.  Here is an overview:
+
+        1. create application settings
+        2. create forms
+        3. create 2 morphologies, one with impoverished morpheme representations
+        4. create a phonology
+        5. create 2 language models, one categorial
+        6. create 4 parsers -- all combinations of +-impoverished and +-categorial
+
         """
 
         # Create the default application settings -- note that we have only one morpheme delimiter.
@@ -80,6 +90,7 @@ class TestMorphologicalparsersController(TestController):
             'N': model.SyntacticCategory(name=u'N'),
             'V': model.SyntacticCategory(name=u'V'),
             'AGR': model.SyntacticCategory(name=u'AGR'),
+            'Agr': model.SyntacticCategory(name=u'Agr'),
             'PHI': model.SyntacticCategory(name=u'PHI'),
             'S': model.SyntacticCategory(name=u'S'),
             'D': model.SyntacticCategory(name=u'D')
@@ -111,17 +122,24 @@ class TestMorphologicalparsersController(TestController):
             ('s', 's', 'PL', 'plural', cats['PHI']),
 
             ('ait', 'ait', '3SG.IMPV', 'third person singular imperfective', cats['AGR']),
+            ('ait', 'ait', '3IMP', 'third person imparfait', cats['Agr']),
             ('aient', 'aient', '3PL.IMPV', 'third person plural imperfective', cats['AGR']),
 
-            ('Les chats nageaient.', 'le-s chat-s nage-aient', 'the-PL cat-PL swim-3PL.IMPV', 'The cats were swimming.', cats['S']),
-            ('La tortue parlait', 'la tortue parle-ait', 'the turtle speak-3SG.IMPV', 'The turtle was speaking.', cats['S'])
+            ('Les chats nageaient.', 'le-s chat-s nage-aient', 'the-PL cat-PL swim-3PL.IMPV',
+                'The cats were swimming.', cats['S']),
+            ('La tortue parlait', 'la tortue parle-ait', 'the turtle speak-3SG.IMPV',
+                'The turtle was speaking.', cats['S']),
+            ('La tortue tombait', 'la tortue tombe-ait', 'the turtle fall-3SG.IMPV',
+                'The turtle was falling.', cats['S']),
+            ('Le chien parlait', 'le chien parle-ait', 'the dog speak-3IMP',
+                'The dog was speaking.', cats['S'])
         )
 
         for tuple_ in dataset:
             self.create_form(*map(unicode, tuple_))
 
         # Create a form search model that returns lexical items (will be used to create the lexicon corpus)
-        query = {'filter': ['Form', 'syntactic_category', 'name', 'in', [u'N', u'V', u'AGR', u'PHI', u'D']]}
+        query = {'filter': ['Form', 'syntactic_category', 'name', 'in', [u'N', u'V', u'AGR', u'PHI', u'D', u'Agr']]}
         params = self.form_search_create_params.copy()
         params.update({
             'name': u'Find morphemes',
@@ -165,15 +183,16 @@ class TestMorphologicalparsersController(TestController):
 
         # Create a morphology using the lexicon and rules corpora
         name = u'Morphology of a very small subset of french'
-        params = self.morphology_create_params.copy()
-        params.update({
+        morphology_params = self.morphology_create_params.copy()
+        morphology_params.update({
             'name': name,
             'lexicon_corpus': lexicon_corpus_id,
             'rules_corpus': rules_corpus_id,
             'script_type': 'regex'
         })
-        params = json.dumps(params)
-        response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin)
+        morphology_params = json.dumps(morphology_params)
+        response = self.app.post(url('morphologies'), morphology_params,
+                self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         morphology_id = resp['id']
         assert resp['name'] == name
@@ -197,16 +216,13 @@ class TestMorphologicalparsersController(TestController):
         compile_attempt = resp['compile_attempt']
 
         # Poll ``GET /morphologies/morphology_id`` until ``compile_attempt`` has changed.
-        while True:
-            response = self.app.get(url('morphology', id=morphology_id),
-                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
-            resp = json.loads(response.body)
-            if compile_attempt != resp['compile_attempt']:
-                log.debug('Compile attempt for morphology %d has terminated.' % morphology_id)
-                break
-            else:
-                log.debug('Waiting for morphology %d to compile ...' % morphology_id)
-            sleep(1)
+        requester = lambda: self.app.get(url('morphology', id=morphology_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', compile_attempt, log, wait=1,
+            vocal=True, task_descr='compile morphology %s' % morphology_id)
+        assert resp['compile_message'] == \
+            u'Compilation process terminated successfully and new binary file was written.'
+
         response = self.app.get(url('morphology', id=morphology_id), params={'script': u'1', 'lexicon': u'1'},
                     headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
@@ -221,9 +237,9 @@ class TestMorphologicalparsersController(TestController):
         assert u'(NCat "-" PHICat)' in morphology_script # cf. chien-s
         assert u'(DCat "-" PHICat)' in morphology_script # cf. le-s
         assert u'(VCat "-" AGRCat)' in morphology_script # cf. nage-aient, parle-ait
-        assert u'c h a t "%scat":0' % h.rare_delimiter in morphology_script # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
-        assert u'c h i e n "%sdog":0' % h.rare_delimiter in morphology_script
-        assert u'b e \u0301 c a s s e "%swoodcock":0' % h.rare_delimiter in morphology_script
+        assert u'c h a t "%scat%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
+        assert u'c h i e n "%sdog%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
+        assert u'b e \u0301 c a s s e "%swoodcock%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
         assert resp['compile_succeeded'] == True
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
         assert morphology_binary_filename in morphology_dir_contents
@@ -252,6 +268,91 @@ class TestMorphologicalparsersController(TestController):
         assert ['la', 'the'] in lexicon['D']
         assert ['nage', 'swim'] in lexicon['V']
 
+        ################################################################################
+        # BEGIN IMPOVERISHED REPRESENTATION MORPHOLOGY
+        ################################################################################
+
+        # Create a new morphology, this time one that parses to impoverished representations.
+        name = u'Morphology of a very small subset of french, impoverished morphemes'
+        morphology_params = self.morphology_create_params.copy()
+        morphology_params.update({
+            'name': name,
+            'lexicon_corpus': lexicon_corpus_id,
+            'rules_corpus': rules_corpus_id,
+            'script_type': 'regex',
+            'rich_morphemes': False
+        })
+        morphology_params = json.dumps(morphology_params)
+        response = self.app.post(url('morphologies'), morphology_params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        impoverished_morphology_id = resp['id']
+        assert resp['name'] == name
+        assert resp['script_type'] == u'regex'
+
+        # Compile the morphology's script
+        response = self.app.put(url(controller='morphologies', action='generate_and_compile',
+                    id=impoverished_morphology_id), headers=self.json_headers,
+                    extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        compile_attempt = resp['compile_attempt']
+
+        # Poll ``GET /morphologies/morphology_id`` until ``compile_attempt`` has changed.
+        requester = lambda: self.app.get(url('morphology', id=impoverished_morphology_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', compile_attempt, log, wait=1,
+            vocal=True, task_descr='compile morphology %s' % impoverished_morphology_id)
+        assert resp['compile_message'] == \
+            u'Compilation process terminated successfully and new binary file was written.'
+
+        response = self.app.get(url('morphology', id=impoverished_morphology_id), params={'script': u'1', 'lexicon': u'1'},
+                    headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        morphology_dir = os.path.join(self.morphologies_path, 'morphology_%d' % impoverished_morphology_id)
+        morphology_binary_filename = 'morphology_%d.foma' % impoverished_morphology_id
+        morphology_dir_contents = os.listdir(morphology_dir)
+        morphology_script_path = os.path.join(morphology_dir, 'morphology_%d.script' % impoverished_morphology_id)
+        morphology_script = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
+        assert u'define morphology' in morphology_script
+        assert u'(NCat)' in morphology_script # cf. tortue
+        assert u'(DCat)' in morphology_script # cf. la
+        assert u'(NCat "-" PHICat)' in morphology_script # cf. chien-s
+        assert u'(DCat "-" PHICat)' in morphology_script # cf. le-s
+        assert u'(VCat "-" AGRCat)' in morphology_script # cf. nage-aient, parle-ait
+        assert u'c h a t' in morphology_script # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
+        assert u'c h i e n' in morphology_script
+        assert u'b e \u0301 c a s s e' in morphology_script
+        assert resp['compile_succeeded'] == True
+        assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
+        assert morphology_binary_filename in morphology_dir_contents
+        assert resp['modifier']['role'] == u'contributor'
+        rules = resp['rules_generated']
+        assert u'D' in rules # cf. le
+        assert u'N' in rules # cf. tortue
+        assert u'D-PHI' in rules # cf. le-s
+        assert u'N-PHI' in rules # cf. chien-s
+        assert u'V-AGR' in rules # cf. nage-aient, parle-ait
+        assert 'lexicon' in resp
+        assert 'script' in resp
+        assert resp['script'] == morphology_script
+        assert [u'chat', u'cat'] in resp['lexicon']['N']
+        assert [u'chien', u'dog'] in resp['lexicon']['N']
+
+        # Test GET /morphologies/1?script=1&lexicon=1 and make sure the script and lexicon are returned
+        response = self.app.get(url('morphology', id=impoverished_morphology_id), params={'script': u'1', 'lexicon': u'1'},
+                    headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        assert resp['script'] == morphology_script
+        lexicon = resp['lexicon']
+        assert ['s', 'PL'] in lexicon['PHI']
+        assert ['oiseau', 'bird'] in lexicon['N']
+        assert ['aient', '3PL.IMPV'] in lexicon['AGR']
+        assert ['la', 'the'] in lexicon['D']
+        assert ['nage', 'swim'] in lexicon['V']
+
+        ################################################################################
+        # END IMPOVERISHED REPRESENTATION MORPHOLOGY
+        ################################################################################
+
         # Create a very simple French phonology
         script = u'''
 define eDrop e -> 0 || _ "-" a;
@@ -269,12 +370,31 @@ define phonology eDrop .o. breakDrop;
         resp = json.loads(response.body)
         phonology_id = resp['id']
 
-        # Create a morpheme language model
+        ################################################################################
+        # LANGUAGE MODEL 1 
+        ################################################################################
+
+        # Create a corpus heavily stacked towards tombe|fall-ait|3SG.IMPV and V-AGR
+        # as opposed to tombe|fall-ait|3IMP and V-Agr.
+        sentences = Session.query(model.Form).filter(model.Form.syntactic_category.has(
+            model.SyntacticCategory.name==u'S')).all()
+        target_id = [s for s in sentences if s.transcription == u'La tortue tombait'][0].id
+        sentence_ids = [s.id for s in sentences] + [target_id] * 100
+        params = self.corpus_create_params.copy()
+        params.update({
+            'name': u'Corpus of sentences with lots of form %s' % target_id,
+            'content': u','.join(map(unicode, sentence_ids))
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('corpora'), params, self.json_headers, self.extra_environ_admin)
+        lm_corpus_id = json.loads(response.body)['id']
+
+        # Create the LM using lm_corpus
         name = u'Morpheme language model'
         params = self.morpheme_language_model_create_params.copy()
         params.update({
             'name': name,
-            'corpus': rules_corpus_id,
+            'corpus': lm_corpus_id,
             'toolkit': 'mitlm'
         })
         params = json.dumps(params)
@@ -298,7 +418,55 @@ define phonology eDrop .o. breakDrop;
         resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
         assert resp['generate_message'] == u'Language model successfully generated.'
 
-        # Create the morphological parser
+        ################################################################################
+        # LANGUAGE MODEL 2 -- CATEGORIAL
+        ################################################################################
+
+        name = u'Morpheme language model -- categorial'
+        params = self.morpheme_language_model_create_params.copy()
+        params.update({
+            'name': name,
+            'corpus': lm_corpus_id,
+            'toolkit': 'mitlm',
+            'categorial': True
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphemelanguagemodels'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        categorial_language_model_id = resp['id']
+        assert resp['name'] == name
+        assert resp['toolkit'] == u'mitlm'
+        assert resp['order'] == 3
+        assert resp['smoothing'] == u'' # The ModKN smoothing algorithm is the implicit default with MITLM
+        assert resp['categorial'] == True
+
+        # Generate the files of the language model
+        response = self.app.put(url(controller='morphemelanguagemodels', action='generate',
+            id=categorial_language_model_id),
+            {}, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        lm_generate_attempt = resp['generate_attempt']
+
+        # Poll GET /morphemelanguagemodels/id until generate_attempt changes.
+        requester = lambda: self.app.get(url('morphemelanguagemodel', id=categorial_language_model_id),
+            headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = self.poll(requester, 'generate_attempt', lm_generate_attempt, log, wait=1, vocal=False)
+        assert resp['generate_message'] == u'Language model successfully generated.'
+
+        ################################################################################
+        # TRANSCRIPTIONS & PARSES
+        ################################################################################
+
+        transcription1 = u'tombait'
+        transcription1_correct_parse = u'%s-%s' % (
+                h.rare_delimiter.join([u'tombe', u'fall', u'V']),
+                h.rare_delimiter.join([u'ait', u'3SG.IMPV', u'AGR']))
+        transcription1_impoverished_parse = u'tombe-ait'
+        transcription2 = u'tombeait'
+
+        ################################################################################
+        # MORPHOLOGICAL PARSER 1
+        ################################################################################
 
         # Create a morphological parser for toy french
         params = self.morphological_parser_create_params.copy()
@@ -332,15 +500,12 @@ define phonology eDrop .o. breakDrop;
             sleep(1)
 
         # Test applyup on the mophological parser's morphophonology FST
-        transcription1 = u'tombait'
-        transcription1_correct_parse = u'tombe%sfall-ait%s3SG.IMPV' % (h.rare_delimiter, h.rare_delimiter)
-        transcription2 = u'tombeait'
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(url(controller='morphologicalparsers', action='applyup',
                     id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert transcription1_correct_parse in resp[transcription1]
-        assert len(resp[transcription1]) == 1
+        assert len(resp[transcription1]) == 2
         assert resp[transcription2] == []
 
         # Test how well the morphological parser parses some test words.
@@ -351,26 +516,205 @@ define phonology eDrop .o. breakDrop;
         # There is only one possible parse for transcription 1 -- it is de facto the most probable
         assert resp[transcription1] == transcription1_correct_parse
 
-        # Create two more identical morphological parsers for later tests.
-        params = self.morphological_parser_create_params.copy()
-        params.update({
-            'name': u'Morphological parser for toy French 2',
-            'phonology': phonology_id,
-            'morphology': morphology_id,
-            'language_model': morpheme_language_model_id
-        })
-        params = json.dumps(params)
-        response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
+        ################################################################################
+        # END MORPHOLOGICAL PARSER 1
+        ################################################################################
 
+        ################################################################################
+        # MORPHOLOGICAL PARSER 2
+        ################################################################################
+
+        # Create an impoverished morphemes morphological parser for toy french
         params = self.morphological_parser_create_params.copy()
         params.update({
-            'name': u'Morphological parser for toy French 3',
+            'name': u'Morphological parser for toy French, impoverished morphemes',
             'phonology': phonology_id,
-            'morphology': morphology_id,
+            'morphology': impoverished_morphology_id,
             'language_model': morpheme_language_model_id
         })
         params = json.dumps(params)
         response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphological_parser_id = resp['id']
+
+        # Generate the parser's morphophonology FST and compile it.
+        response = self.app.put(url(controller='morphologicalparsers', action='generate_and_compile',
+            id=morphological_parser_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphological_parser_compile_attempt = resp['compile_attempt']
+
+        # Poll ``GET /morphologicalparsers/morphological_parser_id`` until ``compile_attempt`` has changed.
+        while True:
+            response = self.app.get(url('morphologicalparser', id=morphological_parser_id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if morphological_parser_compile_attempt != resp['compile_attempt']:
+                log.debug('Compile attempt for morphological parser %d has terminated.' % morphological_parser_id)
+                break
+            else:
+                log.debug('Waiting for morphological parser %d to compile ...' % morphological_parser_id)
+            sleep(1)
+
+        # Test applyup on the mophological parser's morphophonology FST
+        # Because the morphology returns impoverished representations, the morphophonology_
+        # will too.
+        params = json.dumps({'transcriptions': [transcription1, transcription2]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applyup',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert transcription1_impoverished_parse in resp[transcription1]
+        assert len(resp[transcription1]) == 1
+        assert resp[transcription2] == []
+
+        # Test applydown on the mophological parser's morphophonology FST
+        params = json.dumps({'morpheme_sequences': [transcription1_impoverished_parse]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applydown',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert transcription1 in resp[transcription1_impoverished_parse]
+
+        # Test how well the morphological parser parses some test words.
+        params = json.dumps({'transcriptions': [transcription1]})
+        response = self.app.put(url(controller='morphologicalparsers', action='parse',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+
+        # Note how the rich representation is always returned by a parser even if its morphophonology
+        # returns impoverished ones.  The ``parse`` action ambiguates the morphemic analysis received
+        # from the morphophonology before selecting the most probable candidate.
+        assert resp[transcription1] == transcription1_correct_parse
+
+        ################################################################################
+        # END MORPHOLOGICAL PARSER 2
+        ################################################################################
+
+        ################################################################################
+        # MORPHOLOGICAL PARSER 3 -- categorial LM
+        ################################################################################
+
+        # Create categorial LM  morphological parser for toy french
+        params = self.morphological_parser_create_params.copy()
+        params.update({
+            'name': u'Morphological parser for toy French, categorial LM',
+            'phonology': phonology_id,
+            'morphology': morphology_id,
+            'language_model': categorial_language_model_id
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphological_parser_id = resp['id']
+
+        # Generate the parser's morphophonology FST and compile it.
+        response = self.app.put(url(controller='morphologicalparsers', action='generate_and_compile',
+            id=morphological_parser_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphological_parser_compile_attempt = resp['compile_attempt']
+
+        # Poll ``GET /morphologicalparsers/morphological_parser_id`` until ``compile_attempt`` has changed.
+        while True:
+            response = self.app.get(url('morphologicalparser', id=morphological_parser_id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if morphological_parser_compile_attempt != resp['compile_attempt']:
+                log.debug('Compile attempt for morphological parser %d has terminated.' % morphological_parser_id)
+                break
+            else:
+                log.debug('Waiting for morphological parser %d to compile ...' % morphological_parser_id)
+            sleep(1)
+
+        # Test applyup on the mophological parser's morphophonology FST.  Everything should
+        # work just like parser #1.
+        params = json.dumps({'transcriptions': [transcription1, transcription2]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applyup',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert transcription1_correct_parse in resp[transcription1]
+        assert len(resp[transcription1]) == 2
+        assert resp[transcription2] == []
+
+        # Test applydown on the mophological parser's morphophonology FST
+        params = json.dumps({'morpheme_sequences': [transcription1_correct_parse]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applydown',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert transcription1 in resp[transcription1_correct_parse]
+
+        # Test how well the morphological parser parses some test words.
+        params = json.dumps({'transcriptions': [transcription1]})
+        response = self.app.put(url(controller='morphologicalparsers', action='parse',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        # There is only one possible parse for transcription 1 -- it is de facto the most probable
+        assert resp[transcription1] == transcription1_correct_parse
+
+        ################################################################################
+        # END MORPHOLOGICAL PARSER 3
+        ################################################################################
+
+        ################################################################################
+        # MORPHOLOGICAL PARSER 4 -- categorial LM & impoverished morphology
+        ################################################################################
+
+        # Create categorial LM, impoverished morphology morphological parser for toy french
+        params = self.morphological_parser_create_params.copy()
+        params.update({
+            'name': u'Morphological parser for toy French, categorial LM, impoverished morphology',
+            'phonology': phonology_id,
+            'morphology': impoverished_morphology_id,
+            'language_model': categorial_language_model_id
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('morphologicalparsers'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphological_parser_id = resp['id']
+
+        # Generate the parser's morphophonology FST and compile it.
+        response = self.app.put(url(controller='morphologicalparsers', action='generate_and_compile',
+            id=morphological_parser_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        morphological_parser_compile_attempt = resp['compile_attempt']
+
+        # Poll ``GET /morphologicalparsers/morphological_parser_id`` until ``compile_attempt`` has changed.
+        while True:
+            response = self.app.get(url('morphologicalparser', id=morphological_parser_id),
+                        headers=self.json_headers, extra_environ=self.extra_environ_contrib)
+            resp = json.loads(response.body)
+            if morphological_parser_compile_attempt != resp['compile_attempt']:
+                log.debug('Compile attempt for morphological parser %d has terminated.' % morphological_parser_id)
+                break
+            else:
+                log.debug('Waiting for morphological parser %d to compile ...' % morphological_parser_id)
+            sleep(1)
+
+        # Test applyup on the mophological parser's morphophonology FST.  Expect to get morpheme 
+        # form sequences. 
+        params = json.dumps({'transcriptions': [transcription1, transcription2]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applyup',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert transcription1_impoverished_parse in resp[transcription1]
+        assert len(resp[transcription1]) == 1
+        assert resp[transcription2] == []
+
+        # Test applydown on the mophological parser's morphophonology FST
+        params = json.dumps({'morpheme_sequences': [transcription1_impoverished_parse]})
+        response = self.app.put(url(controller='morphologicalparsers', action='applydown',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert transcription1 in resp[transcription1_impoverished_parse]
+
+        # Test how well the morphological parser parses some test words.
+        params = json.dumps({'transcriptions': [transcription1]})
+        response = self.app.put(url(controller='morphologicalparsers', action='parse',
+                    id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        # parse time ambiguation and categorial LM application should all conspire to return the correct parse...
+        assert resp[transcription1] == transcription1_correct_parse
+
+        ################################################################################
+        # END MORPHOLOGICAL PARSER 4
+        ################################################################################
 
         # Test that GET /morphologicalparsers returns all morphological parser resources.
 
@@ -379,7 +723,7 @@ define phonology eDrop .o. breakDrop;
         # Get all morphological parsers
         response = self.app.get(url('morphologicalparsers'), headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
-        assert len(resp) == 3
+        assert len(resp) == 4
 
         # Test the paginator GET params.
         paginator = {'items_per_page': 1, 'page': 1}
@@ -401,7 +745,7 @@ define phonology eDrop .o. breakDrop;
 
         # Test the order_by *with* paginator.
         params = {'order_by_model': 'MorphologicalParser', 'order_by_attribute': 'id',
-                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 3}
+                     'order_by_direction': 'desc', 'items_per_page': 1, 'page': 4}
         response = self.app.get(url('morphologicalparsers'), params,
                         headers=self.json_headers, extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
@@ -447,8 +791,8 @@ define phonology eDrop .o. breakDrop;
         response = self.app.get(url('new_morphologicalparser'), headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp['phonologies']) == 1
-        assert len(resp['morphologies']) == 1
-        assert len(resp['morpheme_language_models']) == 1
+        assert len(resp['morphologies']) == 2
+        assert len(resp['morpheme_language_models']) == 2
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_morphologicalparser', id=morphological_parsers[0].id), status=401)
@@ -476,8 +820,8 @@ define phonology eDrop .o. breakDrop;
         resp = json.loads(response.body)
         assert resp['morphological_parser']['name'] == morphological_parsers[0].name
         assert len(resp['data']['phonologies']) == 1
-        assert len(resp['data']['morphologies']) == 1
-        assert len(resp['data']['morpheme_language_models']) == 1
+        assert len(resp['data']['morphologies']) == 2
+        assert len(resp['data']['morpheme_language_models']) == 2
         assert response.content_type == 'application/json'
 
         # Tests that PUT /morphologicalparsers/id updates the morphological parser with id=id.
@@ -620,7 +964,7 @@ define phonology eDrop .o. breakDrop;
         assert resp['description'] == u'Newer description'
         assert resp['phonology']['id'] == morphological_parser_1_phonology_id
 
-    @nottest
+    #@nottest
     def test_i_large_datasets(self):
         """Tests that morphological parser functionality works with large datasets.
 
@@ -650,8 +994,8 @@ define phonology eDrop .o. breakDrop;
         # The ``precompiled_morphophonology`` variable holds the name of a compiled foma FST that
         # maps surface representations to sequences of morphemes.  A file with this name should be
         # present in /tests/data/morphophonologies or else the variable should be set to None.
-        pregenerated_morphophonology = 'blaold_morphophonology.script'
-        precompiled_morphophonology = 'blaold_morphophonology.foma'
+        pregenerated_morphophonology = None # 'blaold_morphophonology.script'
+        precompiled_morphophonology = None # 'blaold_morphophonology.foma'
 
         # Here we load a whole database from the mysqpl dump file specified in ``tests/data/datasets/<old_dump_file>``.
         old_dump_file_path = os.path.join(self.test_datasets_path, old_dump_file)
@@ -789,6 +1133,7 @@ define phonology eDrop .o. breakDrop;
         #word_category_sequences = u'agra-vai vai-agrb'
 
         # Now create a morphology using the lexicon and rules defined by word_category_sequences
+        rich_morphemes = False
         name = u'Morphology of Blackfoot'
         params = self.morphology_create_params.copy()
         params.update({
@@ -796,7 +1141,8 @@ define phonology eDrop .o. breakDrop;
             'lexicon_corpus': lexicon_corpus_id,
             'rules': word_category_sequences,
             'script_type': u'lexc',
-            'extract_morphemes_from_rules_corpus': False
+            'extract_morphemes_from_rules_corpus': False,
+            'rich_morphemes': rich_morphemes
         })
         params = json.dumps(params)
         response = self.app.post(url('morphologies'), params, self.json_headers, self.extra_environ_admin_appset)
@@ -918,21 +1264,29 @@ define phonology eDrop .o. breakDrop;
                 sleep(wait)
                 seconds_elapsed = seconds_elapsed + wait
 
-        # Test applyup on the mophological parser's morphophonology FST
+        # Some reusable transcriptions and their parses
         transcription1 = u'nitsspiyi'
-        transcription1_correct_parse = u'nit%s1-ihpiyi%sdance' % (h.rare_delimiter, h.rare_delimiter)
+        transcription1_correct_parse = u'%s-%s' % (
+                h.rare_delimiter.join([u'nit', u'1', u'agra']),
+                h.rare_delimiter.join([u'ihpiyi', u'dance', u'vai']))
+        transcription1_impoverished_parse = u'nit-ihpiyi'
         transcription2 = u'aaniit'
-        transcription2_correct_parse = u'waanii%ssay-t%sIMP' % (h.rare_delimiter, h.rare_delimiter)
+        transcription2_correct_parse = u'%s-%s' % (
+                h.rare_delimiter.join([u'waanii', u'say', u'vai']),
+                h.rare_delimiter.join([u't', u'IMP', u'agrb']))
+        transcription2_impoverished_parse = u'waanii-t'
+
+        # Test applyup on the mophological parser's morphophonology FST
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(url(controller='morphologicalparsers', action='applyup',
                     id=morphological_parser_id), params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        assert transcription1_correct_parse in resp[transcription1]
-        #log.debug('These are the parses for %s:' % transcription1)
-        #log.debug(u'\n'.join(pretty_parses(resp[transcription1])))
-        assert transcription2_correct_parse in resp[transcription2]
-        #log.debug('These are the parses for %s:' % transcription2)
-        #log.debug(u'\n'.join(pretty_parses(resp[transcription2])))
+        if rich_morphemes:
+            assert transcription1_correct_parse in resp[transcription1]
+            assert transcription2_correct_parse in resp[transcription2]
+        else:
+            assert transcription1_impoverished_parse in resp[transcription1]
+            assert transcription2_impoverished_parse in resp[transcription2]
 
         # Test how well the morphological parser parses some test words.
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
@@ -955,7 +1309,7 @@ define phonology eDrop .o. breakDrop;
         # Implement category-based class LMs and test them against morpheme-based ones.
         # Build multiple Bf morphological parsers and test them out, find the best one, write a paper on it!
 
-    @nottest
+    #@nottest
     def test_z_cleanup(self):
         """Clean up after the tests."""
 
