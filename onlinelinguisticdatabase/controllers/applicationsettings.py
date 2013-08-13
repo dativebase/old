@@ -341,39 +341,39 @@ def update_application_settings(application_settings, data):
     changed = False
 
     # Unicode Data
-    changed = h.set_attr(application_settings, 'object_language_name', data['object_language_name'], changed)
-    changed = h.set_attr(application_settings, 'object_language_id', data['object_language_id'], changed)
-    changed = h.set_attr(application_settings, 'metalanguage_name', data['metalanguage_name'], changed)
-    changed = h.set_attr(application_settings, 'metalanguage_id', data['metalanguage_id'], changed)
-    changed = h.set_attr(application_settings, 'metalanguage_inventory',
+    changed = application_settings.set_attr('object_language_name', data['object_language_name'], changed)
+    changed = application_settings.set_attr('object_language_id', data['object_language_id'], changed)
+    changed = application_settings.set_attr('metalanguage_name', data['metalanguage_name'], changed)
+    changed = application_settings.set_attr('metalanguage_id', data['metalanguage_id'], changed)
+    changed = application_settings.set_attr('metalanguage_inventory',
             h.normalize(h.remove_all_white_space(data['metalanguage_inventory'])), changed)
-    changed = h.set_attr(application_settings, 'orthographic_validation',
+    changed = application_settings.set_attr('orthographic_validation',
             data['orthographic_validation'], changed)
-    changed = h.set_attr(application_settings, 'narrow_phonetic_inventory',
+    changed = application_settings.set_attr('narrow_phonetic_inventory',
             h.normalize(h.remove_all_white_space(data['narrow_phonetic_inventory'])), changed)
-    changed = h.set_attr(application_settings, 'narrow_phonetic_validation',
+    changed = application_settings.set_attr('narrow_phonetic_validation',
             data['narrow_phonetic_validation'], changed)
-    changed = h.set_attr(application_settings, 'broad_phonetic_inventory',
+    changed = application_settings.set_attr('broad_phonetic_inventory',
             h.normalize(h.remove_all_white_space(data['broad_phonetic_inventory'])), changed)
-    changed = h.set_attr(application_settings, 'broad_phonetic_validation',
+    changed = application_settings.set_attr('broad_phonetic_validation',
             data['broad_phonetic_validation'], changed)
-    changed = h.set_attr(application_settings, 'morpheme_break_is_orthographic',
+    changed = application_settings.set_attr('morpheme_break_is_orthographic',
             data['morpheme_break_is_orthographic'], changed)
-    changed = h.set_attr(application_settings, 'morpheme_break_validation',
+    changed = application_settings.set_attr('morpheme_break_validation',
             data['morpheme_break_validation'], changed)
-    changed = h.set_attr(application_settings, 'phonemic_inventory',
+    changed = application_settings.set_attr('phonemic_inventory',
             h.normalize(h.remove_all_white_space(data['phonemic_inventory'])), changed)
-    changed = h.set_attr(application_settings, 'morpheme_delimiters',
+    changed = application_settings.set_attr('morpheme_delimiters',
             h.normalize(data['morpheme_delimiters']), changed)
-    changed = h.set_attr(application_settings, 'punctuation',
+    changed = application_settings.set_attr('punctuation',
             h.normalize(h.remove_all_white_space(data['punctuation'])), changed)
-    changed = h.set_attr(application_settings, 'grammaticalities',
+    changed = application_settings.set_attr('grammaticalities',
             h.normalize(h.remove_all_white_space(data['grammaticalities'])), changed)
 
     # Many-to-One
-    changed = h.set_attr(application_settings, 'storage_orthography', data['storage_orthography'], changed)
-    changed = h.set_attr(application_settings, 'input_orthography', data['input_orthography'], changed)
-    changed = h.set_attr(application_settings, 'output_orthography', data['output_orthography'], changed)
+    changed = application_settings.set_attr('storage_orthography', data['storage_orthography'], changed)
+    changed = application_settings.set_attr('input_orthography', data['input_orthography'], changed)
+    changed = application_settings.set_attr('output_orthography', data['output_orthography'], changed)
 
     # Many-to-Many Data: unrestricted_users
     # First check if the user has made any changes. If there are changes, just

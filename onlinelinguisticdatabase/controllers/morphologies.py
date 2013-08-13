@@ -22,14 +22,11 @@
 import logging
 import simplejson as json
 import os
-import re
 import cPickle
 from uuid import uuid4
 import codecs
-from subprocess import Popen
 from paste.fileapp import FileApp
 from pylons.controllers.util import forward
-from shutil import rmtree
 from pylons import request, response, session, config
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
@@ -111,7 +108,7 @@ class MorphologiesController(BaseController):
             morphology = create_new_morphology(data)
             Session.add(morphology)
             Session.commit()
-            create_morphology_dir(morphology)
+            morphology.make_directory_safely(morphology.directory)
             return morphology
         except h.JSONDecodeError:
             response.status_int = 400
@@ -217,13 +214,13 @@ class MorphologiesController(BaseController):
         if morphology:
             morphology_dict = morphology.get_dict()
             if request.GET.get('script') == u'1':
-                morphology_script_path = get_morphology_file_path(morphology, file_type='script')
+                morphology_script_path = morphology.get_file_path('script')
                 if os.path.isfile(morphology_script_path):
                     morphology_dict['script'] = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
                 else:
                     morphology_dict['script'] = u''
             if request.GET.get('lexicon') == u'1':
-                morphology_lexicon_path = get_morphology_file_path(morphology, file_type='lexicon')
+                morphology_lexicon_path = morphology.get_file_path('lexicon')
                 if os.path.isfile(morphology_lexicon_path):
                     morphology_dict['lexicon'] = cPickle.load(open(morphology_lexicon_path, 'rb'))
                 else:
@@ -335,7 +332,7 @@ class MorphologiesController(BaseController):
         morphology = Session.query(Morphology).get(id)
         if morphology:
             if h.foma_installed():
-                foma_file_path = get_morphology_file_path(morphology, 'binary')
+                foma_file_path = morphology.get_file_path('binary')
                 if os.path.isfile(foma_file_path):
                     return forward(FileApp(foma_file_path))
                 else:
@@ -397,13 +394,12 @@ class MorphologiesController(BaseController):
         morphology = Session.query(Morphology).get(id)
         if morphology:
             if h.foma_installed():
-                morphology_binary_path = get_morphology_file_path(morphology, 'binary')
+                morphology_binary_path = morphology.get_file_path('binary')
                 if os.path.isfile(morphology_binary_path):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         inputs = MorphemeSequencesSchema.to_python(inputs)
-                        return foma_apply(direction, inputs['morpheme_sequences'], morphology,
-                                                 morphology_binary_path, session['user'])
+                        return morphology.apply(direction, inputs['morpheme_sequences'])
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
@@ -454,18 +450,26 @@ def create_new_morphology(data):
     :returns: an SQLAlchemy model object representing the morphology.
 
     """
-    morphology = Morphology()
-    morphology.UUID = unicode(uuid4())
-    morphology.name = h.normalize(data['name'])
-    morphology.description = h.normalize(data['description'])
-    morphology.enterer = morphology.modifier = session['user']
-    morphology.datetime_modified = morphology.datetime_entered = h.now()
-    morphology.lexicon_corpus = data['lexicon_corpus']
-    morphology.rules_corpus = data['rules_corpus']
-    morphology.script_type = data['script_type']
-    morphology.extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus']
-    morphology.rules = data['rules']
-    morphology.rich_morphemes = data['rich_morphemes']
+    morphology = Morphology(
+        parent_directory = h.get_OLD_directory_path('morphologies', config=config),
+        word_boundary_symbol = h.word_boundary_symbol,
+        morpheme_delimiters = h.get_morpheme_delimiters(type_=u'unicode'),
+        rare_delimiter = h.rare_delimiter,
+        UUID = unicode(uuid4()),
+        name = h.normalize(data['name']),
+        description = h.normalize(data['description']),
+        enterer = session['user'],
+        modifier = session['user'],
+        datetime_modified = h.now(),
+        datetime_entered = h.now(),
+        lexicon_corpus = data['lexicon_corpus'],
+        rules_corpus = data['rules_corpus'],
+        script_type = data['script_type'],
+        extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus'],
+        rules = data['rules'],
+        rich_morphemes = data['rich_morphemes'],
+        include_unknowns = data['include_unknowns']
+    )
     return morphology
 
 def update_morphology(morphology, data):
@@ -478,59 +482,23 @@ def update_morphology(morphology, data):
 
     """
     changed = False
-    changed = h.set_attr(morphology, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(morphology, 'description', h.normalize(data['description']), changed)
-    changed = h.set_attr(morphology, 'lexicon_corpus', data['lexicon_corpus'], changed)
-    changed = h.set_attr(morphology, 'rules_corpus', data['rules_corpus'], changed)
-    changed = h.set_attr(morphology, 'script_type', data['script_type'], changed)
-    changed = h.set_attr(morphology, 'extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
-    changed = h.set_attr(morphology, 'rules', data['rules'], changed)
-    changed = h.set_attr(morphology, 'rich_morphemes', data['rich_morphemes'], changed)
+    changed = morphology.set_attr('name', h.normalize(data['name']), changed)
+    changed = morphology.set_attr('description', h.normalize(data['description']), changed)
+    changed = morphology.set_attr('lexicon_corpus', data['lexicon_corpus'], changed)
+    changed = morphology.set_attr('rules_corpus', data['rules_corpus'], changed)
+    changed = morphology.set_attr('script_type', data['script_type'], changed)
+    changed = morphology.set_attr('extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
+    changed = morphology.set_attr('rules', data['rules'], changed)
+    changed = morphology.set_attr('rich_morphemes', data['rich_morphemes'], changed)
+    changed = morphology.set_attr('include_unknowns', data['include_unknowns'], changed)
+    changed = morphology.set_attr('rare_delimiter', data['rare_delimiter'], changed)
+    changed = morphology.set_attr('word_boundary_symbol', data['word_boundary_symbol'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']
         morphology.datetime_modified = h.now()
         return morphology
     return changed
-
-def get_morphology_dir_path(morphology):
-    """Return the path to a morphology's directory.
-
-    :param morphology: a morphology model object.
-    :returns: an absolute path to the directory for the morphology.
-
-    """
-    return os.path.join(h.get_OLD_directory_path('morphologies', config=config),
-                        'morphology_%d' % morphology.id)
-
-def create_morphology_dir(morphology):
-    """Create the directory to hold the morphology script and auxiliary files.
-
-    :param morphology: a morphology model object.
-    :returns: an absolute path to the directory for the morphology.
-
-    """
-    morphology_dir_path = get_morphology_dir_path(morphology)
-    h.make_directory_safely(morphology_dir_path)
-    return morphology_dir_path
-
-def get_morphology_file_path(morphology, file_type='script'):
-    """Return the path to a morphology's file of the given type.
-
-    :param morphology: a morphology model object.
-    :param str file_type: one of 'script', 'binary', 'compiler', or 'tester'.
-    :returns: an absolute path to the morphology's script file.
-
-    """
-    ext_map = {
-        'script': 'script',
-        'binary': 'foma',
-        'compiler': 'sh',
-        'log': 'log',
-        'lexicon': 'pickle'
-    }
-    return os.path.join(get_morphology_dir_path(morphology),
-            'morphology_%d.%s' % (morphology.id, ext_map.get(file_type, 'script')))
 
 def generate_and_compile_morphology(morphology_id, compile_=True):
     morphology = Session.query(Morphology).get(morphology_id)
@@ -540,64 +508,15 @@ def generate_and_compile_morphology(morphology_id, compile_=True):
     if compile_ and not h.foma_installed():
         response.status_int = 400
         return {'error': 'Foma and flookup are not installed.'}
-    morphology_dir_path = get_morphology_dir_path(morphology)
-    verification_string = {'lexc': u'Done!', 'regex': u'defined morphology: '}.get(
-        morphology.script_type, u'Done!')
     foma_worker_q.put({
         'id': h.generate_salt(),
-        'func': 'generate_and_compile_morphology_script',
-        'args': {'morphology_id': morphology.id, 'compile': compile_,
-            'script_dir_path': morphology_dir_path, 'user_id': session['user'].id,
-            'verification_string': verification_string, 'timeout': h.morphology_compile_timeout}
+        'func': 'generate_and_compile_morphology',
+        'args': {
+            'morphology_id': morphology.id,
+            'compile': compile_,
+            'user_id': session['user'].id,
+            'timeout': h.morphology_compile_timeout
+        }
     })
     return morphology
 
-def remove_morphology_directory(morphology):
-    """Remove the directory of the morphology model and everything in it.
-    
-    :param morphology: a morphology model object.
-    :returns: an absolute path to the directory for the morphology.
-
-    """
-    try:
-        morphology_dir_path = get_morphology_dir_path(morphology)
-        rmtree(morphology_dir_path)
-        return morphology_dir_path
-    except Exception:
-        return None
-
-def foma_apply(direction, inputs, morphology, morphology_binary_path, user):
-    """Foma-apply the inputs in the direction of ``direction`` using the morphology's compiled foma script.
-
-    :param str direction: the direction in which to use the transducer
-    :param list inputs: a list of morpho-phonemic transcriptions.
-    :param morphology: a morphology model.
-    :param str morphology_binary_path: an absolute path to a compiled morphology script.
-    :param user: a user model.
-    :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
-
-    """
-    random_string = h.generate_salt()
-    morphology_dir_path = get_morphology_dir_path(morphology)
-    inputs_file_path = os.path.join(morphology_dir_path,
-            'inputs_%s_%s.txt' % (user.username, random_string))
-    outputs_file_path = os.path.join(morphology_dir_path,
-            'outputs_%s_%s.txt' % (user.username, random_string))
-    apply_file_path = os.path.join(morphology_dir_path,
-            'apply_%s_%s.sh' % (user.username, random_string))
-    with codecs.open(inputs_file_path, 'w', 'utf8') as f:
-        f.write(u'\n'.join(inputs))
-    with codecs.open(apply_file_path, 'w', 'utf8') as f:
-        f.write('#!/bin/sh\ncat %s | flookup %s%s' % (
-            inputs_file_path, {'up': '', 'down': '-i '}.get(direction, '-i '), morphology_binary_path))
-    os.chmod(apply_file_path, 0744)
-    with open(os.devnull, 'w') as devnull:
-        with codecs.open(outputs_file_path, 'w', 'utf8') as outfile:
-            p = Popen(apply_file_path, shell=False, stdout=outfile, stderr=devnull)
-    p.communicate()
-    with codecs.open(outputs_file_path, 'r', 'utf8') as f:
-        result = h.foma_output_file2dict(f, remove_word_boundaries=False)
-    os.remove(inputs_file_path)
-    os.remove(outputs_file_path)
-    os.remove(apply_file_path)
-    return result

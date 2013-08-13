@@ -21,19 +21,13 @@
 
 import logging
 import datetime
-import re
 import simplejson as json
-
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import SpeakerSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Speaker
 
@@ -255,12 +249,12 @@ def update_speaker(speaker, data):
     changed = False
 
     # Unicode Data
-    changed = h.set_attr(speaker, 'first_name', h.normalize(data['first_name']), changed)
-    changed = h.set_attr(speaker, 'last_name', h.normalize(data['last_name']), changed)
-    changed = h.set_attr(speaker, 'dialect', h.normalize(data['dialect']), changed)
-    changed = h.set_attr(speaker, 'page_content', h.normalize(data['page_content']), changed)
-    changed = h.set_attr(speaker, 'markup_language', h.normalize(data['markup_language']), changed)
-    changed = h.set_attr(speaker, 'html',
+    changed = speaker.set_attr('first_name', h.normalize(data['first_name']), changed)
+    changed = speaker.set_attr('last_name', h.normalize(data['last_name']), changed)
+    changed = speaker.set_attr('dialect', h.normalize(data['dialect']), changed)
+    changed = speaker.set_attr('page_content', h.normalize(data['page_content']), changed)
+    changed = speaker.set_attr('markup_language', h.normalize(data['markup_language']), changed)
+    changed = speaker.set_attr('html',
                         h.get_HTML_from_contents(speaker.page_content, speaker.markup_language),
                         changed)
 

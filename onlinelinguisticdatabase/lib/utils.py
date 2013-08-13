@@ -29,6 +29,7 @@ import unicodedata
 import string
 import smtplib
 import gzip
+import zipfile
 import codecs
 import ConfigParser
 from random import choice, shuffle
@@ -357,7 +358,7 @@ def destroy_all_directories(directory_name, config_filename='test.ini'):
 
 def make_directory_safely(path):
     """Create a directory and avoid race conditions.
-    
+
     Taken from 
     http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write.
     Listed as ``make_sure_path_exists``.
@@ -710,7 +711,7 @@ def get_grammaticalities():
     except AttributeError:
         return []
 
-def get_morpheme_delimiters():
+def get_morpheme_delimiters_DEPRECATED():
     """Return the morpheme delimiters from app settings as a list."""
     application_settings = get_application_settings()
     try:
@@ -721,6 +722,16 @@ def get_morpheme_delimiters():
         return morpheme_delimiters and morpheme_delimiters.split(',') or []
     except AttributeError:
         return []
+
+def get_morpheme_delimiters(type_='list'):
+    """Return the morpheme delimiters from app settings as an object of type ``type_``."""
+    application_settings = get_application_settings()
+    morpheme_delimiters = getattr(application_settings, 'morpheme_delimiters', u'')
+    if type_ != 'list':
+        return morpheme_delimiters
+    if morpheme_delimiters:
+        return morpheme_delimiters.split(u',')
+    return []
 
 def is_lexical(form):
     """Return True if the input form is lexical, i.e, if neither its morpheme
@@ -1806,17 +1817,6 @@ def get_user_full_name(user):
     return '%s %s' % (user.first_name, user.last_name)
 
 
-def set_attr(obj, name, value, changed):
-    """Set the value of obj.name to value only if obj.name != value.  Set changed
-    to True if obj.name has changed as a result.  Return changed.  Useful in the
-    update_model function of the controllers.
-    """
-    if getattr(obj, name) != value:
-        setattr(obj, name, value)
-        changed = True
-    return changed
-
-
 validation_values = (u'None', u'Warning', u'Error')
 
 # How long to wait (in seconds) before terminating a process that is trying to
@@ -1858,26 +1858,6 @@ def foma_output_file2dict(file_, remove_word_boundaries=True):
             result.setdefault(i, []).append({u'+?': None}.get(o, o))
     return dict((k, filter(None, v)) for k, v in result.iteritems())
 
-# Cf. http://code.google.com/p/foma/wiki/RegularExpressionReference#Reserved_symbols
-foma_reserved_symbols = [u'\u0021', u'\u0022', u'\u0023', u'\u0024', u'\u0025',
-    u'\u0026', u'\u0028', u'\u0029', u'\u002A', u'\u002B', u'\u002C', u'\u002D',
-    u'\u002E', u'\u002F', u'\u0030', u'\u003A', u'\u003B', u'\u003C', u'\u003E',
-    u'\u003F', u'\u005B', u'\u005C', u'\u005D', u'\u005E', u'\u005F', u'\u0060',
-    u'\u007B', u'\u007C', u'\u007D', u'\u007E', u'\u00AC', u'\u00B9', u'\u00D7',
-    u'\u03A3', u'\u03B5', u'\u207B', u'\u2081', u'\u2082', u'\u2192', u'\u2194',
-    u'\u2200', u'\u2203', u'\u2205', u'\u2208', u'\u2218', u'\u2225', u'\u2227',
-    u'\u2228', u'\u2229', u'\u222A', u'\u2264', u'\u2265', u'\u227A', u'\u227B']
-
-foma_reserved_symbols_patt = re.compile(u'[%s]' % u''.join(foma_reserved_symbols))
-
-def escape_foma_reserved_symbols(string):
-    """Prepend foma reserved symbols with % to escape them."""
-    return foma_reserved_symbols_patt.sub(lambda m: u'%' + m.group(0), string)
-
-def delete_foma_reserved_symbols(string):
-    """Delete foma reserved symbols -- good for names of defined regexes."""
-    return foma_reserved_symbols_patt.sub(u'', string)
-
 morphology_script_types = ('regex', 'lexc')
 
 def get_file_length(file_path):
@@ -1904,6 +1884,50 @@ def compress_file(file_path):
         fo.writelines(fi)
         fo.close()
         return gzip_path
+
+def zipdir(path):
+    """Create a compressed .zip archive of the directory at ``path``.
+
+    Note that the relative path names of all files in the tree under ``path``
+    are maintained.  E.g,. if ``path/dir/x.txt`` exists, then when ``path.zip``
+    is unzipped, ``path/dir/x.txt`` will be created.
+
+    """
+    dirname = os.path.dirname(path)
+    zip_path = '%s.zip' % path
+    zip_file = zipfile.ZipFile(zip_path, 'w')
+    for root, dirs, files in os.walk(path):
+        for file_ in files:
+            full_path = os.path.join(root, file_)
+            relative_path = full_path[len(dirname):]
+            zip_file.write(full_path, relative_path, zipfile.ZIP_DEFLATED)
+    zip_file.close()
+    return zip_path
+
+class ZipFile(zipfile.ZipFile):
+
+    @property
+    def directory_name(self):
+        try:
+            return self._directory_name
+        except AttributeError:
+            self._directory_name = os.path.splitext(os.path.basename(self.filename))[0]
+            return self._directory_name
+
+    def write_directory(self, directory_path, **kwargs):
+        for root, dirs, files in os.walk(directory_path):
+            for file_name in files:
+                full_path = os.path.join(root, file_name)
+                if kwargs.get('keep_dir', False):
+                    new_path = os.path.join(self.directory_name,
+                        os.path.basename(directory_path), file_name)
+                else:
+                    new_path = os.path.join(self.directory_name, file_name)
+                self.write(full_path, new_path, zipfile.ZIP_DEFLATED)
+
+    def write_file(self, file_path):
+        new_path = os.path.join(self.directory_name, os.path.basename(file_path))
+        self.write(file_path, new_path, zipfile.ZIP_DEFLATED)
 
 
 def pretty_print_bytes(num_bytes):
@@ -1972,27 +1996,6 @@ def get_language_object(language_list):
     return language
 
 
-# makefilter is a unicode filter factory -- taken from The Python Cookbook
-class Keeper(object):
-    """Filters everything from a unicode string except the characters in ``keep``."""
-    def __init__(self, keep):
-        self.keep = set(map(ord, keep))
-    def __getitem__(self, n):
-        if n not in self.keep:
-            return None
-        return unichr(n)
-    def __call__(self, s):
-        return unicode(s).translate(self)
-makefilter = Keeper
-
-def get_form_references(content):
-    """Similar to ``get_ids_of_forms_referenced`` except that references are
-    assumed to be comma-delimited strings of digits -- all other text is
-    filtered out.
-    """
-    digits_comma_only = makefilter('1234567890,')
-    return filter(None, map(get_int, digits_comma_only(content).split(',')))
-
 # String to use when a morpheme's category cannot be determined
 unknown_category = u'?'
 
@@ -2007,9 +2010,6 @@ def chunker(sequence, size):
     """Convert a sequence to a generator that yields subsequences of the sequence of size ``size``."""
     return (sequence[position:position + size] for position in xrange(0, len(sequence), size))
 
-
-ngram_start_symbol = u'START_SYMBOL'
-ngram_end_symbol = u'END_SYMBOL'
 
 def get_morpheme_splitter():
     """Return a function that will split words into morphemes."""
@@ -2061,7 +2061,8 @@ def get_word_category_sequences(corpus):
     result = {}
     morpheme_splitter = get_morpheme_splitter()
     for form in corpus.forms:
-        category_sequences, morphemes = extract_word_pos_sequences(form, unknown_category, morpheme_splitter, extract_morphemes=False)
+        category_sequences, morphemes = form.extract_word_pos_sequences(
+            unknown_category, morpheme_splitter, extract_morphemes=False)
         if category_sequences:
             for category_sequence in category_sequences:
                 result.setdefault(category_sequence, []).append(form.id)

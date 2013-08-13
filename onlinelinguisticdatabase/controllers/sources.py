@@ -21,13 +21,9 @@
 
 import logging
 import datetime
-import re
 import simplejson as json
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import SourceSchema
 import onlinelinguisticdatabase.lib.helpers as h
@@ -347,50 +343,50 @@ def update_source(source, data):
     changed = False
 
     # Unicode Data
-    changed = h.set_attr(source, 'type', h.normalize(data['type']), changed)
-    changed = h.set_attr(source, 'key', h.normalize(data['key']), changed)
-    changed = h.set_attr(source, 'address', h.normalize(data['address']), changed)
-    changed = h.set_attr(source, 'annote', h.normalize(data['annote']), changed)
-    changed = h.set_attr(source, 'author', h.normalize(data['author']), changed)
-    changed = h.set_attr(source, 'booktitle', h.normalize(data['booktitle']), changed)
-    changed = h.set_attr(source, 'chapter', h.normalize(data['chapter']), changed)
-    changed = h.set_attr(source, 'crossref', h.normalize(data['crossref']), changed)
-    changed = h.set_attr(source, 'edition', h.normalize(data['edition']), changed)
-    changed = h.set_attr(source, 'editor', h.normalize(data['editor']), changed)
-    changed = h.set_attr(source, 'howpublished', h.normalize(data['howpublished']), changed)
-    changed = h.set_attr(source, 'institution', h.normalize(data['institution']), changed)
-    changed = h.set_attr(source, 'journal', h.normalize(data['journal']), changed)
-    changed = h.set_attr(source, 'key_field', h.normalize(data['key_field']), changed)
-    changed = h.set_attr(source, 'month', h.normalize(data['month']), changed)
-    changed = h.set_attr(source, 'note', h.normalize(data['note']), changed)
-    changed = h.set_attr(source, 'number', h.normalize(data['number']), changed)
-    changed = h.set_attr(source, 'organization', h.normalize(data['organization']), changed)
-    changed = h.set_attr(source, 'pages', h.normalize(data['pages']), changed)
-    changed = h.set_attr(source, 'publisher', h.normalize(data['publisher']), changed)
-    changed = h.set_attr(source, 'school', h.normalize(data['school']), changed)
-    changed = h.set_attr(source, 'series', h.normalize(data['series']), changed)
-    changed = h.set_attr(source, 'title', h.normalize(data['title']), changed)
-    changed = h.set_attr(source, 'type_field', h.normalize(data['type_field']), changed)
-    changed = h.set_attr(source, 'url', data['url'], changed)
-    changed = h.set_attr(source, 'volume', h.normalize(data['volume']), changed)
-    changed = h.set_attr(source, 'year', data['year'], changed)
-    changed = h.set_attr(source, 'affiliation', h.normalize(data['affiliation']), changed)
-    changed = h.set_attr(source, 'abstract', h.normalize(data['abstract']), changed)
-    changed = h.set_attr(source, 'contents', h.normalize(data['contents']), changed)
-    changed = h.set_attr(source, 'copyright', h.normalize(data['copyright']), changed)
-    changed = h.set_attr(source, 'ISBN', h.normalize(data['ISBN']), changed)
-    changed = h.set_attr(source, 'ISSN', h.normalize(data['ISSN']), changed)
-    changed = h.set_attr(source, 'keywords', h.normalize(data['keywords']), changed)
-    changed = h.set_attr(source, 'language', h.normalize(data['language']), changed)
-    changed = h.set_attr(source, 'location', h.normalize(data['location']), changed)
-    changed = h.set_attr(source, 'LCCN', h.normalize(data['LCCN']), changed)
-    changed = h.set_attr(source, 'mrnumber', h.normalize(data['mrnumber']), changed)
-    changed = h.set_attr(source, 'price', h.normalize(data['price']), changed)
-    changed = h.set_attr(source, 'size', h.normalize(data['size']), changed)
+    changed = source.set_attr('type', h.normalize(data['type']), changed)
+    changed = source.set_attr('key', h.normalize(data['key']), changed)
+    changed = source.set_attr('address', h.normalize(data['address']), changed)
+    changed = source.set_attr('annote', h.normalize(data['annote']), changed)
+    changed = source.set_attr('author', h.normalize(data['author']), changed)
+    changed = source.set_attr('booktitle', h.normalize(data['booktitle']), changed)
+    changed = source.set_attr('chapter', h.normalize(data['chapter']), changed)
+    changed = source.set_attr('crossref', h.normalize(data['crossref']), changed)
+    changed = source.set_attr('edition', h.normalize(data['edition']), changed)
+    changed = source.set_attr('editor', h.normalize(data['editor']), changed)
+    changed = source.set_attr('howpublished', h.normalize(data['howpublished']), changed)
+    changed = source.set_attr('institution', h.normalize(data['institution']), changed)
+    changed = source.set_attr('journal', h.normalize(data['journal']), changed)
+    changed = source.set_attr('key_field', h.normalize(data['key_field']), changed)
+    changed = source.set_attr('month', h.normalize(data['month']), changed)
+    changed = source.set_attr('note', h.normalize(data['note']), changed)
+    changed = source.set_attr('number', h.normalize(data['number']), changed)
+    changed = source.set_attr('organization', h.normalize(data['organization']), changed)
+    changed = source.set_attr('pages', h.normalize(data['pages']), changed)
+    changed = source.set_attr('publisher', h.normalize(data['publisher']), changed)
+    changed = source.set_attr('school', h.normalize(data['school']), changed)
+    changed = source.set_attr('series', h.normalize(data['series']), changed)
+    changed = source.set_attr('title', h.normalize(data['title']), changed)
+    changed = source.set_attr('type_field', h.normalize(data['type_field']), changed)
+    changed = source.set_attr('url', data['url'], changed)
+    changed = source.set_attr('volume', h.normalize(data['volume']), changed)
+    changed = source.set_attr('year', data['year'], changed)
+    changed = source.set_attr('affiliation', h.normalize(data['affiliation']), changed)
+    changed = source.set_attr('abstract', h.normalize(data['abstract']), changed)
+    changed = source.set_attr('contents', h.normalize(data['contents']), changed)
+    changed = source.set_attr('copyright', h.normalize(data['copyright']), changed)
+    changed = source.set_attr('ISBN', h.normalize(data['ISBN']), changed)
+    changed = source.set_attr('ISSN', h.normalize(data['ISSN']), changed)
+    changed = source.set_attr('keywords', h.normalize(data['keywords']), changed)
+    changed = source.set_attr('language', h.normalize(data['language']), changed)
+    changed = source.set_attr('location', h.normalize(data['location']), changed)
+    changed = source.set_attr('LCCN', h.normalize(data['LCCN']), changed)
+    changed = source.set_attr('mrnumber', h.normalize(data['mrnumber']), changed)
+    changed = source.set_attr('price', h.normalize(data['price']), changed)
+    changed = source.set_attr('size', h.normalize(data['size']), changed)
 
     # Many-to-One Data
-    changed = h.set_attr(source, 'file', data['file'], changed)
-    changed = h.set_attr(source, 'crossref_source', data['crossref_source'], changed)
+    changed = source.set_attr('file', data['file'], changed)
+    changed = source.set_attr('crossref_source', data['crossref_source'], changed)
 
     if changed:
         source.datetime_modified = datetime.datetime.utcnow()

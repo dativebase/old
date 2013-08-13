@@ -61,6 +61,7 @@ class MorphologyBackup(Base):
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
     rules = Column(UnicodeText)
     rich_morphemes = Column(Boolean, default=False)
+    include_unknowns = Column(Boolean, default=False)
 
     def vivify(self, morphology_dict):
         """The vivify method gives life to a morphology_backup by specifying its
@@ -87,6 +88,7 @@ class MorphologyBackup(Base):
         self.extract_morphemes_from_rules_corpus = morphology_dict['extract_morphemes_from_rules_corpus']
         self.rules = morphology_dict['rules']
         self.rich_morphemes = morphology_dict['rich_morphemes']
+        self.include_unknowns = morphology_dict['include_unknowns']
 
     def get_dict(self):
         return {
@@ -108,5 +110,6 @@ class MorphologyBackup(Base):
             'generate_attempt': self.generate_attempt,
             'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus,
             'rules': self.rules,
-            'rich_morphemes': self.rich_morphemes
+            'rich_morphemes': self.rich_morphemes,
+            'include_unknowns': self.include_unknowns
         }

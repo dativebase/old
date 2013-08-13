@@ -134,3 +134,33 @@ class Form(Base):
             'tags': self.get_tags_list(self.tags),
             'files': self.get_files_list(self.files)
         }
+
+    def extract_word_pos_sequences(self, unknown_category, morpheme_splitter, extract_morphemes=False):
+        """Return the unique word-based pos sequences, as well as (possibly) the morphemes, implicit in the form.
+
+        :param form: a form model object
+        :param morpheme_splitter: callable that splits a strings into its morphemes and delimiters
+        :param str unknown_category: the string used in syntactic category strings when a morpheme-gloss pair is unknown
+        :param morphology: the morphology model object -- needed because its extract_morphemes_from_rules_corpus
+            attribute determines whether we return a list of morphemes.
+        :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes as (pos, (mb, mg)) tuples).
+
+        """
+        if not self.syntactic_category_string:
+            return None, None
+        pos_sequences = set()
+        morphemes = []
+        sc_words = self.syntactic_category_string.split()
+        mb_words = self.morpheme_break.split()
+        mg_words = self.morpheme_gloss.split()
+        for sc_word, mb_word, mg_word in zip(sc_words, mb_words, mg_words):
+            pos_sequence = tuple(morpheme_splitter(sc_word))
+            if unknown_category not in pos_sequence:
+                pos_sequences.add(pos_sequence)
+                if extract_morphemes:
+                    morpheme_sequence = morpheme_splitter(mb_word)[::2]
+                    gloss_sequence = morpheme_splitter(mg_word)[::2]
+                    for pos, morpheme, gloss in zip(pos_sequence[::2], morpheme_sequence, gloss_sequence):
+                        morphemes.append((pos, (morpheme, gloss)))
+        return pos_sequences, morphemes
+

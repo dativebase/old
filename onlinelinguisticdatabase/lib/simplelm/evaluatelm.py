@@ -27,15 +27,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# NOTE: this script is a modified version of Novak's evaluate-lm.py.  
+# NOTE: this script is a modified version of Novak's evaluate-lm.py.
 # It has been modifed by Joel Dunham (2013).  Modifications:
 #
 #  * some minor code formatting
-#  * load_arpa now has an encoding paramter to allow for UTF-8-encoded 
+#  * load_arpa now has an encoding parameter to allow for UTF-8-encoded
 #    ARPA files.
 
 import re
 import codecs
+import logging
+
+log = logging.getLogger(__name__)
 
 class LMTree():
     """A simple trie structure suitable for representing a standard

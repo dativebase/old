@@ -9,6 +9,7 @@
 *.log
 *.swp
 TODO.txt
+TODO_PARSER.txt
 
 # Some Pylons-generated directories that should be ignored
 /dist/

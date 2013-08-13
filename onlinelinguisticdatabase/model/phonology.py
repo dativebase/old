@@ -18,8 +18,9 @@ from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.lib.parser import PhonologyFST
 
-class Phonology(Base):
+class Phonology(PhonologyFST, Base):
 
     __tablename__ = 'phonology'
     __table_args__ = {'mysql_charset': 'utf8'}
@@ -41,6 +42,10 @@ class Phonology(Base):
     compile_succeeded = Column(Boolean, default=False)
     compile_message = Column(Unicode(255))
     compile_attempt = Column(Unicode(36))
+
+    # These two incidental attributes are initialized by the constructor.
+    parent_directory = Column(Unicode(255))
+    word_boundary_symbol = Column(Unicode(10))
 
     def get_dict(self):
         return {

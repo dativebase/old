@@ -25,19 +25,15 @@ TODO: permit choice of morpheme vs category-based language models
 import logging
 import simplejson as json
 import os
-import re
-import cPickle
 from uuid import uuid4
 from paste.fileapp import FileApp
 from pylons.controllers.util import forward
-from shutil import rmtree
 from pylons import request, response, session, config
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import MorphemeLanguageModelSchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
-import onlinelinguisticdatabase.lib.simplelm as simplelm
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import MorphemeLanguageModel, MorphemeLanguageModelBackup
 from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
@@ -100,11 +96,11 @@ class MorphemelanguagemodelsController(BaseController):
             schema = MorphemeLanguageModelSchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            morpheme_language_model = create_new_morpheme_language_model(data)
-            Session.add(morpheme_language_model)
+            lm = create_new_morpheme_language_model(data)
+            Session.add(lm)
             Session.commit()
-            create_morpheme_language_model_dir(morpheme_language_model)
-            return morpheme_language_model
+            lm.make_directory_safely(lm.directory)
+            return lm
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -179,14 +175,14 @@ class MorphemelanguagemodelsController(BaseController):
         :returns: the deleted morpheme language model model.
 
         """
-        morpheme_language_model = h.eagerload_morpheme_language_model(Session.query(MorphemeLanguageModel)).get(id)
-        if morpheme_language_model:
-            morpheme_language_model_dict = morpheme_language_model.get_dict()
-            backup_morpheme_language_model(morpheme_language_model_dict)
-            Session.delete(morpheme_language_model)
+        lm = h.eagerload_morpheme_language_model(Session.query(MorphemeLanguageModel)).get(id)
+        if lm:
+            lm_dict = lm.get_dict()
+            backup_morpheme_language_model(lm_dict)
+            Session.delete(lm)
             Session.commit()
-            remove_morpheme_language_model_directory(morpheme_language_model)
-            return morpheme_language_model
+            lm.remove_directory()
+            return lm
         else:
             response.status_int = 404
             return {'error': 'There is no morpheme language model with id %s' % id}
@@ -202,9 +198,9 @@ class MorphemelanguagemodelsController(BaseController):
         :returns: a morpheme language model model object.
 
         """
-        morpheme_language_model = h.eagerload_morpheme_language_model(Session.query(MorphemeLanguageModel)).get(id)
-        if morpheme_language_model:
-            return morpheme_language_model
+        lm = h.eagerload_morpheme_language_model(Session.query(MorphemeLanguageModel)).get(id)
+        if lm:
+            return lm
         else:
             response.status_int = 404
             return {'error': 'There is no morpheme language model with id %s' % id}
@@ -227,9 +223,10 @@ class MorphemelanguagemodelsController(BaseController):
             is the data structure returned by the ``new`` action.
 
         """
-        morpheme_language_model = h.eagerload_morpheme_language_model(Session.query(MorphemeLanguageModel)).get(id)
-        if morpheme_language_model:
-            return {'data': get_data_for_new_edit(dict(request.GET)), 'morpheme_language_model': morpheme_language_model}
+        lm = h.eagerload_morpheme_language_model(Session.query(MorphemeLanguageModel)).get(id)
+        if lm:
+            return {'data': get_data_for_new_edit(dict(request.GET)),
+                    'morpheme_language_model': lm}
         else:
             response.status_int = 404
             return {'error': 'There is no morpheme language model with id %s' % id}
@@ -253,9 +250,9 @@ class MorphemelanguagemodelsController(BaseController):
             morpheme language model.
 
         """
-        morpheme_language_model, previous_versions = h.get_model_and_previous_versions('MorphemeLanguageModel', id)
-        if morpheme_language_model or previous_versions:
-            return {'morpheme_language_model': morpheme_language_model,
+        lm, previous_versions = h.get_model_and_previous_versions('MorphemeLanguageModel', id)
+        if lm or previous_versions:
+            return {'morpheme_language_model': lm,
                     'previous_versions': previous_versions}
         else:
             response.status_int = 404
@@ -274,28 +271,21 @@ class MorphemelanguagemodelsController(BaseController):
             determine when the generation task has terminated.
 
         """
-        morpheme_language_model = Session.query(MorphemeLanguageModel).get(id)
-        if not morpheme_language_model:
+        lm = Session.query(MorphemeLanguageModel).get(id)
+        if not lm:
             response.status_int = 404
             return {'error': 'There is no morpheme language model with id %s' % id}
-        morpheme_language_model_dir_path = h.get_model_directory_path(morpheme_language_model, config)
-        verification_string = u'Saving LM to %s' % h.get_model_file_path(morpheme_language_model,
-                morpheme_language_model_dir_path, file_type='arpa')
         args = {
-            'morpheme_language_model_id': morpheme_language_model.id,
-            'morpheme_language_model_path': morpheme_language_model_dir_path,
+            'morpheme_language_model_id': lm.id,
             'user_id': session['user'].id,
-            'verification_string': verification_string,
             'timeout': h.morpheme_language_model_generate_timeout
         }
-        if morpheme_language_model.vocabulary_morphology:
-            args['morphology_path'] = h.get_model_directory_path(morpheme_language_model.vocabulary_morphology, config)
         foma_worker_q.put({
             'id': h.generate_salt(),
-            'func': 'write_morpheme_language_model_files',
+            'func': 'generate_language_model',
             'args': args
         })
-        return morpheme_language_model
+        return lm
 
     @h.jsonify
     @h.restrict('PUT')
@@ -303,41 +293,27 @@ class MorphemelanguagemodelsController(BaseController):
     def get_probabilities(self, id):
         """Return the probability of each sequence of morphemes passed in the JSON PUT params.
 
-        :param list morpheme_sequences: space-delimited morphemes in morpheme_form|morpheme_gloss
+        :param list morpheme_sequences: space-delimited morphemes in form|gloss|category
             format wherer "|" is actually ``h.rare_delimiter``.
         :returns: a dictionary with morpheme sequences as keys and log probabilities as values.
 
         """
-        morpheme_language_model = Session.query(MorphemeLanguageModel).get(id)
-        if morpheme_language_model:
+        lm = Session.query(MorphemeLanguageModel).get(id)
+        if lm:
             try:
                 schema = MorphemeSequencesSchema()
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
-                splitter = re.compile('\s+')
-                morpheme_sequences = [(morpheme_sequence,
-                                       [h.lm_start] + splitter.split(morpheme_sequence) + [h.lm_end])
-                        for morpheme_sequence in data['morpheme_sequences']]
-                morpheme_language_model_dir_path = h.get_model_directory_path(morpheme_language_model, config)
-                lm_pickle_path = h.get_model_file_path(morpheme_language_model, morpheme_language_model_dir_path, file_type='lm_trie')
-                if os.path.isfile(lm_pickle_path):
-                    try:
-                        lm_trie = cPickle.load(open(lm_pickle_path, 'rb'))
-                        return dict((morpheme_sequence, simplelm.compute_sentence_prob(lm_trie, morpheme_sequence_list))
-                                        for morpheme_sequence, morpheme_sequence_list in morpheme_sequences)
-                    except Exception:
-                        response.status_int = 400
-                        return {'error': 'An error occurred while trying to generate probabilities.'}
-                else:
-                    response.status_int = 404
-                    log.warn(lm_pickle_path)
-                    return {'error': 'The morpheme language model was not written to disk.'}
+                return lm.get_probabilities(data['morpheme_sequences'])
             except h.JSONDecodeError:
                 response.status_int = 400
                 return h.JSONDecodeErrorResponse
             except Invalid, e:
                 response.status_int = 400
                 return {'errors': e.unpack_errors()}
+            except Exception:
+                response.status_int = 400
+                return {'error': 'An error occurred while trying to generate probabilities.'}
         else:
             response.status_int = 404
             return {'error': 'There is no morpheme language model with id %s' % id}
@@ -353,25 +329,21 @@ class MorphemelanguagemodelsController(BaseController):
         the perplexity and return the average.  See ``evaluate_morpheme_language_model`` in lib/foma_worker.py.
 
         """
-        morpheme_language_model = Session.query(MorphemeLanguageModel).get(id)
-        if not morpheme_language_model:
+        lm = Session.query(MorphemeLanguageModel).get(id)
+        if not lm:
             response.status_int = 404
             return {'error': 'There is no morpheme language model with id %s' % id}
-        morpheme_language_model_dir_path = h.get_model_directory_path(morpheme_language_model, config)
         args = {
-            'morpheme_language_model_id': morpheme_language_model.id,
-            'morpheme_language_model_path': morpheme_language_model_dir_path,
+            'morpheme_language_model_id': lm.id,
             'user_id': session['user'].id,
             'timeout': h.morpheme_language_model_generate_timeout
         }
-        if morpheme_language_model.vocabulary_morphology:
-            args['morphology_path'] = h.get_model_directory_path(morpheme_language_model.vocabulary_morphology, config)
         foma_worker_q.put({
             'id': h.generate_salt(),
-            'func': 'evaluate_morpheme_language_model',
+            'func': 'compute_perplexity',
             'args': args
         })
-        return morpheme_language_model
+        return lm
 
     @h.restrict('GET')
     @h.authenticate_with_JSON
@@ -383,13 +355,12 @@ class MorphemelanguagemodelsController(BaseController):
         :returns: a stream of bytes -- the ARPA file of the LM.
 
         """
-        morpheme_language_model = Session.query(MorphemeLanguageModel).get(id)
-        if morpheme_language_model:
-            lm_directory_path = h.get_model_directory_path(morpheme_language_model, config)
-            lm_arpa_path = h.get_model_file_path(morpheme_language_model, lm_directory_path, file_type='arpa')
-            if os.path.isfile(lm_arpa_path):
-                if authorized_to_access_arpa_file(session['user'], morpheme_language_model):
-                    return forward(FileApp(lm_arpa_path, content_type='text/plain'))
+        lm = Session.query(MorphemeLanguageModel).get(id)
+        if lm:
+            arpa_path = lm.get_file_path('arpa')
+            if os.path.isfile(arpa_path):
+                if authorized_to_access_arpa_file(session['user'], lm):
+                    return forward(FileApp(arpa_path, content_type='text/plain'))
                 else:
                     response.status_int = 403
                     return json.dumps(h.unauthorized_msg)
@@ -445,18 +416,26 @@ def create_new_morpheme_language_model(data):
     :returns: an SQLAlchemy model object representing the morpheme language model.
 
     """
-    morpheme_language_model = MorphemeLanguageModel()
-    morpheme_language_model.UUID = unicode(uuid4())
-    morpheme_language_model.name = h.normalize(data['name'])
-    morpheme_language_model.description = h.normalize(data['description'])
-    morpheme_language_model.enterer = morpheme_language_model.modifier = session['user']
-    morpheme_language_model.datetime_modified = morpheme_language_model.datetime_entered = h.now()
-    morpheme_language_model.vocabulary_morphology = data['vocabulary_morphology']
-    morpheme_language_model.corpus = data['corpus']
-    morpheme_language_model.toolkit = data['toolkit']
-    morpheme_language_model.order = data['order']
-    morpheme_language_model.smoothing = data['smoothing']
-    morpheme_language_model.categorial = data['categorial']
+    morpheme_language_model = MorphemeLanguageModel(
+        parent_directory = h.get_OLD_directory_path('morphemelanguagemodels', config=config),
+        rare_delimiter = h.rare_delimiter,
+        start_symbol = h.lm_start,
+        end_symbol = h.lm_end,
+        morpheme_delimiters = h.get_morpheme_delimiters(type_=u'unicode'),
+        UUID = unicode(uuid4()),
+        name = h.normalize(data['name']),
+        description = h.normalize(data['description']),
+        enterer = session['user'],
+        modifier = session['user'],
+        datetime_modified = h.now(),
+        datetime_entered = h.now(),
+        vocabulary_morphology = data['vocabulary_morphology'],
+        corpus = data['corpus'],
+        toolkit = data['toolkit'],
+        order = data['order'],
+        smoothing = data['smoothing'],
+        categorial = data['categorial']
+    )
     return morpheme_language_model
 
 def update_morpheme_language_model(morpheme_language_model, data):
@@ -469,43 +448,21 @@ def update_morpheme_language_model(morpheme_language_model, data):
 
     """
     changed = False
-    changed = h.set_attr(morpheme_language_model, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(morpheme_language_model, 'description', h.normalize(data['description']), changed)
-    changed = h.set_attr(morpheme_language_model, 'vocabulary_morphology', data['vocabulary_morphology'], changed)
-    changed = h.set_attr(morpheme_language_model, 'corpus', data['corpus'], changed)
-    changed = h.set_attr(morpheme_language_model, 'toolkit', data['toolkit'], changed)
-    changed = h.set_attr(morpheme_language_model, 'order', data['order'], changed)
-    changed = h.set_attr(morpheme_language_model, 'smoothing', data['smoothing'], changed)
-    changed = h.set_attr(morpheme_language_model, 'categorial', data['categorial'], changed)
+    changed = morpheme_language_model.set_attr('name', h.normalize(data['name']), changed)
+    changed = morpheme_language_model.set_attr('description', h.normalize(data['description']), changed)
+    changed = morpheme_language_model.set_attr('vocabulary_morphology', data['vocabulary_morphology'], changed)
+    changed = morpheme_language_model.set_attr('corpus', data['corpus'], changed)
+    changed = morpheme_language_model.set_attr('toolkit', data['toolkit'], changed)
+    changed = morpheme_language_model.set_attr('order', data['order'], changed)
+    changed = morpheme_language_model.set_attr('smoothing', data['smoothing'], changed)
+    changed = morpheme_language_model.set_attr('categorial', data['categorial'], changed)
+    changed = morpheme_language_model.set_attr('rare_delimiter', h.rare_delimiter, changed)
+    changed = morpheme_language_model.set_attr('start_symbol', h.lm_start, changed)
+    changed = morpheme_language_model.set_attr('end_symbol', h.lm_end, changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morpheme_language_model.modifier = session['user']
         morpheme_language_model.datetime_modified = h.now()
         return morpheme_language_model
     return changed
-
-def create_morpheme_language_model_dir(morpheme_language_model):
-    """Create the directory to hold the morpheme language model auxiliary files.
-
-    :param morpheme_language_model: a morpheme language model model object.
-    :returns: an absolute path to the directory for the morpheme language model.
-
-    """
-    morpheme_language_model_dir_path = h.get_model_directory_path(morpheme_language_model, config)
-    h.make_directory_safely(morpheme_language_model_dir_path)
-    return morpheme_language_model_dir_path
-
-def remove_morpheme_language_model_directory(morpheme_language_model):
-    """Remove the directory of the morpheme language model model and everything in it.
-
-    :param morpheme_language_model: a morpheme language model model object.
-    :returns: an absolute path to the directory for the morpheme language model.
-
-    """
-    try:
-        morpheme_language_model_dir_path = h.get_model_directory_path(morpheme_language_model, config)
-        rmtree(morpheme_language_model_dir_path)
-        return morpheme_language_model_dir_path
-    except Exception:
-        return None
 

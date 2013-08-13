@@ -21,19 +21,13 @@
 
 import logging
 import datetime
-import re
 import simplejson as json
-
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import TagSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Tag
 
@@ -253,8 +247,8 @@ def update_tag(tag, data):
 
     """
     changed = False
-    changed = h.set_attr(tag, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(tag, 'description', h.normalize(data['description']), changed)
+    changed = tag.set_attr('name', h.normalize(data['name']), changed)
+    changed = tag.set_attr('description', h.normalize(data['description']), changed)
     if changed:
         tag.datetime_modified = datetime.datetime.utcnow()
         return tag

@@ -21,19 +21,13 @@
 
 import logging
 import datetime
-import re
 import simplejson as json
-
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, session, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import UserSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import User
 
@@ -351,29 +345,29 @@ def update_user(user, data):
     changed = False
 
     # Unicode Data
-    changed = h.set_attr(user, 'first_name', h.normalize(data['first_name']), changed)
-    changed = h.set_attr(user, 'last_name', h.normalize(data['last_name']), changed)
-    changed = h.set_attr(user, 'email', h.normalize(data['email']), changed)
-    changed = h.set_attr(user, 'affiliation', h.normalize(data['affiliation']), changed)
-    changed = h.set_attr(user, 'role', h.normalize(data['role']), changed)
-    changed = h.set_attr(user, 'page_content', h.normalize(data['page_content']), changed)
-    changed = h.set_attr(user, 'markup_language', h.normalize(data['markup_language']), changed)
-    changed = h.set_attr(user, 'html', h.get_HTML_from_contents(user.page_content, user.markup_language), changed)
+    changed = user.set_attr('first_name', h.normalize(data['first_name']), changed)
+    changed = user.set_attr('last_name', h.normalize(data['last_name']), changed)
+    changed = user.set_attr('email', h.normalize(data['email']), changed)
+    changed = user.set_attr('affiliation', h.normalize(data['affiliation']), changed)
+    changed = user.set_attr('role', h.normalize(data['role']), changed)
+    changed = user.set_attr('page_content', h.normalize(data['page_content']), changed)
+    changed = user.set_attr('markup_language', h.normalize(data['markup_language']), changed)
+    changed = user.set_attr('html', h.get_HTML_from_contents(user.page_content, user.markup_language), changed)
 
     # username and password need special treatment: a value of None means that
     # these should not be updated.
     if data['password'] is not None:
-        changed = h.set_attr(user, 'password',
+        changed = user.set_attr('password',
                     unicode(h.encrypt_password(data['password'], str(user.salt))), changed)
     if data['username'] is not None:
         username = h.normalize(data['username'])
         if username != user.username:
             h.rename_user_directory(user.username, username)
-        changed = h.set_attr(user, 'username', username, changed)
+        changed = user.set_attr('username', username, changed)
 
     # Many-to-One Data
-    changed = h.set_attr(user, 'input_orthography', data['input_orthography'], changed)
-    changed = h.set_attr(user, 'output_orthography', data['output_orthography'], changed)
+    changed = user.set_attr('input_orthography', data['input_orthography'], changed)
+    changed = user.set_attr('output_orthography', data['output_orthography'], changed)
 
     if changed:
         user.datetime_modified = datetime.datetime.utcnow()

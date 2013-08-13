@@ -27,8 +27,6 @@ from string import letters, digits
 from random import sample
 from paste.fileapp import FileApp
 from pylons import request, response, session, config
-from pylons.decorators.rest import restrict
-from pylons.decorators import jsonify
 from pylons.controllers.util import forward
 from formencode.validators import Invalid
 from sqlalchemy.orm import subqueryload
@@ -627,11 +625,11 @@ def update_standard_metadata(file, data, changed):
         the boolean ``changed``.
 
     """
-    changed = h.set_attr(file, 'description', h.normalize(data['description']), changed)
-    changed = h.set_attr(file, 'utterance_type', h.normalize(data['utterance_type']), changed)
-    changed = h.set_attr(file, 'date_elicited', data['date_elicited'], changed)
-    changed = h.set_attr(file, 'elicitor', data['elicitor'], changed)
-    changed = h.set_attr(file, 'speaker', data['speaker'], changed)
+    changed = file.set_attr('description', h.normalize(data['description']), changed)
+    changed = file.set_attr('utterance_type', h.normalize(data['utterance_type']), changed)
+    changed = file.set_attr('date_elicited', data['date_elicited'], changed)
+    changed = file.set_attr('elicitor', data['elicitor'], changed)
+    changed = file.set_attr('speaker', data['speaker'], changed)
 
     # Many-to-Many Data: tags & forms
     # Update only if the user has made changes.
@@ -697,10 +695,10 @@ def update_subinterval_referencing_file(file):
     data = schema.to_python(data, state)
 
     # Data unique to referencing subinterval files
-    changed = h.set_attr(file, 'parent_file', data['parent_file'], changed)
-    changed = h.set_attr(file, 'name', (h.normalize(data['name']) or file.parent_file.filename), changed)
-    changed = h.set_attr(file, 'start', data['start'], changed)
-    changed = h.set_attr(file, 'end', data['end'], changed)
+    changed = file.set_attr('parent_file', data['parent_file'], changed)
+    changed = file.set_attr('name', (h.normalize(data['name']) or file.parent_file.filename), changed)
+    changed = file.set_attr('start', data['start'], changed)
+    changed = file.set_attr('end', data['end'], changed)
 
     file, changed = update_standard_metadata(file, data, changed)
 
@@ -723,10 +721,10 @@ def update_externally_hosted_file(file):
     data = FileExternallyHostedSchema().to_python(data)
 
     # Data unique to referencing subinterval files
-    changed = h.set_attr(file, 'url', data['url'], changed)
-    changed = h.set_attr(file, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(file, 'password', data['password'], changed)
-    changed = h.set_attr(file, 'MIME_type', data['MIME_type'], changed)
+    changed = file.set_attr('url', data['url'], changed)
+    changed = file.set_attr('name', h.normalize(data['name']), changed)
+    changed = file.set_attr('password', data['password'], changed)
+    changed = file.set_attr('MIME_type', data['MIME_type'], changed)
 
     file, changed = update_standard_metadata(file, data, changed)
 

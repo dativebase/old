@@ -55,13 +55,16 @@ class TestPhonologiesController(TestController):
         """Tests that GET /phonologies returns an array of all phonologies and that order_by and pagination parameters work correctly."""
 
         # Add 100 phonologies.
-        def create_phonology_from_index(index):
-            phonology = model.Phonology()
+        def create_phonology_from_index(index, parent, boundary):
+            phonology = model.Phonology(parent=parent, boundary=boundary)
             phonology.name = u'Phonology %d' % index
             phonology.description = u'A phonology with %d rules' % index
             phonology.script = u'# After this comment, the script will begin.\n\n'
             return phonology
-        phonologies = [create_phonology_from_index(i) for i in range(1, 101)]
+        phonologies_path = self.phonologies_path
+        boundary = h.word_boundary_symbol
+        phonologies = [create_phonology_from_index(i, phonologies_path, boundary)
+                for i in range(1, 101)]
         Session.add_all(phonologies)
         Session.commit()
         phonologies = h.get_phonologies(True)
@@ -169,7 +172,7 @@ class TestPhonologiesController(TestController):
         assert new_phonology_count == original_phonology_count + 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert 'phonology_%d.script' % resp['id'] in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_script
 
@@ -340,7 +343,7 @@ class TestPhonologiesController(TestController):
         phonology_dir_contents = os.listdir(phonology_dir)
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert 'phonology_%d.script' % resp['id'] in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_script
 
@@ -496,7 +499,7 @@ class TestPhonologiesController(TestController):
         """Tests that PUT /phonologies/id/compile compiles the foma script of the phonology with id.
 
         .. note::
-        
+
             Phonology compilation is accomplished via a worker thread and
             requests to /phonologies/id/compile return immediately.  When the
             script compilation attempt has terminated, the values of the
@@ -506,7 +509,7 @@ class TestPhonologiesController(TestController):
             in order to know when the compilation-tasked worker has finished.
 
         .. note::
-        
+
             Depending on system resources, the following tests may fail.  A fast
             system may compile the large FST in under 30 seconds; a slow one may
             fail to compile the medium one in under 30.
@@ -528,10 +531,10 @@ class TestPhonologiesController(TestController):
         phonology1_id = resp['id']
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id)
         phonology_dir_contents = os.listdir(phonology_dir)
-        phonology_binary_filename = 'phonology_%d.foma' % phonology1_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology'
-        assert 'phonology_%d.script' % phonology1_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology1_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_script
@@ -585,7 +588,7 @@ class TestPhonologiesController(TestController):
         response = self.app.get(url(controller='phonologies', action='servecompiled',
             id=phonology1_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
         phonology_binary_path = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id,
-               'phonology_%d.foma' % phonology1_id)
+               'phonology.foma')
         foma_file = open(phonology_binary_path, 'rb')
         foma_file_content = foma_file.read()
         assert foma_file_content == response.body
@@ -617,10 +620,10 @@ class TestPhonologiesController(TestController):
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % resp['id'])
         phonology_dir_contents = os.listdir(phonology_dir)
         phonology_id = resp['id']
-        phonology_binary_filename = 'phonology_%d.foma' % phonology_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology 2'
-        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_malformed_phonology_script
@@ -666,10 +669,10 @@ class TestPhonologiesController(TestController):
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % resp['id'])
         phonology_dir_contents = os.listdir(phonology_dir)
         phonology_id = resp['id']
-        phonology_binary_filename = 'phonology_%d.foma' % phonology_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology 3'
-        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_no_phonology_script
@@ -713,10 +716,10 @@ class TestPhonologiesController(TestController):
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % resp['id'])
         phonology_dir_contents = os.listdir(phonology_dir)
         phonology_id = resp['id']
-        phonology_binary_filename = 'phonology_%d.foma' % phonology_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology 4'
-        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == u''
@@ -764,10 +767,10 @@ class TestPhonologiesController(TestController):
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % resp['id'])
         phonology_dir_contents = os.listdir(phonology_dir)
         phonology_id = resp['id']
-        phonology_binary_filename = 'phonology_%d.foma' % phonology_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology 5'
-        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_medium_phonology_script
@@ -815,10 +818,10 @@ class TestPhonologiesController(TestController):
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % resp['id'])
         phonology_dir_contents = os.listdir(phonology_dir)
         phonology_id = resp['id']
-        phonology_binary_filename = 'phonology_%d.foma' % phonology_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology 6'
-        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_large_phonology_script
@@ -854,7 +857,7 @@ class TestPhonologiesController(TestController):
         response = self.app.put(url(controller='phonologies', action='compile', id=phonology1_id),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        phonology_binary_filename = 'phonology_%d.foma' % phonology1_id
+        phonology_binary_filename = 'phonology.foma'
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id)
         compile_attempt = resp['compile_attempt']
 
@@ -894,10 +897,10 @@ class TestPhonologiesController(TestController):
         phonology1_id = resp['id']
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id)
         phonology_dir_contents = os.listdir(phonology_dir)
-        phonology_binary_filename = 'phonology_%d.foma' % phonology1_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology'
-        assert 'phonology_%d.script' % phonology1_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology1_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_script
@@ -1098,10 +1101,10 @@ class TestPhonologiesController(TestController):
         phonology1_id = resp['id']
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id)
         phonology_dir_contents = os.listdir(phonology_dir)
-        phonology_binary_filename = 'phonology_%d.foma' % phonology1_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology'
-        assert 'phonology_%d.script' % phonology1_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology1_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_script
@@ -1181,10 +1184,10 @@ class TestPhonologiesController(TestController):
         phonology1_id = resp['id']
         phonology_dir = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id)
         phonology_dir_contents = os.listdir(phonology_dir)
-        phonology_binary_filename = 'phonology_%d.foma' % phonology1_id
+        phonology_binary_filename = 'phonology.foma'
         assert resp['name'] == u'Blackfoot Phonology 2'
-        assert 'phonology_%d.script' % phonology1_id in phonology_dir_contents
-        assert 'phonology_%d.sh' % phonology1_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
+        assert 'phonology.sh' in phonology_dir_contents
         assert phonology_binary_filename not in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_testless_script

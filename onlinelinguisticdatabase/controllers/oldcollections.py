@@ -22,23 +22,16 @@
 import logging
 import datetime
 import re
-import os
 from uuid import uuid4
 import simplejson as json
-from string import letters, digits
-from random import sample
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
-from pylons.controllers.util import forward
+from pylons import request, response, session, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import CollectionSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
-from onlinelinguisticdatabase.model import Collection, CollectionBackup, User, Form
+from onlinelinguisticdatabase.model import Collection, CollectionBackup, Form
 
 log = logging.getLogger(__name__)
 
@@ -898,26 +891,26 @@ def update_collection(collection, data, collections_referenced):
     contents_changed = False
 
     # Unicode Data
-    changed = h.set_attr(collection, 'title', h.normalize(data['title']), changed)
-    changed = h.set_attr(collection, 'type', h.normalize(data['type']), changed)
-    changed = h.set_attr(collection, 'url', h.normalize(data['url']), changed)
-    changed = h.set_attr(collection, 'description', h.normalize(data['description']), changed)
-    changed = h.set_attr(collection, 'markup_language', h.normalize(data['markup_language']), changed)
+    changed = collection.set_attr('title', h.normalize(data['title']), changed)
+    changed = collection.set_attr('type', h.normalize(data['type']), changed)
+    changed = collection.set_attr('url', h.normalize(data['url']), changed)
+    changed = collection.set_attr('description', h.normalize(data['description']), changed)
+    changed = collection.set_attr('markup_language', h.normalize(data['markup_language']), changed)
     submitted_contents = h.normalize(data['contents'])
     if collection.contents != submitted_contents:
         collection.contents = submitted_contents
         contents_changed = changed = True
-    changed = h.set_attr(collection, 'contents_unpacked', h.normalize(data['contents_unpacked']), changed)
-    changed = h.set_attr(collection, 'html', h.get_HTML_from_contents(collection.contents_unpacked,
+    changed = collection.set_attr('contents_unpacked', h.normalize(data['contents_unpacked']), changed)
+    changed = collection.set_attr('html', h.get_HTML_from_contents(collection.contents_unpacked,
                                                       collection.markup_language), changed)
 
     # User-entered date: date_elicited
-    changed = h.set_attr(collection, 'date_elicited', data['date_elicited'], changed)
+    changed = collection.set_attr('date_elicited', data['date_elicited'], changed)
 
     # Many-to-One Data
-    changed = h.set_attr(collection, 'elicitor', data['elicitor'], changed)
-    changed = h.set_attr(collection, 'speaker', data['speaker'], changed)
-    changed = h.set_attr(collection, 'source', data['source'], changed)
+    changed = collection.set_attr('elicitor', data['elicitor'], changed)
+    changed = collection.set_attr('speaker', data['speaker'], changed)
+    changed = collection.set_attr('source', data['source'], changed)
 
     # Many-to-Many Data: files, forms & tags
     # Update only if the user has made changes.

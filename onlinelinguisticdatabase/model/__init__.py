@@ -30,7 +30,7 @@ from onlinelinguisticdatabase.model.translation import Translation
 from onlinelinguisticdatabase.model.language import Language
 from onlinelinguisticdatabase.model.morphemelanguagemodel import MorphemeLanguageModel
 from onlinelinguisticdatabase.model.morphemelanguagemodelbackup import MorphemeLanguageModelBackup
-from onlinelinguisticdatabase.model.morphologicalparser import MorphologicalParser
+from onlinelinguisticdatabase.model.morphologicalparser import MorphologicalParser, Parse
 from onlinelinguisticdatabase.model.morphologicalparserbackup import MorphologicalParserBackup
 from onlinelinguisticdatabase.model.morphology import Morphology
 from onlinelinguisticdatabase.model.morphologybackup import MorphologyBackup
@@ -48,7 +48,7 @@ __all__ = ['Session', 'Base', 'ApplicationSettings', 'Collection', 'CollectionBa
         'Corpus', 'CorpusFile', 'CorpusBackup', 'ElicitationMethod', 'File', 'Form', 
         'FormFile', 'FormBackup', 'FormSearch', 'Translation', 'Language', 'MorphemeLanguageModel',
         'MorphemeLanguageModelBackup', 'MorphologicalParser', 'MorphologicalParserBackup',
-        'Morphology', 'MorphologyBackup', 'Orthography', 'Page', 'Phonology', 'PhonologyBackup',
+        'Morphology', 'MorphologyBackup', 'Orthography', 'Page', 'Parse', 'Phonology', 'PhonologyBackup',
         'Source', 'Speaker', 'SyntacticCategory', 'Tag', 'User', 'UserForm']
 
 def init_model(engine):

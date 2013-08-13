@@ -21,17 +21,13 @@
 
 import os
 import logging
-import socket
 import simplejson as json
-from paste.deploy import appconfig
-from pylons import url, request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
-from pylons.decorators import validate
+from pylons import request, response, session, config
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import LoginSchema, PasswordResetSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.model import Form, User
+from onlinelinguisticdatabase.model import User
 from onlinelinguisticdatabase.model.meta import Session
 
 log = logging.getLogger(__name__)

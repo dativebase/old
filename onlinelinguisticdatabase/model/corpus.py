@@ -37,6 +37,20 @@ corpustag_table = Table('corpustag', Base.metadata,
     mysql_charset='utf8'
 )
 
+
+# Keeper is a unicode filter factory -- taken from The Python Cookbook
+class Keeper(object):
+    """Filters everything from a unicode string except the characters in ``keep``."""
+    def __init__(self, keep):
+        self.keep = set(map(ord, keep))
+    def __getitem__(self, n):
+        if n not in self.keep:
+            return None
+        return unichr(n)
+    def __call__(self, s):
+        return unicode(s).translate(self)
+
+
 class Corpus(Base):
 
     __tablename__ = 'corpus'
@@ -93,6 +107,24 @@ class Corpus(Base):
         result = self.get_dict()
         result['forms'] = self.get_forms_list(self.forms)
         return result
+
+    makefilter = Keeper
+
+    @classmethod
+    def get_int(cls, input_):
+        try:
+            return int(input_)
+        except Exception:
+            return None
+
+    @classmethod
+    def get_form_references(cls, content):
+        """Similar to ``get_ids_of_forms_referenced`` except that references are
+        assumed to be comma-delimited strings of digits -- all other text is
+        filtered out.
+        """
+        digits_comma_only = cls.makefilter('1234567890,')
+        return filter(None, map(cls.get_int, digits_comma_only(content).split(',')))
 
 
 class CorpusFile(Base):

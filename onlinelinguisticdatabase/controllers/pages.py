@@ -21,19 +21,13 @@
 
 import logging
 import datetime
-import re
 import simplejson as json
-
-from pylons import request, response, session, app_globals, config
-from pylons.decorators.rest import restrict
+from pylons import request, response, config
 from formencode.validators import Invalid
-from sqlalchemy.exc import OperationalError, InvalidRequestError
-from sqlalchemy.sql import asc
-
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import PageSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Page
 
@@ -252,11 +246,11 @@ def update_page(page, data):
     """
     changed = False
     # Unicode Data
-    changed = h.set_attr(page, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(page, 'heading', h.normalize(data['heading']), changed)
-    changed = h.set_attr(page, 'markup_language', data['markup_language'], changed)
-    changed = h.set_attr(page, 'content', h.normalize(data['content']), changed)
-    changed = h.set_attr(page, 'html', h.get_HTML_from_contents(page.content, page.markup_language), changed)
+    changed = page.set_attr('name', h.normalize(data['name']), changed)
+    changed = page.set_attr('heading', h.normalize(data['heading']), changed)
+    changed = page.set_attr('markup_language', data['markup_language'], changed)
+    changed = page.set_attr('content', h.normalize(data['content']), changed)
+    changed = page.set_attr('html', h.get_HTML_from_contents(page.content, page.markup_language), changed)
 
     if changed:
         page.datetime_modified = datetime.datetime.utcnow()

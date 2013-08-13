@@ -19,24 +19,21 @@
 
 """
 
-from itertools import product
 import logging
-import cPickle
 import simplejson as json
 import os
+from shutil import copytree, copyfile, rmtree
 from uuid import uuid4
 import codecs
-from subprocess import Popen
+import cPickle
 from paste.fileapp import FileApp
 from pylons.controllers.util import forward
-from shutil import rmtree
 from pylons import request, response, session, config
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import MorphologicalParserSchema, TranscriptionsSchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
-import onlinelinguisticdatabase.lib.simplelm as simplelm
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import MorphologicalParser, MorphologicalParserBackup
 from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
@@ -56,7 +53,7 @@ class MorphologicalparsersController(BaseController):
     REST Controller styled on the Atom Publishing Protocol.
 
     .. note::
-    
+
        The ``h.jsonify`` decorator converts the return value of the methods to
        JSON.
 
@@ -104,11 +101,11 @@ class MorphologicalparsersController(BaseController):
             schema = MorphologicalParserSchema()
             values = json.loads(unicode(request.body, request.charset))
             data = schema.to_python(values)
-            morphological_parser = create_new_morphological_parser(data)
-            Session.add(morphological_parser)
+            parser = create_new_morphological_parser(data)
+            Session.add(parser)
             Session.commit()
-            create_morphological_parser_dir(morphological_parser)
-            return morphological_parser
+            parser.make_directory_safely(parser.directory)
+            return parser
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -183,14 +180,14 @@ class MorphologicalparsersController(BaseController):
         :returns: the deleted morphological parser model.
 
         """
-        morphological_parser = h.eagerload_morphological_parser(Session.query(MorphologicalParser)).get(id)
-        if morphological_parser:
-            morphological_parser_dict = morphological_parser.get_dict()
-            backup_morphological_parser(morphological_parser_dict)
-            Session.delete(morphological_parser)
+        parser = h.eagerload_morphological_parser(Session.query(MorphologicalParser)).get(id)
+        if parser:
+            parser_dict = parser.get_dict()
+            backup_morphological_parser(parser_dict)
+            Session.delete(parser)
             Session.commit()
-            remove_morphological_parser_directory(morphological_parser)
-            return morphological_parser
+            parser.remove_directory()
+            return parser
         else:
             response.status_int = 404
             return {'error': 'There is no morphological parser with id %s' % id}
@@ -312,35 +309,6 @@ class MorphologicalparsersController(BaseController):
         """
         return generate_and_compile_morphological_parser(id, compile_=False)
 
-    @h.restrict('GET')
-    @h.authenticate_with_JSON
-    def servecompiled(self, id):
-        """Serve the compiled foma script of the morphophonology FST of the morphological parser.
-
-        :URL: ``PUT /morphologicalparsers/servecompiled/id``
-        :param str id: the ``id`` value of a morphological parser.
-        :returns: a stream of bytes -- the compiled morphological parser script.  
-
-        """
-        morphological_parser = Session.query(MorphologicalParser).get(id)
-        if morphological_parser:
-            if h.foma_installed():
-                morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-                foma_file_path  = h.get_model_file_path(morphological_parser,
-                        morphological_parser_dir_path, file_type='binary')
-                if os.path.isfile(foma_file_path):
-                    return forward(FileApp(foma_file_path))
-                else:
-                    response.status_int = 400
-                    return json.dumps({'error': 'The morphophonology foma script of '
-                        'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
-            else:
-                response.status_int = 400
-                return json.dumps({'error': 'Foma and flookup are not installed.'})
-        else:
-            response.status_int = 404
-            return json.dumps({'error': 'There is no morphological parser with id %s' % id})
-
     @h.jsonify
     @h.restrict('PUT')
     @h.authenticate
@@ -387,22 +355,18 @@ class MorphologicalparsersController(BaseController):
             outputs of ``t1`` after apply up/down.
 
         """
-        morphological_parser = Session.query(MorphologicalParser).get(id)
-        if morphological_parser:
+        parser = Session.query(MorphologicalParser).get(id)
+        if parser:
             if h.foma_installed():
-                morphological_parser_dir_path = h.get_model_directory_path(
-                        morphological_parser, config)
-                morphophonology_fst_binary_path = h.get_model_file_path(
-                        morphological_parser, morphological_parser_dir_path, file_type='binary')
-                if os.path.isfile(morphophonology_fst_binary_path):
+                binary_path = parser.get_file_path('binary')
+                if os.path.isfile(binary_path):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         schema, key = {'up': (TranscriptionsSchema, 'transcriptions'),
                                        'down': (MorphemeSequencesSchema, 'morpheme_sequences')}.\
                                         get(direction, (MorphemeSequencesSchema, 'morpheme_sequences'))
                         inputs = schema.to_python(inputs)
-                        return foma_apply(direction, inputs[key], morphological_parser,
-                                                 morphophonology_fst_binary_path, session['user'])
+                        return parser.apply(direction, inputs[key])
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
@@ -412,7 +376,7 @@ class MorphologicalparsersController(BaseController):
                 else:
                     response.status_int = 400
                     return json.dumps({'error': 'The morphophonology foma script of '
-                        'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
+                        'MorphologicalParser %d has not been compiled yet.' % parser.id})
             else:
                 response.status_int = 400
                 return {'error': 'Foma and flookup are not installed.'}
@@ -434,122 +398,142 @@ class MorphologicalparsersController(BaseController):
             parsers of t1 and t2.
 
         """
-        morphological_parser = Session.query(MorphologicalParser).get(id)
-        if not morphological_parser:
+        parser = Session.query(MorphologicalParser).get(id)
+        if not parser:
             response.status_int = 404
             return {'error': 'There is no morphological parser with id %s' % id}
         if not h.foma_installed():
             response.status_int = 400
             return {'error': 'Foma and flookup are not installed.'}
-        morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-        morphological_parser_binary_path = h.get_model_file_path(morphological_parser,
-                morphological_parser_dir_path, file_type='binary')
-        if not os.path.isfile(morphological_parser_binary_path):
-            response.status_int = 400
-            return json.dumps({'error': 'The morphophonology foma script of '
-                'MorphologicalParser %d has not been compiled yet.' % morphological_parser.id})
-        morpheme_language_model_dir_path = h.get_model_directory_path(morphological_parser.language_model, config)
-        lm_pickle_path = h.get_model_file_path(morphological_parser.language_model, morpheme_language_model_dir_path,
-                file_type='lm_trie')
-        if not os.path.isfile(lm_pickle_path):
-            response.status_int = 404
-            return {'error': 'The morpheme language model was not written to disk.'}
         try:
-            lm_trie = cPickle.load(open(lm_pickle_path, 'rb'))
-        except Exception:
-            response.status_int = 400
-            return {'error': 'An error occurred while trying to retrieve the language model.'}
-        try:
-            morpheme_splitter = h.get_morpheme_splitter()
             inputs = json.loads(unicode(request.body, request.charset))
             schema = TranscriptionsSchema
             inputs = schema.to_python(inputs)
-            candidates = foma_apply('up', inputs['transcriptions'], morphological_parser,
-                                        morphological_parser_binary_path, session['user'])
-            # Ambiguate candidates if morphology does not parse to rich morpheme representations.
-            if not morphological_parser.morphology.rich_morphemes:
-                candidates = ambiguate_candidates(candidates,
-                        morphological_parser.morphology, morpheme_splitter)
-            return dict((transcription, get_most_probable_parse(lm_trie, candidate_parses,
-                         morpheme_splitter, morphological_parser.language_model.categorial))
-                         for transcription, candidate_parses in candidates.iteritems())
+            return parser.parse(inputs['transcriptions'])
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
+        except Exception, e:
+            log.warn(e)
+            response.status_int = 400
+            return {'error': u'Parse request raised an error.'}
 
-def ambiguate_candidates(candidates, morphology, splitter):
-    """Return parse candidates with rich representations and ambiguated, if necessary.
+    @h.restrict('GET')
+    @h.authenticate_with_JSON
+    @h.authorize(['administrator', 'contributor'])
+    def servecompiled(self, id):
+        """Serve the compiled foma script of the morphophonology FST of the morphological parser.
 
-    Note that this is only necessary when ``morphology.rich_morphemes==False``.
+        :URL: ``PUT /morphologicalparsers/servecompiled/id``
+        :param str id: the ``id`` value of a morphological parser.
+        :returns: a stream of bytes -- the compiled morphological parser script.  
 
-    :param dict candidates: keys are transcriptions and values are lists of strings representing
-        morphological parses.  Since they are being ambiguated, we should expect them to be flat
-        structures of morpheme forms delimited by the language's delimiters.
-    :param inst morphology: object associated to a pickled dictionary that maps morpheme 
-        forms to lists of (gloss, category) 2-tuples.
-    :returns: the list of candidates with rich representations and, if necessary, ambiguated.
+        """
+        parser = Session.query(MorphologicalParser).get(id)
+        if parser:
+            if h.foma_installed():
+                binary_path = parser.get_file_path('binary')
+                if os.path.isfile(binary_path):
+                    return forward(FileApp(binary_path))
+                else:
+                    response.status_int = 400
+                    return json.dumps({'error': 'The morphophonology foma script of '
+                        'MorphologicalParser %d has not been compiled yet.' % parser.id})
+            else:
+                response.status_int = 400
+                return json.dumps({'error': 'Foma and flookup are not installed.'})
+        else:
+            response.status_int = 404
+            return json.dumps({'error': 'There is no morphological parser with id %s' % id})
 
-    """
-    def get_category(morpheme):
-        if type(morpheme) == list:
-            return morpheme[2]
-        return morpheme
-    def get_morpheme(morpheme):
-        if type(morpheme) == list:
-            return h.rare_delimiter.join(morpheme)
-        return morpheme
-    morphological_rules = morphology.rules_generated.split()
-    morphology_dir_path = h.get_model_directory_path(morphology, config)
-    dictionary_path = h.get_model_file_path(morphology, morphology_dir_path,
-        file_type='dictionary')
-    try:
-        dictionary = cPickle.load(open(dictionary_path, 'rb'))
-        new_candidates = {}
-        for transcription, candidate_list in candidates.iteritems():
-            new_candidate_list = set()
-            for candidate in candidate_list:
-                temp = []
-                morphemes = splitter(candidate)
-                for index, morpheme in enumerate(morphemes):
-                    if index % 2 == 0:
-                        homographs = [[morpheme, gloss, category]
-                                for gloss, category in dictionary[morpheme]]
-                        temp.append(homographs)
-                    else:
-                        temp.append(morpheme) # it's really a delimiter
-                for candidate in product(*temp):
-                    # Only add an ambiguated candidate if its category sequence accords with the morphology's rules
-                    if ''.join(get_category(x) for x in candidate) in morphological_rules:
-                        new_candidate_list.add(u''.join(get_morpheme(x) for x in candidate))
-            new_candidates[transcription] = list(new_candidate_list)
-        return new_candidates
-    except Exception:
-        log.warn('some kind of exception occured in morphologicalparsers.py ambiguate_candidates')
-        return dict((transcription, []) for transcription in candidates)
+    @h.restrict('GET')
+    @h.authenticate_with_JSON
+    @h.authorize(['administrator', 'contributor'])
+    def export_deprecated(self, id):
+        """Export the parser as a self-contained archive including a Python interface and all required files.
+        """
+        try:
+            parser = Session.query(MorphologicalParser).get(id)
+            directory = parser.directory
+            archive_dir = os.path.join(directory, 'archive')
+            if os.path.exists(archive_dir):
+                rmtree(archive_dir)
+            os.mkdir(archive_dir)
+            parser.copy_files(archive_dir)
+            parser.phonology.copy_files(archive_dir)
+            parser.morphology.copy_files(archive_dir)
+            parser.language_model.copy_files(archive_dir)
+            lib_path = os.path.join(config['here'], 'onlinelinguisticdatabase', 'lib')
+            simplelm_path = os.path.join(lib_path, 'simplelm')
+            parser_path = os.path.join(lib_path, 'parser.py')
+            parse_path = os.path.join(lib_path, 'parse.py')
+            new_parse_path = os.path.join(archive_dir, 'parse.py')
+            copytree(simplelm_path, os.path.join(archive_dir, 'simplelm'))
+            copyfile(parser_path, os.path.join(archive_dir, 'parser.py'))
+            copyfile(parse_path, new_parse_path)
+            os.chmod(new_parse_path, 0744)
+            data = parser.export()
+            data_path = os.path.join(archive_dir, 'data.pickle')
+            cPickle.dump(data, open(data_path, 'wb'))
+            zip_path = h.zipdir(archive_dir)
+            return forward(FileApp(zip_path))
+        except Exception, e:
+            log.warn(e)
+            response.status_int = 400
+            return json.dumps({'error': 'An error occured while attempting to export '
+                               'morphological parser %s' % id})
 
-def get_most_probable_parse(language_model_trie, candidates, morpheme_splitter, categorial_LM):
-    """Return the most probable parse from within the list of parses in candidates.
+    @h.restrict('GET')
+    @h.authenticate_with_JSON
+    @h.authorize(['administrator', 'contributor'])
+    def export(self, id):
+        """Export the parser as a self-contained .zip archive including a Python interface and all required files.
 
-    :param instance language_model_trie: a simplm.LMTrie instance encoding a morpheme LM.
-    :param list candidates: candidate parses as strings of morphemes and delimiters.
-    :param func morpheme_splitter: function that splits a string into morphemes and delimiters.
-    :returns: the candidate parse (as a string) with the greatest probability.
+        This allows a user to use the parser locally (assuming they have foma and MITLM installed) via
+        the following procedure:
 
-    """
-    candidates_probs = []
-    for candidate in candidates:
-        morpheme_sequence = morpheme_splitter(candidate)[::2]
-        if categorial_LM: # treat candidates as category sequences if LM is categorial
-            morpheme_sequence = [morpheme.split(h.rare_delimiter)[2]
-                    for morpheme in morpheme_sequence]
-        morpheme_sequence = [h.lm_start] + morpheme_sequence + [h.lm_end]
-        candidates_probs.append((candidate,
-            simplelm.compute_sentence_prob(language_model_trie, morpheme_sequence)))
-    candidates_probs.sort(key=lambda x: x[1])
-    return candidates_probs[-1][0]
+            $ unzip archive.zip
+            $ cd archive
+            $ ./parse.py chiens chats tombait
+
+        """
+        try:
+            parser = Session.query(MorphologicalParser).get(id)
+            directory = parser.directory
+            lib_path = os.path.abspath(os.path.dirname(h.__file__))
+
+            # config.pickle is a dict used to construct the parser (see lib/parse.py)
+            config_ = parser.export()
+            config_path = os.path.join(directory, 'config.pickle')
+            cPickle.dump(config_, open(config_path, 'wb'))
+
+            # cache.pickle is a dict encoding the cached parses of this parser
+            cache_dict = parser.cache.export()
+            cache_path = os.path.join(directory, 'cache.pickle')
+            cPickle.dump(cache_dict, open(cache_path, 'wb'))
+
+            # create the .zip archive, including the files of the parser, the simplelm package,
+            # the parser.py module and the parse.py executable.
+            zip_path = os.path.join(directory, 'archive.zip')
+            zip_file = h.ZipFile(zip_path, 'w')
+            #zip_file.write_directory(parser.directory)
+            for file_name in os.listdir(directory):
+                if (os.path.splitext(file_name)[1] not in ('.log', '.sh', '.script', '.zip') and
+                    file_name != 'morpheme_language_model.pickle'):
+                    zip_file.write_file(os.path.join(directory, file_name))
+            zip_file.write_directory(os.path.join(lib_path, 'simplelm'), keep_dir=True)
+            zip_file.write_file(os.path.join(lib_path, 'parser.py'))
+            zip_file.write_file(os.path.join(lib_path, 'parse.py'))
+            zip_file.close()
+            return forward(FileApp(zip_path))
+        except Exception, e:
+            log.warn(e)
+            response.status_int = 400
+            return json.dumps({'error': 'An error occured while attempting to export '
+                'morphological parser %s: %s' % (id, e)})
 
 def get_data_for_new_edit(GET_params):
     """Return the data needed to create a new morphological parser or edit one."""
@@ -592,15 +576,19 @@ def create_new_morphological_parser(data):
     :returns: an SQLAlchemy model object representing the morphological parser.
 
     """
-    morphological_parser = MorphologicalParser()
-    morphological_parser.UUID = unicode(uuid4())
-    morphological_parser.name = h.normalize(data['name'])
-    morphological_parser.description = h.normalize(data['description'])
-    morphological_parser.enterer = morphological_parser.modifier = session['user']
-    morphological_parser.datetime_modified = morphological_parser.datetime_entered = h.now()
-    morphological_parser.phonology = data['phonology']
-    morphological_parser.morphology = data['morphology']
-    morphological_parser.language_model = data['language_model']
+    morphological_parser = MorphologicalParser(
+        parent_directory = h.get_OLD_directory_path('morphologicalparsers', config=config),
+        UUID = unicode(uuid4()),
+        name = h.normalize(data['name']),
+        description = h.normalize(data['description']),
+        enterer = session['user'],
+        modifier = session['user'],
+        datetime_modified = h.now(),
+        datetime_entered = h.now(),
+        phonology = data['phonology'],
+        morphology = data['morphology'],
+        language_model = data['language_model']
+    )
     return morphological_parser
 
 def update_morphological_parser(morphological_parser, data):
@@ -613,28 +601,17 @@ def update_morphological_parser(morphological_parser, data):
 
     """
     changed = False
-    changed = h.set_attr(morphological_parser, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(morphological_parser, 'description', h.normalize(data['description']), changed)
-    changed = h.set_attr(morphological_parser, 'phonology', data['phonology'], changed)
-    changed = h.set_attr(morphological_parser, 'morphology', data['morphology'], changed)
-    changed = h.set_attr(morphological_parser, 'language_model', data['language_model'], changed)
+    changed = morphological_parser.set_attr('name', h.normalize(data['name']), changed)
+    changed = morphological_parser.set_attr('description', h.normalize(data['description']), changed)
+    changed = morphological_parser.set_attr('phonology', data['phonology'], changed)
+    changed = morphological_parser.set_attr('morphology', data['morphology'], changed)
+    changed = morphological_parser.set_attr('language_model', data['language_model'], changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphological_parser.modifier = session['user']
         morphological_parser.datetime_modified = h.now()
         return morphological_parser
     return changed
-
-def create_morphological_parser_dir(morphological_parser):
-    """Create the directory to hold the morphological parser script and auxiliary files.
-
-    :param morphological_parser: a morphological parser model object.
-    :returns: an absolute path to the directory for the morphological parser.
-
-    """
-    morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-    h.make_directory_safely(morphological_parser_dir_path)
-    return morphological_parser_dir_path
 
 def generate_and_compile_morphological_parser(morphological_parser_id, compile_=True):
     morphological_parser = Session.query(MorphologicalParser).get(morphological_parser_id)
@@ -644,75 +621,15 @@ def generate_and_compile_morphological_parser(morphological_parser_id, compile_=
     if compile_ and not h.foma_installed():
         response.status_int = 400
         return {'error': 'Foma and flookup are not installed.'}
-    morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-    morphology_dir_path = h.get_model_directory_path(morphological_parser.morphology, config)
-    phonology_dir_path = h.get_model_directory_path(morphological_parser.phonology, config)
-    verification_string = u'defined morphophonology: '
     foma_worker_q.put({
         'id': h.generate_salt(),
-        'func': 'create_morphological_parser_components',
+        'func': 'generate_and_compile_parser',
         'args': {
             'morphological_parser_id': morphological_parser.id,
             'compile': compile_,
-            'script_dir_path': morphological_parser_dir_path,
-            'morphology_dir_path': morphology_dir_path,
-            'phonology_dir_path': phonology_dir_path,
             'user_id': session['user'].id,
-            'verification_string': verification_string,
             'timeout': h.morphological_parser_compile_timeout
         }
     })
     return morphological_parser
-
-def remove_morphological_parser_directory(morphological_parser):
-    """Remove the directory of the morphological parser model and everything in it.
-
-    :param morphological_parser: a morphological parser model object.
-    :returns: an absolute path to the directory for the morphological parser.
-
-    """
-    try:
-        morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-        rmtree(morphological_parser_dir_path)
-        return morphological_parser_dir_path
-    except Exception:
-        return None
-
-def foma_apply(direction, inputs, morphological_parser, morphological_parser_binary_path, user):
-    """Foma-apply the inputs in the direction of ``direction`` using the morphological parser's compiled foma script.
-
-    :param str direction: the direction in which to use the transducer
-    :param list inputs: a list of surface transcriptions or morpheme sequences.
-    :param morphological_parser: a morphological parser model.
-    :param str morphological_parser_binary_path: an absolute path to a compiled morphological parser script.
-    :param user: a user model.
-    :returns: a dictionary: ``{input1: [o1, o2, ...], input2: [...], ...}``
-
-    """
-    random_string = h.generate_salt()
-    morphological_parser_dir_path = h.get_model_directory_path(morphological_parser, config)
-    inputs_file_path = os.path.join(morphological_parser_dir_path,
-            'inputs_%s_%s.txt' % (user.username, random_string))
-    outputs_file_path = os.path.join(morphological_parser_dir_path,
-            'outputs_%s_%s.txt' % (user.username, random_string))
-    apply_file_path = os.path.join(morphological_parser_dir_path,
-            'apply_%s_%s.sh' % (user.username, random_string))
-    with codecs.open(inputs_file_path, 'w', 'utf8') as f:
-        inputs = [u'%s%s%s' % (h.word_boundary_symbol, input_, h.word_boundary_symbol)
-                  for input_ in inputs]
-        f.write(u'\n'.join(inputs))
-    with codecs.open(apply_file_path, 'w', 'utf8') as f:
-        f.write('#!/bin/sh\ncat %s | flookup %s%s' % (
-            inputs_file_path, {'up': '', 'down': '-i '}.get(direction, '-i '), morphological_parser_binary_path))
-    os.chmod(apply_file_path, 0744)
-    with open(os.devnull, 'w') as devnull:
-        with codecs.open(outputs_file_path, 'w', 'utf8') as outfile:
-            p = Popen(apply_file_path, shell=False, stdout=outfile, stderr=devnull)
-    p.communicate()
-    with codecs.open(outputs_file_path, 'r', 'utf8') as f:
-        result = h.foma_output_file2dict(f)
-    os.remove(inputs_file_path)
-    os.remove(outputs_file_path)
-    os.remove(apply_file_path)
-    return result
 

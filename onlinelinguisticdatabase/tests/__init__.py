@@ -400,7 +400,8 @@ class TestController(TestCase):
         new_valid_methods = tuple(new_valid_methods)
         webtest.lint.valid_methods = new_valid_methods
 
-    def poll(self, requester, changing_attr, changing_attr_originally, log, wait=2, vocal=True, task_descr='task'):
+    def poll(self, requester, changing_attr, changing_attr_originally,
+             log, wait=2, vocal=True, task_descr='task'):
         """Poll a resource by calling ``requester`` until the value of ``changing_attr`` no longer matches ``changing_attr_originally``.
         """
         seconds_elapsed = 0

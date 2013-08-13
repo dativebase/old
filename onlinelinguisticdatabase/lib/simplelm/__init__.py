@@ -28,6 +28,6 @@
 # NOTE: this __init__ module was created in order to make an importable
 # Python package out of Novak's SimpleLM project. 
 
-from evaluatelm import load_arpa, compute_sentence_prob
+from evaluatelm import load_arpa, compute_sentence_prob, LMTree
 
-__all__ = ['load_arpa', 'compute_sentence_prob']
+__all__ = ['load_arpa', 'compute_sentence_prob', 'LMTree']

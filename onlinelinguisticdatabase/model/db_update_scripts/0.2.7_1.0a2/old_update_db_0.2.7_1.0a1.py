@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 """This executable updates an OLD 0.2.7 MySQL database and makes it compatible with
-the OLD 1.0a1 data structure
+the OLD 1.0a2 data structure
 
 Usage:
 
@@ -37,7 +37,7 @@ making changes to your MySQL configuration file (/etc/mysql/my.cnf in Debian sys
 http://cameronyule.com/2008/07/configuring-mysql-to-use-utf-8/.
 
 This script will change any non-UTF-8 databases, tables and columns to UTF-8 following the procedure
-outlined at https://codex.wordpress.org/Converting_Database_Character_Sets.  It will also perform 
+outlined at https://codex.wordpress.org/Converting_Database_Character_Sets.  It will also perform
 unicode canonical decompositional normalization on all the data.
 
 Notes on character sets
@@ -59,6 +59,7 @@ Get info on the columns:
 
     $ select column_name, collation_name from information_schema.columns where table_schema="..." and table_name="...";
 
+select table_name, column_name, collation_name from information_schema.columns where table_schema='old_test' order by table_name and column_name;
 """
 
 import os
@@ -392,30 +393,35 @@ ALTER TABLE language
     CHANGE datetimeModified datetime_modified datetime DEFAULT NULL;
 
 CREATE TABLE `morphology` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `UUID` varchar(36) DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `description` text,
-  `script_type` varchar(5),
-  `lexicon_corpus_id` int(11) DEFAULT NULL,
-  `rules_corpus_id` int(11) DEFAULT NULL,
-  `enterer_id` int(11) DEFAULT NULL,
-  `modifier_id` int(11) DEFAULT NULL,
-  `datetime_entered` datetime DEFAULT NULL,
-  `datetime_modified` datetime DEFAULT NULL,
-  `compile_succeeded` tinyint(1) DEFAULT NULL,
-  `compile_message` varchar(255) DEFAULT NULL,
-  `compile_attempt` varchar(36) DEFAULT NULL,
-  `generate_attempt` varchar(36) DEFAULT NULL,
-  `extract_morphemes_from_rules_corpus` tinyint(1) DEFAULT NULL,
-  `rules` text,
-  `rules_generated` text,
-  PRIMARY KEY (`id`),
-  KEY `lexicon_corpus_id` (`lexicon_corpus_id`),
-  KEY `rules_corpus_id` (`rules_corpus_id`),
-  KEY `enterer_id` (`enterer_id`),
-  KEY `modifier_id` (`modifier_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `UUID` varchar(36) DEFAULT NULL,
+    `name` varchar(255) DEFAULT NULL,
+    `description` text,
+    `script_type` varchar(5) DEFAULT NULL,
+    `lexicon_corpus_id` int(11) DEFAULT NULL,
+    `rules_corpus_id` int(11) DEFAULT NULL,
+    `enterer_id` int(11) DEFAULT NULL,
+    `modifier_id` int(11) DEFAULT NULL,
+    `datetime_entered` datetime DEFAULT NULL,
+    `datetime_modified` datetime DEFAULT NULL,
+    `compile_succeeded` tinyint(1) DEFAULT NULL,
+    `compile_message` varchar(255) DEFAULT NULL,
+    `compile_attempt` varchar(36) DEFAULT NULL,
+    `generate_attempt` varchar(36) DEFAULT NULL,
+    `extract_morphemes_from_rules_corpus` tinyint(1) DEFAULT NULL,
+    `rules_generated` text,
+    `rules` text,
+    `rich_morphemes` tinyint(1) DEFAULT NULL,
+    `parent_directory` varchar(255) DEFAULT NULL,
+    `word_boundary_symbol` varchar(10) DEFAULT NULL,
+    `rare_delimiter` varchar(10) DEFAULT NULL,
+    `morpheme_delimiters` varchar(255) DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `lexicon_corpus_id` (`lexicon_corpus_id`),
+    KEY `rules_corpus_id` (`rules_corpus_id`),
+    KEY `enterer_id` (`enterer_id`),
+    KEY `modifier_id` (`modifier_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 
 CREATE TABLE `morphologybackup` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -457,6 +463,8 @@ ALTER TABLE phonology
     ADD COLUMN compile_succeeded tinyint(1) DEFAULT NULL,
     ADD COLUMN compile_message VARCHAR(255) DEFAULT NULL,
     ADD COLUMN compile_attempt VARCHAR(36) DEFAULT NULL,
+    ADD COLUMN parent_directory varchar(255) DEFAULT NULL,
+    ADD COLUMN word_boundary_symbol varchar(10) DEFAULT NULL
     ADD FOREIGN KEY (modifier_id) REFERENCES user(id),
     ADD FOREIGN KEY (enterer_id) REFERENCES user(id);
 

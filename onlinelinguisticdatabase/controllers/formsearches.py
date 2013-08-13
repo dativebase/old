@@ -312,9 +312,9 @@ def update_form_search(form_search, data):
     changed = False
 
     # Unicode Data
-    changed = h.set_attr(form_search, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(form_search, 'search', data['search'], changed)
-    changed = h.set_attr(form_search, 'description', h.normalize(data['description']), changed)
+    changed = form_search.set_attr('name', h.normalize(data['name']), changed)
+    changed = form_search.set_attr('search', data['search'], changed)
+    changed = form_search.set_attr('description', h.normalize(data['description']), changed)
 
     if changed:
         form_search.datetime_modified = datetime.datetime.utcnow()

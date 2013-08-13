@@ -21,7 +21,6 @@
 
 import logging
 import re
-import sys
 import simplejson as json
 from uuid import uuid4
 from pylons import request, response, session, app_globals, config
@@ -620,25 +619,25 @@ def update_form(form, data):
     """
     changed = False
     # Unicode Data
-    changed = h.set_attr(form, 'transcription',
+    changed = form.set_attr('transcription',
             h.to_single_space(h.normalize(data['transcription'])), changed)
-    changed = h.set_attr(form, 'phonetic_transcription',
+    changed = form.set_attr('phonetic_transcription',
             h.to_single_space(h.normalize(data['phonetic_transcription'])), changed)
-    changed = h.set_attr(form, 'narrow_phonetic_transcription',
+    changed = form.set_attr('narrow_phonetic_transcription',
             h.to_single_space(h.normalize(data['narrow_phonetic_transcription'])), changed)
-    changed = h.set_attr(form, 'morpheme_break',
+    changed = form.set_attr('morpheme_break',
             h.to_single_space(h.normalize(data['morpheme_break'])), changed)
-    changed = h.set_attr(form, 'morpheme_gloss',
+    changed = form.set_attr('morpheme_gloss',
             h.to_single_space(h.normalize(data['morpheme_gloss'])), changed)
-    changed = h.set_attr(form, 'comments', h.normalize(data['comments']), changed)
-    changed = h.set_attr(form, 'speaker_comments', h.normalize(data['speaker_comments']), changed)
-    changed = h.set_attr(form, 'syntax', h.normalize(data['syntax']), changed)
-    changed = h.set_attr(form, 'semantics', h.normalize(data['semantics']), changed)
-    changed = h.set_attr(form, 'grammaticality', data['grammaticality'], changed)
-    changed = h.set_attr(form, 'status', data['status'], changed)
+    changed = form.set_attr('comments', h.normalize(data['comments']), changed)
+    changed = form.set_attr('speaker_comments', h.normalize(data['speaker_comments']), changed)
+    changed = form.set_attr('syntax', h.normalize(data['syntax']), changed)
+    changed = form.set_attr('semantics', h.normalize(data['semantics']), changed)
+    changed = form.set_attr('grammaticality', data['grammaticality'], changed)
+    changed = form.set_attr('status', data['status'], changed)
 
     # User-entered date: date_elicited
-    changed = h.set_attr(form, 'date_elicited', data['date_elicited'], changed)
+    changed = form.set_attr('date_elicited', data['date_elicited'], changed)
 
     # One-to-Many Data: Translations
     # First check if the user has made any changes to the translations.
@@ -653,12 +652,12 @@ def update_form(form, data):
         changed = True
 
     # Many-to-One Data
-    changed = h.set_attr(form, 'elicitation_method', data['elicitation_method'], changed)
-    changed = h.set_attr(form, 'syntactic_category', data['syntactic_category'], changed)
-    changed = h.set_attr(form, 'source', data['source'], changed)
-    changed = h.set_attr(form, 'elicitor', data['elicitor'], changed)
-    changed = h.set_attr(form, 'verifier', data['verifier'], changed)
-    changed = h.set_attr(form, 'speaker', data['speaker'], changed)
+    changed = form.set_attr('elicitation_method', data['elicitation_method'], changed)
+    changed = form.set_attr('syntactic_category', data['syntactic_category'], changed)
+    changed = form.set_attr('source', data['source'], changed)
+    changed = form.set_attr('elicitor', data['elicitor'], changed)
+    changed = form.set_attr('verifier', data['verifier'], changed)
+    changed = form.set_attr('speaker', data['speaker'], changed)
 
     # Many-to-Many Data: tags & files
     # Update only if the user has made changes.
@@ -687,10 +686,10 @@ def update_form(form, data):
     (morpheme_break_ids, morpheme_gloss_ids, syntactic_category_string,
         break_gloss_category, cache) = compile_morphemic_analysis(form)
 
-    changed = h.set_attr(form, 'morpheme_break_ids', morpheme_break_ids, changed)
-    changed = h.set_attr(form, 'morpheme_gloss_ids', morpheme_gloss_ids, changed)
-    changed = h.set_attr(form, 'syntactic_category_string', syntactic_category_string, changed)
-    changed = h.set_attr(form, 'break_gloss_category', break_gloss_category, changed)
+    changed = form.set_attr('morpheme_break_ids', morpheme_break_ids, changed)
+    changed = form.set_attr('morpheme_gloss_ids', morpheme_gloss_ids, changed)
+    changed = form.set_attr('syntactic_category_string', syntactic_category_string, changed)
+    changed = form.set_attr('break_gloss_category', break_gloss_category, changed)
 
     if changed:
         form.datetime_modified = h.now()
@@ -718,10 +717,10 @@ def update_morpheme_references_of_form(form, valid_delimiters=None, **kwargs):
     changed = False
     (morpheme_break_ids, morpheme_gloss_ids, syntactic_category_string,
         break_gloss_category, cache) = compile_morphemic_analysis(form, valid_delimiters, **kwargs)
-    changed = h.set_attr(form, 'morpheme_break_ids', morpheme_break_ids, changed)
-    changed = h.set_attr(form, 'morpheme_gloss_ids', morpheme_gloss_ids, changed)
-    changed = h.set_attr(form, 'syntactic_category_string', syntactic_category_string, changed)
-    changed = h.set_attr(form, 'break_gloss_category', break_gloss_category, changed)
+    changed = form.set_attr('morpheme_break_ids', morpheme_break_ids, changed)
+    changed = form.set_attr('morpheme_gloss_ids', morpheme_gloss_ids, changed)
+    changed = form.set_attr('syntactic_category_string', syntactic_category_string, changed)
+    changed = form.set_attr('break_gloss_category', break_gloss_category, changed)
     if changed:
         form.datetime_modified = h.now()
         session['user'] = Session.merge(session['user'])

@@ -1070,7 +1070,7 @@ class ValidFormReferences(FancyValidator):
             values['forms'] = SQLAQueryBuilder().get_SQLA_query(
                 json.loads(values['form_search'].search)).all()
             return values
-        form_references = list(set(h.get_form_references(values.get('content', u''))))
+        form_references = list(set(model.Corpus.get_form_references(values.get('content', u''))))
         if not form_references:
             values['forms'] = []
             return values
@@ -1149,12 +1149,28 @@ class MorphologySchema(Schema):
     extract_morphemes_from_rules_corpus = StringBoolean()
     rules = MorphologyRules()
     rich_morphemes = StringBoolean()
+    include_unknowns = StringBoolean()
+
+class CompatibleParserComponents(FancyValidator):
+    """Ensures that the phonology, morphology and LM of a parser are compatible.
+
+    """
+    messages = {'rare_no_match': "A parser's non-categorial LM must have the same "
+        "rare_delimiter value as its morphology."}
+    def _to_python(self, values, state):
+        # If a parser's LM is *not* categorial, then its rare_delimiter value must
+        # match that of the morphology or probability estimation will not be possible!
+        if not values['language_model'].categorial:
+            if values['language_model'].rare_delimiter != values['morphology'].rare_delimiter:
+                raise Invalid(self.message('rare_no_match', state), values, state)
+        return values
 
 class MorphologicalParserSchema(Schema):
     """MorphologicalParserSchema is a Schema for validating the data submitted to
     MorphologicalparsersController (controllers/morphologicalparsers.py).
 
     """
+    chained_validators = [CompatibleParserComponents()]
     allow_extra_fields = True
     filter_extra_fields = True
     name = UniqueUnicodeValue(max=255, not_empty=True, model_name='MorphologicalParser', attribute_name='name')
@@ -1166,8 +1182,10 @@ class MorphologicalParserSchema(Schema):
 class ValidSmoothing(FancyValidator):
     messages = {'invalid smoothing': 'The LM toolkit %(toolkit)s implements no such smoothing algorithm %(smoothing)s.'}
     def _to_python(self, values, state):
-        if values.get('smoothing') and values['smoothing'] not in h.language_model_toolkits[values['toolkit']]['smoothing_algorithms']:
-            raise Invalid(self.message('invalid smoothing', state, toolkit=values['toolkit'], smoothing=values['smoothing']), values, state)
+        if (values.get('smoothing') and values['smoothing'] not in
+            h.language_model_toolkits[values['toolkit']]['smoothing_algorithms']):
+            raise Invalid(self.message('invalid smoothing', state, toolkit=values['toolkit'],
+                smoothing=values['smoothing']), values, state)
         else:
             return values
 
@@ -1184,6 +1202,6 @@ class MorphemeLanguageModelSchema(Schema):
     corpus = ValidOLDModelObject(model_name='Corpus', not_empty=True)
     vocabulary_morphology = ValidOLDModelObject(model_name='Morphology')
     toolkit = OneOf(h.language_model_toolkits.keys(), not_empty=True)
-    order = Int(min=2, max=5)
+    order = Int(min=2, max=5, if_empty=3)
     smoothing = UnicodeString(max=30)
     categorial = StringBoolean()

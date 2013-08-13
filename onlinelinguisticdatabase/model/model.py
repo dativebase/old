@@ -132,3 +132,17 @@ class Model(object):
         ones.
         """
         pass
+
+    def set_attr(self, name, value, changed):
+        """Set the value of ``self.name`` to ``value`` only if ``self.name != value``.
+        Set ``changed`` to ``True`` if ``self.name`` has changed as a result.  Return
+        ``changed``.  Useful in the ``update_<model>`` function of the controllers.
+
+        """
+
+        if getattr(self, name) != value:
+            setattr(self, name, value)
+            changed = True
+        return changed
+
+

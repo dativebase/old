@@ -289,9 +289,9 @@ class TestMorphologiesController(TestController):
                     headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         morphology_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id)
-        morphology_binary_filename = 'morphology_%d.foma' % morphology_1_id
+        morphology_binary_filename = 'morphology.foma'
         morphology_dir_contents = os.listdir(morphology_dir)
-        morphology_script_path = os.path.join(morphology_dir, 'morphology_%d.script' % morphology_1_id)
+        morphology_script_path = os.path.join(morphology_dir, 'morphology.script')
         morphology_script = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
         assert u'define morphology' in morphology_script
         assert u'(NCat)' in morphology_script # cf. tortue
@@ -299,7 +299,8 @@ class TestMorphologiesController(TestController):
         assert u'(NCat "-" PHICat)' in morphology_script # cf. chien-s
         assert u'(DCat "-" PHICat)' in morphology_script # cf. le-s
         assert u'(VCat "-" AGRCat)' in morphology_script # cf. nage-aient, parle-ait
-        assert u'c h a t "%scat%sN":0' % (h.rare_delimiter, h.rare_delimiter) not in morphology_script # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
+        assert (u'c h a t "%scat%sN":0' % (h.rare_delimiter, h.rare_delimiter)
+                not in morphology_script) # cf. extract_morphemes_from_rules_corpus = False and chat's exclusion from the lexicon corpus
         assert u'c h i e n "%sdog%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
         assert u'b e \u0301 c a s s e "%swoodcock%sN":0' % (h.rare_delimiter, h.rare_delimiter) in morphology_script
         assert resp['compile_succeeded'] == True
@@ -334,7 +335,7 @@ class TestMorphologiesController(TestController):
         response = self.app.get(url(controller='morphologies', action='servecompiled',
             id=morphology_1_id), headers=self.json_headers, extra_environ=self.extra_environ_admin)
         morphology_binary_path = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id,
-               'morphology_%d.foma' % morphology_1_id)
+               'morphology.foma')
         foma_file = open(morphology_binary_path, 'rb')
         foma_file_content = foma_file.read()
         assert foma_file_content == response.body
@@ -351,7 +352,7 @@ class TestMorphologiesController(TestController):
         response = self.app.put(url(controller='morphologies', action='generate_and_compile', id=morphology_1_id),
                                 headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = json.loads(response.body)
-        morphology_binary_filename = 'morphology_%d.foma' % morphology_1_id
+        morphology_binary_filename = 'morphology.foma'
         morphology_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id)
         compile_attempt = resp['compile_attempt']
 
@@ -467,9 +468,9 @@ class TestMorphologiesController(TestController):
                 log.debug('Waiting for morphology %d to compile ...' % morphology_2_id)
             sleep(1)
         morphology_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_2_id)
-        morphology_binary_filename = 'morphology_%d.foma' % morphology_2_id
+        morphology_binary_filename = 'morphology.foma'
         morphology_dir_contents = os.listdir(morphology_dir)
-        morphology_script_path = os.path.join(morphology_dir, 'morphology_%d.script' % morphology_2_id)
+        morphology_script_path = os.path.join(morphology_dir, 'morphology.script')
         morphology_script = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
         assert resp['compile_succeeded'] == True
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
@@ -505,9 +506,9 @@ class TestMorphologiesController(TestController):
                 log.debug('Waiting for morphology %d to compile ...' % morphology_3_id)
             sleep(1)
         morphology_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_3_id)
-        morphology_binary_filename = 'morphology_%d.foma' % morphology_3_id
+        morphology_binary_filename = 'morphology.foma'
         morphology_dir_contents = os.listdir(morphology_dir)
-        morphology_script_path = os.path.join(morphology_dir, 'morphology_%d.script' % morphology_3_id)
+        morphology_script_path = os.path.join(morphology_dir, 'morphology.script')
         morphology_script = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
         assert resp['compile_succeeded'] == False
         assert resp['compile_message'] == u'Foma script is not a well-formed morphology.'
@@ -552,7 +553,7 @@ class TestMorphologiesController(TestController):
                     headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = json.loads(response.body)
         morphology_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id)
-        morphology_binary_filename = 'morphology_%d.foma' % morphology_1_id
+        morphology_binary_filename = 'morphology.foma'
         morphology_dir_contents = os.listdir(morphology_dir)
         morphology_script = resp['script']
         rules = resp['rules_generated']
@@ -708,7 +709,7 @@ class TestMorphologiesController(TestController):
         morphology_1_lexicon_corpus_id = morphologies[0]['lexicon_corpus']['id']
         morphology_count = len(morphologies)
         morphology_1_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id)
-        morphology_1_script_path = os.path.join(morphology_1_dir, 'morphology_%d.script' % morphology_1_id)
+        morphology_1_script_path = os.path.join(morphology_1_dir, 'morphology.script')
         morphology_1_script = u''
         if foma_installed:
             morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
@@ -894,7 +895,7 @@ class TestMorphologiesController(TestController):
         morphology_1_lexicon_corpus_id = morphologies[0]['lexicon_corpus']['id']
         morphology_count = len(morphologies)
         morphology_1_dir = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id)
-        morphology_1_script_path = os.path.join(morphology_1_dir, 'morphology_%d.script' % morphology_1_id)
+        morphology_1_script_path = os.path.join(morphology_1_dir, 'morphology.script')
         morphology_1_script = codecs.open(morphology_1_script_path, mode='r', encoding='utf8').read()
 
         # Update morphology 1 by making it into a lexc script
@@ -924,10 +925,10 @@ class TestMorphologiesController(TestController):
         # generated for the same morphology: foma did *not* evaluate them as equivalent.  I do not know
         # what to make of this at this point ...
         morphology_path = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id)
-        #morphology_script_path = os.path.join(morphology_path, 'morphology_%d.script' % morphology_1_id)
-        #morphology_script_backup_path = os.path.join(morphology_path, 'morphology_%d_backup.script' % morphology_1_id)
-        morphology_binary_path = os.path.join(morphology_path, 'morphology_%d.foma' % morphology_1_id)
-        #morphology_binary_backup_path = os.path.join(morphology_path, 'morphology_%d_backup.foma' % morphology_1_id)
+        #morphology_script_path = os.path.join(morphology_path, 'morphology.script')
+        #morphology_script_backup_path = os.path.join(morphology_path, 'morphology_backup.script')
+        morphology_binary_path = os.path.join(morphology_path, 'morphology.foma')
+        #morphology_binary_backup_path = os.path.join(morphology_path, 'morphology_backup.foma')
         #copyfileobj(open(morphology_script_path, 'rb'), open(morphology_script_backup_path, 'wb'))
         #copyfileobj(open(morphology_binary_path, 'rb'), open(morphology_binary_backup_path, 'wb'))
 
@@ -1274,8 +1275,6 @@ class TestMorphologiesController(TestController):
         large_morphology_id = resp['id']
         assert resp['name'] == name
         assert resp['script_type'] == u'lexc'
-        log.debug('rich_morphemes')
-        log.debug(resp['rich_morphemes'])
 
         ################################################################################
         # END NEW
@@ -1283,8 +1282,8 @@ class TestMorphologiesController(TestController):
 
         # Compile the morphology's script (if necessary, cf. precompiled_lexc_morphology and pregenerated_lexc_morphology)
         morphology_directory = os.path.join(self.morphologies_path, 'morphology_%d' % large_morphology_id)
-        morphology_binary_filename = 'morphology_%d.foma' % large_morphology_id
-        morphology_script_filename = 'morphology_%d.script' % large_morphology_id
+        morphology_binary_filename = 'morphology.foma'
+        morphology_script_filename = 'morphology.script'
         morphology_binary_path = os.path.join(morphology_directory, morphology_binary_filename)
         morphology_script_path = os.path.join(morphology_directory, morphology_script_filename)
         try:
@@ -1333,15 +1332,11 @@ class TestMorphologiesController(TestController):
         # to the morphology's lexicon in its directory.
         if not resp['rich_morphemes']:
             large_morphology = Session.query(model.Morphology).get(large_morphology_id)
-            morphology_dir_path = os.path.join(self.morphologies_path,
-                                            'morphology_%d' % large_morphology_id)
-            dictionary_path = h.get_model_file_path(large_morphology, morphology_dir_path, 'dictionary')
+            dictionary_path = large_morphology.get_file_path('dictionary')
             assert os.path.isfile(dictionary_path)
             dictionary = cPickle.load(open(dictionary_path, 'rb'))
             first_key = dictionary.keys()[0]
             assert type(dictionary[first_key]) == list
-            log.debug(first_key)
-            log.debug(dictionary[first_key])
 
         # Get the morphology again, this time requesting the lexicon attribute
         response = self.app.get(url('morphology', id=large_morphology_id), params={'lexicon': u'1'},

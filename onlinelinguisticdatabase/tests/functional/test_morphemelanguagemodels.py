@@ -14,10 +14,7 @@
 
 import logging
 import os
-import sys
 import codecs
-from shutil import copyfileobj
-from time import time
 import simplejson as json
 from time import sleep
 from nose.tools import nottest
@@ -190,7 +187,8 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp['restricted'] == False
 
         # Get the ARPA file of the LM as a viewer.
-        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa',
+            id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_view)
         assert response.content_type == u'text/plain'
         arpa = unicode(response.body, encoding='utf8')
@@ -223,7 +221,8 @@ class TestMorphemelanguagemodelsController(TestController):
         assert resp == h.unauthorized_msg
 
         # Attempt to get the ARPA file of the LM as an administrator and expect to succeed.
-        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa', id=morpheme_language_model_id),
+        response = self.app.get(url(controller='morphemelanguagemodels', action='serve_arpa',
+            id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         assert response.content_type == u'text/plain'
         arpa = unicode(response.body, encoding='utf8')
@@ -237,7 +236,8 @@ class TestMorphemelanguagemodelsController(TestController):
             h.rare_delimiter.join([u's', u'PL', u'PHI']),
             h.rare_delimiter.join([u'chat', u'cat', u'N']))
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
-        response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities', id=morpheme_language_model_id),
+        response = self.app.put(url(controller='morphemelanguagemodels', action='get_probabilities',
+            id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         likely_word_log_prob = resp[likely_word]
@@ -402,21 +402,6 @@ class TestMorphemelanguagemodelsController(TestController):
         perplexity = resp['perplexity']
         log.debug('Perplexity of super toy french (6 sentence corpus, category-based, FixKN, n=4): %s' % perplexity)
 
-        # TODO: alter morphological_parser so that it can handle category-based LMs
-            # X morphologies need to include category names on the lower side of the tape
-            # X morpheme language models need to range over m|g|c triples, not just m|g doubles.
-            # X m_parsers: parse action must ambiguate candidates, if not rich_morphemes
-            # X m_parsers: ensure that apply up/down returns/accepts impoverished morphemes when morphology is so specified.
-            # X get_most_probable_parse in morphologicalparsers controller needs minor tweaking.
-        # TODO: should users be able to manually cancel a compilation request?
-        # TODO: at the very least, the system should be able to tell them that a request is ongoing and
-            # they should not be able to re-request compilation in that case...
-        # TODO: alot of the code in foma_worker should be moved to a different location (e.g., the 
-           # relevant model objects and OO-ified.
-        # TODO: look into backoff to category: implementation via another LM toolkit or
-        #  roll my own by creating two LMs (one categorial, one not) and synthesizing them
-        # TODO: parse Blackfoot and report on results.
-
     @nottest
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
@@ -553,9 +538,10 @@ class TestMorphemelanguagemodelsController(TestController):
         morpheme_language_model_1_corpus_id = morpheme_language_models[0]['corpus']['id']
         morpheme_language_model_1_vocabulary_morphology_id = getattr(morpheme_language_models[0].get('vocabulary_morphology'), 'id', None)
         morpheme_language_model_count = len(morpheme_language_models)
-        morpheme_language_model_1_dir = os.path.join(self.morpheme_language_models_path, 'morpheme_language_model_%d' % morpheme_language_model_id)
+        morpheme_language_model_1_dir = os.path.join(
+            self.morpheme_language_models_path, 'morpheme_language_model_%d' % morpheme_language_model_id)
         morpheme_language_model_1_arpa_path = os.path.join(morpheme_language_model_1_dir,
-                'morpheme_language_model_%d.lm' % morpheme_language_model_id)
+                'morpheme_language_model.lm')
         morpheme_language_model_1_arpa = codecs.open(morpheme_language_model_1_arpa_path, mode='r', encoding='utf8').read()
 
         # Update the first morpheme language model.  This will create the first backup for this morpheme language model.
@@ -790,8 +776,9 @@ class TestMorphemelanguagemodelsController(TestController):
         perplexity = resp['perplexity']
 
         # count how many words constitute the corpus.
-        lm_corpus_path = os.path.join(self.morpheme_language_models_path, 'morpheme_language_model_%s' % morpheme_language_model_id,
-                'morpheme_language_model_%s.txt' % morpheme_language_model_id)
+        lm_corpus_path = os.path.join(self.morpheme_language_models_path,
+                'morpheme_language_model_%s' % morpheme_language_model_id,
+                'morpheme_language_model.txt')
         word_count = 0
         with codecs.open(lm_corpus_path, encoding='utf8') as f:
             for line in f:
@@ -856,7 +843,7 @@ class TestMorphemelanguagemodelsController(TestController):
 
         # count how many words constitute the corpus.
         lm_corpus_path = os.path.join(self.morpheme_language_models_path, 'morpheme_language_model_%s' % morpheme_language_model_id,
-                'morpheme_language_model_%s.txt' % morpheme_language_model_id)
+                'morpheme_language_model.txt')
         word_count = 0
         with codecs.open(lm_corpus_path, encoding='utf8') as f:
             for line in f:
@@ -1040,6 +1027,10 @@ class TestMorphemelanguagemodelsController(TestController):
             task_descr='GET PERPLEXITY OF LM %s' % morpheme_language_model_id)
         new_perplexity = resp['perplexity']
 
+        log.debug('new_perplexity')
+        log.debug(new_perplexity)
+        log.debug('perplexity')
+        log.debug(perplexity)
         assert new_perplexity < perplexity
         log.debug('Perplexity of Blackfoot LM %s (%s sentence corpus, ModKN, n=3, fixed vocabulary): %s' % (
             morpheme_language_model_id, word_count, new_perplexity))

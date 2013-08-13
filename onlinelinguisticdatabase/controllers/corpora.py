@@ -554,7 +554,7 @@ def write_to_file(corpus, format_):
                         restricted = True
                     f.write(writer(form))
         else:
-            form_references = h.get_form_references(corpus.content)
+            form_references = corpus.get_form_references(corpus.content)
             forms = dict([(f.id, f) for f in corpus.forms])
             with codecs.open(corpus_file_path, 'w', 'utf8') as f:
                 for id in form_references:
@@ -669,10 +669,10 @@ def update_corpus(corpus, data):
     """
     changed = False
     # Unicode Data
-    changed = h.set_attr(corpus, 'name', h.normalize(data['name']), changed)
-    changed = h.set_attr(corpus, 'description', h.normalize(data['description']), changed)
-    changed = h.set_attr(corpus, 'content', data['content'], changed)
-    changed = h.set_attr(corpus, 'form_search', data['form_search'], changed)
+    changed = corpus.set_attr('name', h.normalize(data['name']), changed)
+    changed = corpus.set_attr('description', h.normalize(data['description']), changed)
+    changed = corpus.set_attr('content', data['content'], changed)
+    changed = corpus.set_attr('form_search', data['form_search'], changed)
 
     tags_to_add = [t for t in data['tags'] if t]
     forms_to_add = [f for f in data['forms'] if f]
