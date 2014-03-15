@@ -138,16 +138,16 @@ def generate_language_model(**kwargs):
     lm.generate_succeeded = False
     try:
         lm.write_corpus()
-    except Exception:
-        lm.generate_message = u'Error writing the corpus file.'
+    except Exception, e:
+        lm.generate_message = u'Error writing the corpus file. %s' % e
     try:
         lm.write_vocabulary()
-    except Exception:
-        lm.generate_message = u'Error writing the vocabulary file.'
+    except Exception, e:
+        lm.generate_message = u'Error writing the vocabulary file. %s' % e
     try:
         lm.write_arpa(kwargs['timeout'])
-    except Exception:
-        lm.generate_message = u'Error writing the ARPA file.'
+    except Exception, e:
+        lm.generate_message = u'Error writing the ARPA file. %s' % e
     try:
         lm.generate_trie()
     except Exception, e:
