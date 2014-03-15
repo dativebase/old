@@ -409,7 +409,9 @@ class MorphologicalparsersController(BaseController):
             inputs = json.loads(unicode(request.body, request.charset))
             schema = TranscriptionsSchema
             inputs = schema.to_python(inputs)
-            return parser.parse(inputs['transcriptions'])
+            parses = parser.parse(inputs['transcriptions'])
+            return dict((transcription, parse) for transcription, (parse, candidates) in
+                        parses.iteritems())
         except h.JSONDecodeError:
             response.status_int = 400
             return h.JSONDecodeErrorResponse
@@ -521,7 +523,7 @@ class MorphologicalparsersController(BaseController):
             zip_file = h.ZipFile(zip_path, 'w')
             #zip_file.write_directory(parser.directory)
             for file_name in os.listdir(directory):
-                if (os.path.splitext(file_name)[1] not in ('.log', '.sh', '.script', '.zip') and
+                if (os.path.splitext(file_name)[1] not in ('.log', '.sh', '.zip') and
                     file_name != 'morpheme_language_model.pickle'):
                     zip_file.write_file(os.path.join(directory, file_name))
             zip_file.write_directory(os.path.join(lib_path, 'simplelm'), keep_dir=True)
