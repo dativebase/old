@@ -262,7 +262,9 @@ class TestController(TestCase):
             'script_type': u'lexc',
             'extract_morphemes_from_rules_corpus': False,
             'rules': u'',
-            'rich_morphemes': True
+            'rich_upper': True,
+            'rich_lower': False,
+            'include_unknowns': False
         }
         self.morphological_parser_create_params = {
             'name': u'',

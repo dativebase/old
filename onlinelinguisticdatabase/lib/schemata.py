@@ -1148,7 +1148,8 @@ class MorphologySchema(Schema):
     script_type = OneOf(h.morphology_script_types)
     extract_morphemes_from_rules_corpus = StringBoolean()
     rules = MorphologyRules()
-    rich_morphemes = StringBoolean()
+    rich_upper = StringBoolean()
+    rich_lower = StringBoolean()
     include_unknowns = StringBoolean()
 
 class CompatibleParserComponents(FancyValidator):

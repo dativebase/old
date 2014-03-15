@@ -467,7 +467,8 @@ def create_new_morphology(data):
         script_type = data['script_type'],
         extract_morphemes_from_rules_corpus = data['extract_morphemes_from_rules_corpus'],
         rules = data['rules'],
-        rich_morphemes = data['rich_morphemes'],
+        rich_upper = data['rich_upper'],
+        rich_lower = data['rich_lower'],
         include_unknowns = data['include_unknowns']
     )
     return morphology
@@ -489,10 +490,11 @@ def update_morphology(morphology, data):
     changed = morphology.set_attr('script_type', data['script_type'], changed)
     changed = morphology.set_attr('extract_morphemes_from_rules_corpus', data['extract_morphemes_from_rules_corpus'], changed)
     changed = morphology.set_attr('rules', data['rules'], changed)
-    changed = morphology.set_attr('rich_morphemes', data['rich_morphemes'], changed)
+    changed = morphology.set_attr('rich_upper', data['rich_upper'], changed)
+    changed = morphology.set_attr('rich_lower', data['rich_lower'], changed)
     changed = morphology.set_attr('include_unknowns', data['include_unknowns'], changed)
-    changed = morphology.set_attr('rare_delimiter', data['rare_delimiter'], changed)
-    changed = morphology.set_attr('word_boundary_symbol', data['word_boundary_symbol'], changed)
+    changed = morphology.set_attr('rare_delimiter', h.rare_delimiter, changed)
+    changed = morphology.set_attr('word_boundary_symbol', h.word_boundary_symbol, changed)
     if changed:
         session['user'] = Session.merge(session['user'])
         morphology.modifier = session['user']

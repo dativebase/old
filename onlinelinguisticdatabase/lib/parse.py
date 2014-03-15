@@ -66,7 +66,8 @@ morphology = parser.MorphologyFST(
     parent_directory = script_dir,
     word_boundary_symbol = config['morphology']['word_boundary_symbol'],
     rare_delimiter = config['morphology']['rare_delimiter'],
-    rich_morphemes = config['morphology']['rich_morphemes'],
+    rich_upper = config['morphology']['rich_upper'],
+    rich_lower = config['morphology']['rich_lower'],
     rules_generated = config['morphology']['rules_generated']
 )
 

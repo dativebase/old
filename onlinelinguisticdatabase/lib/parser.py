@@ -47,8 +47,133 @@ from itertools import product
 import threading
 from signal import SIGKILL
 import simplelm
+import unicodedata
 
 log = logging.getLogger(__name__)
+
+
+class Parse(object):
+    """Represents a parse of a word.
+
+    Makes it easy to convert between string and list representations of a parse,
+    e.g., from the string
+
+        ``u'chien|dog|N-s|PL|Num'``
+
+    to the list
+
+        ``[u'chien-s', u'dog-PL', u'N-Num']``
+
+    Usage:
+
+        >>> parse = Parse(u'chien|dog|N-s|PL|Num', morpheme_delimiters=u'-', rare_delimiter=u'|')
+        >>> parse.parse
+        u'chien|dog|N-s|PL|Num'
+        >>> parse.triplet
+        [u'chien-s', u'dog-PL', u'N-Num']
+
+    """
+
+    def __init__(self, parse, **kwargs):
+        """Initialization requires a ``basestring`` representation of the parse,
+        where such a representation consists of morphemes in f|g|c-f|g|c
+        format, i.e., <*f*orm, *g*loss, *c*ategory> triples whose elements are delimited
+        by ``self.rare_delimiter`` (represented by "|"), interleaved with items from
+        the list of morpheme delimiters defined in the comma-separated string
+        ``self.morpheme_delimiters``.
+
+        """
+
+        self.parse = parse
+        self.morpheme_delimiters = kwargs.get('morpheme_delimiters', u'-')
+        self.rare_delimiter = kwargs.get('rare_delimiter', u'\u2980')
+
+    def __repr__(self):
+        return self.parse.__repr__()
+
+    @property
+    def triplet(self):
+        try:
+            return self._triplet
+        except AttributeError:
+            self._triplet = self.parse2triplet(self.parse)
+            return self._triplet
+
+    def parse2triplet(self, parse):
+        """Convert a string representation of the parse (i.e., ``parse``) to a list of three strings,
+        i.e., forms, glosses, categories.  To illustrate, if ``parse`` is 'chien|dog|N-s|PL|Phi',
+        output will be ['chien-s', 'dog-PL', 'N-Phi'].
+
+        """
+
+        triplet = []
+        if not parse:
+            return triplet
+        for index, item in enumerate(self.morpheme_splitter(parse)):
+            if index % 2 == 0:
+                triplet.append(item.split(self.rare_delimiter))
+            else:
+                triplet.append([item, item, item])
+        return [u''.join(item) for item in zip(*triplet)]
+
+    def esc_RE_meta_chars(self, string):
+        """Escapes regex metacharacters in ``string``.
+
+            >>> esc_RE_meta_chars(u'-')
+            u'\\\-'
+
+        """
+        def esc(c):
+            if c in u'\\^$*+?{,}.|][()^-':
+                return re.escape(c)
+            return c
+        return ''.join([esc(c) for c in string])
+
+    @property
+    def morpheme_splitter(self):
+        """Return a function that will split words into morphemes and delimiters."""
+        try:
+            return self._morpheme_splitter
+        except AttributeError:
+            delimiters = self.delimiters
+            self._morpheme_splitter = lambda x: [x] # default, word is morpheme
+            if delimiters:
+                self._morpheme_splitter = re.compile(u'([%s])' %
+                    ''.join([self.esc_RE_meta_chars(d) for d in delimiters])).split
+            return self._morpheme_splitter
+
+    @property
+    def morpheme_only_splitter(self):
+        """Return a function that will split words into morphemes, excluding delimiters."""
+        try:
+            return self._morpheme_only_splitter
+        except AttributeError:
+            delimiters = self.delimiters
+            self._morpheme_splitter = lambda x: [x] # default, word is morpheme
+            if delimiters:
+                self._morpheme_splitter = re.compile(u'[%s]' %
+                    ''.join([self.esc_RE_meta_chars(d) for d in delimiters])).split
+            return self._morpheme_splitter
+
+    @property
+    def delimiters(self):
+        """Return a list of morpheme delimiters.
+
+        Note: we generate the list ``self._delimiters`` from the unicode object ``self.morpheme_delimiters``
+        if the latter exists; the rationale for this is that SQLAlchemy-based FSTs cannot persist Python
+        lists so the ``morpheme_delimiters`` attribute stores the string representing the list.
+
+        """
+
+        try:
+            return self._delimiters
+        except AttributeError:
+            morpheme_delimiters = getattr(self, 'morpheme_delimiters', None)
+            if morpheme_delimiters:
+                self._delimiters = morpheme_delimiters.split(u',')
+            else:
+                self._delimiters = []
+            return self._delimiters
 
 
 class Command(object):
@@ -159,65 +284,6 @@ class Command(object):
             rmtree(self.directory)
         except Exception:
             return None
-
-    def esc_RE_meta_chars(self, string):
-        """Escapes regex metacharacters in ``string``.
-
-            >>> esc_RE_meta_chars(u'-')
-            u'\\\-'
-
-        """
-        def esc(c):
-            if c in u'\\^$*+?{,}.|][()^-':
-                return re.escape(c)
-            return c
-        return ''.join([esc(c) for c in string])
-
-    @property
-    def morpheme_splitter(self):
-        """Return a function that will split words into morphemes and delimiters."""
-        try:
-            return self._morpheme_splitter
-        except AttributeError:
-            delimiters = self.delimiters
-            self._morpheme_splitter = lambda x: [x] # default, word is morpheme
-            if delimiters:
-                self._morpheme_splitter = re.compile(u'([%s])' %
-                    ''.join([self.esc_RE_meta_chars(d) for d in delimiters])).split
-            return self._morpheme_splitter
-
-    @property
-    def morpheme_only_splitter(self):
-        """Return a function that will split words into morphemes, excluding delimiters."""
-        try:
-            return self._morpheme_only_splitter
-        except AttributeError:
-            delimiters = self.delimiters
-            self._morpheme_splitter = lambda x: [x] # default, word is morpheme
-            if delimiters:
-                self._morpheme_splitter = re.compile(u'[%s]' %
-                    ''.join([self.esc_RE_meta_chars(d) for d in delimiters])).split
-            return self._morpheme_splitter
-
-    @property
-    def delimiters(self):
-        """Return a list of morpheme delimiters.
-
-        Note: we generate the list ``self._delimiters`` from the unicode object ``self.morpheme_delimiters``
-        if the latter exists; the rationale for this is that SQLAlchemy-based FSTs cannot persist Python
-        lists so the ``morpheme_delimiters`` attribute stores the string representing the list.
-
-        """
-
-        try:
-            return self._delimiters
-        except AttributeError:
-            morpheme_delimiters = getattr(self, 'morpheme_delimiters', None)
-            if morpheme_delimiters:
-                self._delimiters = morpheme_delimiters.split(u',')
-            else:
-                self._delimiters = []
-            return self._delimiters
 
     def run(self, cmd, timeout):
         """Run :func:`cmd` as a subprocess that is terminated within ``timeout`` seconds.
@@ -466,6 +532,7 @@ class FomaFST(Command):
             the absolute path to the compiled foma FST.
 
         """
+        log.warn('IN COMPILE')
         verification_string = verification_string or self.verification_string
         compiler_path = self.get_file_path('compiler')
         binary_path = self.get_file_path('binary')
@@ -486,7 +553,8 @@ class FomaFST(Command):
                 else:
                     self.compile_message = u'Compilation process failed.'
             else:
-                self.compile_message = u'Foma script is not a well-formed %s.' % self.object_type
+                log.warn(output)
+                self.compile_message = u'Foma script is not a well-formed %s %s.' % (self.object_type, output)
         except Exception:
             self.compile_message = u'Compilation attempt raised an error.'
         if self.compile_succeeded:
@@ -498,21 +566,59 @@ class FomaFST(Command):
                 pass
         self.compile_attempt = unicode(uuid4())
 
-    def save_script(self):
+    def decombine(self, string):
+        """Alter a string so that any unicode combining characters it contains
+        are separated from their base characters by a space.  This was found to be
+        necessary in order to sidestep a bug (?) of foma wherein a morphophonology 
+        formed by the composition of (a) a morphology with space-separated base and
+        combining characters and (b) a phonology with adjacent base and combining
+        characters was not recognizing transcriptions containing such combining
+        characters, despite the fact that the phonology and morphology would both
+        individually recognize such strings.  Without first "decombining" the phonological
+        rules it is possible to create a vacuous phonology that when used to create
+        a morphophonology results in a transducer that is identical to the original
+        morphology in terms of states and transitions but differs only in its sigma
+        value, i.e., the elements of the alphabet, where the morphophonology will 
+        have base/combining multicharacter symbols in its sigma that (somehow) prevent
+        the 
+
+        """
+
+        print 'in parser.py, decombine'
+        raise AttributeError
+        string_list = []
+        for c in string:
+            if unicodedata.combining(c):
+                string_list.extend([u'  ', c])
+            else:
+                string_list.append(c)
+        return u''.join(string_list)
+
+    def save_script(self, decombine=False):
         """Save the unicode value of ``self.script`` to disk.
 
         Also create the compiler shell script which will be used to compile the script.
 
+        :param bool decombine: if ``True``, the lines of the script will be "decombined",
+            see ``self.decombine`` above.
         :returns: the absolute path to the newly created foma FST script file.
 
         """
+        print 'in parser.py, save_script'
         try:
             self.make_directory_safely(self.directory)
             script_path = self.get_file_path('script')
             binary_path = self.get_file_path('binary')
             compiler_path = self.get_file_path('compiler')
             with codecs.open(script_path, 'w', 'utf8') as f:
-                f.write(self.script)
+                if decombine:
+                    for line in self.script.splitlines(True):
+                        if not line.strip().startswith(u'#'):
+                            f.write(self.decombine(line))
+                        else:
+                            f.write(line)
+                else:
+                    f.write(self.script)
             # The compiler shell script loads the foma script and compiles it to binary form.
             with open(compiler_path, 'w') as f:
                 f.write('#!/bin/sh\nfoma -e "source %s" -e "regex %s;" '
@@ -576,8 +682,13 @@ class PhonologyFST(FomaFST):
     boundaries = True
 
 
-class MorphologyFST(FomaFST):
+class MorphologyFST(FomaFST, Parse):
     """Represents a foma-based morphology finite-state transducer.
+
+    .. note::
+
+        The second superclass ``Parse`` provides the ``morpheme_splitter`` property.
+
     """
 
     def __init__(self, parent_directory, **kwargs):
@@ -611,7 +722,7 @@ class MorphologyFST(FomaFST):
             return self._file_type2extension
 
 
-class LanguageModel(Command):
+class LanguageModel(Command, Parse):
     """Represents ngram language model objects.
 
     This class assumes that the elements of the model are morphemes, not words.
@@ -626,6 +737,10 @@ class LanguageModel(Command):
     .. note::
 
         At present, only support for the MITLM toolkit is implemented.
+
+    .. note::
+
+        The second superclass ``Parse`` provides the ``morpheme_only_splitter`` property
 
     """
 
@@ -819,6 +934,9 @@ class Cache(object):
     def __getitem__(self, k):
         return self._store[k]
 
+    def __len__(self):
+        return len(self._store)
+
     def get(self, k, default=None):
         return self._store.get(k, default)
 
@@ -844,13 +962,17 @@ class Cache(object):
             self.persist()
 
 
-class MorphologicalParser(FomaFST):
+class MorphologicalParser(FomaFST, Parse):
     """Represents a morphological parser: a morphophonology FST filtered by an ngram LM.
 
-    The primary read methods are ``parse`` and ``parse_one``.  In order to function correctly,
+    The primary read method is ``parse``.  In order to function correctly,
     a MorphologicalParser instance must have ``morphology``, ``phonology`` and ``language_model``
     attributes whose values are fully generated and compiled ``Morphology``, ``Phonology`` and
     ``LanguageModel`` instances, respectively.
+
+    .. note::
+
+        The second superclass ``Parse`` provides the ``morpheme_splitter`` property.
 
     """
 
@@ -866,9 +988,9 @@ class MorphologicalParser(FomaFST):
 
     @property
     def cache(self):
-        if getattr(self, '_cache', None):
+        try:
             return self._cache
-        else:
+        except AttributeError:
             self._cache = Cache()
             return self._cache
 
@@ -882,55 +1004,56 @@ class MorphologicalParser(FomaFST):
             self.object_type, self.object_type)
 
     def pretty_parse(self, input_,):
-        result = self.parse(input_)
-        result = dict((k, self.parse2triplet(v)) for k, v in result.iteritems())
-        return result
-
-    def parse2triplet(self, parse):
-        """Convert a string representing a sequence of morphemes to a list of three strings,
-        i.e., forms, glosses, categories.  To illustrate, if ``parse`` is 'chien|dog|N-s|PL|Phi',
-        output will be ['chien-s', 'dog-PL', 'N-Phi'].
+        """A convenience interface to the ``parse`` method which returns triplet list
+        representations of parse.
 
         """
 
-        if not parse:
-            return parse
-        triplet = []
-        for index, item in enumerate(self.morpheme_splitter(parse)):
-            if index % 2 == 0:
-                triplet.append(item.split(self.my_morphology.rare_delimiter))
+        parses = self.parse(input_, parse_objects=True)
+        return dict((transcription, parse.triplet)
+                      for transcription, (parse, candidates) in parses.iteritems())
+
+    def parse(self, transcriptions, parse_objects=False):
+        """Parse the input transcriptions.
+
+        :param list transcriptions: unicode strings representing transcriptions of words.
+        :returns: a dict from transcriptions to parses.  If ``parse_objects==True``,
+            then the parses will be ``Parse`` instances instead of the default unicode objects.
+
+        """
+
+        if isinstance(transcriptions, basestring):
+            transcriptions = [transcriptions]
+        transcriptions = list(set(transcriptions))
+        parsed = {}
+        unparsed = []
+        for transcription in transcriptions:
+            cached_parse, cached_candidates = self.cache.get(transcription, (False, False))
+            if cached_parse is not False:
+                parsed[transcription] = cached_parse, cached_candidates
             else:
-                triplet.append([item, item, item])
-        return [u''.join(item) for item in zip(*triplet)]
-
-    def parse(self, input_):
-        """Parse the input(s) and return a dictionary from inputs to parses
-
-        :param basestring/list input_: a transcription of a word or a list thereof.
-        :returns: a dictionary with input transcriptions as keys and parses as values.
-
-        """
-        if isinstance(input_, basestring):
-            result = {input_: self.parse_one(input_)}
-        else:
-            result = dict((t, self.parse_one(t)) for t in input_)
+                unparsed.append(transcription)
+        unparsed = self.get_candidates(unparsed) # This is where the foma subprocess is enlisted.
+        for transcription, candidates in unparsed.iteritems():
+            parse = self.get_most_probable(candidates)
+            self.cache[transcription] = parsed[transcription] = parse, candidates
         if self.persist_cache:
             self.cache.persist()
-        return result
+        if parse_objects:
+            return dict((transcription, (self.get_parse_object(parse),
+                                         map(self.get_parse_object, candidates)))
+                        for transcription, (parse, candidates) in parsed.iteritems())
+        return parsed
 
-    def parse_one(self, transcription):
-        """Return the most probable parse for the input transcription.
-
-        :param unicode transcription: a surface form of a word.
-        :returns: unicode object representing the most probable parse of the transcription.
+    def get_parse_object(self, parse_string):
+        """Return a ``Parse`` instance representation of the parse string that is aware
+        of the delimiters of the parser that generated the parse string.
 
         """
-        parse = self.cache.get(transcription, False)
-        if parse is False:
-            candidates = self.get_candidates(transcription)
-            parse = self.get_most_probable(candidates)
-            self.cache[transcription] = parse
-        return parse
+
+        return Parse(parse_string,
+                     morpheme_delimiters = getattr(self, 'morpheme_delimiters', None),
+                     rare_delimiter = self.my_morphology.rare_delimiter)
 
     def get_most_probable(self, candidates):
         """Uses ``self.my_language_model`` to return the most probable of a list of candidate parses.
@@ -941,6 +1064,7 @@ class MorphologicalParser(FomaFST):
         :returns: the most probable candidate in candidates.
 
         """
+
         if not candidates:
             return None
         temp = []
@@ -954,30 +1078,34 @@ class MorphologicalParser(FomaFST):
             temp.append((candidate, self.my_language_model.get_probability_one(lm_input)))
         return sorted(temp, key=lambda x: x[1])[-1][0]
 
-    def get_candidates(self, transcription):
+    def get_candidates(self, transcriptions):
         """Returns the morphophonologically valid parses of the input transcription.
 
-        :param unicode transcription: a surface transcription of a word.
-        :returns: a list of strings representing candidate parses in 'form|gloss|category' format.
+        :param list transcriptions: surface transcriptions of words.
+        :returns: a dict from transcriptions to lists of strings representing candidate
+            parses in 'form|gloss|category' format.
 
         """
 
-        candidate_parses = self.applyup(transcription)[transcription]
-        if not self.my_morphology.rich_morphemes:
-            candidate_parses = self.disambiguate(candidate_parses)
-        return candidate_parses
+        candidates = self.applyup(transcriptions)
+        if not self.my_morphology.rich_upper:
+            candidates = self.disambiguate(candidates)
+        return candidates
 
     def disambiguate(self, candidates):
         """Return parse candidates with rich representations, i.e., disambiguated.
 
-        Note that this is only necessary when ``self.my_morphology.rich_morphemes==False``.
+        Note that this is only necessary when ``self.my_morphology.rich_upper==False``.
 
-        :param list candidates: a list of strings representing morphological parses.  Since
-            they are being disambiguated, we should expect them to be morpheme forms
-            delimited by the language's delimiters.
-        :returns: a list of richly represented morphological parses, i.e., in f|g|c format.
+        :param dict candidates: keys are transcriptions, values are lists of strings
+            representing morphological parses.  Since they are being disambiguated,
+            we should expect these lists to be morpheme forms delimited by the
+            language's delimiters.
+        :returns: a dict of the same form as the input where the values are lists of
+            richly represented morphological parses, i.e., in f|g|c format.
 
-        This converts something like 'chien-s' to 'chien|dog|N-s|PL|Phi'.
+        This converts something like {'chiens': 'chien-s'} to
+        {'chiens': 'chien|dog|N-s|PL|Phi'}.
 
         """
 
@@ -993,26 +1121,30 @@ class MorphologicalParser(FomaFST):
         dictionary_path = self.my_morphology.get_file_path('dictionary')
         try:
             dictionary = cPickle.load(open(dictionary_path, 'rb'))
-            new_candidates = set()
-            for candidate in candidates:
-                temp = []
-                morphemes = self.morpheme_splitter(candidate)
-                for index, morpheme in enumerate(morphemes):
-                    if index % 2 == 0:
-                        homographs = [[morpheme, gloss, category]
-                                for gloss, category in dictionary[morpheme]]
-                        temp.append(homographs)
-                    else:
-                        temp.append(morpheme) # it's really a delimiter
-                for candidate in product(*temp):
-                    # Only add a disambiguated candidate if its category sequence accords with the morphology's rules
-                    if ''.join(get_category(x) for x in candidate) in rules:
-                        new_candidates.add(u''.join(get_morpheme(x) for x in candidate))
-            return list(new_candidates)
+            result = {}
+            for transcription, candidate_list in candidates.iteritems():
+                new_candidates = set()
+                for candidate in candidate_list:
+                    temp = []
+                    morphemes = self.morpheme_splitter(candidate)
+                    for index, morpheme in enumerate(morphemes):
+                        if index % 2 == 0:
+                            homographs = [[morpheme, gloss, category]
+                                    for gloss, category in dictionary[morpheme]]
+                            temp.append(homographs)
+                        else:
+                            temp.append(morpheme) # it's really a delimiter
+                    for candidate in product(*temp):
+                        # Only add a disambiguated candidate if its category sequence accords
+                        # with the morphology's rules
+                        if ''.join(get_category(x) for x in candidate) in rules:
+                            new_candidates.add(u''.join(get_morpheme(x) for x in candidate))
+                result[transcription] = list(new_candidates)
+            return result
         except Exception, e:
             log.warn('some kind of exception occured in morphologicalparsers.py '
                     'disambiguate_candidates: %s' % e)
-            return []
+            return dict((k, []) for k in candidates)
 
     # A parser's morphology and language_model objects should always be accessed via the
     # ``my_``-prefixed properties defined below.  These properties abstract away the complication
@@ -1059,7 +1191,8 @@ class MorphologicalParser(FomaFST):
             'morphology': {
                 'word_boundary_symbol': getattr(self.my_morphology, 'word_boundary_symbol', u'#'),
                 'rare_delimiter': getattr(self.my_morphology, 'rare_delimiter', u'\u2980'),
-                'rich_morphemes': getattr(self.my_morphology, 'rich_morphemes', True),
+                'rich_upper': getattr(self.my_morphology, 'rich_upper', True),
+                'rich_lower': getattr(self.my_morphology, 'rich_lower', True),
                 'rules_generated': getattr(self.my_morphology, 'rules_generated', u'')
             },
             'language_model': {

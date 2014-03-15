@@ -15,76 +15,86 @@
 """Morphological parser model
 
 This model includes a lot of functionality related to the generation of
-attribute values and files that are necessary for a parser to parse input 
+attribute values and files that are necessary for a parser to parse input
 transcriptions effectively.
 
 In particular, the morphological parser model replicates the files and
-attribute values that are crucial to maintaining parsing functionality
-even when the referenced language model, morphology and/or phonology models
-are altered or deleted.  It takes a successful ``generate_and_compile``
-request to change the parsing behaviour of a parser.
+attribute values that are crucial to maintaining parsing functionality even
+when the referenced language model, morphology and/or phonology models are
+altered or deleted.  It takes a successful ``generate_and_compile`` request to
+change the parsing behaviour of a parser.
 
-This approach was taken so that updates to subordinate objects/models would
-not silently change parsing functionality and in order to ensure that a parser's
-cache is in accordance with its parsing functionality.  If a generate and 
-compile request results in the change of a crucial attribute value or file, then
-the cache is cleared.
+This approach was taken so that updates to subordinate objects/models would not
+silently change parsing functionality and in order to ensure that a parser's
+cache is in accordance with its parsing functionality.  If a generate and
+compile request results in the change of a crucial attribute value or file,
+then the cache is cleared.
 
-A persistent cache is implemented via ``parse`` table that maps transcriptions
-to parses, relative to a morphological parser model.  Each parser has a one-to-many
-collection in ``self.parses``.  However, interaction with the parser's cache is 
-mediated via a ``Cache`` instance (see below) that provides a standardized interface
-to cached parses (i.e., self.cache[k], self.cache[k] = v, self.cache.get(k, default),
-self.cache.update() and self.cache.clear()), cf. ``lib/parser.py`` for a pickle-based
-Cache class.
+A persistent cache is implemented via the ``parse`` table which maps
+transcriptions to parses, relative to a morphological parser model.  Each
+parser has a one-to-many collection in ``self.parses``.  However, interaction
+with the parser's cache is mediated via a ``Cache`` instance (see below) that
+provides a standardized interface to cached parses (i.e., self.cache[k],
+self.cache[k] = v, self.cache.get(k, default), self.cache.update() and
+self.cache.clear()), cf. ``lib/parser.py`` for a pickle-based Cache class.
 
-The following attributes are those crucial to parsing functionality.  (Note that the 
-files that are crucial to a parser's parsing functionality are ``morphophonology.foma``,
-``morpheme_language_model.pickle`` and (if needed) ``morphology_dictionary.pickle``.)
+The following attributes are those crucial to parsing functionality. (Note
+that the files that are crucial to a parser's parsing functionality are
+``morphophonology.foma``, ``morpheme_language_model.pickle`` and (if needed)
+``morphology_dictionary.pickle``.)
 
 ``word_boundary_symbol``
 
-    The apply method of phonology and morphological parser objecs prefixes and postfixes
-    this string to inputs and removes it from outputs transparently.  The parser inherits
-    this value from the phonology it references; it assumes that the writer of the phonology
-    script has used this string to represent word boundaries.
+    The apply method of phonology and morphological parser objecs prefixes and
+    postfixes this string to inputs and removes it from outputs transparently.
+    The parser inherits this value from the phonology it references; it assumes
+    that the writer of the phonology script has used this string to represent
+    word boundaries.
 
 ``morphology_rare_delimiter``
 
-    This is an attribute of both morphology and morphemelanguagemodel models.  A parser
-    can only be successfully created or updated if the ``rare_delimiter`` value of
-    its morphology and its LM are identical (assuming the LM is not categorial; if it 
-    is then the rare delimiter is irrelevant).  This string affects how *all* LM files
-    come out as well as how the morphology foma scripts are generated.
+    This is an attribute of both morphology and morphemelanguagemodel models.
+    A parser can only be successfully created or updated if the
+    ``rare_delimiter`` value of its morphology and its LM are identical
+    (assuming the LM is not categorial; if it is, then the rare delimiter is
+    irrelevant).  This string affects how *all* LM files come out as well as
+    how the morphology foma scripts are generated.
 
 ``language_model_start_symbol`` & ``language_model_end_symbol``
 
-    These values are used in the construction of LMs and a parser cannot parse without 
-    knowing the correct values.
+    These values are used in the construction of LMs and a parser cannot parse
+    without knowing the correct values.
 
 ``language_model_categorial``
-    This is an attribute of LMs.  It determines whether the LM returns probabilities for 
-    morpheme sequences or simply category sequences.  A parser needs to know its value in
-    order to parse.
 
-``morphology_rich_morphemes``
+    This is an attribute of LMs. It determines whether the LM returns
+    probabilities for morpheme sequences or simply category sequences. A
+    parser needs to know its value in order to parse.
 
-    This is an attribute of morphology models.  It determines whether a morphology
-    represents the morphemes in its lexicon as form|gloss|category triples or simply as
-    form singletons; it affects whether a parser must perform disambiguation on the output
-    of its morphophonology prior to candidate ranking.
+``morphology_rich_upper``
+
+    This is an attribute of morphology models. It determines whether the upper
+    side of the tape of a morphology represents the morphemes in its lexicon as
+    form|gloss|category triples or simply as form singletons; it affects
+    whether a parser must perform disambiguation on the output of its
+    morphophonology prior to candidate ranking.
+
+``morphology_rich_lower``
+
+    This is analog of ``morphology_rich_upper`` on the lower side of the tape.
 
 ``morphology_rules_generated``
 
-    This is an attribute of morphology model.  It is a string of word formation rules
-    (strings of categories and delimiters) separated by spaces.  It is used in the parser
-    to filter out morphologically invalid disambiguations.
+    This is an attribute of the morphology model. It is a string of word
+    formation rules (strings of categories and delimiters) separated by spaces.
+    It is used in the parser to filter out morphologically invalid
+    disambiguations.
 
 ``morpheme_delimiters``
 
-    The parser requires knowledge of the delimiters assumed by the morphology in order 
-    to disambiguate the output of its morphophonology (if necessary) and to pass a suitable
-    input to the ``get_most_probable`` method.
+    The parser requires knowledge of the delimiters assumed by the morphology
+    in order to disambiguate the output of its morphophonology (if necessary)
+    and to pass a suitable input to the ``get_most_probable`` method.
 
 """
 
@@ -97,9 +107,10 @@ from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now, Session
-from onlinelinguisticdatabase.lib.parser import MorphologicalParser, LanguageModel, MorphologyFST
+from onlinelinguisticdatabase.lib.parser import MorphologicalParser, LanguageModel, MorphologyFST, PhonologyFST
 from shutil import copyfile
 import logging
+import simplejson as json
 
 log = logging.getLogger(__name__)
 
@@ -117,9 +128,11 @@ class Parse(Base):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
-    id = Column(Integer, Sequence('parse_seq_id', optional=True), primary_key=True)
+    id = Column(Integer, Sequence('parse_seq_id', optional=True),
+            primary_key=True)
     transcription = Column(Unicode(1000))
     parse = Column(UnicodeText)
+    candidates = Column(UnicodeText)
     parser_id = Column(Integer, ForeignKey('morphologicalparser.id'))
     datetime_modified = Column(DateTime, default=now)
 
@@ -168,7 +181,8 @@ class MorphologicalParser(MorphologicalParser, Base):
     # been altered or deleted.
     word_boundary_symbol = Column(Unicode(10))
     morphology_rare_delimiter = Column(Unicode(10))
-    morphology_rich_morphemes = Column(Boolean)
+    morphology_rich_upper = Column(Boolean)
+    morphology_rich_lower = Column(Boolean)
     morphology_rules_generated = Column(UnicodeText)
     language_model_start_symbol = Column(Unicode(10))
     language_model_end_symbol = Column(Unicode(10))
@@ -239,7 +253,8 @@ class MorphologicalParser(MorphologicalParser, Base):
             self.write_morphophonology_script()
             self.replicate_attributes()
             self.replicate_lm()
-            self.replicate_morphology_dictionary()
+            self.replicate_morphology()
+            self.replicate_phonology()
             self.generate_succeeded = True
             self.generate_message = u''
         except Exception:
@@ -263,7 +278,12 @@ class MorphologicalParser(MorphologicalParser, Base):
             f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" '
                 '-e "save stack %s" -e "quit"' % (script_path, binary_path))
         os.chmod(compiler_path, 0744)
-        phonology_script = self.phonology.script
+        # NOTE: the phonology script is taken from the script as written to disk.  This
+        # is because it is only this version that has had its combining characters separated
+        # from their base characters (the user-created script is stored unaltered in the db;
+        # see the ``save_script`` and ``decombine`` methods of ``lib/parser.py`` as well as
+
+        phonology_script = codecs.open(self.phonology.get_file_path('script'), 'r', 'utf8').read()
         morphophonology = self.generate_morphophonology(phonology_script)
         morphology_script_path = self.morphology.get_file_path('script')
         if morphophonology:
@@ -296,18 +316,46 @@ class MorphologicalParser(MorphologicalParser, Base):
         self.copy_file(trie_path, replicated_trie_path)
         self.copy_file(arpa_path, replicated_arpa_path)
 
-    def replicate_morphology_dictionary(self):
-        """Copy the parser's morphology's dictionary pickle file (if it exists) to the parser's directory.
+    def replicate_morphology(self):
+        """Copy the parser's morphology's foma script and dictionary pickle files (if
+        either exist) to the parser's directory.
 
-        If this results in a new dictionary pickle file being written, set ``self.changed = True``.
+        If this results in any new files being written, set ``self.changed = True``.
 
         """
 
-        if not self.morphology.rich_morphemes:
+        my_morphology = MorphologyFST(parent_directory=self.directory)
+
+        if not self.morphology.rich_upper:
             dictionary_path = self.morphology.get_file_path('dictionary')
-            my_morphology = MorphologyFST(parent_directory=self.directory)
-            replicated_dictionary_path = my_morphology.get_file_path('dictionary')
-            self.copy_file(dictionary_path, replicated_dictionary_path)
+            if os.path.isfile(dictionary_path):
+                replicated_dictionary_path = my_morphology.get_file_path('dictionary')
+                self.copy_file(dictionary_path, replicated_dictionary_path)
+
+        script_path = self.morphology.get_file_path('script')
+        if os.path.isfile(script_path):
+            replicated_script_path = my_morphology.get_file_path('script')
+            self.copy_file(script_path, replicated_script_path)
+
+    def replicate_phonology(self):
+        """Copy the parser's phonology's foma script and binary files (if
+        either exist) to the parser's directory.
+
+        If this results in any new files being written, set ``self.changed = True``.
+
+        """
+
+        my_phonology = PhonologyFST(parent_directory=self.directory)
+
+        script_path = self.phonology.get_file_path('script')
+        if os.path.isfile(script_path):
+            replicated_script_path = my_phonology.get_file_path('script')
+            self.copy_file(script_path, replicated_script_path)
+
+        binary_path = self.phonology.get_file_path('binary')
+        if os.path.isfile(binary_path):
+            replicated_binary_path = my_phonology.get_file_path('binary')
+            self.copy_file(binary_path, replicated_binary_path)
 
     def copy_file(self, src, dst):
         """Copy the file at ``src`` to ``dst``.
@@ -355,7 +403,8 @@ class MorphologicalParser(MorphologicalParser, Base):
             changed = self.set_attr('word_boundary_symbol', self.phonology.word_boundary_symbol, changed)
         changed = self.set_attr('morpheme_delimiters', self.morphology.morpheme_delimiters, changed)
         changed = self.set_attr('morphology_rare_delimiter', self.morphology.rare_delimiter, changed)
-        changed = self.set_attr('morphology_rich_morphemes', self.morphology.rich_morphemes, changed)
+        changed = self.set_attr('morphology_rich_upper', self.morphology.rich_upper, changed)
+        changed = self.set_attr('morphology_rich_lower', self.morphology.rich_lower, changed)
         changed = self.set_attr('morphology_rules_generated', self.morphology.rules_generated, changed)
         changed = self.set_attr('language_model_start_symbol', self.language_model.start_symbol, changed)
         changed = self.set_attr('language_model_end_symbol', self.language_model.end_symbol, changed)
@@ -395,7 +444,8 @@ class MorphologicalParser(MorphologicalParser, Base):
                 rare_delimiter = self.morphology_rare_delimiter,
                 word_boundary_symbol = self.word_boundary_symbol,
                 rules_generated = self.morphology_rules_generated,
-                rich_morphemes = self.morphology_rich_morphemes,
+                rich_upper = self.morphology_rich_upper,
+                rich_lower = self.morphology_rich_lower,
                 morpheme_delimiters = self.morpheme_delimiters
             )
             return self._my_morphology
@@ -469,7 +519,7 @@ class Cache(object):
                 filter(Parse.transcription==k).first()
             if parse:
                 # log.warn('GOT %s FROM DB IN DB_CACHE' % k)
-                self._store[k] = parse.parse
+                self._store[k] = parse.parse, json.loads(parse.candidates)
                 return self._store[k]
             else:
                 raise e
@@ -494,8 +544,12 @@ class Cache(object):
             persisted = [parse.transcription for parse in Session.query(Parse).\
                 filter(Parse.parser_id==self.parser.id).\
                 filter(Parse.transcription.in_(self._store.keys())).all()]
-            unpersisted = [Parse(transcription=k, parse=v, parser=self.parser)
-                for k, v in self._store.iteritems() if k not in persisted]
+            unpersisted = [Parse(transcription=transcription,
+                                 parse=parse,
+                                 candidates = json.dumps(candidates),
+                                 parser=self.parser)
+                           for transcription, (parse, candidates) in self._store.iteritems()
+                           if transcription not in persisted]
             Session.add_all(unpersisted)
             Session.commit()
             # log.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
@@ -520,7 +574,7 @@ class Cache(object):
     def export(self):
         """Update the local store with the persistence layer and return the store.
         """
-        persisted = dict((p.transcription, p.parse) for p in
+        persisted = dict((p.transcription, (p.parse, json.loads(p.candidates))) for p in
             Session.query(Parse).filter(Parse.parser_id==self.parser.id).all())
         self._store.update(persisted)
         return self._store

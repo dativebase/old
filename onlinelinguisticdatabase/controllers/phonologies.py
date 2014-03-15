@@ -87,6 +87,7 @@ class PhonologiesController(BaseController):
         :returns: the newly created phonology.
 
         """
+        print 'in phonologies create'
         try:
             schema = PhonologySchema()
             values = json.loads(unicode(request.body, request.charset))
@@ -94,7 +95,7 @@ class PhonologiesController(BaseController):
             phonology = create_new_phonology(data)
             Session.add(phonology)
             Session.commit()
-            phonology.save_script()
+            phonology.save_script(decombine=True) # ``decombine`` means separate unicode combining characters from their bases
             return phonology
         except h.JSONDecodeError:
             response.status_int = 400

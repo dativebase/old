@@ -57,8 +57,10 @@ class Morphology(MorphologyFST, Base):
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
     rules_generated = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces -- system-generated value
     rules = Column(UnicodeText) # word formation rules (i.e., strings of categories and delimiters) separated by spaces -- user-generated value
-    rich_morphemes = Column(Boolean, default=False) # if True, m=<f|g|c>, else m=f
+    rich_upper = Column(Boolean, default=False) # if True, the morphemes on the upper side of the tape are in <f|g|c> forma, else f format
+    rich_lower = Column(Boolean, default=False) # if True, the morphemes on the lower side of the tape are in <f|g|c> forma, else f format
     include_unknowns = Column(Boolean, default=False) # if True, morphemes of unknown category will be added to lexicon.
+    # NOTE: the include_unknowns attribute currently has no effect: it turned out to be a major complication!
 
     # These incidental attributes are initialized by the constructor.
     parent_directory = Column(Unicode(255))
@@ -86,19 +88,20 @@ class Morphology(MorphologyFST, Base):
             'extract_morphemes_from_rules_corpus': self.extract_morphemes_from_rules_corpus,
             'rules': self.rules,
             'rules_generated': self.rules_generated,
-            'rich_morphemes': self.rich_morphemes,
+            'rich_upper': self.rich_upper,
+            'rich_lower': self.rich_lower,
             'include_unknowns': self.include_unknowns
         }
 
-    def generate_rules_and_lexicon(self, unknown_category):
+    def generate_rules_and_lexicon(self):
         try:
-            return self._generate_rules_and_lexicon(unknown_category)
+            return self._generate_rules_and_lexicon()
         except Exception, e:
             log.warn('GOT EXCEPTION TRYING TO GENERATE RULES AND LEXICON')
             log.warn(e)
             return [], {}
 
-    def _generate_rules_and_lexicon(self, unknown_category):
+    def _generate_rules_and_lexicon(self):
         """Generate morphotactic rules and a lexicon for this morphology based on its corpora.
 
         :returns: 2-tuple: <rules, morphemes>
@@ -113,8 +116,7 @@ class Morphology(MorphologyFST, Base):
             (not self.rules_corpus or
             self.lexicon_corpus.id != self.rules_corpus.id)):
             for form in self.lexicon_corpus.forms:
-                # HERE!
-                new_morphemes = self._extract_morphemes_from_form(form, morpheme_splitter, unknown_category)
+                new_morphemes = self._extract_morphemes_from_form(form, morpheme_splitter)
                 for pos, data in new_morphemes:
                     morphemes.setdefault(pos, set()).add(data)
         # Get the pos sequences (and morphemes) from the user-specified ``rules`` string value or else from the 
@@ -126,8 +128,9 @@ class Morphology(MorphologyFST, Base):
                 pos_sequences.add(pos_sequence)
         else:
             for form in self.rules_corpus.forms:
-                new_pos_sequences, new_morphemes = form.extract_word_pos_sequences(unknown_category,
-                                    morpheme_splitter, self.extract_morphemes_from_rules_corpus)
+                new_pos_sequences, new_morphemes = form.extract_word_pos_sequences(
+                    self.unknown_category, morpheme_splitter,
+                    self.extract_morphemes_from_rules_corpus)
                 if new_pos_sequences:
                     pos_sequences |= new_pos_sequences
                     for pos, data in new_morphemes:
@@ -138,7 +141,7 @@ class Morphology(MorphologyFST, Base):
         morphemes = dict([(pos, sorted(data)) for pos, data in morphemes.iteritems()])
         return pos_sequences, morphemes
 
-    def _extract_morphemes_from_form(self, form, morpheme_splitter, unknown_category):
+    def _extract_morphemes_from_form(self, form, morpheme_splitter):
         """Return the morphemes in ``form`` as a list of tuples of the form (pos, (mb, mg)).
 
         """
@@ -154,14 +157,16 @@ class Morphology(MorphologyFST, Base):
             morpheme_sequence = morpheme_splitter(mb_word)[::2]
             gloss_sequence = morpheme_splitter(mg_word)[::2]
             for pos, morpheme, gloss in zip(pos_sequence, morpheme_sequence, gloss_sequence):
-                if self.include_unknowns or pos != unknown_category:
+                if pos != self.unknown_category:
                     morphemes.append((pos, (morpheme, gloss)))
         return morphemes
 
     def _filter_invalid_sequences(self, pos_sequences, morphemes):
         """Remove category sequences from pos_sequences if they contain categories not listed as 
         keys of the morphemes dict or if they contain delimiters not listed in self.delimiters.
+
         """
+
         if not morphemes:
             return pos_sequences
         if self.extract_morphemes_from_rules_corpus:
@@ -179,7 +184,7 @@ class Morphology(MorphologyFST, Base):
 
         :param dict lexicon: keys are categories and values are lists of 2-tuples of the form <form, gloss>.
 
-        This function need only be called if ``self.rich_morphemes`` is set to ``False``, in which case 
+        This function need only be called if ``self.rich_upper`` is set to ``False``, in which case
         the morphology will parse, e.g., chien-s to chien-s and the dictionary will be needed
         to disambiguate the parse into richer representations, e.g.,
         ['chien|dog|N-s|PL|Num', 'chien|dog|N-s|plrl|Phi'].
@@ -205,10 +210,11 @@ class Morphology(MorphologyFST, Base):
 
         """
 
-        rules, lexicon = self.generate_rules_and_lexicon(unknown_category)
+        self.unknown_category = unknown_category
+        rules, lexicon = self.generate_rules_and_lexicon()
         self.rules_generated = u' '.join(map(u''.join, rules))
         cPickle.dump(lexicon, open(self.get_file_path('lexicon'), 'wb'))
-        if not self.rich_morphemes:
+        if not self.rich_upper:
             dictionary = self.generate_dictionary(lexicon)
             cPickle.dump(dictionary, open(self.get_file_path('dictionary'), 'wb'))
         script_path = self.get_file_path('script')
@@ -255,6 +261,10 @@ class Morphology(MorphologyFST, Base):
 
         """
 
+        # If not rich_upper, remove homographs from morphemes
+        if not self.rich_upper:
+            morphemes = dict((pos, sorted(set((mb, None) for mb, mg in morph_list)))
+                    for pos, morph_list in morphemes.iteritems())
         roots = []
         continuation_classes = set()
         for sequence in pos_sequences:
@@ -295,11 +305,17 @@ class Morphology(MorphologyFST, Base):
             for form, gloss in our_morphemes:
                 form = self.escape_foma_reserved_symbols(form)
                 # Rich morphemes means m=<f|g|c>, impoverished means m=f
-                if self.rich_morphemes:
+                if self.rich_upper or self.rich_lower:
                     gloss = self.escape_foma_reserved_symbols(gloss)
                     category_name = self.escape_foma_reserved_symbols(first_element)
-                    yield u'%s%s%s%s%s:%s %s;\n' % (form, self.rare_delimiter, gloss, self.rare_delimiter,
-                        category_name, form, next_class)
+                    if self.rich_upper and self.rich_lower:
+                        yield u'%s %s;\n' % (self.rare_delimiter.join([form, gloss, category_name]), next_class)
+                    elif self.rich_upper:
+                        yield u'%s:%s %s;\n' % (
+                            self.rare_delimiter.join([form, gloss, category_name]), form, next_class)
+                    else:
+                        yield u'%s:%s %s;\n' % (
+                            form, self.rare_delimiter.join([form, gloss, category_name]), next_class)
                 else:
                     yield u'%s %s;\n' % (form, next_class)
         yield u'\n\n'
@@ -323,12 +339,25 @@ class Morphology(MorphologyFST, Base):
     def _get_morpheme_representation(self, **kwargs):
         """Return a rich representation of the morpheme-as-FST (i.e., <f|g|c>:f) or an impoverished one (i.e., f:f).
         """
-        if self.rich_morphemes:
-            return u'%s "%s%s%s%s":0' % (
-                u' '.join(map(self.escape_foma_reserved_symbols, list(kwargs['mb']))),
-                kwargs['delimiter'], kwargs['mg'], kwargs['delimiter'], kwargs['pos'])
+        form = kwargs['mb']
+        if self.rich_upper or self.rich_lower:
+
+            delimiter = kwargs['delimiter']
+            gloss = kwargs['mg']
+            category = kwargs['pos']
+            if self.rich_upper and self.rich_lower:
+                return u' '.join(map(self.escape_foma_reserved_symbols,
+                                     list(delimiter.join([form, gloss, category]))))
+            else:
+                tmp = u'%s%s%s%s' % (delimiter, gloss, delimiter, category)
+                if self.rich_upper:
+                    return u'%s "%s":0' % (u' '.join(map(
+                        self.escape_foma_reserved_symbols, list(form))), tmp)
+                else:
+                    return u'%s 0:"%s"' % (u' '.join(map(
+                        self.escape_foma_reserved_symbols, list(form))), tmp)
         else:
-            return u' '.join(map(self.escape_foma_reserved_symbols, list(kwargs['mb'])))
+            return u' '.join(map(self.escape_foma_reserved_symbols, list(form)))
 
     def _get_lexicon_generator(self, morphemes):
         """Return a generator that yields lines of a foma script defining a lexicon.
@@ -343,8 +372,9 @@ class Morphology(MorphologyFST, Base):
             'c h i e n "|dog|N":0' as one of its disjuncts.  This is a transducer that maps
             'chien|dog|N' to 'chien', i.e,. '"|dog|N"' is a multi-character symbol that is mapped
             to the null symbol, i.e., '0'.  Note also that the vertical bar '|' character is 
-            not actually used -- the delimiter character is actually that defined in ``utils.rare_delimiter``
-            which, by default, is U+2980 'TRIPLE VERTICAL BAR DELIMITER'.
+            not actually used -- the delimiter character is actually that defined in
+            ``utils.rare_delimiter`` which, by default, is U+2980 'TRIPLE VERTICAL BAR
+            DELIMITER'.
 
         """
         delimiter = self.rare_delimiter
@@ -353,6 +383,8 @@ class Morphology(MorphologyFST, Base):
             if foma_regex_name:
                 yield u'define %s [\n' % foma_regex_name
                 if data:
+                    if not (self.rich_upper or self.rich_lower):
+                        data = sorted(set((mb, None) for mb, mg in data))
                     for mb, mg in data[:-1]:
                         yield u'    %s |\n' % self._get_morpheme_representation(
                                 mb=mb, mg=mg, pos=pos, delimiter=delimiter)
@@ -365,6 +397,8 @@ class Morphology(MorphologyFST, Base):
         by "Cat".  This prevents conflicts between regex names and symbols in regexes.
 
         """
+        if candidate == self.unknown_category:
+            return 'unknownCat'
         name = self.delete_foma_reserved_symbols(candidate)
         if not name:
             return None
