@@ -889,7 +889,7 @@ def compileMorphemicAnalysis_(form, morpheme_delimiters=None, **kwargs):
 
     def morphemic_analysis_is_consistent(**kwargs):
         """Determine whether a morphemic analysis is consistent.
-        
+
         :param dict kwargs: contains the morphological data in various pre-processed states.
         :returns: ``True`` if the morphemic analysis is consistent; ``False`` otherwise.
 

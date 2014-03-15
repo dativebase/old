@@ -18,6 +18,9 @@ from sqlalchemy import Table, Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
+import simplejson as json
+from itertools import product
+
 
 class FormFile(Base):
 
@@ -135,14 +138,13 @@ class Form(Base):
             'files': self.get_files_list(self.files)
         }
 
-    def extract_word_pos_sequences(self, unknown_category, morpheme_splitter, extract_morphemes=False):
+    def extract_word_pos_sequences(self, unknown_category, morpheme_splitter,
+                                   extract_morphemes=False):
         """Return the unique word-based pos sequences, as well as (possibly) the morphemes, implicit in the form.
 
-        :param form: a form model object
-        :param morpheme_splitter: callable that splits a strings into its morphemes and delimiters
         :param str unknown_category: the string used in syntactic category strings when a morpheme-gloss pair is unknown
-        :param morphology: the morphology model object -- needed because its extract_morphemes_from_rules_corpus
-            attribute determines whether we return a list of morphemes.
+        :param morpheme_splitter: callable that splits a strings into its morphemes and delimiters
+        :param bool extract_morphemes: determines whether we return a list of morphemes implicit in the form.
         :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes as (pos, (mb, mg)) tuples).
 
         """
