@@ -16,7 +16,6 @@
 
 import codecs
 import os
-import re
 import cPickle
 import random
 from sqlalchemy import Column, Sequence, ForeignKey
