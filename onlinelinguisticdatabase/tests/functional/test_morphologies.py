@@ -577,7 +577,7 @@ class TestMorphologiesController(TestController):
         morphology_script_path = os.path.join(morphology_dir, 'morphology.script')
         morphology_script = codecs.open(morphology_script_path, mode='r', encoding='utf8').read()
         assert resp['compile_succeeded'] == False
-        assert resp['compile_message'] == u'Foma script is not a well-formed morphology.'
+        assert resp['compile_message'].startswith(u'Foma script is not a well-formed morphology')
         assert morphology_binary_filename not in morphology_dir_contents
         assert resp['modifier']['role'] == u'contributor'
         assert morphology_script.replace(' ', '').replace('\n', '') == 'definemorphology();'
@@ -1170,21 +1170,23 @@ class TestMorphologiesController(TestController):
 
         .. note::
 
-            This test only works if MySQL is being used as the RDBMS for the test
-            *and* there is a file in 
+            This test only works if MySQL is being used as the RDBMS for the
+            test *and* there is a file in 
             ``onlinelinguisticdatabase/onlinelinguisticdatabase/tests/data/datasets/``
-            that is a MySQL dump file of a valid OLD database.  The name of this file
-            can be configured by setting the ``old_dump_file`` variable.  Note that no
-            such dump file is provided with the OLD source since the file used by the
-            developer contains data that cannot be publicly shared.
+            that is a MySQL dump file of a valid OLD database.  The name of
+            this file can be configured by setting the ``old_dump_file``
+            variable.  Note that no such dump file is provided with the OLD
+            source since the file used by the developer contains data that
+            cannot be publicly shared.
 
         .. warning::
 
-            This test will take a long time to complete.  If the morphologies have been
-            precompiled (see below), it will take about 3 minutes.  If they have not been
-            precoompiled, it will take about 12 minutes for the lexc Blackfoot morphology
-            to compile and the regex Blackfoot morphology will exceed the morphology compile
-            timeout value of 30 minutes (as specified in lib/utils.py).
+            This test will take a long time to complete.  If the morphologies
+            have been precompiled (see below), it will take about 3 minutes. 
+            If they have not been precompiled, it will take about 12 minutes
+            for the lexc Blackfoot morphology to compile and the regex
+            Blackfoot morphology will exceed the morphology compile timeout
+            value of 30 minutes (as specified in lib/utils.py).
 
         """
 
@@ -1194,23 +1196,28 @@ class TestMorphologiesController(TestController):
 
         # Configuration
 
-        # The ``old_dump_file`` variable holds the name of a MySQL dump file in /tests/data/datasets
-        # that will be used to populate the database.
+        # The ``old_dump_file`` variable holds the name of a MySQL dump file in
+        # /tests/data/datasets that will be used to populate the database.
         old_dump_file = 'blaold.sql'
         backup_dump_file = 'old_test_dump.sql'
 
-        # These variables hold the names of the pre-generated foma scripts and their compiled counterparts.
-        # These files, if specified, should be present in /tests/data/morphologies.
-        # Specifying these variables sidesteps the lengthy compilation process, if desired.  Set these variables to None
-        # if you want the compilation, i.e., want to regenerate the values.
+        # These variables hold the names of the pre-generated foma scripts and
+        # their compiled counterparts. These files, if specified, should be
+        # present in /tests/data/morphologies. Specifying these variables
+        # sidesteps the lengthy compilation process, if desired. Set these
+        # variables to None if you want the compilation, i.e., want to
+        # regenerate the values.
         pregenerated_lexc_morphology = None # 'blaold_morphology_lexc.script'
         precompiled_lexc_morphology = None # 'blaold_morphology_lexc.foma'
         pregenerated_regex_morphology = None # 'blaold_morphology_regex.script'
         precompiled_regex_morphology = None # 'blaold_morphology_regex.foma'
 
-        # Here we load a whole database from the mysqpl dump file specified in ``tests/data/datasets/<old_dump_file>``.
-        old_dump_file_path = os.path.join(self.test_datasets_path, old_dump_file)
-        backup_dump_file_path = os.path.join(self.test_datasets_path, backup_dump_file)
+        # Here we load a whole database from the mysqpl dump file specified in
+        # ``tests/data/datasets/<old_dump_file>``.
+        old_dump_file_path = os.path.join(self.test_datasets_path,
+            old_dump_file)
+        backup_dump_file_path = os.path.join(self.test_datasets_path,
+            backup_dump_file)
         tmp_script_path = os.path.join(self.test_datasets_path, 'tmp.sh')
         if not os.path.isfile(old_dump_file_path):
             return
