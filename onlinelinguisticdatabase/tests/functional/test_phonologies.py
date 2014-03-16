@@ -50,13 +50,13 @@ class TestPhonologiesController(TestController):
         TestController.tearDown(self, del_global_app_set=True,
                 dirs_to_destroy=['user', 'phonology'])
 
-    @nottest
+    #@nottest
     def test_index(self):
         """Tests that GET /phonologies returns an array of all phonologies and that order_by and pagination parameters work correctly."""
 
         # Add 100 phonologies.
         def create_phonology_from_index(index, parent, boundary):
-            phonology = model.Phonology(parent=parent, boundary=boundary)
+            phonology = model.Phonology(parent, boundary=boundary)
             phonology.name = u'Phonology %d' % index
             phonology.description = u'A phonology with %d rules' % index
             phonology.script = u'# After this comment, the script will begin.\n\n'
@@ -142,7 +142,7 @@ class TestPhonologiesController(TestController):
         assert resp['errors']['page'] == u'Please enter a number that is 1 or greater'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_create(self):
         """Tests that POST /phonologies creates a new phonology
         or returns an appropriate error if the input is invalid.
@@ -244,7 +244,7 @@ class TestPhonologiesController(TestController):
         assert resp['errors']['name'] == u'Enter a value not more than 255 characters long'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_new(self):
         """Tests that GET /phonologies/new returns an empty JSON object."""
         response = self.app.get(url('new_phonology'), headers=self.json_headers,
@@ -253,7 +253,7 @@ class TestPhonologiesController(TestController):
         assert resp == {}
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_update(self):
         """Tests that PUT /phonologies/id updates the phonology with id=id."""
 
@@ -320,7 +320,7 @@ class TestPhonologiesController(TestController):
         assert resp['error'] == u'The update request failed because the submitted data were not new.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_delete(self):
         """Tests that DELETE /phonologies/id deletes the phonology with id=id."""
 
@@ -395,7 +395,7 @@ class TestPhonologiesController(TestController):
         assert json.loads(response.body)['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_show(self):
         """Tests that GET /phonologies/id returns the phonology with id=id or an appropriate error."""
 
@@ -440,7 +440,7 @@ class TestPhonologiesController(TestController):
         assert resp['script'] == u'# The rules will begin after this comment.\n\n'
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_edit(self):
         """Tests that GET /phonologies/id/edit returns a JSON object of data necessary to edit the phonology with id=id.
 
@@ -494,7 +494,7 @@ class TestPhonologiesController(TestController):
         assert resp['data'] == {}
         assert response.content_type == 'application/json'
 
-    @nottest
+    #@nottest
     def test_compile(self):
         """Tests that PUT /phonologies/id/compile compiles the foma script of the phonology with id.
 
@@ -651,7 +651,7 @@ class TestPhonologiesController(TestController):
             sleep(1)
 
         assert resp['compile_succeeded'] == False
-        assert resp['compile_message'] == u'Foma script is not a well-formed phonology.'
+        assert resp['compile_message'].startswith(u'Foma script is not a well-formed phonology')
         assert phonology_binary_filename not in os.listdir(phonology_dir)
 
         # 2. Create a phonology whose script does not define a regex called "phonology"
@@ -699,7 +699,7 @@ class TestPhonologiesController(TestController):
             sleep(1)
 
         assert resp['compile_succeeded'] == False
-        assert resp['compile_message'] == u'Foma script is not a well-formed phonology.'
+        assert resp['compile_message'].startswith(u'Foma script is not a well-formed phonology')
         assert phonology_binary_filename not in os.listdir(phonology_dir)
 
         # 3. Create a phonology whose script is empty.
@@ -747,7 +747,7 @@ class TestPhonologiesController(TestController):
             sleep(1)
 
         assert resp['compile_succeeded'] == False
-        assert resp['compile_message'] == u'Foma script is not a well-formed phonology.'
+        assert resp['compile_message'].startswith(u'Foma script is not a well-formed phonology')
         assert phonology_binary_filename not in os.listdir(phonology_dir)
 
         ########################################################################
@@ -849,7 +849,7 @@ class TestPhonologiesController(TestController):
             sleep(3)
 
         assert resp['compile_succeeded'] == False
-        assert resp['compile_message'] == u'Foma script is not a well-formed phonology.'
+        assert resp['compile_message'].startswith(u'Foma script is not a well-formed phonology')
         assert phonology_binary_filename not in os.listdir(phonology_dir)
 
 
@@ -878,7 +878,7 @@ class TestPhonologiesController(TestController):
         assert resp['compile_message'] == u'Compilation process terminated successfully and new binary file was written.'
         assert phonology_binary_filename in os.listdir(phonology_dir)
 
-    @nottest
+    #@nottest
     def test_applydown(self):
         """Tests that ``GET /phonologies/id/applydown`` phonologizes input morpho-phonemic segmentations.
 
@@ -1083,7 +1083,7 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'Phonology %d has not been compiled yet.' % phonology2_id
 
-    @nottest
+    #@nottest
     def test_runtests(self):
         """Tests that ``GET /phonologies/id/runtests`` runs the tests in the phonology's script."""
 
@@ -1223,7 +1223,7 @@ class TestPhonologiesController(TestController):
         resp = json.loads(response.body)
         assert resp['error'] == u'The script of phonology %d contains no tests.' % phonology1_id
 
-    @nottest
+    #@nottest
     def test_history(self):
         """Tests that GET /phonologies/id/history returns the phonology with id=id and its previous incarnations.
 

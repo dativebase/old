@@ -356,12 +356,14 @@ class FomaFST(Command):
     """Represents a foma finite-state transducer.
 
     The FomaFST class is Python logic wrapping foma/flookup functionality;
-    Really, this is just a very restricted interface to subprocess.Popen(['foma', ...]).
+    Really, this is just a very restricted interface to
+    subprocess.Popen(['foma', ...]).
 
-    This class is designed to be both a superclass to an OLD SQLAlchemy-based model (e.g.,
-    a phonology, morphology or morphophonology) as well as a factory for stand-alone foma-based
-    objects.  The three main "public" methods are ``save_script``, ``compile``, ``apply`` (and
-    its conveniences, ``applyup`` and ``applydown``).
+    This class is designed to be both a superclass to an OLD SQLAlchemy-based
+    model (e.g., a phonology, morphology or morphophonology) as well as a
+    factory for stand-alone foma-based objects.  The three main "public"
+    methods are ``save_script``, ``compile``, ``apply`` (and its conveniences,
+    ``applyup`` and ``applydown``).
 
     Usage:
 
@@ -532,7 +534,7 @@ class FomaFST(Command):
             the absolute path to the compiled foma FST.
 
         """
-        log.warn('IN COMPILE')
+        #log.warn('IN COMPILE')
         verification_string = verification_string or self.verification_string
         compiler_path = self.get_file_path('compiler')
         binary_path = self.get_file_path('binary')
@@ -553,7 +555,7 @@ class FomaFST(Command):
                 else:
                     self.compile_message = u'Compilation process failed.'
             else:
-                log.warn(output)
+                #log.warn(output)
                 self.compile_message = u'Foma script is not a well-formed %s %s.' % (self.object_type, output)
         except Exception:
             self.compile_message = u'Compilation attempt raised an error.'
@@ -584,8 +586,8 @@ class FomaFST(Command):
 
         """
 
-        print 'in parser.py, decombine'
-        raise AttributeError
+        #print 'in parser.py, decombine'
+        #raise AttributeError   (I don't know why I was raising an error here. Probably trying to debug something ...
         string_list = []
         for c in string:
             if unicodedata.combining(c):
@@ -604,7 +606,7 @@ class FomaFST(Command):
         :returns: the absolute path to the newly created foma FST script file.
 
         """
-        print 'in parser.py, save_script'
+        #print 'in parser.py, save_script'
         try:
             self.make_directory_safely(self.directory)
             script_path = self.get_file_path('script')
@@ -619,6 +621,7 @@ class FomaFST(Command):
                             f.write(line)
                 else:
                     f.write(self.script)
+            #print 'finished writing script_path'
             # The compiler shell script loads the foma script and compiles it to binary form.
             with open(compiler_path, 'w') as f:
                 f.write('#!/bin/sh\nfoma -e "source %s" -e "regex %s;" '
