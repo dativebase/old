@@ -63,7 +63,7 @@ class TestPhonologybackupsController(TestController):
         assert phonology_count == 1
         assert resp['name'] == u'Phonology'
         assert resp['description'] == u'Covers a lot of the data.'
-        assert 'phonology_%d.script' % phonology_id in phonology_dir_contents
+        assert 'phonology.script' in phonology_dir_contents
         assert response.content_type == 'application/json'
         assert resp['script'] == self.test_phonology_script
 
