@@ -210,8 +210,10 @@ class TestCorporaLargeController(TestController):
                 # Populate the database from the loremipusm text file and dump it
                 add_loremipsum_to_db(loremipsum_path, via_request=via_request)
                 # Write the DB dump shell script
-                shell_script = '#!/bin/sh\nmysqldump -u %s -p%s --no-create-info %s > %s' % (
-                    username, password, dbname, mysql_dump_path)
+                # Note: the --single-transaction option seems to be required (on Mac MySQL 5.6 using InnoDB tables ...)
+                # see http://forums.mysql.com/read.php?10,108835,112951#msg-112951
+                shell_script = '#!/bin/sh\nmysqldump -u %s -p%s --single-transaction --no-create-info --result-file=%s %s' % (
+                    username, password, mysql_dump_path, dbname)
                 with open(olddump_script_path, 'w') as f:
                     f.write(shell_script)
                 os.chmod(olddump_script_path, 0744)

@@ -1230,8 +1230,11 @@ class TestMorphologiesController(TestController):
         password = password.split('@')[0]
         db_name = db_name.split('/')[-1]
         # First dump the existing database so we can load it later.
+        # Note: the --single-transaction option seems to be required (on Mac MySQL 5.6 using InnoDB tables ...)
+        # see http://forums.mysql.com/read.php?10,108835,112951#msg-112951
         with open(tmp_script_path, 'w') as tmpscript:
-            tmpscript.write('#!/bin/sh\nmysqldump -u %s -p%s %s > %s' % (username, password, db_name, backup_dump_file_path))
+            tmpscript.write('#!/bin/sh\nmysqldump -u %s -p%s --single-transaction --no-create-info --result-file=%s %s' % (
+                username, password, backup_dump_file_path, db_name))
         os.chmod(tmp_script_path, 0744)
         with open(os.devnull, "w") as fnull:
             call([tmp_script_path], stdout=fnull, stderr=fnull)
