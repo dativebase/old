@@ -63,7 +63,7 @@ class TestCorporaLargeController(TestController):
 
             In order to run ``mysqldump`` with the MySQL user listed in
             ``test.ini``, that user must have permission to lock and update
-            tables::
+            tables (alter and file privileges may also be required ...)::
 
                 mysql -u root -p<root_password>
                 grant lock tables, update on old_test.* to 'old'@'localhost';
