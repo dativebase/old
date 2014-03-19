@@ -1227,7 +1227,15 @@ def get_most_recent_modification_datetime(model_name):
     return OLDModel
 
 
-def datetime_string2datetime(datetime_string):
+def round_datetime(dt):
+    """Round a datetime to the nearest second."""
+    discard = datetime.timedelta(microseconds=dt.microsecond)
+    dt -= discard
+    if discard >= datetime.timedelta(microseconds=500000):
+        dt += datetime.timedelta(seconds=1)
+    return dt
+
+def datetime_string2datetime(datetime_string, RDBMSName=None):
     """Parse an ISO 8601-formatted datetime into a Python datetime object.
     Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds
 
@@ -1242,10 +1250,13 @@ def datetime_string2datetime(datetime_string):
         return None
     try:
         microseconds = int(parts[1])
-        return datetime_object.replace(microsecond=microseconds)
+        datetime_object = datetime_object.replace(microsecond=microseconds)
     except (IndexError, ValueError, OverflowError):
-        return datetime_object
-
+        pass
+    # MySQL rounds microseconds to the nearest second.
+    if RDBMSName == 'mysql':
+        datetime_object = round_datetime(datetime_object)
+    return datetime_object
 
 def date_string2date(date_string):
     """Parse an ISO 8601-formatted date into a Python date object."""
@@ -1727,9 +1738,9 @@ def eagerload_form(query):
 
 def eagerload_application_settings(query):
     return query.options(
-        #subqueryload(model.ApplicationSettings.input_orthography),
-        #subqueryload(model.ApplicationSettings.output_orthography),
-        #subqueryload(model.ApplicationSettings.storage_orthography)
+        subqueryload(model.ApplicationSettings.input_orthography),
+        subqueryload(model.ApplicationSettings.output_orthography),
+        subqueryload(model.ApplicationSettings.storage_orthography)
     )
 
 def eagerload_collection(query, eagerload_forms=False):
@@ -1771,8 +1782,9 @@ def eagerload_corpus(query, eagerload_forms=False):
 def eagerload_file(query):
     return query.options(
         subqueryload(model.File.enterer),
-        #subqueryload(model.File.elicitor),
-        #subqueryload(model.File.speaker),
+        subqueryload(model.File.elicitor),
+        subqueryload(model.File.speaker),
+        subqueryload(model.File.parent_file),
         joinedload(model.File.tags),
         joinedload(model.File.forms))
 

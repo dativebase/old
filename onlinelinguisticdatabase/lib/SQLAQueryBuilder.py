@@ -149,8 +149,22 @@ try:
 except ImportError:
     # ImportError will be raised in utils if the Pylons environment is not
     # running, e.g., if we are debugging.  In this case, we need to define our
-    # own date/datetime parseing functions.
-    def datetime_string2datetime(datetime_string):
+    # own date/datetime parsing functions.
+
+    def round_datetime(dt):
+        """Round a datetime to the nearest second."""
+        discard = datetime.timedelta(microseconds=dt.microsecond)
+        dt -= discard
+        if discard >= datetime.timedelta(microseconds=500000):
+            dt += datetime.timedelta(seconds=1)
+        return dt
+
+    def datetime_string2datetime(datetime_string, RDBMSName=None):
+        """Parse an ISO 8601-formatted datetime into a Python datetime object.
+        Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds
+
+        Previously called ISO8601Str2datetime.
+        """
         try:
             parts = datetime_string.split('.')
             years_to_seconds_string = parts[0]
@@ -160,9 +174,13 @@ except ImportError:
             return None
         try:
             microseconds = int(parts[1])
-            return datetime_object.replace(microsecond=microseconds)
+            datetime_object = datetime_object.replace(microsecond=microseconds)
         except (IndexError, ValueError, OverflowError):
-            return datetime_object
+            pass
+        # MySQL rounds microseconds to the nearest second.
+        if RDBMSName == 'mysql':
+            datetime_object = round_datetime(datetime_object)
+        return datetime_object
 
     def date_string2date(date_string):
         try:
@@ -321,7 +339,7 @@ class SQLAQueryBuilder(object):
         """Converts ISO 8601 datetime strings to Python datetime.datetime objects."""
         if datetime_string is None:
             return datetime_string   # None can be used on datetime comparisons so assume this is what was intended
-        datetime = datetime_string2datetime(datetime_string)
+        datetime = datetime_string2datetime(datetime_string, self.RDBMSName)
         if datetime is None:
             self._add_to_errors('datetime %s' % str(datetime_string),
                 u'Datetime search parameters must be valid ISO 8601 datetime strings.')
