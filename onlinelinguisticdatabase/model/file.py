@@ -23,7 +23,7 @@ import logging
 log = logging.getLogger(__name__)
 
 filetag_table = Table('filetag', Base.metadata,
-    Column('id', Integer, Sequence('formfile_seq_id', optional=True), primary_key=True),
+    Column('id', Integer, Sequence('filetag_seq_id', optional=True), primary_key=True),
     Column('file_id', Integer, ForeignKey('file.id')),
     Column('tag_id', Integer, ForeignKey('tag.id')),
     Column('datetime_modified', DateTime(), default=now),
@@ -57,11 +57,11 @@ class File(Base):
     date_elicited = Column(Date)
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    enterer_id = Column(Integer, ForeignKey('user.id'))
+    enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User', primaryjoin='File.enterer_id==User.id')
-    elicitor_id = Column(Integer, ForeignKey('user.id'))
+    elicitor_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     elicitor = relation('User', primaryjoin='File.elicitor_id==User.id')
-    speaker_id = Column(Integer, ForeignKey('speaker.id'))
+    speaker_id = Column(Integer, ForeignKey('speaker.id', ondelete='SET NULL'))
     speaker = relation('Speaker')
     utterance_type = Column(Unicode(255))
     tags = relation('Tag', secondary=filetag_table, backref='files')
@@ -71,7 +71,7 @@ class File(Base):
     password = Column(Unicode(255))     # for external files requiring authentication
 
     # Attributes germane to subinterval-referencing a/v files.
-    parent_file_id = Column(Integer, ForeignKey('file.id'))
+    parent_file_id = Column(Integer, ForeignKey('file.id', ondelete='SET NULL'))
     parent_file = relation('File', remote_side=[id])
     start = Column(Float)
     end = Column(Float)

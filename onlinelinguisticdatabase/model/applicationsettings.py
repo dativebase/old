@@ -67,13 +67,13 @@ class ApplicationSettings(Base):
     morpheme_delimiters = Column(Unicode(255))
     punctuation = Column(UnicodeText)
     grammaticalities = Column(Unicode(255))
-    storage_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    storage_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
     storage_orthography = relation('Orthography',
         primaryjoin='ApplicationSettings.storage_orthography_id==Orthography.id')
-    input_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    input_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
     input_orthography = relation('Orthography',
         primaryjoin='ApplicationSettings.input_orthography_id==Orthography.id')
-    output_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    output_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
     output_orthography = relation('Orthography',
         primaryjoin='ApplicationSettings.output_orthography_id==Orthography.id')
     datetime_modified = Column(DateTime, default=now)

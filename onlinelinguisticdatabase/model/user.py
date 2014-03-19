@@ -49,10 +49,10 @@ class User(Base):
     markup_language = Column(Unicode(100))
     page_content = Column(UnicodeText)
     html = Column(UnicodeText)
-    input_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    input_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
     input_orthography = relation('Orthography',
         primaryjoin='User.input_orthography_id==Orthography.id')
-    output_orthography_id = Column(Integer, ForeignKey('orthography.id'))
+    output_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
     output_orthography = relation('Orthography',
         primaryjoin='User.output_orthography_id==Orthography.id')
     datetime_modified = Column(DateTime, default=now)

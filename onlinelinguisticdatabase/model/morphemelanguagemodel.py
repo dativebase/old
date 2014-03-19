@@ -42,11 +42,11 @@ class MorphemeLanguageModel(LanguageModel, Base):
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    corpus_id = Column(Integer, ForeignKey('corpus.id'))
+    corpus_id = Column(Integer, ForeignKey('corpus.id', ondelete='SET NULL'))
     corpus = relation('Corpus') # whence we extract the morpheme sequences and their counts
-    enterer_id = Column(Integer, ForeignKey('user.id'))
+    enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User', primaryjoin='MorphemeLanguageModel.enterer_id==User.id')
-    modifier_id = Column(Integer, ForeignKey('user.id'))
+    modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='MorphemeLanguageModel.modifier_id==User.id')
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
@@ -59,7 +59,7 @@ class MorphemeLanguageModel(LanguageModel, Base):
     toolkit = Column(Unicode(10))
     order = Column(Integer)
     smoothing = Column(Unicode(30))
-    vocabulary_morphology_id = Column(Integer, ForeignKey('morphology.id'))
+    vocabulary_morphology_id = Column(Integer, ForeignKey('morphology.id', ondelete='SET NULL'))
     vocabulary_morphology = relation('Morphology') # if specified, LM will use the lexicon of the morphology as the fixed vocabulary
     restricted = Column(Boolean, default=False)
     categorial = Column(Boolean, default=False) # if True, the model will be built over sequences of categories, not morphemes

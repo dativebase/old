@@ -33,7 +33,7 @@ class FormSearch(Base):
     name = Column(Unicode(255))
     search = Column(UnicodeText)    # The search params as JSON
     description = Column(UnicodeText)
-    enterer_id = Column(Integer, ForeignKey('user.id'))
+    enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User')
     datetime_modified = Column(DateTime, default=now)
 

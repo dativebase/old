@@ -31,9 +31,9 @@ class Source(Base):
         return '<Source (%s)>' % self.id
 
     id = Column(Integer, Sequence('source_seq_id', optional=True), primary_key=True)
-    file_id = Column(Integer, ForeignKey('file.id'))
+    file_id = Column(Integer, ForeignKey('file.id', ondelete='SET NULL'))
     file = relation('File')
-    crossref_source_id = Column(Integer, ForeignKey('source.id'))
+    crossref_source_id = Column(Integer, ForeignKey('source.id', ondelete='SET NULL'))
     crossref_source = relation('Source', remote_side=[id])
     datetime_modified = Column(DateTime, default=now)
 
