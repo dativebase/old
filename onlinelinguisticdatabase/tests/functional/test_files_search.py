@@ -1085,8 +1085,8 @@ class TestFormsSearchController(TestController):
         response = self.app.request(url('files'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['File.datetime_modified.in_'] == \
-            u'Invalid filter expression: File.datetime_modified.in_(%s)' % repr(today_timestamp)
+        assert resp['errors']['File.datetime_modified.in_'].startswith(
+            u'Invalid filter expression: File.datetime_modified.in_')
 
         # in_ on a list of datetimes works (SQLAQueryBuilder generates a list of datetime objects)
         json_query = json.dumps({'query': {'filter':

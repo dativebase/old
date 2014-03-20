@@ -455,6 +455,7 @@ class TestFormsearchesController(TestController):
         # Create some form_searches (and other models) to search and add SEARCH to the list of allowable methods
         _create_test_data(100)
         self._add_SEARCH_to_web_test_valid_methods()
+        RDBMSName = h.get_RDBMS_name(config_filename='test.ini')
 
         form_searches = json.loads(json.dumps(h.get_form_searches(True), cls=h.JSONOLDEncoder))
 
@@ -480,9 +481,13 @@ class TestFormsearchesController(TestController):
         response = self.app.post(url('/formsearches/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
+        if RDBMSName == u'mysql':
+            _yesterday_timestamp = h.round_datetime(yesterday_timestamp)
+        else:
+            _yesterday_timestamp = yesterday_timestamp
         result_set = [fs for fs in form_searches if
             re.search('[13456]', fs['name']) and not 'F' in fs['name'] and
-            (re.search('[1456]', json.dumps(fs['search'])) or fs['datetime_modified'] > yesterday_timestamp.isoformat())]
+            (re.search('[1456]', json.dumps(fs['search'])) or fs['datetime_modified'] > _yesterday_timestamp.isoformat())]
         assert resp
         assert len(resp) == len(result_set)
         assert set([s['id'] for s in resp]) == set([s['id'] for s in result_set])

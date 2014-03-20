@@ -435,6 +435,9 @@ class TestFilesController(TestController):
         # Attempt to create an illicit file type (.html) but with a valid
         # extension (.wav).  Expect an error, i.e., validation detects that the
         # file is really html, despite the misleading extension.
+        # WARNING: this (type of) test will fail of python-magic (and its dependency libmagic) is
+        # not installed. This is because the file create validator will not recognize this
+        # file as HTML pretending to be WAV
         files_dir_list = os.listdir(self.files_path)
         html_file_path = os.path.join(self.test_files_path, 'illicit.html')
         html_file_base64 = b64encode(open(html_file_path).read())

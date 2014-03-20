@@ -485,6 +485,10 @@ class TestRememberedformsController(TestController):
                                  if u'restricted' not in [t['name'] for t in f['tags']]]
         contributor_remembered_forms = [f for f in forms if f['id'] % 2 != 0]
         administrator_remembered_forms = [f for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
+        RDBMSName = h.get_RDBMS_name(config_filename='test.ini')
+        _today_timestamp = today_timestamp
+        if RDBMSName == u'mysql':
+            _today_timestamp = h.round_datetime(today_timestamp)
 
         # The query we will use over and over again
         json_query = json.dumps({'query': {'filter': [
@@ -494,6 +498,7 @@ class TestRememberedformsController(TestController):
                 ['or', [
                     ['Form', 'datetime_modified', '=', today_timestamp.isoformat()],
                     ['Form', 'date_elicited', '=', jan1.isoformat()]]]]]}})
+
         # A slight variation on the above query so that searches on the admin's
         # remembered forms will return some values
         json_query_admin = json.dumps({'query': {'filter': [
@@ -509,19 +514,19 @@ class TestRememberedformsController(TestController):
             f for f in viewer_remembered_forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
         result_set_contributor = [
             f for f in contributor_remembered_forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
         result_set_administrator = [
             f for f in administrator_remembered_forms if
             '8' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
 
         # Search the viewer's remembered forms as the viewer

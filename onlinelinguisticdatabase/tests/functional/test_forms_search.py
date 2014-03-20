@@ -998,8 +998,6 @@ class TestFormsSearchController(TestController):
 
         # regex on valid datetime will work and will similarly to equality test.
         today_string = today_timestamp.isoformat()
-        if h.get_RDBMS_name(config_filename='test.ini') == 'mysql':
-            today_string = today_string.split('.')[0]
         json_query = json.dumps({'query': {'filter':
                 ['Form', 'datetime_modified', 'regex', today_string]}})
         response = self.app.request(url('forms'), method='SEARCH', body=json_query,
@@ -1022,8 +1020,9 @@ class TestFormsSearchController(TestController):
         response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
-        assert resp['errors']['Form.datetime_modified.in_'] == \
-            u'Invalid filter expression: Form.datetime_modified.in_(%s)' % repr(today_timestamp)
+        error_prefix = u'Invalid filter expression: Form.datetime_modified.in_'
+        received_error = resp['errors']['Form.datetime_modified.in_']
+        assert received_error.startswith(error_prefix)
 
         # in_ on a list of datetimes works (SQLAQueryBuilder generates a list of datetime objects)
         json_query = json.dumps({'query': {'filter':
@@ -1489,6 +1488,7 @@ class TestFormsSearchController(TestController):
     def test_search_x_complex(self):
         """Tests POST /forms/search: complex searches."""
         forms = json.loads(json.dumps(h.get_forms(), cls=h.JSONOLDEncoder))
+        RDBMSName = h.get_RDBMS_name(config_filename='test.ini')
 
         # A fairly complex search
         json_query = json.dumps({'query': {'filter': [
@@ -1503,10 +1503,14 @@ class TestFormsSearchController(TestController):
         resp = json.loads(response.body)
 
         # Emulate the search Pythonically
+        if RDBMSName == u'mysql':
+            _today_timestamp = h.round_datetime(today_timestamp)
+        else:
+            _today_timestamp = today_timestamp
         result_set = [f for f in forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
              (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
         assert len(resp) == len(result_set)
 

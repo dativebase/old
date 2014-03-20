@@ -1232,7 +1232,7 @@ class TestFormsController(TestController):
             model.FormBackup.UUID==unicode(
             resp['UUID'])).order_by(
             desc(model.FormBackup.id)).first()
-        assert backup.datetime_modified.isoformat() == datetime_modified
+        assert datetime_modified.startswith(backup.datetime_modified.isoformat())
         assert backup.transcription == original_transcription
         assert response.content_type == 'application/json'
 
