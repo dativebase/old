@@ -1833,7 +1833,7 @@ validation_values = (u'None', u'Warning', u'Error')
 
 # How long to wait (in seconds) before terminating a process that is trying to
 # compile a foma script.
-phonology_compile_timeout = 30 * 60
+phonology_compile_timeout = 30
 morphology_compile_timeout = 60 * 3000  # Give foma morphology scripts 30 minutes to compile
 morphological_parser_compile_timeout = 60 * 60  # Give foma morphological parser scripts 60 minutes to compile
 morpheme_language_model_generate_timeout = 60 * 15

@@ -804,7 +804,7 @@ class TestPhonologiesController(TestController):
         ########################################################################
         # Compile a large phonology -- compilation should exceed the 30s limit.
         ########################################################################
-        
+
         params = self.phonology_create_params.copy()
         params.update({
             'name': u'Blackfoot Phonology 6',

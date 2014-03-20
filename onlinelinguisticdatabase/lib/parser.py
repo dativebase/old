@@ -321,7 +321,30 @@ class Command(object):
                 pass
 
     def get_process_children(self, pid):
-        """Return list of pids of child processes of ``pid``."""
+        """Return list of pids of child processes of ``pid``.
+
+        Note that Linux and Mac use different ps interfaces, hence the fork.
+
+        """
+        if os.uname()[0] == 'Darwin':
+            return self.get_process_children_mac(pid)
+        else:
+            return self.get_process_children_linux(pid)
+
+    def get_process_children_mac(self, pid):
+        """Return list of pids of child processes of ``pid`` on Mac."""
+        p = Popen('ps -o pid -o ppid', shell=True,
+                    stdout=PIPE, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        try:
+            return [int(p) for p, pp in
+                    [line.strip().split() for line in stdout.splitlines()[1:]]
+                    if int(pp) == pid]
+        except Exception:
+            return []
+
+    def get_process_children_linux(self, pid):
+        """Return list of pids of child processes of ``pid`` on Linux."""
         p = Popen('ps --no-headers -o pid --ppid %d' % pid, shell=True,
                   stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
@@ -555,8 +578,8 @@ class FomaFST(Command):
                 else:
                     self.compile_message = u'Compilation process failed.'
             else:
-                #log.warn(output)
-                self.compile_message = u'Foma script is not a well-formed %s %s.' % (self.object_type, output)
+                self.compile_message = (u'Foma script is not a well-formed %s %s.'
+                    % (self.object_type, output))[:255]
         except Exception:
             self.compile_message = u'Compilation attempt raised an error.'
         if self.compile_succeeded:

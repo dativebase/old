@@ -87,7 +87,6 @@ class PhonologiesController(BaseController):
         :returns: the newly created phonology.
 
         """
-        print 'in phonologies create'
         try:
             schema = PhonologySchema()
             values = json.loads(unicode(request.body, request.charset))
