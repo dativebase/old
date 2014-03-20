@@ -65,12 +65,12 @@ sqlalchemy.url = sqlite:///production.db
 # users (admin, contributor and viewer) as well as the "restricted" and "foreign
 # word" tags, a home page template, etc.  The admin's username is "admin" and
 # her password is "adminA_1".
-emptyDatabase = 0
+empty_database = 0
 
 # Add Language Data.  If value is 1, ISO 639-3 language data will be entered.
 # When value is 1, make sure language table of db is empty or errors will arise.
 # If value is 0, ISO 639-3 language data will not be entered.  Default is 1.
-addLanguageData = 1
+add_language_data = 1
 
 # Permanent Store: for storing binary files for corpora, files, users,
 # phonologies, ...
