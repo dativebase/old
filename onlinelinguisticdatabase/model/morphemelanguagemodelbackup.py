@@ -25,7 +25,6 @@ log = logging.getLogger(__file__)
 class MorphemeLanguageModelBackup(Base):
 
     __tablename__ = 'morphemelanguagemodelbackup'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<MorphemeLanguageModelBackup (%s)>' % self.id

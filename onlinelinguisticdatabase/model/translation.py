@@ -16,13 +16,11 @@
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class Translation(Base):
 
     __tablename__ = 'translation'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Translation (%s)>' % self.id

@@ -23,7 +23,6 @@ from onlinelinguisticdatabase.lib.parser import PhonologyFST
 class Phonology(PhonologyFST, Base):
 
     __tablename__ = 'phonology'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Phonology (%s)>' % self.id

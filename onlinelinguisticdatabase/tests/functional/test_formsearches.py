@@ -20,7 +20,7 @@ from time import sleep
 from nose.tools import nottest
 from onlinelinguisticdatabase.tests import TestController, url
 import onlinelinguisticdatabase.model as model
-from onlinelinguisticdatabase.model.meta import Session
+from onlinelinguisticdatabase.model.meta import Session, Model
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model import FormSearch
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
@@ -35,6 +35,8 @@ log = logging.getLogger(__name__)
 today_timestamp = datetime.datetime.now()
 day_delta = datetime.timedelta(1)
 yesterday_timestamp = today_timestamp - day_delta
+
+mysql_engine = Model.__table_args__.get('mysql_engine')
 
 def _create_test_form_searches(n=100):
     """Create n form searches with various properties.  A testing ground for searches!
@@ -481,7 +483,8 @@ class TestFormsearchesController(TestController):
         response = self.app.post(url('/formsearches/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
-        if RDBMSName == u'mysql':
+        mysql_engine = Model.__table_args__.get('mysql_engine')
+        if RDBMSName == u'mysql' and mysql_engine == 'InnoDB':
             _yesterday_timestamp = h.round_datetime(yesterday_timestamp)
         else:
             _yesterday_timestamp = yesterday_timestamp
@@ -621,3 +624,4 @@ class TestFormsearchesController(TestController):
                                 extra_environ=self.extra_environ_view)
         resp = json.loads(response.body)
         assert resp['search_parameters'] == h.get_search_parameters(query_builder)
+

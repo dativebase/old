@@ -119,7 +119,6 @@ class Parse(Base):
     """
 
     __tablename__ = 'parse'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Parse (%s)>' % self.id
@@ -139,7 +138,6 @@ class Parse(Base):
 class MorphologicalParser(MorphologicalParser, Base):
 
     __tablename__ = 'morphologicalparser'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<MorphologicalParser (%s)>' % self.id

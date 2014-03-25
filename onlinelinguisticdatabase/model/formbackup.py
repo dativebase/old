@@ -19,12 +19,10 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 import simplejson as json
-import datetime
 
 class FormBackup(Base):
     """Class for creating OLD FormBackup models.
@@ -38,7 +36,6 @@ class FormBackup(Base):
     """
 
     __tablename__ = "formbackup"
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<FormBackup (%s)>" % self.id

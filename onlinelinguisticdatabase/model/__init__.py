@@ -16,14 +16,14 @@
 
 from onlinelinguisticdatabase.model.meta import Session, Base
 
-from onlinelinguisticdatabase.model.applicationsettings import ApplicationSettings
-from onlinelinguisticdatabase.model.collection import Collection
+from onlinelinguisticdatabase.model.applicationsettings import ApplicationSettings, ApplicationSettingsUser
+from onlinelinguisticdatabase.model.collection import Collection, CollectionFile, CollectionTag
 from onlinelinguisticdatabase.model.collectionbackup import CollectionBackup
-from onlinelinguisticdatabase.model.corpus import Corpus, CorpusFile
+from onlinelinguisticdatabase.model.corpus import Corpus, CorpusFile, CorpusForm, CorpusTag
 from onlinelinguisticdatabase.model.corpusbackup import CorpusBackup
 from onlinelinguisticdatabase.model.elicitationmethod import ElicitationMethod
-from onlinelinguisticdatabase.model.file import File
-from onlinelinguisticdatabase.model.form import Form, FormFile
+from onlinelinguisticdatabase.model.file import File, FileTag
+from onlinelinguisticdatabase.model.form import Form, FormFile, FormTag, CollectionForm
 from onlinelinguisticdatabase.model.formbackup import FormBackup
 from onlinelinguisticdatabase.model.formsearch import FormSearch
 from onlinelinguisticdatabase.model.translation import Translation
@@ -44,12 +44,17 @@ from onlinelinguisticdatabase.model.syntacticcategory import SyntacticCategory
 from onlinelinguisticdatabase.model.tag import Tag
 from onlinelinguisticdatabase.model.user import User, UserForm
 
-__all__ = ['Session', 'Base', 'ApplicationSettings', 'Collection', 'CollectionBackup', 
-        'Corpus', 'CorpusFile', 'CorpusBackup', 'ElicitationMethod', 'File', 'Form', 
-        'FormFile', 'FormBackup', 'FormSearch', 'Translation', 'Language', 'MorphemeLanguageModel',
-        'MorphemeLanguageModelBackup', 'MorphologicalParser', 'MorphologicalParserBackup',
-        'Morphology', 'MorphologyBackup', 'Orthography', 'Page', 'Parse', 'Phonology', 'PhonologyBackup',
-        'Source', 'Speaker', 'SyntacticCategory', 'Tag', 'User', 'UserForm']
+__all__ = ['Session', 'Base', 'ApplicationSettings', 'ApplicationSettingsUser',
+    'Collection', 'CollectionBackup', 'CollectionFile', 'CollectionForm',
+    'CollectionTag', 'Corpus', 'CorpusBackup', 'CorpusFile', 'CorpusForm',
+    'CorpusTag', 'ElicitationMethod', 'File', 'FileTag', 'Form', 'FormFile',
+    'FormTag', 'FormBackup', 'FormSearch', 'Translation', 'Language',
+    'MorphemeLanguageModel', 'MorphemeLanguageModelBackup',
+    'MorphologicalParser', 'MorphologicalParserBackup', 'Morphology',
+    'MorphologyBackup', 'Orthography', 'Page', 'Parse', 'Phonology',
+    'PhonologyBackup', 'Source', 'Speaker', 'SyntacticCategory', 'Tag', 'User',
+    'UserForm']
+
 
 def init_model(engine):
     """Call me before using any of the tables or classes in the model"""

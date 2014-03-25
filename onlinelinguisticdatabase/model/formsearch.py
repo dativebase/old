@@ -24,7 +24,6 @@ log = logging.getLogger(__name__)
 class FormSearch(Base):
 
     __tablename__ = 'formsearch'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<FormSearch (%s)>' % self.id

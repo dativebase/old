@@ -34,7 +34,6 @@ class PhonologyBackup(Base):
     """
 
     __tablename__ = "phonologybackup"
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<PhonologyBackup (%s)>" % self.id

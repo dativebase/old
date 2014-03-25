@@ -14,7 +14,7 @@
 
 """File model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Float
 from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
@@ -22,13 +22,15 @@ from onlinelinguisticdatabase.model.meta import Base, now
 import logging
 log = logging.getLogger(__name__)
 
-filetag_table = Table('filetag', Base.metadata,
-    Column('id', Integer, Sequence('filetag_seq_id', optional=True), primary_key=True),
-    Column('file_id', Integer, ForeignKey('file.id')),
-    Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
+class FileTag(Base):
+
+    __tablename__ = 'filetag'
+
+    id = Column(Integer, Sequence('filetag_seq_id', optional=True), primary_key=True)
+    file_id = Column(Integer, ForeignKey('file.id'))
+    tag_id = Column(Integer, ForeignKey('tag.id'))
+    datetime_modified = Column(DateTime(), default=now)
+
 
 class File(Base):
     """There are 3 types of file:
@@ -43,7 +45,6 @@ class File(Base):
     """
 
     __tablename__ = 'file'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<File (%s)>" % self.id
@@ -64,7 +65,7 @@ class File(Base):
     speaker_id = Column(Integer, ForeignKey('speaker.id', ondelete='SET NULL'))
     speaker = relation('Speaker')
     utterance_type = Column(Unicode(255))
-    tags = relation('Tag', secondary=filetag_table, backref='files')
+    tags = relation('Tag', secondary=FileTag.__table__, backref='files')
 
     # Attributes germane to externally hosted files.
     url = Column(Unicode(255))          # for external files

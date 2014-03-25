@@ -14,28 +14,33 @@
 
 """Corpus model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 import logging
 log = logging.getLogger(name=__name__)
 
-corpusform_table = Table('corpusform', Base.metadata,
-    Column('id', Integer, Sequence('corpusform_seq_id', optional=True), primary_key=True),
-    Column('corpus_id', Integer, ForeignKey('corpus.id')),
-    Column('form_id', Integer, ForeignKey('form.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
+class CorpusForm(Base):
 
-corpustag_table = Table('corpustag', Base.metadata,
-    Column('id', Integer, Sequence('corpustag_seq_id', optional=True), primary_key=True),
-    Column('corpus_id', Integer, ForeignKey('corpus.id')),
-    Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
+    __tablename__ = 'corpusform'
+
+    id = Column(Integer, Sequence('corpusform_seq_id', optional=True),
+            primary_key=True)
+    corpus_id = Column(Integer, ForeignKey('corpus.id'))
+    form_id = Column(Integer, ForeignKey('form.id'))
+    datetime_modified = Column(DateTime(), default=now)
+
+
+class CorpusTag(Base):
+
+    __tablename__ = 'corpustag'
+
+    id = Column(Integer, Sequence('corpustag_seq_id', optional=True),
+            primary_key=True)
+    corpus_id = Column(Integer, ForeignKey('corpus.id'))
+    tag_id = Column(Integer, ForeignKey('tag.id'))
+    datetime_modified = Column(DateTime(), default=now)
 
 
 # Keeper is a unicode filter factory -- taken from The Python Cookbook
@@ -54,7 +59,6 @@ class Keeper(object):
 class Corpus(Base):
 
     __tablename__ = 'corpus'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<Corpus (%s)>" % self.id
@@ -72,8 +76,8 @@ class Corpus(Base):
     form_search = relation('FormSearch')
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    tags = relation('Tag', secondary=corpustag_table)
-    forms = relation('Form', secondary=corpusform_table, backref='corpora')
+    tags = relation('Tag', secondary=CorpusTag.__table__)
+    forms = relation('Form', secondary=CorpusForm.__table__, backref='corpora')
 
     # ``files`` attribute holds references to ``CorpusFile`` models, not ``File``
     # models.  This is a one-to-many relation, like form.translations.
@@ -131,7 +135,6 @@ class CorpusFile(Base):
     """Represents a corpus' forms written to disk in a certain format."""
 
     __tablename__ = 'corpusfile'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<CorpusFile (%s)>" % self.id

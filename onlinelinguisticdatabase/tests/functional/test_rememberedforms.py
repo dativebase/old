@@ -20,7 +20,7 @@ import simplejson as json
 import logging
 from datetime import date, datetime, timedelta
 import onlinelinguisticdatabase.model as model
-from onlinelinguisticdatabase.model.meta import Session
+from onlinelinguisticdatabase.model.meta import Session, Model
 import onlinelinguisticdatabase.lib.helpers as h
 
 log = logging.getLogger(__name__)
@@ -34,6 +34,8 @@ jan1 = date(2012, 01, 01)
 jan2 = date(2012, 01, 02)
 jan3 = date(2012, 01, 03)
 jan4 = date(2012, 01, 04)
+
+mysql_engine = Model.__table_args__.get('mysql_engine')
 
 ################################################################################
 # Functions for creating & retrieving test data
@@ -476,6 +478,8 @@ class TestRememberedformsController(TestController):
         """
 
         forms = json.loads(json.dumps(h.get_forms(), cls=h.JSONOLDEncoder))
+
+        mysql_engine = Model.__table_args__.get('mysql_engine')
         viewer, contributor, administrator = get_users()
         viewer_id = viewer.id
         contributor_id = contributor.id
@@ -487,7 +491,7 @@ class TestRememberedformsController(TestController):
         administrator_remembered_forms = [f for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
         RDBMSName = h.get_RDBMS_name(config_filename='test.ini')
         _today_timestamp = today_timestamp
-        if RDBMSName == u'mysql':
+        if RDBMSName == u'mysql' and mysql_engine == 'InnoDB':
             _today_timestamp = h.round_datetime(today_timestamp)
 
         # The query we will use over and over again

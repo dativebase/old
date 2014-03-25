@@ -22,9 +22,9 @@ from onlinelinguisticdatabase.model.meta import Base, now
 class UserForm(Base):
 
     __tablename__ = 'userform'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
-    id = Column(Integer, Sequence('userform_seq_id', optional=True), primary_key=True)
+    id = Column(Integer, Sequence('userform_seq_id', optional=True),
+            primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     user_id = Column(Integer, ForeignKey('user.id'))
     datetime_modified = Column(DateTime, default=now)
@@ -32,12 +32,12 @@ class UserForm(Base):
 class User(Base):
 
     __tablename__ = 'user'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<User (%s)>" % self.id
 
-    id = Column(Integer, Sequence('user_seq_id', optional=True), primary_key=True)
+    id = Column(Integer, Sequence('user_seq_id', optional=True),
+            primary_key=True)
     username = Column(Unicode(255), unique=True)
     password = Column(Unicode(255))
     salt = Column(Unicode(255))
@@ -49,14 +49,17 @@ class User(Base):
     markup_language = Column(Unicode(100))
     page_content = Column(UnicodeText)
     html = Column(UnicodeText)
-    input_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    input_orthography_id = Column(Integer, ForeignKey('orthography.id',
+        ondelete='SET NULL'))
     input_orthography = relation('Orthography',
         primaryjoin='User.input_orthography_id==Orthography.id')
-    output_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    output_orthography_id = Column(Integer, ForeignKey('orthography.id',
+        ondelete='SET NULL'))
     output_orthography = relation('Orthography',
         primaryjoin='User.output_orthography_id==Orthography.id')
     datetime_modified = Column(DateTime, default=now)
-    remembered_forms = relation('Form', secondary=UserForm.__table__, backref='memorizers')
+    remembered_forms = relation('Form', secondary=UserForm.__table__,
+            backref='memorizers')
 
     def get_dict(self):
         return {

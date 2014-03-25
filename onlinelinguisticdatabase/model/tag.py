@@ -14,15 +14,13 @@
 
 """Tag model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class Tag(Base):
 
     __tablename__ = 'tag'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Tag (%s)>' % self.id

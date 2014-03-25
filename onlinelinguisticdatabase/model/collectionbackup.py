@@ -19,17 +19,14 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 import simplejson as json
-import datetime
 
 class CollectionBackup(Base):
 
     __tablename__ = "collectionbackup"
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<CollectionBackup (%s)>" % self.id
