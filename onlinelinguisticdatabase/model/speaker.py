@@ -14,15 +14,13 @@
 
 """Speaker model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class Speaker(Base):
 
     __tablename__ = 'speaker'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Speaker (%s)>' % self.id

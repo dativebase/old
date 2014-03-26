@@ -14,9 +14,9 @@
 
 """Source model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 
 import logging
@@ -25,7 +25,6 @@ log = logging.getLogger(__name__)
 class Source(Base):
 
     __tablename__ = 'source'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Source (%s)>' % self.id

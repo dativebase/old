@@ -127,6 +127,7 @@ from onlinelinguisticdatabase.lib.utils import normalize
 log = logging.getLogger(__name__)
 
 
+
 try:
     import simplejson as json
 except ImportError:
@@ -134,9 +135,14 @@ except ImportError:
 
 try:
     import onlinelinguisticdatabase.model as old_model
-    from onlinelinguisticdatabase.model.meta import Session
+    from onlinelinguisticdatabase.model.meta import Session, Model
 except ImportError:
     pass
+
+try:
+    mysql_engine = Model.__table_args__.get('mysql_engine')
+except NameError:
+    mysql_engine = None
 
 try:
     from onlinelinguisticdatabase.lib.utils import get_RDBMS_name
@@ -159,7 +165,7 @@ except ImportError:
             dt += datetime.timedelta(seconds=1)
         return dt
 
-    def datetime_string2datetime(datetime_string, RDBMSName=None):
+    def datetime_string2datetime(datetime_string, RDBMSName=None, mysql_engine=None):
         """Parse an ISO 8601-formatted datetime into a Python datetime object.
         Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds
 
@@ -177,8 +183,8 @@ except ImportError:
             datetime_object = datetime_object.replace(microsecond=microseconds)
         except (IndexError, ValueError, OverflowError):
             pass
-        # MySQL rounds microseconds to the nearest second.
-        if RDBMSName == 'mysql':
+        # MySQL InnoDB tables round microseconds to the nearest second.
+        if RDBMSName == 'mysql' and mysql_engine == 'InnoDB':
             datetime_object = round_datetime(datetime_object)
         return datetime_object
 
@@ -339,7 +345,7 @@ class SQLAQueryBuilder(object):
         """Converts ISO 8601 datetime strings to Python datetime.datetime objects."""
         if datetime_string is None:
             return datetime_string   # None can be used on datetime comparisons so assume this is what was intended
-        datetime = datetime_string2datetime(datetime_string, self.RDBMSName)
+        datetime = datetime_string2datetime(datetime_string, self.RDBMSName, mysql_engine)
         if datetime is None:
             self._add_to_errors('datetime %s' % str(datetime_string),
                 u'Datetime search parameters must be valid ISO 8601 datetime strings.')

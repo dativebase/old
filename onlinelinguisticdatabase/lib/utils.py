@@ -1235,7 +1235,7 @@ def round_datetime(dt):
         dt += datetime.timedelta(seconds=1)
     return dt
 
-def datetime_string2datetime(datetime_string, RDBMSName=None):
+def datetime_string2datetime(datetime_string, RDBMSName=None, mysql_engine=None):
     """Parse an ISO 8601-formatted datetime into a Python datetime object.
     Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds
 
@@ -1253,8 +1253,8 @@ def datetime_string2datetime(datetime_string, RDBMSName=None):
         datetime_object = datetime_object.replace(microsecond=microseconds)
     except (IndexError, ValueError, OverflowError):
         pass
-    # MySQL rounds microseconds to the nearest second.
-    if RDBMSName == 'mysql':
+    # MySQL InnoDB tables round microseconds to the nearest second.
+    if RDBMSName == 'mysql' and mysql_engine == 'InnoDB':
         datetime_object = round_datetime(datetime_object)
     return datetime_object
 

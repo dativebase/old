@@ -14,27 +14,24 @@
 
 """Corpus backup model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Boolean
-from sqlalchemy.orm import relation, backref
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from onlinelinguisticdatabase.model.meta import Base, now
 import simplejson as json
-import datetime
 
 class CorpusBackup(Base):
     """Define the corpus backup model.
-    
+
     .. note::
-    
+
         Unlike with the collection backup model, the corpus backup model does
         not backup references to forms.  This is because corpora will generally
         reference many, many forms and it would be inefficient to store all of
         these references as massive (mostly redundant) JSON arrays...
 
     """
-    
+
     __tablename__ = 'corpusbackup'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<CorpusBackup (%s)>" % self.id

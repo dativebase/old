@@ -14,43 +14,45 @@
 
 """Form model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
-import simplejson as json
-from itertools import product
 
 
 class FormFile(Base):
 
     __tablename__ = 'formfile'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     id = Column(Integer, Sequence('formfile_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     file_id = Column(Integer, ForeignKey('file.id'))
     datetime_modified = Column(DateTime, default=now)
 
-formtag_table = Table('formtag', Base.metadata,
-    Column('id', Integer, Sequence('formfile_seq_id', optional=True), primary_key=True),
-    Column('form_id', Integer, ForeignKey('form.id')),
-    Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
 
-collectionform_table = Table('collectionform', Base.metadata,
-    Column('id', Integer, Sequence('collectionform_seq_id', optional=True), primary_key=True),
-    Column('collection_id', Integer, ForeignKey('collection.id')),
-    Column('form_id', Integer, ForeignKey('form.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
+class FormTag(Base):
+
+    __tablename__ = 'formtag'
+
+    id = Column(Integer, Sequence('formtag_seq_id', optional=True), primary_key=True)
+    form_id = Column(Integer, ForeignKey('form.id'))
+    tag_id = Column(Integer, ForeignKey('tag.id'))
+    datetime_modified = Column(DateTime(), default=now)
+
+
+class CollectionForm(Base):
+
+    __tablename__ = 'collectionform'
+
+    id = Column(Integer, Sequence('collectionform_seq_id', optional=True), primary_key=True)
+    collection_id = Column(Integer, ForeignKey('collection.id'))
+    form_id = Column(Integer, ForeignKey('form.id'))
+    datetime_modified = Column(DateTime(), default=now)
+
 
 class Form(Base):
+
     __tablename__ = "form"
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<Form (%s)>" % self.id
@@ -93,8 +95,8 @@ class Form(Base):
     source = relation('Source')
     translations = relation('Translation', backref='form', cascade='all, delete, delete-orphan')
     files = relation('File', secondary=FormFile.__table__, backref='forms')
-    collections = relation('Collection', secondary=collectionform_table, backref='forms')
-    tags = relation('Tag', secondary=formtag_table, backref='forms')
+    collections = relation('Collection', secondary=CollectionForm.__table__, backref='forms')
+    tags = relation('Tag', secondary=FormTag.__table__, backref='forms')
 
     def get_dict(self):
         """Return a Python dictionary representation of the Form.  This

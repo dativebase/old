@@ -22,7 +22,6 @@ import simplejson as json
 class MorphologicalParserBackup(Base):
 
     __tablename__ = 'morphologicalparserbackup'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<MorphologicalParserBackup (%s)>' % self.id

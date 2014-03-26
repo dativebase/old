@@ -14,7 +14,7 @@
 
 """ApplicationSettings model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
@@ -30,21 +30,22 @@ def delete_key(dict_, key_):
         pass
     return dict_
 
-applicationsettingsuser_table = Table(
-    'applicationsettingsuser', Base.metadata,
-    Column('id', Integer,
-        Sequence('applicationsettingsuser_seq_id', optional=True),
-        primary_key=True),
-    Column('applicationsettings_id', Integer, ForeignKey('applicationsettings.id')),
-    Column('user_id', Integer, ForeignKey('user.id')),
-    Column('datetime_modified', DateTime, default=now),
-    mysql_charset='utf8'
-)
+
+class ApplicationSettingsUser(Base):
+
+    __tablename__ = 'applicationsettingsuser'
+
+    id = Column(Integer, Sequence('applicationsettingsuser_seq_id',
+        optional=True), primary_key=True)
+    applicationsettings_id = Column(Integer,
+            ForeignKey('applicationsettings.id'))
+    user_id = Column(Integer, ForeignKey('user.id'))
+    datetime_modified = Column(DateTime, default=now)
+
 
 class ApplicationSettings(Base):
 
     __tablename__ = 'applicationsettings'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<ApplicationSettings (%s)>' % self.id
@@ -77,7 +78,7 @@ class ApplicationSettings(Base):
     output_orthography = relation('Orthography',
         primaryjoin='ApplicationSettings.output_orthography_id==Orthography.id')
     datetime_modified = Column(DateTime, default=now)
-    unrestricted_users = relation('User', secondary=applicationsettingsuser_table)
+    unrestricted_users = relation('User', secondary=ApplicationSettingsUser.__table__)
 
     def get_dict(self):
         """Return a Python dictionary representation of the ApplicationSettings.

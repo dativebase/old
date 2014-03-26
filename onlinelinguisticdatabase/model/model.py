@@ -24,6 +24,11 @@ class Model(object):
     model.meta).
     """
 
+    __table_args__ = {
+        'mysql_charset': 'utf8',
+        'mysql_engine': 'MyISAM'  # Possible values: MyISAM, InnoDB
+    }
+
     # Maps names of tables to the sets of attributes required for mini-dict creation
     table_name2core_attributes = {
         'corpus': ['id', 'name'],

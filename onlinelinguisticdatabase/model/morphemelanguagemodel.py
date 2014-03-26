@@ -32,8 +32,8 @@ class MorphemeLanguageModel(LanguageModel, Base):
     Support for CMU-Cambridge, SRILM, KenLM, etc. may be forthcoming...
 
     """
+
     __tablename__ = 'morphemelanguagemodel'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<MorphemeLanguageModel (%s)>' % self.id

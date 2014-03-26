@@ -14,31 +14,36 @@
 
 """Collection model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from sqlalchemy.orm import relation, backref
+from sqlalchemy.orm import relation
 from onlinelinguisticdatabase.model.meta import Base, now
 
-collectionfile_table = Table('collectionfile', Base.metadata,
-    Column('id', Integer, Sequence('collectionfile_seq_id', optional=True), primary_key=True),
-    Column('collection_id', Integer, ForeignKey('collection.id')),
-    Column('file_id', Integer, ForeignKey('file.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
+class CollectionFile(Base):
 
-collectiontag_table = Table('collectiontag', Base.metadata,
-    Column('id', Integer, Sequence('collectiontag_seq_id', optional=True), primary_key=True),
-    Column('collection_id', Integer, ForeignKey('collection.id')),
-    Column('tag_id', Integer, ForeignKey('tag.id')),
-    Column('datetime_modified', DateTime(), default=now),
-    mysql_charset='utf8'
-)
+    __tablename__ = 'collectionfile'
+
+    id = Column(Integer, Sequence('collectionfile_seq_id', optional=True),
+            primary_key=True)
+    collection_id = Column(Integer, ForeignKey('collection.id'))
+    file_id = Column(Integer, ForeignKey('file.id'))
+    datetime_modified = Column(DateTime(), default=now)
+
+
+class CollectionTag(Base):
+
+    __tablename__ = 'collectiontag'
+
+    id = Column(Integer, Sequence('collectiontag_seq_id', optional=True),
+            primary_key=True)
+    collection_id = Column(Integer, ForeignKey('collection.id'))
+    tag_id = Column(Integer, ForeignKey('tag.id'))
+    datetime_modified = Column(DateTime(), default=now)
+
 
 class Collection(Base):
 
     __tablename__ = 'collection'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return "<Collection (%s)>" % self.id
@@ -65,8 +70,8 @@ class Collection(Base):
     date_elicited = Column(Date)
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    tags = relation('Tag', secondary=collectiontag_table)
-    files = relation('File', secondary=collectionfile_table, backref='collections')
+    tags = relation('Tag', secondary=CollectionTag.__table__)
+    files = relation('File', secondary=CollectionFile.__table__, backref='collections')
     # forms attribute is defined in a relation/backref in the form model
 
     # The contents_unpacked column holds the contents of the collection where all

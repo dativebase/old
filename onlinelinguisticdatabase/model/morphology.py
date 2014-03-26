@@ -30,7 +30,6 @@ log = logging.getLogger(__name__)
 class Morphology(MorphologyFST, Base):
 
     __tablename__ = 'morphology'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Morphology (%s)>' % self.id

@@ -21,7 +21,6 @@ from onlinelinguisticdatabase.model.meta import Base, now
 class SyntacticCategory(Base):
 
     __tablename__ = 'syntacticcategory'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():

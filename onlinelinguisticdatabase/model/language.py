@@ -14,15 +14,13 @@
 
 """Language model"""
 
-from sqlalchemy import Table, Column, Sequence, ForeignKey
+from sqlalchemy import Column
 from sqlalchemy.types import Unicode, DateTime
-from sqlalchemy.orm import relation, backref
 from onlinelinguisticdatabase.model.meta import Base, now
 
 class Language(Base):
 
     __tablename__ = 'language'
-    __table_args__ = {'mysql_charset': 'utf8'}
 
     def __repr__(self):
         return '<Language (%s)>' % self.Id

@@ -54,6 +54,7 @@ sqlalchemy.url = sqlite:///production.db
 # ISO 639-3 id for the language under study.
 #sqlalchemy.url = mysql://username:password@localhost:3306/dbname
 #sqlalchemy.pool_recycle = 3600
+# See model/model.py for toggling the MySQL engine between MyISAM and InnoDB
 
 
 ################################################################################
