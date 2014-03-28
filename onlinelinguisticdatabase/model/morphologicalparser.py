@@ -544,7 +544,7 @@ class Cache(object):
                 filter(Parse.transcription.in_(self._store.keys())).all()]
             unpersisted = [Parse(transcription=transcription,
                                  parse=parse,
-                                 candidates = json.dumps(candidates),
+                                 candidates = self.json_dumps_candidates(candidates),
                                  parser=self.parser)
                            for transcription, (parse, candidates) in self._store.iteritems()
                            if transcription not in persisted]
@@ -552,6 +552,13 @@ class Cache(object):
             Session.commit()
             # log.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
             self.updated = False
+
+    def json_dumps_candidates(self, candidates):
+        candidates = json.dumps(candidates)
+        if len(candidates) > 65000:
+            return json.dumps(candidates[:500])
+        else:
+            return candidates
 
     def clear(self, persist=False):
         """Clear the cache and its persistence layer.
