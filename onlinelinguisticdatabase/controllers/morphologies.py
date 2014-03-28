@@ -191,7 +191,7 @@ class MorphologiesController(BaseController):
             backup_morphology(morphology_dict)
             Session.delete(morphology)
             Session.commit()
-            remove_morphology_directory(morphology)
+            morphology.remove_directory()
             return morphology
         else:
             response.status_int = 404
