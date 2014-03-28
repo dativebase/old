@@ -1039,12 +1039,13 @@ class MorphologicalParser(FomaFST, Parse):
         return dict((transcription, parse.triplet)
                       for transcription, (parse, candidates) in parses.iteritems())
 
-    def parse(self, transcriptions, parse_objects=False):
+    def parse(self, transcriptions, parse_objects=False, max_candidates=10):
         """Parse the input transcriptions.
 
         :param list transcriptions: unicode strings representing transcriptions of words.
-        :returns: a dict from transcriptions to parses.  If ``parse_objects==True``,
-            then the parses will be ``Parse`` instances instead of the default unicode objects.
+        :param bool parse_objects: if True, instances of Parse will be returned.
+        :param int max_candidates: max number of candidates to return.
+        :returns: a dict from transcriptions to (parse, candidates) tuples.
 
         """
 
@@ -1061,8 +1062,10 @@ class MorphologicalParser(FomaFST, Parse):
                 unparsed.append(transcription)
         unparsed = self.get_candidates(unparsed) # This is where the foma subprocess is enlisted.
         for transcription, candidates in unparsed.iteritems():
-            parse = self.get_most_probable(candidates)
-            self.cache[transcription] = parsed[transcription] = parse, candidates
+            parse, sorted_candidates = self.get_most_probable(candidates)
+            if max_candidates:
+                sorted_candidates = sorted_candidates[:max_candidates]
+            self.cache[transcription] = parsed[transcription] = parse, sorted_candidates
         if self.persist_cache:
             self.cache.persist()
         if parse_objects:
@@ -1087,12 +1090,12 @@ class MorphologicalParser(FomaFST, Parse):
         :param list candidates: list of unicode strings representing morphological parses.
             These must be in 'f|g|c-f|g|c' format, i.e., morphemes are ``self.rare_delimiter``-
             delimited form/gloss/category triples delimited by morpheme delimiters.
-        :returns: the most probable candidate in candidates.
+        :returns: 2-tuple: (the most probable candidate, the sorted candidates).
 
         """
 
         if not candidates:
-            return None
+            return None, []
         temp = []
         for candidate in candidates:
             lm_input = self.morpheme_splitter(candidate)[::2]
@@ -1102,7 +1105,9 @@ class MorphologicalParser(FomaFST, Parse):
             lm_input = ([self.my_language_model.start_symbol] + lm_input +
                         [self.my_language_model.end_symbol])
             temp.append((candidate, self.my_language_model.get_probability_one(lm_input)))
-        return sorted(temp, key=lambda x: x[1])[-1][0]
+        #return sorted(temp, key=lambda x: x[1])[-1][0]
+        sorted_candidates = [c[0] for c in sorted(temp, key=lambda x: x[1], reverse=True)]
+        return sorted_candidates[0], sorted_candidates
 
     def get_candidates(self, transcriptions):
         """Returns the morphophonologically valid parses of the input transcription.
