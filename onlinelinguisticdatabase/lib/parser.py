@@ -84,9 +84,16 @@ class Parse(object):
 
         """
 
-        self.parse = parse
         self.morpheme_delimiters = kwargs.get('morpheme_delimiters', u'-')
         self.rare_delimiter = kwargs.get('rare_delimiter', u'\u2980')
+        if isinstance(parse, basestring):
+            self.parse = parse
+        else:
+            if not parse:
+                self._triplet = []
+            else:
+                self._triplet = parse
+            self.parse = self.triplet2parse(parse)
 
     def __repr__(self):
         return self.parse.__repr__()
@@ -98,6 +105,19 @@ class Parse(object):
         except AttributeError:
             self._triplet = self.parse2triplet(self.parse)
             return self._triplet
+
+    @property
+    def morphemes(self):
+        """Return the parse as a list of morphemes where each morpheme is a string
+        whose three parts are separated by ``self.rare_delimiter``.
+
+        """
+
+        try:
+            return self._morphemes
+        except AttributeError:
+            self._morphemes = self.morpheme_only_splitter(self.parse)
+            return self._morphemes
 
     def parse2triplet(self, parse):
         """Convert a string representation of the parse (i.e., ``parse``) to a list of three strings,
@@ -115,6 +135,21 @@ class Parse(object):
             else:
                 triplet.append([item, item, item])
         return [u''.join(item) for item in zip(*triplet)]
+
+    def triplet2parse(self, triplet):
+        """Convert a list representation of a parse to a string one. E.g., if ``triplet``
+        is ['chien-s', 'dog-PL', 'N-Phi'], then ``parse`` will be 'chien|dog|N-s|PL|Phi'.
+
+        """
+        parse = []
+        if not triplet:
+            return u''
+        for index, item in enumerate(zip(*[self.morpheme_splitter(line) for line in triplet])):
+            if index % 2 == 0:
+                parse.append(self.rare_delimiter.join(item))
+            else:
+                parse.append(item[0])
+        return u''.join(parse)
 
     def esc_RE_meta_chars(self, string):
         """Escapes regex metacharacters in ``string``.
@@ -149,11 +184,11 @@ class Parse(object):
             return self._morpheme_only_splitter
         except AttributeError:
             delimiters = self.delimiters
-            self._morpheme_splitter = lambda x: [x] # default, word is morpheme
+            self._morpheme_only_splitter = lambda x: [x] # default, word is morpheme
             if delimiters:
-                self._morpheme_splitter = re.compile(u'[%s]' %
+                self._morpheme_only_splitter = re.compile(u'[%s]' %
                     ''.join([self.esc_RE_meta_chars(d) for d in delimiters])).split
-            return self._morpheme_splitter
+            return self._morpheme_only_splitter
 
     @property
     def delimiters(self):
