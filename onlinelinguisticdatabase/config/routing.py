@@ -57,6 +57,10 @@ def make_map(config):
     map.connect('/error/{action}', controller='error')
     map.connect('/error/{id}/{action}', controller='error')
 
+    # CORS preflight OPTIONS requests---don't interfere with them
+    map.connect('/*garbage',
+        conditions=dict(method='OPTIONS'), controller='cors', action='proceed')
+
     # CUSTOM ROUTES HERE
     map.connect('/collections/{id}/history', controller='oldcollections', action='history')
 
