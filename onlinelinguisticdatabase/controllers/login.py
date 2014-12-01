@@ -45,7 +45,7 @@ class LoginController(BaseController):
     here = h.get_config(config=config).get('here')
 
     @h.jsonify
-    @h.restrict('POST')
+    @h.restrict('POST', 'OPTIONS')
     def authenticate(self):
         """Session-based authentication.
 
