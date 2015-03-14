@@ -297,7 +297,7 @@ class FormSchema(Schema):
     phonetic_transcription = ValidBroadPhoneticTranscription(max=255)
     narrow_phonetic_transcription = ValidNarrowPhoneticTranscription(max=255)
     morpheme_break = ValidMorphemeBreakTranscription(max=255)
-    grammaticality = ValidGrammaticality()
+    grammaticality = ValidGrammaticality(if_empty='')
     morpheme_gloss = UnicodeString(max=255)
     translations = ValidTranslations(not_empty=True)
     comments = UnicodeString()
