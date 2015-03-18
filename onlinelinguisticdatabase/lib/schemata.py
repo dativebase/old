@@ -241,8 +241,16 @@ class ValidGrammaticality(FancyValidator):
 
 def get_grammaticalities():
     try:
-        grammaticalities = getattr(getattr(
-            app_globals, 'application_settings', None), 'grammaticalities', [u''])
+        applicationSettings = getattr(app_globals, 'application_settings', None)
+        if not applicationSettings:
+            # The reason this is second choice is because it guarantees a
+            # database request.
+            grammaticalities = h.get_grammaticalities()
+        else:
+            grammaticalities = getattr('grammaticalities', [u''])
+        # This is what I used to do (can probably be deleted; run tests):
+        # grammaticalities = getattr(getattr(
+        #     app_globals, 'application_settings', None), 'grammaticalities', [u''])
     except TypeError, e:
         # During testing, app_globals may not be present.
         grammaticalities = [u'']
