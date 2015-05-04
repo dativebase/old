@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name='onlinelinguisticdatabase',
-    version='1.0a1',
+    version='1.1',
     description='''A program for building web services that facilitate collaborative
 storing, searching, processing and analyzing of linguistic fieldwork data.''',
     long_description='''\
