@@ -49,8 +49,12 @@ class HTML2JSONContentType(object):
 
             # CORS stuff. See http://stackoverflow.com/questions/2771974/modify-headers-in-pylons-using-middleware
 
-            # Use '*' to allow all origins
-            new_headers['Access-Control-Allow-Origin'] = 'http://localhost:9000'
+            try:
+                origin = environ.get('HTTP_ORIGIN')
+            except Exception, e:
+                origin = 'http://dativebeta.lingsync.org'
+            # new_headers['Access-Control-Allow-Origin'] = 'http://localhost:9000'
+            new_headers['Access-Control-Allow-Origin'] = origin
 
             # Use this header to indicate that cookies should be included in CORS requests.
             new_headers['Access-Control-Allow-Credentials'] = 'true'
@@ -151,5 +155,4 @@ def make_app(global_conf, full_stack=False, static_files=True, **app_conf):
         app = Cascade([static_app, app])
     app.config = config
     return app
-
 
