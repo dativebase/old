@@ -740,7 +740,7 @@ class PhonologyFST(FomaFST):
         kwargs['object_type'] = kwargs.get('object_type', u'phonology')
         super(PhonologyFST, self).__init__(parent_directory, **kwargs)
 
-    boundaries = True
+    boundaries = False
 
 
 class MorphologyFST(FomaFST, Parse):
