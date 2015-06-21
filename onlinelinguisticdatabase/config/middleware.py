@@ -60,7 +60,7 @@ class HTML2JSONContentType(object):
             new_headers['Access-Control-Allow-Credentials'] = 'true'
 
             # What was here before: new_headers['Access-Control-Allow-Methods'] = 'OPTIONS, GET, POST'
-            new_headers['Access-Control-Allow-Methods'] = 'GET, HEAD, POST, PUT, DELETE, TRACE, CONNECT, COPY, OPTIONS'
+            new_headers['Access-Control-Allow-Methods'] = 'GET, HEAD, POST, PUT, DELETE, TRACE, CONNECT, COPY, OPTIONS, SEARCH'
 
             # What was here before: new_headers['Access-Control-Allow-Headers'] = 'Content-Type, content-type, Depth, User-Agent, X-File-Size, X-Requested-With, If-Modified-Since, X-File-Name, Cache-Control'
             new_headers['Access-Control-Allow-Headers'] = 'Content-Type, content-type'
