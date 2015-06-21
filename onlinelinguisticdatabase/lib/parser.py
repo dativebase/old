@@ -582,14 +582,17 @@ class FomaFST(Command):
     def compile(self, timeout=30*60, verification_string=None):
         """Compile the foma FST's script.
 
-        The superclass's ``run`` method performs the compilation request and cancels it if
-        it exceeds ``timeout`` seconds.
+        The superclass's ``run`` method performs the compilation request and
+        cancels it if it exceeds ``timeout`` seconds.
 
-        :param float/int timeout: how long to wait before terminating the compile process.
-        :param str verification_string]: a string that will be found in the stdout of a successful foma request.
-        :returns: ``None``.  Attribute values of the Foma FST object are altered to reflect the success
-            (or not) of the compilation.  If successful, ``self.get_file_path('binary')`` will be return
-            the absolute path to the compiled foma FST.
+        :param float/int timeout: how long to wait before terminating the
+            compile process.
+        :param str verification_string]: a string that will be found in the
+            stdout of a successful foma request.
+        :returns: ``None``.  Attribute values of the Foma FST object are
+            altered to reflect the success (or not) of the compilation.  If
+            successful, ``self.get_file_path('binary')`` will be return the
+            absolute path to the compiled foma FST.
 
         """
         #log.warn('IN COMPILE')
