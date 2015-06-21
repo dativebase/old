@@ -70,9 +70,14 @@ class FomaWorkerThread(threading.Thread):
 def start_foma_worker():
     """Called in :mod:`onlinelinguisticdatabase.config.environment.py`.
     """
+
     foma_worker = FomaWorkerThread()
     foma_worker.setDaemon(True)
     foma_worker.start()
+
+    foma_worker2 = FomaWorkerThread()
+    foma_worker2.setDaemon(True)
+    foma_worker2.start()
 
 ################################################################################
 # PHONOLOGY
