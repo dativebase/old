@@ -435,7 +435,7 @@ def create_new_phonology(data):
         UUID = unicode(uuid4()),
         name = h.normalize(data['name']),
         description = h.normalize(data['description']),
-        script = h.normalize(data['script']),  # normalize or not?
+        script = h.normalize(data['script']).replace(u'\r', u''),  # normalize or not?
         enterer = session['user'],
         modifier = session['user'],
         datetime_modified = h.now(),
