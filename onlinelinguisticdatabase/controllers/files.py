@@ -448,7 +448,12 @@ def add_standard_metadata(file, data):
     now = h.now()
     file.datetime_entered = now
     file.datetime_modified = now
-    file.enterer = session['user']
+    # Because of SQLAlchemy's uniqueness constraints, we may need to set the
+    # enterer to the elicitor.
+    if data['elicitor'] and (data['elicitor'].id == session['user'].id):
+        file.enterer = data['elicitor']
+    else:
+        file.enterer = session['user']
     return file
 
 def restrict_file_by_forms(file):

@@ -598,7 +598,14 @@ def create_new_form(data):
 
     # OLD-generated Data
     form.datetime_entered = form.datetime_modified = h.now()
-    form.enterer = form.modifier = session['user']
+    # Because of SQLAlchemy's uniqueness constraints, we may need to set the
+    # enterer to the elicitor/verifier.
+    if data['elicitor'] and (data['elicitor'].id == session['user'].id):
+        form.enterer = form.modifier = data['elicitor']
+    elif data['verifier'] and (data['verifier'].id == session['user'].id):
+        form.enterer = form.modifier = data['verifier']
+    else:
+        form.enterer = form.modifier = session['user']
 
     # Create the morpheme_break_ids and morpheme_gloss_ids attributes.
     # We add the form first to get an ID so that monomorphemic Forms can be

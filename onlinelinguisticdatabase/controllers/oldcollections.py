@@ -868,7 +868,12 @@ def create_new_collection(data, collections_referenced):
     now = datetime.datetime.utcnow()
     collection.datetime_entered = now
     collection.datetime_modified = now
-    collection.enterer = collection.modifier = session['user']
+    # Because of SQLAlchemy's uniqueness constraints, we may need to set the
+    # enterer to the elicitor.
+    if data['elicitor'] and (data['elicitor'].id == session['user'].id):
+        collection.enterer = data['elicitor']
+    else:
+        collection.enterer = session['user']
 
     return collection
 
