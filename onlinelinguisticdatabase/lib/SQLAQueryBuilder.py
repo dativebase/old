@@ -571,7 +571,7 @@ class SQLAQueryBuilder(object):
             'url': {},
             'password': {},
             'tags': {'foreign_model': 'Tag', 'type': 'collection'},
-            'forms': {'foreign_model': 'Collection', 'type': 'collection'},
+            'forms': {'foreign_model': 'Form', 'type': 'collection'},
             'collections': {'foreign_model': 'Collection', 'type': 'collection'}
         },
         'Translation': {
