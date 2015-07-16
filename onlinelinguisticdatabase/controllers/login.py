@@ -70,7 +70,7 @@ class LoginController(BaseController):
                 if user:
                     session['user'] = user
                     session.save()
-                    return {'authenticated': True}
+                    return {'authenticated': True, 'user': user}
                 else:
                     response.status_int = 401
                     return {'error': u'The username and password provided are not valid.'}
