@@ -60,6 +60,7 @@ class FormBackup(Base):
     break_gloss_category = Column(Unicode(1023))
     syntax = Column(Unicode(1023))
     semantics = Column(Unicode(1023))
+    status = Column(Unicode(40))
     elicitor = Column(UnicodeText)
     enterer = Column(UnicodeText)
     verifier = Column(UnicodeText)
@@ -99,6 +100,7 @@ class FormBackup(Base):
         self.break_gloss_category = form_dict['break_gloss_category']
         self.syntax = form_dict['syntax']
         self.semantics = form_dict['semantics']
+        self.status = form_dict['status']
         self.elicitation_method = unicode(json.dumps(form_dict['elicitation_method']))
         self.syntactic_category = unicode(json.dumps(form_dict['syntactic_category']))
         self.source = unicode(json.dumps(form_dict['source']))
@@ -133,6 +135,7 @@ class FormBackup(Base):
             'break_gloss_category': self.break_gloss_category,
             'syntax': self.syntax,
             'semantics': self.semantics,
+            'status': self.status,
             'elicitation_method': self.json_loads(self.elicitation_method),
             'syntactic_category': self.json_loads(self.syntactic_category),
             'source': self.json_loads(self.source),
