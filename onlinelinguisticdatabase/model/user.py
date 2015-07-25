@@ -74,10 +74,9 @@ class User(Base):
             'html': self.html,
             'input_orthography': self.get_mini_orthography_dict(self.input_orthography),
             'output_orthography': self.get_mini_orthography_dict(self.output_orthography),
-            'datetime_modified': self.datetime_modified
+            'datetime_modified': self.datetime_modified,
+            'username': self.username
         }
 
     def get_full_dict(self):
-        user_dict = self.get_dict()
-        user_dict['username'] = self.username
-        return user_dict
+        return self.get_dict()

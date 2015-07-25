@@ -142,7 +142,8 @@ class UsersController(BaseController):
                 values = json.loads(unicode(request.body, request.charset))
                 state = h.get_state_object(values)
                 state.user_to_update = user.get_full_dict()
-                state.user = session['user'].get_full_dict()
+                current_user = Session.query(User).get(session['user'].id)
+                state.user = current_user.get_full_dict()
                 data = schema.to_python(values, state)
                 user = update_user(user, data)
                 # user will be False if there are no changes (cf. update_user).
