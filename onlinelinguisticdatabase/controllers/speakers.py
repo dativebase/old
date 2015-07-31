@@ -109,7 +109,7 @@ class SpeakersController(BaseController):
         :returns: an empty dictionary.
 
         """
-        return {}
+        return {'markup_languages': h.markup_languages}
 
     @h.jsonify
     @h.restrict('PUT')
@@ -206,10 +206,17 @@ class SpeakersController(BaseController):
             representation of the speaker and the value of the ``data`` key
             is an empty dictionary.
 
+        TODO: implement a `get_new_speaker_data` function here, similar to that
+        defined in controllers/user.py so that GET params can effect what data
+        are returned.
+
         """
         speaker = Session.query(Speaker).get(id)
         if speaker:
-            return {'data': {}, 'speaker': speaker}
+            return {
+                'data': {'markup_languages': h.markup_languages},
+                'speaker': speaker
+            }
         else:
             response.status_int = 404
             return {'error': 'There is no speaker with id %s' % id}
