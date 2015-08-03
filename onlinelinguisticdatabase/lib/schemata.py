@@ -558,7 +558,6 @@ class CollectionSchema(Schema):
     speaker = ValidOLDModelObject(model_name='Speaker')
     source = ValidOLDModelObject(model_name='Source')
     elicitor = ValidOLDModelObject(model_name='User')
-    enterer = ValidOLDModelObject(model_name='User')
     date_elicited = DateConverter(month_style='mm/dd/yyyy')
     tags = ForEach(ValidOLDModelObject(model_name='Tag'))
     files = ForEach(ValidOLDModelObject(model_name='File'))
