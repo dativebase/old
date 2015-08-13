@@ -33,7 +33,7 @@ from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import MorphemeLanguageModelSchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import MorphemeLanguageModel, MorphemeLanguageModelBackup
 from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
@@ -55,6 +55,51 @@ class MorphemelanguagemodelsController(BaseController):
     """
 
     query_builder = SQLAQueryBuilder('MorphemeLanguageModel', config=config)
+
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
+    @h.authenticate
+    def search(self):
+        """Return the list of morpheme language model resources matching the
+        input JSON query.
+
+        :URL: ``SEARCH /morphemelanguagemodels`` (or ``POST
+            /morphemelanguagemodels/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``order_by`` and ``paginator`` attributes are optional.
+
+        """
+        try:
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            query = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            return h.add_pagination(query, python_search_params.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        except:
+            response.status_int = 400
+            return {'error': u'The specified search parameters generated an invalid database query'}
+
+    @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    def new_search(self):
+        """Return the data necessary to search the morpheme language model
+        resources.
+
+        :URL: ``GET /morphemelanguagemodels/new_search``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
+
+        """
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -350,7 +395,7 @@ class MorphemelanguagemodelsController(BaseController):
     def serve_arpa(self, id):
         """Serve the generated ARPA file of the morpheme language model.
 
-        :URL: ``PUT /morphologies/serve_arpa/id``
+        :URL: ``PUT /morphemelanguagemodels/serve_arpa/id``
         :param str id: the ``id`` value of a morpheme language model.
         :returns: a stream of bytes -- the ARPA file of the LM.
 

@@ -32,7 +32,7 @@ from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import MorphologySchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Morphology, MorphologyBackup
 from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
