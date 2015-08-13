@@ -66,6 +66,49 @@ class MorphologiesController(BaseController):
     query_builder = SQLAQueryBuilder('Morphology', config=config)
 
     @h.jsonify
+    @h.restrict('SEARCH', 'POST')
+    @h.authenticate
+    def search(self):
+        """Return the list of morphology resources matching the input JSON
+        query.
+
+        :URL: ``SEARCH /morphologies`` (or ``POST /morphologies/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``order_by`` and ``paginator`` attributes are optional.
+
+        """
+        try:
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            query = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            return h.add_pagination(query, python_search_params.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        except:
+            response.status_int = 400
+            return {'error': u'The specified search parameters generated an invalid database query'}
+
+    @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    def new_search(self):
+        """Return the data necessary to search the morphology resources.
+
+        :URL: ``GET /morphologies/new_search``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
+
+        """
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
+
+    @h.jsonify
     @h.restrict('GET')
     @h.authenticate
     def index(self):

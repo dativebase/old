@@ -160,6 +160,7 @@ def make_map(config):
     map = search_connect(map, 'formsearches')
     map = search_connect(map, 'languages')
     map = search_connect(map, 'sources')
+    map = search_connect(map, 'morphologies')
 
     # rememberedforms "resource"
     map.connect("rememberedforms", "/rememberedforms/{id}",
