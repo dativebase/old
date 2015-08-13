@@ -64,6 +64,15 @@ def make_map(config):
     # CUSTOM ROUTES HERE
     map.connect('/collections/{id}/history', controller='oldcollections', action='history')
 
+    # Note: this is the unconventional "search connect" mapping for corpora
+    # resources. To search across corpora, you need to issue a SEARCH/POST
+    # /corpora/searchcorpora request.
+    map.connect('/corpora/searchcorpora', controller='corpora',
+                action='search_corpora',
+                conditions=dict(method=['POST', 'SEARCH']))
+    map.connect('/corpora/new_search_corpora', controller='corpora',
+                action='new_search_corpora', conditions=dict(method='GET'))
+
     map.connect('/corpora/{id}/get_word_category_sequences', controller='corpora', action='get_word_category_sequences',
                 conditions=dict(method='GET'))
     map.connect('/corpora/{id}', controller='corpora', action='search',

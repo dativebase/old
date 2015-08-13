@@ -388,16 +388,16 @@ class SQLAQueryBuilder(object):
     }
 
     # The schema attribute describes the database structure in a way that allows
-    # the query builder to properly interpret the list-based queries and generate
-    # errors where necessary.  Maps model names to attribute names.  Attribute names whose values contain
-    # an 'alias' key are treated as the value of that key, e.g., ['Form',
-    # 'enterer' ...] will be treated as Form.enterer_id...  The relations listed
-    # in self.relations above are the default for all attributes.  This can be
-    # overridden by specifying a 'relation' key (cf.
-    # schema['Form']['translations'] below).  Certain attributes require
-    # value converters -- functions that change the value in some attribute-
-    # specific way, e.g., conversion of ISO 8601 datetimes to Python datetime
-    # objects.
+    # the query builder to properly interpret the list-based queries and
+    # generate errors where necessary. Maps model names to attribute names.
+    # Attribute names whose values contain an 'alias' key are treated as the
+    # value of that key, e.g., ['Form', 'enterer' ...] will be treated as
+    # Form.enterer_id... The relations listed in self.relations above are the
+    # default for all attributes. This can be overridden by specifying a
+    # 'relation' key (cf. schema['Form']['translations'] below). Certain
+    # attributes require value converters -- functions that change the value in
+    # some attribute-specific way, e.g., conversion of ISO 8601 datetimes to
+    # Python datetime objects.
     schema = {
         'Collection': {
             'id': {},
@@ -451,6 +451,7 @@ class SQLAQueryBuilder(object):
             'content': {},
             'enterer': {'foreign_model': 'User', 'type': 'scalar'},
             'modifier': {'foreign_model': 'User', 'type': 'scalar'},
+            'form_search': {'foreign_model': 'FormSearch', 'type': 'scalar'},
             'datetime_entered': {'value_converter': '_get_datetime_value'},
             'datetime_modified': {'value_converter': '_get_datetime_value'},
             'tags': {'foreign_model': 'Tag', 'type': 'collection'},

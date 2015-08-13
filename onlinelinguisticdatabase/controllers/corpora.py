@@ -56,6 +56,45 @@ class CorporaController(BaseController):
     @h.jsonify
     @h.restrict('SEARCH', 'POST')
     @h.authenticate
+    def search_corpora(self):
+        """Return the list of corpora that match the input JSON query.
+
+        :URL: ``SEARCH/POST /corpora/searchcorpora``
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``order_by`` and ``paginator`` attributes are optional.
+
+        .. note::
+
+            This action *does* result in a search across corpora resources.
+            Contrast this with the `search` method below which allows one to
+            search across the forms in a specified corpus.
+
+        """
+
+        try:
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            SQLAQuery = self.query_builder_for_ordering.get_SQLA_query(
+                python_search_params.get('query'))
+            return h.add_pagination(SQLAQuery,
+                python_search_params.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        except:
+            response.status_int = 400
+            return {'error': u'The specified search parameters generated an invalid database query'}
+
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
+    @h.authenticate
     def search(self, id):
         """Return the forms from corpus ``id`` that match the input JSON query.
 
@@ -112,6 +151,24 @@ class CorporaController(BaseController):
 
         """
         return {'search_parameters': h.get_search_parameters(self.query_builder)}
+
+    @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    def new_search_corpora(self):
+        """Return the data necessary to search across corpus resources.
+
+        :URL: ``GET /corpora/new_search_corpora``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
+
+        .. note::
+
+            Contrast this action with `new_search`, which returns the data
+            needed to search across the forms of a corpus.
+
+        """
+        return {'search_parameters':
+            h.get_search_parameters(self.query_builder_for_ordering)}
 
     @h.jsonify
     @h.restrict('GET')
@@ -468,7 +525,7 @@ class CorporaController(BaseController):
     @h.authenticate
     def get_word_category_sequences(self, id):
         """Return the category sequence types of validly morphologically analyzed words
-        in the corpus with ``id``, uncluding the id exemplars of said types.
+        in the corpus with ``id``, including the id exemplars of said types.
         """
         corpus = Session.query(Corpus).get(id)
         if corpus:
