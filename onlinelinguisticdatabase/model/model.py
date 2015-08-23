@@ -40,8 +40,9 @@ class Model(object):
         'morphology': ['id', 'name'],
         'orthography': ['id', 'name', 'orthography', 'lowercase', 'initial_glottal_stops'],
         'phonology': ['id', 'name'],
-        'source': ['id', 'type', 'key', 'journal', 'editor', 'chapter', 'pages',
-            'publisher', 'booktitle', 'school', 'institution', 'year', 'author', 'title', 'note'],
+        'source': ['id', 'crossref', 'crossref_source', 'type', 'key',
+            'journal', 'editor', 'chapter', 'pages', 'publisher', 'booktitle',
+            'school', 'institution', 'year', 'author', 'title', 'note'],
         'speaker': ['id', 'first_name', 'last_name', 'dialect'],
         'syntacticcategory': ['id', 'name'],
         'tag': ['id', 'name'],
@@ -56,7 +57,14 @@ class Model(object):
         dict_ = {}
         try:
             for attr in attrs:
-                dict_[attr] = getattr(model, attr)
+                if attr is 'crossref_source':
+                    crossref_source = getattr(model, 'crossref_source')
+                    if crossref_source:
+                        sub_attrs = self.table_name2core_attributes['source']
+                        tmp = self.get_dict_from_model(crossref_source, sub_attrs)
+                        dict_[attr] = tmp
+                else:
+                    dict_[attr] = getattr(model, attr)
             return dict_
         except AttributeError:
             return None
