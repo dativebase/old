@@ -442,7 +442,8 @@ class MorphologiesController(BaseController):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         inputs = MorphemeSequencesSchema.to_python(inputs)
-                        return morphology.apply(direction, inputs['morpheme_sequences'])
+                        inputs = [h.normalize(i) for i in inputs['morpheme_sequences']]
+                        return morphology.apply(direction, inputs)
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
