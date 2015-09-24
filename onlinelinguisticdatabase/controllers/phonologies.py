@@ -385,7 +385,8 @@ class PhonologiesController(BaseController):
                     try:
                         inputs = json.loads(unicode(request.body, request.charset))
                         inputs = MorphophonemicTranscriptionsSchema.to_python(inputs)
-                        return phonology.applydown(inputs['transcriptions'])
+                        inputs = [h.normalize(i) for i in inputs['transcriptions']]
+                        return phonology.applydown(inputs)
                     except h.JSONDecodeError:
                         response.status_int = 400
                         return h.JSONDecodeErrorResponse
