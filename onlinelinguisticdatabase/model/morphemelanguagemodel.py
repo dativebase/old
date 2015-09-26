@@ -93,7 +93,8 @@ class MorphemeLanguageModel(LanguageModel, Base):
             'smoothing': self.smoothing,
             'vocabulary_morphology': self.get_mini_dict_for(self.vocabulary_morphology),
             'restricted': self.restricted,
-            'categorial': self.categorial
+            'categorial': self.categorial,
+            'rare_delimiter': self.rare_delimiter
         }
 
     def write_corpus(self):
