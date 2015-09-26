@@ -409,7 +409,8 @@ class MorphologicalparsersController(BaseController):
             inputs = json.loads(unicode(request.body, request.charset))
             schema = TranscriptionsSchema
             inputs = schema.to_python(inputs)
-            parses = parser.parse(inputs['transcriptions'])
+            inputs = [h.normalize(w) for w in inputs['transcriptions']]
+            parses = parser.parse(inputs)
             return dict((transcription, parse) for transcription, (parse, candidates) in
                         parses.iteritems())
         except h.JSONDecodeError:

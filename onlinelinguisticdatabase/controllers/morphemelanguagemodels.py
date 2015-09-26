@@ -349,7 +349,8 @@ class MorphemelanguagemodelsController(BaseController):
                 schema = MorphemeSequencesSchema()
                 values = json.loads(unicode(request.body, request.charset))
                 data = schema.to_python(values)
-                return lm.get_probabilities(data['morpheme_sequences'])
+                morpheme_sequences = [h.normalize(ms) for ms in data['morpheme_sequences']]
+                return lm.get_probabilities(morpheme_sequences)
             except h.JSONDecodeError:
                 response.status_int = 400
                 return h.JSONDecodeErrorResponse
