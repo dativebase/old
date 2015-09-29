@@ -1046,7 +1046,7 @@ class MorphologicalParser(FomaFST, Parse):
         self.persist_cache = kwargs.pop('persist_cache', True)
         super(MorphologicalParser, self).__init__(parent_directory, **kwargs)
 
-    boundaries = True # parsers transparently/automatically wrap input transcriptions in word boundary symbols
+    boundaries = False # parsers transparently/automatically wrap input transcriptions in word boundary symbols
     object_type2directory_name = {'morphologicalparser': 'morphological_parser'}
     object_type2file_name = {'morphologicalparser': 'morphophonology'}
 

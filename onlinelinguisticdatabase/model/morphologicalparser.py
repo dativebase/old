@@ -291,8 +291,8 @@ class MorphologicalParser(MorphologicalParser, Base):
                     f.write('define morphology;\n\n')
                 else:
                     f.write('source %s\n\n' % morphology_script_path)
-                f.write('define morphology "%s" morphology "%s";\n\n' % (
-                    self.word_boundary_symbol, self.word_boundary_symbol))
+                # f.write('define morphology "%s" morphology "%s";\n\n' % (
+                #     self.word_boundary_symbol, self.word_boundary_symbol))
                 f.write('%s\n' % morphophonology)
         else:
             with codecs.open(script_path, 'w', 'utf8') as f:
