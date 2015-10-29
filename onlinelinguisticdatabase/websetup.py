@@ -64,7 +64,11 @@ def setup_app(command, conf, vars):
         # Create the _requests_tests.py script
         requests_tests_path = os.path.join(config['pylons.paths']['root'], 'tests',
                                          'scripts', '_requests_tests.py')
-        copyfile(requests_tests_path, '_requests_tests.py')
+
+        # This line is problematic in production apps because the
+        # _requests_tests.py file is not included in the build. So, I'm
+        # commenting it out by default.
+        # copyfile(requests_tests_path, '_requests_tests.py')
 
         # Create the tables if they don't already exist
         Base.metadata.create_all(bind=Session.bind, checkfirst=True)
