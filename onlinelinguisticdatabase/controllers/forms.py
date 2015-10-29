@@ -242,7 +242,7 @@ class FormsController(BaseController):
         form = h.eagerload_form(Session.query(Form)).get(id)
         if form:
             if session['user'].role == u'administrator' or \
-            form.enterer is session['user']:
+            getattr(form.enterer, 'id', None) == getattr(session['user'], 'id', False):
                 form_dict = form.get_dict()
                 backup_form(form_dict)
                 update_collections_referencing_this_form(form)
