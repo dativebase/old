@@ -163,6 +163,7 @@ def make_map(config):
     map = search_connect(map, 'morphologies')
     map = search_connect(map, 'phonologies')
     map = search_connect(map, 'morphemelanguagemodels')
+    map = search_connect(map, 'morphologicalparsers')
 
     # rememberedforms "resource"
     map.connect("rememberedforms", "/rememberedforms/{id}",

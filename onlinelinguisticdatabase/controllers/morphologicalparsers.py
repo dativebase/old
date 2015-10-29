@@ -33,7 +33,7 @@ from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import MorphologicalParserSchema, TranscriptionsSchema, MorphemeSequencesSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
+from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import MorphologicalParser, MorphologicalParserBackup
 from onlinelinguisticdatabase.lib.foma_worker import foma_worker_q
@@ -60,6 +60,51 @@ class MorphologicalparsersController(BaseController):
     """
 
     query_builder = SQLAQueryBuilder('MorphologicalParser', config=config)
+
+    @h.jsonify
+    @h.restrict('SEARCH', 'POST')
+    @h.authenticate
+    def search(self):
+        """Return the list of morphological parser resources matching the input
+        JSON query.
+
+        :URL: ``SEARCH /morphologicalparsers``
+          (or ``POST /morphologicalparsers/search``)
+        :request body: A JSON object of the form::
+
+                {"query": {"filter": [ ... ], "order_by": [ ... ]},
+                 "paginator": { ... }}
+
+            where the ``order_by`` and ``paginator`` attributes are optional.
+
+        """
+        try:
+            json_search_params = unicode(request.body, request.charset)
+            python_search_params = json.loads(json_search_params)
+            query = self.query_builder.get_SQLA_query(python_search_params.get('query'))
+            return h.add_pagination(query, python_search_params.get('paginator'))
+        except h.JSONDecodeError:
+            response.status_int = 400
+            return h.JSONDecodeErrorResponse
+        except (OLDSearchParseError, Invalid), e:
+            response.status_int = 400
+            return {'errors': e.unpack_errors()}
+        except:
+            response.status_int = 400
+            return {'error': u'The specified search parameters generated an invalid database query'}
+
+    @h.jsonify
+    @h.restrict('GET')
+    @h.authenticate
+    def new_search(self):
+        """Return the data necessary to search the morphological parser resources.
+
+        :URL: ``GET /morphologicalparsers/new_search``
+        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
+
+        """
+        return {'search_parameters': h.get_search_parameters(self.query_builder)}
+
 
     @h.jsonify
     @h.restrict('GET')
@@ -411,6 +456,9 @@ class MorphologicalparsersController(BaseController):
             inputs = schema.to_python(inputs)
             inputs = [h.normalize(w) for w in inputs['transcriptions']]
             parses = parser.parse(inputs)
+            # TODO: allow for a param which causes the candidates to be
+            # returned as well as/instead of only the most probable parse
+            # candidate.
             return dict((transcription, parse) for transcription, (parse, candidates) in
                         parses.iteritems())
         except h.JSONDecodeError:
