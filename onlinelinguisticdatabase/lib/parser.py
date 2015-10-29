@@ -550,7 +550,10 @@ class FomaFST(Command):
         for line in file_:
             line = line.strip()
             if line:
-                i, o = map(remover, line.split('\t')[:2])
+                try:
+                    i, o = map(remover, line.split('\t')[:2])
+                except:
+                    i = o = line
                 result.setdefault(i, []).append({self.flookup_no_output: None}.get(o, o))
         return dict((k, filter(None, v)) for k, v in result.iteritems())
 
