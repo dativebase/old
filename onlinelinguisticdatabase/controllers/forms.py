@@ -790,7 +790,10 @@ def update_morpheme_references_of_forms(forms, valid_delimiters, **kwargs):
         Session.commit()
     return [f['id_'] for f in form_buffer]
 
+# WARNING: I changed this to simply return `unistr` without UTF8-encoding it as
+# a string. Why did I ever do this in the first place?
 def utf8_encode(unistr):
+    return unistr
     try:
         return unistr.encode('utf8')
     except AttributeError:
