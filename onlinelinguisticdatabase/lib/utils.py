@@ -1992,7 +1992,7 @@ def get_language_objects(filename, config):
     iso_639_3File = codecs.open(iso_639_3FilePath, 'r', 'utf-8')
     language_list = [l.split('\t') for l in iso_639_3File]
     return [get_language_object(language) for language in language_list
-            if len(language_list) == 8]
+              if len(language) == 8]
 
 def get_language_object(language_list):
     """Given a list of ISO-639-3 language data, return an OLD language model."""
