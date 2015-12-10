@@ -60,7 +60,6 @@ def setup_app(command, conf, vars):
 
     # Not a test: add a bunch of nice defaults.
     else:
-
         # Create the _requests_tests.py script
         requests_tests_path = os.path.join(config['pylons.paths']['root'], 'tests',
                                          'scripts', '_requests_tests.py')

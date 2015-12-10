@@ -247,7 +247,7 @@ def get_grammaticalities():
             # database request.
             grammaticalities = h.get_grammaticalities()
         else:
-            grammaticalities = getattr('grammaticalities', [u''])
+            grammaticalities = getattr(applicationSettings, 'grammaticalities', [u''])
         # This is what I used to do (can probably be deleted; run tests):
         # grammaticalities = getattr(getattr(
         #     app_globals, 'application_settings', None), 'grammaticalities', [u''])
