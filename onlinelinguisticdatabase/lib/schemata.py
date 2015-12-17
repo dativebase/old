@@ -814,6 +814,7 @@ class UniqueUnicodeValue(UnicodeString):
         attribute = getattr(model_, self.attribute_name)
         id = getattr(state, 'id', None)
         query = Session.query(model_)
+        value = h.normalize(value)
         if (id and query.filter(and_(attribute==value, getattr(model_, 'id')!=id)).first()) or \
         (not id and query.filter(attribute==value).first()):
             raise Invalid(self.message('not_unique', state,
