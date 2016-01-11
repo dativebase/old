@@ -287,7 +287,7 @@ class TestFilesController(TestController):
         ########################################################################
 
         # Pass some mal-formed JSON to test that a 400 error is returned.
-        params = '"a'   # Bad JSON
+        params = u'"a'   # Bad JSON
         response = self.app.post(url('files'), params, self.json_headers,
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
@@ -388,7 +388,7 @@ class TestFilesController(TestController):
             'filename': u'',                    # empty; not allowed
             'base64_encoded_file': '',        # empty; not allowed
             'utterance_type': u'l' * 1000,   # too long
-            'date_elicited': '31/12/2012',   # wrong format
+            'date_elicited': u'31/12/2012',   # wrong format
             'speaker': 200                  # invalid id
         })
         params = json.dumps(params)
@@ -729,7 +729,7 @@ class TestFilesController(TestController):
 
         # Create a valid externally hosted file
         params = self.file_create_params_ext_host.copy()
-        url_ = 'http://vimeo.com/54144270'
+        url_ = u'http://vimeo.com/54144270'
         params.update({
             'url': url_,
             'name': u'externally hosted file',
@@ -744,7 +744,7 @@ class TestFilesController(TestController):
 
         # Attempt to create an externally hosted file with invalid params
         params = self.file_create_params_ext_host.copy()
-        url_ = 'http://vimeo/541442705414427054144270541442705414427054144270'  # Invalid url
+        url_ = u'http://vimeo/541442705414427054144270541442705414427054144270'  # Invalid url
         params.update({
             'url': url_,
             'name': u'invalid externally hosted file',
@@ -776,7 +776,7 @@ class TestFilesController(TestController):
 
         # Show that the name param is optional
         params = self.file_create_params_ext_host.copy()
-        url_ = 'http://vimeo.com/54144270'
+        url_ = u'http://vimeo.com/54144270'
         params.update({
             'url': url_,
             'MIME_type': u'video/mpeg',

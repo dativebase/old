@@ -24,6 +24,7 @@ I altered the global valid_methods tuple of webtest.lint at runtime by adding a
 """
 
 import re
+import platform
 from onlinelinguisticdatabase.tests import TestController, url
 from nose.tools import nottest
 import simplejson as json
@@ -50,6 +51,32 @@ mysql_engine = Model.__table_args__.get('mysql_engine')
 ################################################################################
 # Functions for creating & retrieving test data
 ################################################################################
+
+def get_timestamp_isoformat(timestamp):
+    """Return the timestamp in ISO 8601 format, but also in the form that
+    datetimes are stored in in the database. At present, this function is
+    sensitive to the RDBMS and the MySQL engine type. It may also need to be
+    made sensitive to the platform (i.e., Linux, vs. Mac, vs. Windows).
+
+    """
+
+    RDBMSName = h.get_RDBMS_name(config_filename='test.ini')
+    mysql_engine = Model.__table_args__.get('mysql_engine')
+    system = platform.system() # Will be 'Darwin' on Mac OS X
+    if RDBMSName == u'mysql':
+        if mysql_engine == 'InnoDB' or system == 'Darwin':
+            return h.round_datetime(timestamp).isoformat()
+        else:
+            return timestamp.isoformat().split('.')[0]
+    else:
+        return timestamp.isoformat()
+
+
+# More datetime globals.
+today_timestamp_iso = get_timestamp_isoformat(today_timestamp)
+yesterday_timestamp_iso = get_timestamp_isoformat(yesterday_timestamp)
+
+
 def _create_test_models(n=100):
     _add_test_models_to_session('Tag', n, ['name'])
     _add_test_models_to_session('Speaker', n, ['first_name', 'last_name', 'dialect'])
@@ -854,13 +881,14 @@ class TestFormsSearchController(TestController):
 
         # = datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '=', today_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '=', today_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 49
+
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '=', yesterday_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '=', yesterday_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -868,13 +896,13 @@ class TestFormsSearchController(TestController):
 
         # != datetime -- *NOTE:* the NULL datetime_entered values will not be counted.
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '!=', today_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '!=', today_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 50
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '!=', yesterday_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '!=', yesterday_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -882,7 +910,7 @@ class TestFormsSearchController(TestController):
 
         # To get what one really wants (perhaps), test for NULL too:
         query = {'query': {'filter':
-            ['or', [['Form', 'datetime_entered', '!=', today_timestamp.isoformat()],
+            ['or', [['Form', 'datetime_entered', '!=', today_timestamp_iso],
                 ['Form', 'datetime_entered', '=', None]]]}}
         json_query = json.dumps(query)
         response = self.app.post(url('/forms/search'), json_query,
@@ -892,7 +920,7 @@ class TestFormsSearchController(TestController):
 
         # < datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '<', today_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '<', today_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -900,7 +928,7 @@ class TestFormsSearchController(TestController):
 
         # <= datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_modified', '<=', today_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_modified', '<=', today_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -908,7 +936,7 @@ class TestFormsSearchController(TestController):
 
         # > datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '>', today_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '>', today_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -924,7 +952,7 @@ class TestFormsSearchController(TestController):
 
         # >= datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '>=', yesterday_timestamp.isoformat()]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '>=', yesterday_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1027,7 +1055,7 @@ class TestFormsSearchController(TestController):
         # in_ on a datetime.  This will raise a TypeError ('datetime.datetime' object is
         # not iterable) that is caught in _get_filter_expression
         json_query = json.dumps({'query': {'filter':
-            ['Form', 'datetime_modified', 'in', today_timestamp.isoformat()]}})
+            ['Form', 'datetime_modified', 'in', today_timestamp_iso]}})
         response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
@@ -1038,7 +1066,7 @@ class TestFormsSearchController(TestController):
         # in_ on a list of datetimes works (SQLAQueryBuilder generates a list of datetime objects)
         json_query = json.dumps({'query': {'filter':
             ['Form', 'datetime_modified', 'in',
-                [today_timestamp.isoformat(), yesterday_timestamp.isoformat()]]}})
+                [today_timestamp_iso, yesterday_timestamp_iso]]}})
         response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1199,7 +1227,7 @@ class TestFormsSearchController(TestController):
 
         # translation.datetime_modified
         json_query = json.dumps({'query': {'filter':
-            ['Translation', 'datetime_modified', '>', yesterday_timestamp.isoformat()]}})
+            ['Translation', 'datetime_modified', '>', yesterday_timestamp_iso]}})
         response = self.app.request(url('forms'), method='SEARCH', body=json_query,
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1330,14 +1358,14 @@ class TestFormsSearchController(TestController):
 
         # file.datetime_modified
         json_query = json.dumps({'query': {'filter':
-            ['File', 'datetime_modified', '>', yesterday_timestamp.isoformat()]}})
+            ['File', 'datetime_modified', '>', yesterday_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
         assert len(resp) == 20  # All forms with a file attached
 
         json_query = json.dumps({'query': {'filter':
-            ['File', 'datetime_modified', '<', yesterday_timestamp.isoformat()]}})
+            ['File', 'datetime_modified', '<', yesterday_timestamp_iso]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = json.loads(response.body)
@@ -1507,7 +1535,7 @@ class TestFormsSearchController(TestController):
                 ['Translation', 'transcription', 'like', '%1%'],
                 ['not', ['Form', 'morpheme_break', 'regex', '[18][5-7]']],
                 ['or', [
-                    ['Form', 'datetime_modified', '=', today_timestamp.isoformat()],
+                    ['Form', 'datetime_modified', '=', today_timestamp_iso],
                     ['Form', 'date_elicited', '=', jan1.isoformat()]]]]]}})
         response = self.app.post(url('/forms/search'), json_query,
                         self.json_headers, self.extra_environ_admin)
@@ -1561,8 +1589,8 @@ class TestFormsSearchController(TestController):
                 ['Form', 'morpheme_break', 'like', '%9%'],
                 ['not', ['Translation', 'transcription', 'like', '%6%']],
                 ['or', [
-                    ['Form', 'datetime_entered', '<', today_timestamp.isoformat()],
-                    ['Form', 'datetime_modified', '>', yesterday_timestamp.isoformat()],
+                    ['Form', 'datetime_entered', '<', today_timestamp_iso],
+                    ['Form', 'datetime_modified', '>', yesterday_timestamp_iso],
                     ['not', ['Form', 'date_elicited', 'in', [jan1.isoformat(), jan3.isoformat()]]],
                     ['and', [
                         ['Form', 'enterer', 'id', 'regex', '[135680]'],
