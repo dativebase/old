@@ -53,6 +53,12 @@ class HTML2JSONContentType(object):
                 origin = environ.get('HTTP_ORIGIN')
             except Exception, e:
                 origin = 'http://dativebeta.lingsync.org'
+            # In the test case, there will be no origin. So we set it to
+            # *anything* here, so that WebTest's lint.py doesn't choke on
+            # `None`.
+            if not origin:
+                origin = 'http://localhost:9000'
+
             # new_headers['Access-Control-Allow-Origin'] = 'http://localhost:9000'
             new_headers['Access-Control-Allow-Origin'] = origin
 
