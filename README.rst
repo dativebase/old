@@ -46,5 +46,5 @@ and a MySQL database.
 .. _`Dative source code`: https://github.com/jrwdunham/dative/
 .. _`Dative's web site`: http://www.dative.ca/
 .. _`Dative app`: http://app.dative.ca/
-.. _`Pylons`: http://www.pylonsproject.org/projects/pylons-framework/about
+.. _`Pylons web framework`: http://www.pylonsproject.org/projects/pylons-framework/about
 
