@@ -294,6 +294,27 @@ class ValidOLDModelObject(FancyValidator):
                     return model_object
 
 
+class AtLeastOneTranscriptionTypeValue(FancyValidator):
+    """Every form must have a value for at least one of transcription,
+    phonetic_transcription, narrow_phonetic_transcription, or morpheme_break.
+
+    """
+
+    messages = {
+        'transcription': (u'You must enter a value in at least one of the'
+            ' following fields: transcription, morpheme break, phonetic'
+            ' transcription, or narrow phonetic transcription.')
+    }
+    def _to_python(self, values, state):
+        if (not values['transcription'].strip()) and \
+        (not values['phonetic_transcription'].strip()) and \
+        (not values['narrow_phonetic_transcription'].strip()) and \
+        (not values['morpheme_break'].strip()):
+            raise Invalid(self.message('transcription', state), values, state)
+        else:
+            return values
+
+
 class FormSchema(Schema):
     """FormSchema is a Schema for validating the data input upon a form
     creation request.
@@ -301,7 +322,9 @@ class FormSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
 
-    transcription = ValidOrthographicTranscription(not_empty=True, max=255)
+    chained_validators = [AtLeastOneTranscriptionTypeValue()]
+    #transcription = ValidOrthographicTranscription(not_empty=True, max=255)
+    transcription = ValidOrthographicTranscription(max=255)
     phonetic_transcription = ValidBroadPhoneticTranscription(max=255)
     narrow_phonetic_transcription = ValidNarrowPhoneticTranscription(max=255)
     morpheme_break = ValidMorphemeBreakTranscription(max=255)
