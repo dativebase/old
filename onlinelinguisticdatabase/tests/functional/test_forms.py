@@ -461,7 +461,7 @@ class TestFormsController(TestController):
     def test_create_invalid(self):
         """Tests that POST /forms with invalid input returns an appropriate error."""
 
-        # Empty transcription and translations should raise error
+        # Empty translations should raise error
         form_count = Session.query(model.Form).count()
         params = self.form_create_params.copy()
         params = json.dumps(params)
@@ -469,8 +469,24 @@ class TestFormsController(TestController):
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         new_form_count = Session.query(model.Form).count()
-        assert resp['errors']['transcription'] == u'Please enter a value'
         assert resp['errors']['translations'] == u'Please enter a value'
+        assert new_form_count == form_count
+
+        # If all transcription-type values are empty, an error should be
+        # returned for that special case.
+        form_count = Session.query(model.Form).count()
+        params = self.form_create_params.copy()
+        params.update({
+            'translations': [{'transcription': 'good', 'grammaticality': u''}],
+        })
+        params = json.dumps(params)
+        response = self.app.post(url('forms'), params, self.json_headers,
+                                 self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        new_form_count = Session.query(model.Form).count()
+        assert resp['errors'] == ('You must enter a value in at least one of'
+            ' the following fields: transcription, morpheme break, phonetic'
+            ' transcription, or narrow phonetic transcription.')
         assert new_form_count == form_count
 
         # Exceeding length restrictions should return errors also.
