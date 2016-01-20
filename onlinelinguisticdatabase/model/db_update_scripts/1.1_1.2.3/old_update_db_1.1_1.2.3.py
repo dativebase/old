@@ -28,20 +28,7 @@ Usage:
 
 import os
 import sys
-import re
-import string
 import subprocess
-import datetime
-import unicodedata
-from random import choice, shuffle
-from uuid import uuid4
-from sqlalchemy import create_engine, MetaData, Table, bindparam
-from docutils.core import publish_parts
-from passlib.hash import pbkdf2_sha512
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 # update_SQL holds the SQL statements that create the 1.0 tables missing in 0.2.7 and
 # alter the existing tables.
@@ -68,13 +55,13 @@ def write_update_executable(mysql_update_script_name, here):
     os.chmod(mysql_update_script, 0744)
     return mysql_update_script
 
-def perform_preliminary_update(mysql_db_name, mysql_update_script, mysql_username, mysql_password, mysql_updater):
+def perform_update(mysql_db_name, mysql_update_script, mysql_username, mysql_password, mysql_updater):
     """Perform the preliminary update of the db by calling the executable at
     ``mysql_update_script``.
 
     """
 
-    print_('Running the MySQL update script ... ')
+    print 'Running the MySQL update script ... '
     mysql_script_content = '#!/bin/sh\nmysql -u %s -p%s %s < %s' % (
         mysql_username, mysql_password, mysql_db_name, mysql_update_script)
     with open(mysql_updater, 'w') as f:
@@ -134,6 +121,6 @@ if __name__ == '__main__':
         here)
 
     # Perform the preliminary update of the database using ``mysql_update_script``
-    perform_preliminary_update(mysql_db_name, mysql_update_script,
+    perform_update(mysql_db_name, mysql_update_script,
         mysql_username, mysql_password, mysql_updater)
 

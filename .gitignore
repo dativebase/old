@@ -11,6 +11,8 @@
 TODO.txt
 TODO_PARSER.txt
 
+onlinelinguisticdatabase/model/db_update_scripts/**/*.sh
+
 # Some Pylons-generated directories that should be ignored
 /dist/
 /data/
