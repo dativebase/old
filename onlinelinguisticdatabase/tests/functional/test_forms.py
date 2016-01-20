@@ -506,7 +506,7 @@ class TestFormsController(TestController):
                                  self.extra_environ_admin, status=400)
         resp = json.loads(response.body)
         new_form_count = Session.query(model.Form).count()
-        too_long_error = u'Enter a value not more than 255 characters long'
+        too_long_error = u'Enter a value not more than 510 characters long'
         assert resp['errors']['transcription'] == too_long_error
         assert resp['errors']['phonetic_transcription'] == too_long_error
         assert resp['errors']['narrow_phonetic_transcription'] == too_long_error

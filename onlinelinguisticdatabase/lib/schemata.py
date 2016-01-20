@@ -324,12 +324,12 @@ class FormSchema(Schema):
 
     chained_validators = [AtLeastOneTranscriptionTypeValue()]
     #transcription = ValidOrthographicTranscription(not_empty=True, max=255)
-    transcription = ValidOrthographicTranscription(max=255)
-    phonetic_transcription = ValidBroadPhoneticTranscription(max=255)
-    narrow_phonetic_transcription = ValidNarrowPhoneticTranscription(max=255)
-    morpheme_break = ValidMorphemeBreakTranscription(max=255)
+    transcription = ValidOrthographicTranscription(max=510)
+    phonetic_transcription = ValidBroadPhoneticTranscription(max=510)
+    narrow_phonetic_transcription = ValidNarrowPhoneticTranscription(max=510)
+    morpheme_break = ValidMorphemeBreakTranscription(max=510)
     grammaticality = ValidGrammaticality(if_empty='')
-    morpheme_gloss = UnicodeString(max=255)
+    morpheme_gloss = UnicodeString(max=510)
     translations = ValidTranslations(not_empty=True)
     comments = UnicodeString()
     speaker_comments = UnicodeString()
