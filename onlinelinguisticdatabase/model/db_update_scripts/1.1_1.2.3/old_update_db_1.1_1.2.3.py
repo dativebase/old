@@ -39,6 +39,12 @@ ALTER TABLE form CHANGE COLUMN morpheme_gloss morpheme_gloss VARCHAR(510);
 ALTER TABLE form CHANGE COLUMN phonetic_transcription phonetic_transcription VARCHAR(510);
 ALTER TABLE form CHANGE COLUMN narrow_phonetic_transcription narrow_phonetic_transcription VARCHAR(510);
 ALTER TABLE form CHANGE COLUMN syntactic_category_string syntactic_category_string VARCHAR(510);
+ALTER TABLE formbackup CHANGE COLUMN transcription transcription VARCHAR(510);
+ALTER TABLE formbackup CHANGE COLUMN morpheme_break morpheme_break VARCHAR(510);
+ALTER TABLE formbackup CHANGE COLUMN morpheme_gloss morpheme_gloss VARCHAR(510);
+ALTER TABLE formbackup CHANGE COLUMN phonetic_transcription phonetic_transcription VARCHAR(510);
+ALTER TABLE formbackup CHANGE COLUMN narrow_phonetic_transcription narrow_phonetic_transcription VARCHAR(510);
+ALTER TABLE formbackup CHANGE COLUMN syntactic_category_string syntactic_category_string VARCHAR(510);
 '''.strip()
 
 def write_update_executable(mysql_update_script_name, here):
