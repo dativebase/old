@@ -946,9 +946,28 @@ def get_paginated_query_results(query, paginator):
     if 'count' not in paginator:
         paginator['count'] = query.count()
     start, end = get_start_and_end_from_paginator(paginator)
+    items = query.slice(start, end).all()
+    if paginator.get('minimal'):
+        items = minimal(items)
     return {
         'paginator': paginator,
-        'items': query.slice(start, end).all()
+        'items': items
+    }
+
+def minimal(models_array):
+    """Return a minimal representation of the models in `models_array`. Right
+    now, this means we just return the id, the datetime_entered and the
+    datetime_modified. Useful for graphing data and for checking for updates.
+
+    """
+
+    return [minimal_model(model) for model in models_array]
+
+def minimal_model(model):
+    return {
+        'id': model.id,
+        'datetime_entered': getattr(model, 'datetime_entered', None),
+        'datetime_modified': getattr(model, 'datetime_modified', None)
     }
 
 def add_pagination(query, paginator):
@@ -957,6 +976,8 @@ def add_pagination(query, paginator):
         paginator = PaginatorSchema.to_python(paginator)    # raises formencode.Invalid if paginator is invalid
         return get_paginated_query_results(query, paginator)
     else:
+        if paginator and paginator.get('minimal'):
+            return minimal(query.all())
         return query.all()
 
 def add_order_by(query, order_by_params, query_builder, primary_key='id'):

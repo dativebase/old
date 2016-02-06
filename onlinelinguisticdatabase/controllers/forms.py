@@ -116,9 +116,10 @@ class FormsController(BaseController):
         """
         try:
             query = h.eagerload_form(Session.query(Form))
-            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            get_params = dict(request.GET)
+            query = h.add_order_by(query, get_params, self.query_builder)
             query = h.filter_restricted_models('Form', query)
-            return h.add_pagination(query, dict(request.GET))
+            return h.add_pagination(query, get_params)
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -274,6 +275,8 @@ class FormsController(BaseController):
             unrestricted_users = h.get_unrestricted_users()
             user = session['user']
             if h.user_is_authorized_to_access_model(user, form, unrestricted_users):
+                if dict(request.GET).get('minimal'):
+                    return h.minimal_model(form)
                 return form
             else:
                 response.status_int = 403
