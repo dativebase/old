@@ -176,7 +176,9 @@ class PagesController(BaseController):
             try:
                 schema = PageSchema()
                 values = json.loads(unicode(request.body, request.charset))
-                data = schema.to_python(values)
+                state = h.get_state_object(values)
+                state.id = id
+                data = schema.to_python(values, state)
                 page = update_page(page, data)
                 # page will be False if there are no changes (cf. update_page).
                 if page:
