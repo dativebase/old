@@ -894,7 +894,8 @@ class PageSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
-    name = UnicodeString(max=255, not_empty=True)
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Page',
+        attribute_name='name')
     heading = UnicodeString(max=255)
     markup_language = OneOf(h.markup_languages, if_empty='reStructuredText')
     content = UnicodeString()

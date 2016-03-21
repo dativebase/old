@@ -27,7 +27,7 @@ class Page(Base):
 
     id = Column(Integer, Sequence('page_seq_id', optional=True),
             primary_key=True)
-    name = Column(Unicode(255))
+    name = Column(Unicode(255), unique=True)
     heading = Column(Unicode(255))
     markup_language = Column(Unicode(100))
     content = Column(UnicodeText)
