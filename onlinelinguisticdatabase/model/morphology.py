@@ -196,16 +196,19 @@ class Morphology(MorphologyFST, Base):
         return dictionary
 
     def write(self, unknown_category):
-        """Write the files of the morphology (script, compiler, lexicon, dictionary) to disk.
+        """Write the files of the morphology (script, compiler, lexicon,
+        dictionary) to disk.
 
-        :param unicode unknown_category: what the system uses to mark morphemes without categories.
-        :returns: None; side-effects: generates data structures, writes them to disk, specifies
-            values of the morphology object.
+        :param unicode unknown_category: what the system uses to mark morphemes
+            without categories.
+        :returns: None; side-effects: generates data structures, writes them to
+            disk, specifies values of the morphology object.
 
         .. note::
 
-            The foma script is not saved to the database as an attribute of the morphology
-            model because it is potentially huge, i.e., tens to hundreds of MB.
+            The foma script is not saved to the database as an attribute of the
+            morphology model because it is potentially huge, i.e., tens to
+            hundreds of MB.
 
         """
 
