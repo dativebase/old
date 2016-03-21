@@ -27,7 +27,7 @@ from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import LoginSchema, PasswordResetSchema
 import onlinelinguisticdatabase.lib.helpers as h
-from onlinelinguisticdatabase.model import User
+from onlinelinguisticdatabase.model import User, Page
 from onlinelinguisticdatabase.model.meta import Session
 
 log = logging.getLogger(__name__)
@@ -70,10 +70,17 @@ class LoginController(BaseController):
                 if user:
                     session['user'] = user
                     session.save()
-                    return {'authenticated': True, 'user': user}
+                    home_page = Session.query(Page).filter(
+                        Page.name==u'home').first()
+                    return {
+                        'authenticated': True,
+                        'user': user,
+                        'homepage': home_page
+                    }
                 else:
                     response.status_int = 401
-                    return {'error': u'The username and password provided are not valid.'}
+                    return {'error':
+                        u'The username and password provided are not valid.'}
             else:
                 response.status_int = 401
                 return {'error': u'The username and password provided are not valid.'}
