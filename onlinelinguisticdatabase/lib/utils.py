@@ -1488,6 +1488,15 @@ def rst2html(string):
     except:
         return string
 
+def rst2latex(string, **kwargs):
+    """Use docutils.core to return a string of restructuredtext as a full LaTeX
+    document.
+
+    """
+
+    return publish_parts(string, writer_name='latex')['whole']\
+        .replace('\\usepackage[utf8]{inputenc}', '')
+
 def md2html(string):
     try:
         return Markdown().convert(string)

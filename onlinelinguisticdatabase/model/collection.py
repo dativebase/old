@@ -120,3 +120,4 @@ class Collection(Base):
         result = self.get_dict()
         result['forms'] = self.get_forms_list(self.forms)
         return result
+

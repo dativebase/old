@@ -327,14 +327,25 @@ class OldcollectionsController(BaseController):
             Returns all of the forms of the collection, unlike the other
             collections actions.
 
+            If there is a truthy GET param with key 'latex' and if the markup
+            language is reStructuredText, then the collection's
+            contents_unpacked value will be returned as a LaTeX string in the
+            'latex' attribute.
+
         """
+
         collection = h.eagerload_collection(Session.query(Collection),
                                            eagerload_forms=True).get(id)
         if collection:
             unrestricted_users = h.get_unrestricted_users()
             user = session['user']
             if h.user_is_authorized_to_access_model(user, collection, unrestricted_users):
-                return collection.get_full_dict()
+                result = collection.get_full_dict()
+                # TODO: deal with markdown2latex ...
+                if request.GET.get('latex') and \
+                collection.markup_language == 'reStructuredText':
+                    result['latex'] = h.rst2latex(collection.contents_unpacked)
+                return result
             else:
                 response.status_int = 403
                 return h.unauthorized_msg
