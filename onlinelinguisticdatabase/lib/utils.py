@@ -1504,8 +1504,8 @@ def md2html(string):
         return string
 
 markup_language_to_func = {
-    'Markdown': md2html,
-    'reStructuredText': rst2html
+    'reStructuredText': rst2html,
+    'Markdown': md2html
 }
 
 markup_languages = markup_language_to_func.keys()
