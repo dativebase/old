@@ -824,6 +824,15 @@ class SQLAQueryBuilder(object):
             'name': {},
             'description': {},
             'datetime_modified': {'value_converter': '_get_datetime_value'}
+        },
+        'Keyboard': {
+            'id': {},
+            'name': {},
+            'description': {},
+            'datetime_modified': {'value_converter': '_get_datetime_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
+            'enterer': {'foreign_model': 'User', 'type': 'scalar'},
+            'modifier': {'foreign_model': 'User', 'type': 'scalar'}
         }
     }
 

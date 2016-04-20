@@ -946,6 +946,17 @@ class TagSchema(Schema):
     name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Tag', attribute_name='name')
     description = UnicodeString()
 
+class KeyboardSchema(Schema):
+    """KeyboardSchema is a Schema for validating the data submitted to
+    KeyboardsController (controllers/keyboards.py).
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Keyboard',
+        attribute_name='name')
+    description = UnicodeString()
+    keyboard = UnicodeString(not_empty=True)
+
 
 ################################################################################
 # User Validators

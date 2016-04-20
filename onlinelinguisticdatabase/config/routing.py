@@ -160,6 +160,7 @@ def make_map(config):
     map = search_connect(map, 'formbackups')
     map = search_connect(map, 'forms')
     map = search_connect(map, 'formsearches')
+    map = search_connect(map, 'keyboards')
     map = search_connect(map, 'languages')
     map = search_connect(map, 'morphemelanguagemodels')
     map = search_connect(map, 'morphologicalparsers')
@@ -193,6 +194,7 @@ def make_map(config):
     map.resource('form', 'forms')
     map.resource('formsearch', 'formsearches')
     map.resource('formbackup', 'formbackups')       # read-only
+    map.resource('keyboard', 'keyboards')
     map.resource('language', 'languages')           # read-only
     map.resource('morphemelanguagemodel', 'morphemelanguagemodels')
     map.resource('morphemelanguagemodelbackup', 'morphemelanguagemodelbackups')       # read-only

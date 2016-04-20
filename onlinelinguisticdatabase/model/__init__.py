@@ -26,6 +26,7 @@ from onlinelinguisticdatabase.model.file import File, FileTag
 from onlinelinguisticdatabase.model.form import Form, FormFile, FormTag, CollectionForm
 from onlinelinguisticdatabase.model.formbackup import FormBackup
 from onlinelinguisticdatabase.model.formsearch import FormSearch
+from onlinelinguisticdatabase.model.keyboard import Keyboard
 from onlinelinguisticdatabase.model.translation import Translation
 from onlinelinguisticdatabase.model.language import Language
 from onlinelinguisticdatabase.model.morphemelanguagemodel import MorphemeLanguageModel

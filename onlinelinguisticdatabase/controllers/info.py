@@ -63,10 +63,11 @@ class InfoController(BaseController):
         resources = {}
         for rname in ['ApplicationSettings', 'Collection', 'CollectionBackup',
             'Corpus', 'CorpusBackup', 'ElicitationMethod', 'File', 'Form',
-            'FormBackup', 'FormSearch', 'Language', 'MorphemeLanguageModel',
-            'MorphemeLanguageModelBackup', 'MorphologicalParser',
-            'MorphologicalParserBackup', 'Morphology', 'MorphologyBackup',
-            'Orthography', 'Page', 'Phonology', 'PhonologyBackup']:
+            'FormBackup', 'FormSearch', 'Keyboard', 'Language',
+            'MorphemeLanguageModel', 'MorphemeLanguageModelBackup',
+            'MorphologicalParser', 'MorphologicalParserBackup', 'Morphology',
+            'MorphologyBackup', 'Orthography', 'Page', 'Phonology',
+            'PhonologyBackup']:
             resources[rname] = []
             r_class = getattr(model, rname)
             for k in sorted(r_class.__dict__):

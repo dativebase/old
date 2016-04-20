@@ -44,8 +44,9 @@ onlinelinguisticdatabase/public/lib/
 onlinelinguisticdatabase/public/templates/
 onlinelinguisticdatabase/public/OLD-Model.txt
 
-# Ignore the GMail .ini file
+# Ignore the special-purpose .ini files
 gmail.ini
+keyboards.ini
 
 # Ignore _requests_tests.py since it is copied from tests/ when setup-app is run
 /_requests_tests.py
