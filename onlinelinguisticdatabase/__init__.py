@@ -15,3 +15,6 @@
 """All of the Online Linguistic Database code lives here.
 
 """
+
+__version__ = '1.2.5'
+

@@ -30,7 +30,10 @@ import os
 try:
     import Image
 except ImportError:
-    pass
+    try:
+        from PIL import Image
+    except ImportError:
+        pass
 
 import logging
 log = logging.getLogger(__name__)
