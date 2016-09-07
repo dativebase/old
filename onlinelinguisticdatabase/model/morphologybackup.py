@@ -60,6 +60,7 @@ class MorphologyBackup(Base):
     extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
     rules = Column(UnicodeText)
     rich_upper = Column(Boolean, default=False)
+    rich_lower = Column(Boolean, default=False)
     include_unknowns = Column(Boolean, default=False)
 
     def vivify(self, morphology_dict):
