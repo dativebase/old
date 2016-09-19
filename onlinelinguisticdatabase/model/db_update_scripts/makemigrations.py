@@ -40,6 +40,21 @@ import stat
 import subprocess
 import sys
 
+if "check_output" not in dir( subprocess ): # duck punch it in!
+    def f(*popenargs, **kwargs):
+        if 'stdout' in kwargs:
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise subprocess.CalledProcessError(retcode, cmd)
+        return output
+    subprocess.check_output = f
+
 MODEL_SCHEMA_FILE_NAME = 'model-schema.sql'
 DATABASE_SCHEMA_FILE_NAME = 'database-schema.sql'
 TMP_DIR_NAME = '.tmp'
@@ -131,7 +146,7 @@ class MigrationMaker:
         SQL = []
         if ((not os.path.isfile(self.database_schema_path)) or
                 (not os.path.isfile(self.model_schema_path))):
-            sys.exit('Either {} or {} does not exist'.format(
+            sys.exit('Either {0} or {1} does not exist'.format(
                 self.database_schema_path, self.model_schema_path))
         src_schema = self.get_schema_from_mysql_dumpfile(
             self.database_schema_path)
@@ -181,11 +196,20 @@ class MigrationMaker:
                                           src_table_schema if
                                           x.startswith('`')])
                     if colname in src_col_names:
-                        print('Modify:\n    {}\nto\n    {}\n'.format(
-                            coldef, src_col_names[colname]))
-                        cols_to_modify.append(coldef)
+                        # If a `name` col has been changed to have UTF8 charset
+                        # and collation, that is an intentional fix of a known
+                        # issue. So leave it alone.
+                        if (coldef == '`name` varchar(255) DEFAULT NULL' and
+                            src_col_names[colname] == '`name` varchar(255)'
+                                ' CHARACTER SET utf8 COLLATE utf8_bin DEFAULT'
+                                ' NULL'):
+                            pass
+                        else:
+                            print('Modify:\n    {0}\nto\n    {1}\n'.format(
+                                  coldef, src_col_names[colname]))
+                            cols_to_modify.append(coldef)
                     else:
-                        print('Add:\n    {}\n'.format(coldef))
+                        print('Add:\n    {0}\n'.format(coldef))
                         cols_to_add.append(coldef)
         for coldef in src_table_schema[1:-1]:
             if coldef not in dst_table_schema[1:-1]:
@@ -194,7 +218,7 @@ class MigrationMaker:
                     dst_col_names = [x.split()[0][1:-1] for x in
                                      dst_table_schema if x.startswith('`')]
                     if colname not in dst_col_names:
-                        print('Delete:\n    {}\n'.format(coldef))
+                        print('Delete:\n    {0}\n'.format(coldef))
                         cols_to_remove.append(coldef)
         if cols_to_add:
             diff['cols_to_add'] = cols_to_add
@@ -234,11 +258,11 @@ class MigrationMaker:
         """Create a dummy MySQL database for the temporary OLD we create in
         order to get the schema.
         """
-        create_db_stmt = ('DROP DATABASE IF EXISTS {}; CREATE DATABASE {}'
+        create_db_stmt = ('DROP DATABASE IF EXISTS {0}; CREATE DATABASE {1}'
                           ' DEFAULT' ' CHARACTER SET utf8;'.format(
                               DUMMY_OLD_DB_NAME, DUMMY_OLD_DB_NAME))
         command = ['mysql', '-u', self.mysql_root_username,
-                   '-p{}'.format(self.mysql_root_password), '-e',
+                   '-p{0}'.format(self.mysql_root_password), '-e',
                    create_db_stmt]
         subprocess.check_output(command)
 
@@ -268,7 +292,7 @@ class MigrationMaker:
                 if l.startswith('sqlalchemy.url') and 'sqlite' in l:
                     fixed_config.append('# ' + l)
                     fixed_config.append(
-                        'sqlalchemy.url = mysql://{}:{}@localhost:3306/{}\n'
+                        'sqlalchemy.url = mysql://{0}:{1}@localhost:3306/{2}\n'
                         .format(self.mysql_root_username,
                                 self.mysql_root_password, DUMMY_OLD_DB_NAME))
                     fixed_config.append('sqlalchemy.pool_recycle = 3600\n')
@@ -287,7 +311,7 @@ class MigrationMaker:
         command = ['mysqldump', '--skip-comments', '--skip-extended-insert',
                    '--no-data', '--skip-lock-tables', '-u',
                    self.mysql_root_username,
-                   '-p{}'.format(self.mysql_root_password), DUMMY_OLD_DB_NAME]
+                   '-p{0}'.format(self.mysql_root_password), DUMMY_OLD_DB_NAME]
         with open(dump_file_path, "wb") as f:
             process = subprocess.Popen(command, stdout=f)
         process.communicate()
@@ -300,7 +324,7 @@ class MigrationMaker:
         command = ['mysqldump', '--skip-comments', '--skip-extended-insert',
                    '--no-data', '--skip-lock-tables', '-u',
                    self.mysql_root_username,
-                   '-p{}'.format(self.mysql_root_password), self.db_name]
+                   '-p{0}'.format(self.mysql_root_password), self.db_name]
         with open(dump_file_path, "wb") as f:
             process = subprocess.Popen(command, stdout=f)
         process.communicate()
@@ -349,7 +373,7 @@ class MigrationMaker:
     def get_backup_path(self, backup_dir_path):
         backup_filename = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
         return os.path.join(backup_dir_path,
-                            '{}_{}.sql'.format(
+                            '{0}_{1}.sql'.format(
                                 self.db_name,
                                 backup_filename))
 
@@ -368,7 +392,7 @@ class MigrationMaker:
         # the database
         with open(migration_script_path, 'w') as f:
             f.write('#!/usr/bin/env bash\n'
-                    'mysql -u {} -p\'{}\' {} < {}'.format(
+                    'mysql -u {0} -p\'{1}\' {2} < {3}'.format(
                         self.mysql_root_username,
                         self.mysql_root_password,
                         self.db_name,
@@ -386,10 +410,10 @@ class MigrationMaker:
         self.destroy_tmp_dir()
 
     def destroy_dummy_database(self):
-        drop_db_stmt = ('DROP DATABASE IF EXISTS {};'.format(
+        drop_db_stmt = ('DROP DATABASE IF EXISTS {0};'.format(
             DUMMY_OLD_DB_NAME))
         command = ['mysql', '-u', self.mysql_root_username,
-                   '-p{}'.format(self.mysql_root_password), '-e', drop_db_stmt]
+                   '-p{0}'.format(self.mysql_root_password), '-e', drop_db_stmt]
         subprocess.check_output(command)
 
     def get_db_from_config(self):
@@ -397,7 +421,7 @@ class MigrationMaker:
         file at ``self.config_path`` and return them as a 3-tuple.
         """
         if not os.path.isfile(self.config_path):
-            sys.exit('There is no config file at {}.'.format(self.config_path))
+            sys.exit('There is no config file at {0}.'.format(self.config_path))
         with open(self.config_path) as f:
             for l in f:
                 if l.startswith('sqlalchemy.url'):
@@ -405,6 +429,8 @@ class MigrationMaker:
                     db_url = db_url.replace('mysql://', '')
                     username, password = db_url.split('@')[0].split(':')
                     db_name = db_url.split('/')[-1]
+                    if '?' in db_name:
+                        db_name = db_name.split('?')[0]
                     return db_name, username, password
         return None, None, None
 
@@ -415,7 +441,7 @@ class MigrationMaker:
 
     def print_sql(self, sql):
         line = '=' * 80
-        print('\n{}\nMigration SQL\n{}\n\n{}\n\n{}\n'.format(
+        print('\n{0}\nMigration SQL\n{1}\n\n{2}\n\n{3}\n'.format(
             line, line, sql, line))
 
     @cleanup_on_exception
@@ -425,9 +451,9 @@ class MigrationMaker:
         self.database_schema_path = self.dump_database_schema()
         migration_sql = self.get_migration_sql()
         if not migration_sql.strip():
-            sys.exit('There are no migrations to make. The database {} appears'
+            sys.exit('There are no migrations to make. The database {0} appears'
                      ' to be up-to-date with the OLD v.'
-                     ' {}.'.format(self.db_name, old.__version__))
+                     ' {1}.'.format(self.db_name, old.__version__))
         self.print_sql(migration_sql)
         if commit:
             self.commit_migrations(migration_sql)
