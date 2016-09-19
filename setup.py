@@ -13,7 +13,7 @@ except ImportError:
 # lines then modify the info.py controller so that it stores the appropriate
 # version.
 import sys, os, re
-version = '1.2.5'
+version = '2.0.0'
 p = re.compile('(^\s*[\'"]version[\'"]:\s*[\'"])([0-9\.]+)([\'"].*$)')
 wd = os.path.dirname(os.path.realpath(__file__))
 infopth = os.path.join(wd, 'onlinelinguisticdatabase', 'controllers', 'info.py')
@@ -27,6 +27,17 @@ with open(infopth) as f:
         else:
             lines.append(line)
 with open(infopth, 'w') as f:
+    f.write(''.join(lines))
+# Fix the version number in the onlinelinguisticdatabase/__init__.py file too:
+pkgfile = os.path.join(wd, 'onlinelinguisticdatabase', '__init__.py')
+lines = []
+with open(pkgfile) as f:
+    for line in f:
+        if line.startswith('__version__'):
+            lines.append('__version__ = \'%s\'\n' % version)
+        else:
+            lines.append(line)
+with open(pkgfile, 'w') as f:
     f.write(''.join(lines))
 
 setup(

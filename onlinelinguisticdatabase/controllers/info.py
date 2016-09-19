@@ -1,4 +1,4 @@
-# Copyright 2015 Joel Dunham
+# Copyright 2016 Joel Dunham
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ class InfoController(BaseController):
                     myroutes.append((path, method))
         meta = {
             'app': 'Online Lingusitic Database',
-            'version': '1.2.5',
+            'version': '2.0.0',
             'paths': ['%s %s' % (r[1], r[0]) for r in sorted(myroutes)],
             'resources': resources
         }

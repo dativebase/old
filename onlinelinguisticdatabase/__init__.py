@@ -1,4 +1,4 @@
-# Copyright 2013 Joel Dunham
+# Copyright 2016 Joel Dunham
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,5 +16,5 @@
 
 """
 
-__version__ = '1.2.5'
+__version__ = '2.0.0'
 
