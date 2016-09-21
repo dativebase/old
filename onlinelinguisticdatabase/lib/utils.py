@@ -980,6 +980,18 @@ def add_pagination(query, paginator):
             return minimal(query.all())
         return query.all()
 
+def get_last_modified(result):
+    """Return a ``datetime`` instance representing the most recent modification
+    of the result set in ``result``. Useful for cacheing, i.e., via
+    Last-Modified header.
+    """
+    if 'items' in result:
+        result = result['items']
+    if result:
+        return sorted(r.datetime_modified for r in result)[-1]\
+            .strftime('%a, %d %b %Y %H:%M:%S GMT')
+    return None
+
 def add_order_by(query, order_by_params, query_builder, primary_key='id'):
     """Add an ORDER BY clause to the query using the get_SQLA_order_by method of
     the supplied query_builder (if possible) or using a default ORDER BY <primary_key> ASC.

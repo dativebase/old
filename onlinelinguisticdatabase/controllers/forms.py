@@ -119,7 +119,20 @@ class FormsController(BaseController):
             get_params = dict(request.GET)
             query = h.add_order_by(query, get_params, self.query_builder)
             query = h.filter_restricted_models('Form', query)
-            return h.add_pagination(query, get_params)
+            result = h.add_pagination(query, get_params)
+            # HTTP Cache Headers. Browsers can cache GET /forms requests if
+            # they haven't changed on the server.
+            last_modified = h.get_last_modified(result)
+            if last_modified:
+                response.headers['Last-Modified'] = last_modified
+                response.headers['Cache-Control'] = 'private, max-age=31536000'
+            if_modified_since = request.headers.get('If-Modified-Since')
+            if (last_modified and if_modified_since and
+                    last_modified == if_modified_since):
+                # In this case, the browser will use its cached response.
+                response.status_int = 304
+                return ''
+            return result
         except Invalid, e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}

@@ -66,10 +66,25 @@ class HTML2JSONContentType(object):
             new_headers['Access-Control-Allow-Credentials'] = 'true'
 
             # What was here before: new_headers['Access-Control-Allow-Methods'] = 'OPTIONS, GET, POST'
-            new_headers['Access-Control-Allow-Methods'] = 'GET, HEAD, POST, PUT, DELETE, TRACE, CONNECT, COPY, OPTIONS, SEARCH'
+            new_headers['Access-Control-Allow-Methods'] = (
+                'GET, '
+                'HEAD, '
+                'POST, '
+                'PUT, '
+                'DELETE, '
+                'TRACE, '
+                'CONNECT, '
+                'COPY, '
+                'OPTIONS, '
+                'SEARCH'
+            )
 
             # What was here before: new_headers['Access-Control-Allow-Headers'] = 'Content-Type, content-type, Depth, User-Agent, X-File-Size, X-Requested-With, If-Modified-Since, X-File-Name, Cache-Control'
-            new_headers['Access-Control-Allow-Headers'] = 'Content-Type, content-type'
+            new_headers['Access-Control-Allow-Headers'] = (
+                'Content-Type, '
+                'content-type, '
+                'If-Modified-Since'
+            )
 
             # This causes the preflight result to be cached for specified milliseconds.
             # From LingSync's CouchDB config
@@ -77,10 +92,10 @@ class HTML2JSONContentType(object):
             #new_headers['Access-Control-Max-Age'] = '12345'
 
             # Access-Control-Expose-Headers (optional)
-            # The XMLHttpRequest 2 object has a getResponseHeader() method that returns the
-            # value of a particular response header. During a CORS request, the
-            # getResponseHeader() method can only access simple response headers. Simple
-            # response headers are defined as follows:
+            # The XMLHttpRequest 2 object has a getResponseHeader() method that
+            # returns the value of a particular response header. During a CORS
+            # request, the getResponseHeader() method can only access simple
+            # response headers. Simple response headers are defined as follows:
             #
             #    Cache-Control
             #    Content-Language
@@ -89,11 +104,13 @@ class HTML2JSONContentType(object):
             #    Last-Modified
             #    Pragma
             #
-            # If you want clients to be able to access other headers, you have to use
-            # the Access-Control-Expose-Headers header. The value of this header is a
-            # comma-delimited list of response headers you want to expose to the client.
+            # If you want clients to be able to access other headers, you have
+            # to use the Access-Control-Expose-Headers header. The value of
+            # this header is a comma-delimited list of response headers you
+            # want to expose to the client.
             # NOTE: Commented this out for debuggin ...
-            new_headers['Access-Control-Expose-Headers'] = 'Access-Control-Allow-Origin, Access-Control-Allow-Credentials'
+            new_headers['Access-Control-Expose-Headers'] = \
+                'Access-Control-Allow-Origin, Access-Control-Allow-Credentials'
 
             headers = new_headers.items()
 
