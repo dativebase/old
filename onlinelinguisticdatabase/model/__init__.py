@@ -41,6 +41,7 @@ from onlinelinguisticdatabase.model.phonology import Phonology
 from onlinelinguisticdatabase.model.phonologybackup import PhonologyBackup
 from onlinelinguisticdatabase.model.source import Source
 from onlinelinguisticdatabase.model.speaker import Speaker
+from onlinelinguisticdatabase.model.syncstate import SyncState
 from onlinelinguisticdatabase.model.syntacticcategory import SyntacticCategory
 from onlinelinguisticdatabase.model.tag import Tag
 from onlinelinguisticdatabase.model.user import User, UserForm
@@ -53,8 +54,8 @@ __all__ = ['Session', 'Base', 'ApplicationSettings', 'ApplicationSettingsUser',
     'MorphemeLanguageModel', 'MorphemeLanguageModelBackup',
     'MorphologicalParser', 'MorphologicalParserBackup', 'Morphology',
     'MorphologyBackup', 'Orthography', 'Page', 'Parse', 'Phonology',
-    'PhonologyBackup', 'Source', 'Speaker', 'SyntacticCategory', 'Tag', 'User',
-    'UserForm']
+    'PhonologyBackup', 'Source', 'Speaker', 'SyncState', 'SyntacticCategory',
+    'Tag', 'User', 'UserForm']
 
 
 def init_model(engine):

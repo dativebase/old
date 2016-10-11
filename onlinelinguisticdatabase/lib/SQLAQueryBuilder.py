@@ -126,8 +126,6 @@ from onlinelinguisticdatabase.lib.utils import normalize
 
 log = logging.getLogger(__name__)
 
-
-
 try:
     import simplejson as json
 except ImportError:
@@ -823,6 +821,17 @@ class SQLAQueryBuilder(object):
             'id': {},
             'name': {},
             'description': {},
+            'datetime_modified': {'value_converter': '_get_datetime_value'}
+        },
+        'SyncState': {
+            'id': {},
+            'UUID': {},
+            'master_url': {},
+            'state': {},
+            'interval': {},
+            'sync_details': {},
+            'last_sync': {'value_converter': '_get_datetime_value'},
+            'datetime_entered': {'value_converter': '_get_datetime_value'},
             'datetime_modified': {'value_converter': '_get_datetime_value'}
         },
         'Keyboard': {

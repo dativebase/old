@@ -15,13 +15,15 @@
 from formencode.variabledecode import NestedVariables
 from formencode.schema import Schema
 from formencode.validators import Invalid, FancyValidator, Int, DateConverter, \
-    UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL, Number
+    UnicodeString, OneOf, Regex, Email, StringBoolean, String, URL, Number, \
+    IPAddress
 from formencode.foreach import ForEach
+from formencode.compound import Any
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import onlinelinguisticdatabase.lib.helpers as h
 from sqlalchemy.sql import and_
 import onlinelinguisticdatabase.lib.bibtex as bibtex
-from pylons import app_globals
+from pylons import app_globals, url
 import onlinelinguisticdatabase.model as model
 from onlinelinguisticdatabase.model.meta import Session
 import logging
@@ -945,6 +947,47 @@ class TagSchema(Schema):
     chained_validators = [ValidTagName()]
     name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Tag', attribute_name='name')
     description = UnicodeString()
+
+class ValidMasterURL(FancyValidator):
+    messages = {
+        'reflexive': u'Can\'t sync this OLD to itself!'
+    }
+    def validate_python(self, value, state):
+        our_url = url('/', qualified=True)
+        if value in [our_url, our_url.rstrip('/')]:
+            raise Invalid(self.message('reflexive', state),
+                'master_url', state)
+
+class ValidSyncStateState(FancyValidator):
+    """Only one sync state can be in the "syncing" state at a time. That is,
+    we want to allow this OLD to sync with only one other OLD at a time.
+    """
+    messages = {
+        'too_many': (u'Only one sync state can be active at a time; set the'
+                     u' others to idle.'),
+        'non_choice': u'Please choose from \'syncing\' or \'idle\'.'
+    }
+    def validate_python(self, value, state):
+        if value not in ('syncing', 'idle'):
+            raise Invalid(self.message('non_choice', state),
+                'state', state)
+        syncing = Session.query(model.SyncState).filter(
+            model.SyncState.state=='syncing').all()
+        if len(syncing) > 0:
+            raise Invalid(self.message('too_many', state),
+                'state', state)
+
+class SyncStateSchema(Schema):
+    """SyncStateSchema is a Schema for validating the data submitted to
+    SyncStatesController (controllers/syncstates.py). You can have multiple
+    sync states, but you can't sync to yourself and no more than one can be in
+    "syncing" mode at a time.
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
+    master_url = ValidMasterURL()
+    state = ValidSyncStateState()
+    interval = Number(not_empty=True, min=2)
 
 class KeyboardSchema(Schema):
     """KeyboardSchema is a Schema for validating the data submitted to

@@ -16,12 +16,13 @@
 
 """
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 
 class Globals(object):
-    """Globals acts as a container for objects available throughout the life of the application.
-
+    """Globals acts as a container for objects available throughout the life of
+    the application.
     """
 
     def __init__(self, config):
@@ -31,3 +32,5 @@ class Globals(object):
 
         """
         self.cache = CacheManager(**parse_cache_config_options(config))
+        self.scheduler = BackgroundScheduler()
+        self.scheduler.start()

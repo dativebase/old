@@ -26,7 +26,7 @@ from routes import Mapper
 
 def search_connect(map, name, controller=None):
     """Create a SEARCH mapping for the input ``name``/``controller``.
-    
+
     E.g., ``map = search_connect(map, 'forms')`` causes ``SEARCH /forms`` to
     route to :func:`FormsController.search`, etc.
 
@@ -208,6 +208,7 @@ def make_map(config):
     map.resource('phonologybackup', 'phonologybackups')       # read-only
     map.resource('source', 'sources')
     map.resource('speaker', 'speakers')
+    map.resource('syncstate', 'syncstates')
     map.resource('syntacticcategory', 'syntacticcategories')
     map.resource('tag', 'tags')
     map.resource('user', 'users')
