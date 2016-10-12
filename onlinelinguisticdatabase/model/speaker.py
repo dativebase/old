@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 class Speaker(Base):
 
@@ -26,7 +26,7 @@ class Speaker(Base):
         return '<Speaker (%s)>' % self.id
 
     id = Column(Integer, Sequence('speaker_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     first_name = Column(Unicode(255))
     last_name = Column(Unicode(255))
     dialect = Column(Unicode(255))

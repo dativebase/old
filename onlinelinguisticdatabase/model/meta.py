@@ -17,6 +17,7 @@ import datetime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from onlinelinguisticdatabase.model.model import Model
+from uuid import uuid4
 
 __all__ = ['Base', 'Session', 'now']
 
@@ -34,3 +35,6 @@ Base = declarative_base(cls=Model)
 
 def now():
     return datetime.datetime.utcnow()
+
+def uuid_unicode():
+    return unicode(uuid4())

@@ -17,7 +17,7 @@
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Float
 from sqlalchemy.orm import relation
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 import logging
 log = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class File(Base):
         return "<File (%s)>" % self.id
 
     id = Column(Integer, Sequence('file_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     filename = Column(Unicode(255), unique=True)    # filename is the name of the file as written to disk
     name = Column(Unicode(255))                     # just a name; useful for subinterval-referencing files; need not be unique
     MIME_type = Column(Unicode(255))

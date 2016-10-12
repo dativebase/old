@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 class Orthography(Base):
 
@@ -26,7 +26,7 @@ class Orthography(Base):
         return '<Orthography (%s)>' % self.id
 
     id = Column(Integer, Sequence('orthography_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     name = Column(Unicode(255))
     orthography = Column(UnicodeText)
     lowercase = Column(Boolean, default=False)

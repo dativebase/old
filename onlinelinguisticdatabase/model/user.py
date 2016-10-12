@@ -17,7 +17,7 @@
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 class UserForm(Base):
 
@@ -38,7 +38,7 @@ class User(Base):
 
     id = Column(Integer, Sequence('user_seq_id', optional=True),
             primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     username = Column(Unicode(255), unique=True)
     password = Column(Unicode(255))
     salt = Column(Unicode(255))

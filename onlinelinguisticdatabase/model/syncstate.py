@@ -17,9 +17,10 @@
 import logging
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from onlinelinguisticdatabase.model.meta import Base, now, Session
+from onlinelinguisticdatabase.model.meta import Base, now, Session, uuid_unicode
 import onlinelinguisticdatabase.model
 from pylons import app_globals
+import pprint
 import time
 
 
@@ -39,7 +40,7 @@ class SyncState(Base):
 
     id = Column(
         Integer, Sequence('tag_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
 
     # The URL of the server-side OLD that we are syncing with.
     master_url = Column(Unicode(1000))
@@ -80,8 +81,6 @@ class SyncState(Base):
 
         1. Preflight: see if we can sync with the version of the OLD at
            master_url. Abort if not (how?)
-        1'. TODO: modify all models so that they all have datetime_modified and
-            UUID attributes.
         2. Get the signatures (ids and datemods) of our local resources, using
            ``get_models`` and ``get_resource_signature``.
         3. Get the signatures of the remote/master resources.
@@ -90,12 +89,16 @@ class SyncState(Base):
         """
         log.info('SyncState().sync() called against master {} on sync state'
                  ' model {}'.format(self.master_url, self.UUID))
-        models = self.get_models()
-        log.info('MODELS')
-        log.info(', '.join(sorted(models.keys())))
-        log.info('FORMS SIGNATURE')
-        forms_signature = self.get_resource_signature('Form')
-        log.info(forms_signature)
+        local_resources_state = self.get_local_resources_state()
+        log.info(pprint.pformat(local_resources_state))
+
+    def get_local_resources_state(self):
+        local_resources_state = {}
+        for model_name in self.resource_model_names:
+            if model_name != 'Language':
+                local_resources_state[model_name] = self.get_resource_signature(
+                    model_name)
+        return local_resources_state
 
     def get_resource_signature(self, model_name):
         """Return the signature for the resource corresponding to model
@@ -105,69 +108,12 @@ class SyncState(Base):
         """
         model = getattr(onlinelinguisticdatabase.model, model_name)
         return [(a, b, c.isoformat()) for a, b, c in
-                Session.query(model)
-                .with_entities(model.id, model.UUID, model.datetime_modified).all()]
+                Session.query(model).with_entities(
+                    model.id,
+                    model.UUID,
+                    model.datetime_modified).all()]
 
-
-    def get_models(self):
-        """This should return the names of all of our resource models, i.e.,
-        ApplicationSettings
-        ApplicationSettingsUser
-        Base
-        Collection
-        CollectionBackup
-        CollectionFile
-        CollectionForm
-        CollectionTag
-        Corpus
-        CorpusBackup
-        CorpusFile
-        CorpusForm
-        CorpusTag
-        ElicitationMethod
-        File
-        FileTag
-        Form
-        FormBackup
-        FormFile
-        FormSearch
-        FormTag
-        Keyboard
-        Language
-        MorphemeLanguageModel
-        MorphemeLanguageModelBackup
-        MorphologicalParser
-        MorphologicalParserBackup
-        Morphology
-        MorphologyBackup
-        Orthography
-        Page
-        Parse
-        Phonology
-        PhonologyBackup
-        Source
-        Speaker
-        SyncState
-        SyntacticCategory
-        Tag
-        Translation
-        User
-        UserForm
-        """
-
-        models = {}
-        old_model = onlinelinguisticdatabase.model.model.Model
-        for attr in dir(onlinelinguisticdatabase.model):
-            thing = getattr(onlinelinguisticdatabase.model, attr)
-            try:
-                if (issubclass(thing, old_model) and thing is not
-                        onlinelinguisticdatabase.model.Base):
-                    models[attr] = []
-            except TypeError:
-                pass
-        return models
-
-    def start_sync(self):
+    def start_sync(self, resource_model_names):
         """Initiate a scheduled sync between this OLD and the OLD at
         ``self.master_url`` such that the sync is performed every
         ``self.interval`` seconds.
@@ -175,6 +121,7 @@ class SyncState(Base):
         log.info('APScheduler.add_job called against master {} on sync state'
                  ' model {} and interval {}'.format(self.master_url, self.UUID,
                  self.interval))
+        self.resource_model_names = resource_model_names
         app_globals.scheduler.add_job(
             self.sync,
             'interval',

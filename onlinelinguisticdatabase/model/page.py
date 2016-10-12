@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 class Page(Base):
 
@@ -27,7 +27,7 @@ class Page(Base):
 
     id = Column(Integer, Sequence('page_seq_id', optional=True),
             primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     name = Column(Unicode(255), unique=True)
     heading = Column(Unicode(255))
     markup_language = Column(Unicode(100))

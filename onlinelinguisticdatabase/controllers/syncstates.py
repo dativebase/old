@@ -23,7 +23,7 @@ import logging
 import datetime
 import simplejson as json
 from uuid import uuid4
-from pylons import request, response, config, url
+from pylons import request, response, config, url, app_globals
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 from onlinelinguisticdatabase.lib.schemata import SyncStateSchema
@@ -250,7 +250,7 @@ def create_new_sync_state(data):
 
     # Begin syncing if state is set thus.
     if sync_state.state == 'syncing':
-        sync_state.start_sync()
+        sync_state.start_sync(app_globals.resource_model_names)
 
     # The OLD sync logic determines the values of these attributes, not the
     # client.
@@ -282,8 +282,7 @@ def update_sync_state(sync_state, data):
     if original_state == 'syncing' and sync_state.state != 'syncing':
         sync_state.stop_sync()
     if original_state != 'syncing' and sync_state.state == 'syncing':
-        sync_state.start_sync()
-
+        sync_state.start_sync(app_globals.resource_model_names)
 
     if changed:
         sync_state.datetime_modified = datetime.datetime.utcnow()

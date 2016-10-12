@@ -20,7 +20,7 @@ import logging
 import datetime
 import re
 import simplejson as json
-from pylons import request, response, config
+from pylons import request, response, config, app_globals
 from formencode.validators import Invalid
 from onlinelinguisticdatabase.lib.base import BaseController
 import onlinelinguisticdatabase.lib.helpers as h
@@ -61,13 +61,7 @@ class InfoController(BaseController):
         # Get OLD resources as a dict from resource names to lists of resource
         # attributes.
         resources = {}
-        for rname in ['ApplicationSettings', 'Collection', 'CollectionBackup',
-            'Corpus', 'CorpusBackup', 'ElicitationMethod', 'File', 'Form',
-            'FormBackup', 'FormSearch', 'Keyboard', 'Language',
-            'MorphemeLanguageModel', 'MorphemeLanguageModelBackup',
-            'MorphologicalParser', 'MorphologicalParserBackup', 'Morphology',
-            'MorphologyBackup', 'Orthography', 'Page', 'Phonology',
-            'PhonologyBackup']:
+        for rname in app_globals.resource_model_names:
             resources[rname] = []
             r_class = getattr(model, rname)
             for k in sorted(r_class.__dict__):

@@ -34,3 +34,37 @@ class Globals(object):
         self.cache = CacheManager(**parse_cache_config_options(config))
         self.scheduler = BackgroundScheduler()
         self.scheduler.start()
+
+        # All the names of the resources defined via ``map.resource`` in
+        # config/routing.py. Unfortunately, it appears that we cannot generate
+        # these at runtime.
+        self.resource_model_names = (
+            'ApplicationSettings',
+            'Collection',
+            'CollectionBackup',
+            'Corpus',
+            'CorpusBackup',
+            'ElicitationMethod',
+            'File',
+            'Form',
+            'FormBackup',
+            'FormSearch',
+            'Keyboard',
+            'Language',
+            'MorphemeLanguageModel',
+            'MorphemeLanguageModelBackup',
+            'MorphologicalParser',
+            'MorphologicalParserBackup',
+            'Morphology',
+            'MorphologyBackup',
+            'Orthography',
+            'Page',
+            'Phonology',
+            'PhonologyBackup',
+            'Source',
+            'Speaker',
+            'SyncState',
+            'SyntacticCategory',
+            'Tag',
+            'User',
+        )

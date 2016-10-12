@@ -18,7 +18,7 @@ characters."""
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 import simplejson as json
 
 
@@ -30,7 +30,7 @@ class Keyboard(Base):
         return "<Keyboard (%s)>" % self.id
 
     id = Column(Integer, Sequence('keyboard_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     name = Column(Unicode(255), unique=True)
     description = Column(UnicodeText)
     keyboard = Column(UnicodeText, default=u'{}')

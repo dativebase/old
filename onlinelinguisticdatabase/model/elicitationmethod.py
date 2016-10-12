@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 class ElicitationMethod(Base):
 
@@ -26,7 +26,7 @@ class ElicitationMethod(Base):
         return '<ElicitationMethod (%s)>' % self.id
 
     id = Column(Integer, Sequence('elicitationmethod_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     name = Column(Unicode(255))
     description = Column(UnicodeText)
     datetime_modified = Column(DateTime, default=now)

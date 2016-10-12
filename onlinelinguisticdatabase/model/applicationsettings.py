@@ -17,7 +17,7 @@
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 import logging
 
 log = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class ApplicationSettings(Base):
 
     id = Column(Integer, Sequence('applicationsettings_seq_id', optional=True),
                 primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     object_language_name = Column(Unicode(255))
     object_language_id = Column(Unicode(3))
     metalanguage_name = Column(Unicode(255))

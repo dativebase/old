@@ -17,7 +17,7 @@
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
-from onlinelinguisticdatabase.model.meta import Base, now
+from onlinelinguisticdatabase.model.meta import Base, now, uuid_unicode
 
 import logging
 log = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Source(Base):
         return '<Source (%s)>' % self.id
 
     id = Column(Integer, Sequence('source_seq_id', optional=True), primary_key=True)
-    UUID = Column(Unicode(36))
+    UUID = Column(Unicode(36), default=uuid_unicode)
     file_id = Column(Integer, ForeignKey('file.id', ondelete='SET NULL'))
     file = relation('File')
     crossref_source_id = Column(Integer, ForeignKey('source.id', ondelete='SET NULL'))
