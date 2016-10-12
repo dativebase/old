@@ -67,7 +67,8 @@ class SyncState(Base):
             'UUID': self.UUID,
             'master_url': self.master_url,
             'state': self.state,
-            'sync_details': self.sync_details,
+            'interval': self.interval,
+            'sync_details': self.sync_details,  # TODO: json.loads
             'last_sync': self.last_sync,
             'datetime_modified': self.datetime_modified,
             'datetime_entered': self.datetime_entered
