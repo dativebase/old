@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Orthography
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -252,6 +253,7 @@ def create_new_orthography(data):
 
     """
     orthography = Orthography()
+    orthography.UUID = unicode(uuid4())
     orthography.name = h.normalize(data['name'])
     orthography.orthography = h.normalize(data['orthography'])
     orthography.lowercase = data['lowercase']

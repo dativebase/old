@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import User
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -307,6 +308,7 @@ def create_new_user(data):
 
     """
     user = User()
+    user.UUID = unicode(uuid4())
     user.salt = h.generate_salt()
     user.password = unicode(h.encrypt_password(data['password'], str(user.salt)))
     user.username = h.normalize(data['username'])

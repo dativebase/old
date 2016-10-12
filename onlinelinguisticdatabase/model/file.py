@@ -50,6 +50,7 @@ class File(Base):
         return "<File (%s)>" % self.id
 
     id = Column(Integer, Sequence('file_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     filename = Column(Unicode(255), unique=True)    # filename is the name of the file as written to disk
     name = Column(Unicode(255))                     # just a name; useful for subinterval-referencing files; need not be unique
     MIME_type = Column(Unicode(255))
@@ -86,6 +87,7 @@ class File(Base):
         """
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'date_elicited': self.date_elicited,
             'datetime_entered': self.datetime_entered,
             'datetime_modified': self.datetime_modified,

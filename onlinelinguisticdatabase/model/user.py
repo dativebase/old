@@ -38,6 +38,7 @@ class User(Base):
 
     id = Column(Integer, Sequence('user_seq_id', optional=True),
             primary_key=True)
+    UUID = Column(Unicode(36))
     username = Column(Unicode(255), unique=True)
     password = Column(Unicode(255))
     salt = Column(Unicode(255))
@@ -64,6 +65,7 @@ class User(Base):
     def get_dict(self):
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'email': self.email,

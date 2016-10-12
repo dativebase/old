@@ -471,6 +471,7 @@ class SQLAQueryBuilder(object):
         },
         'ElicitationMethod': {
             'id': {},
+            'UUID': {},
             'name': {},
             'description': {},
             'datetime_modified': {'value_converter': '_get_datetime_value'},
@@ -546,6 +547,7 @@ class SQLAQueryBuilder(object):
         },
         'FormSearch': {
             'id': {},
+            'UUID': {},
             'name': {},
             'search': {},
             'description': {},
@@ -554,6 +556,7 @@ class SQLAQueryBuilder(object):
         },
         'File': {
             'id': {},
+            'UUID': {},
             'filename': {},
             'name': {},
             'MIME_type': {},
@@ -704,6 +707,7 @@ class SQLAQueryBuilder(object):
         },
         'Orthography': {
             'id': {},
+            'UUID': {},
             'name': {},
             'orthography': {},
             'lowercase': {},
@@ -741,6 +745,7 @@ class SQLAQueryBuilder(object):
         },
         'Source': {
             'id': {},
+            'UUID': {},
             'file_id': {},
             'file': {'foreign_model': 'File', 'type': 'scalar'},
             'datetime_modified': {'value_converter': '_get_datetime_value'},
@@ -787,6 +792,7 @@ class SQLAQueryBuilder(object):
         },
         'Speaker': {
             'id': {},
+            'UUID': {},
             'first_name': {},
             'last_name': {},
             'dialect': {},
@@ -797,6 +803,7 @@ class SQLAQueryBuilder(object):
         },
         'SyntacticCategory': {
             'id': {},
+            'UUID': {},
             'name': {},
             'type': {},
             'description': {},
@@ -804,6 +811,7 @@ class SQLAQueryBuilder(object):
         },
         'User': {
             'id': {},
+            'UUID': {},
             'first_name': {},
             'last_name': {},
             'email': {},
@@ -819,6 +827,7 @@ class SQLAQueryBuilder(object):
         },
         'Tag': {
             'id': {},
+            'UUID': {},
             'name': {},
             'description': {},
             'datetime_modified': {'value_converter': '_get_datetime_value'}
@@ -836,6 +845,7 @@ class SQLAQueryBuilder(object):
         },
         'Keyboard': {
             'id': {},
+            'UUID': {},
             'name': {},
             'description': {},
             'datetime_modified': {'value_converter': '_get_datetime_value'},

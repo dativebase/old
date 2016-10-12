@@ -31,6 +31,7 @@ from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDS
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Source
 from onlinelinguisticdatabase.lib.bibtex import entry_types
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -280,6 +281,7 @@ def create_new_source(data):
 
     """
     source = Source()
+    source.UUID = unicode(uuid4())
     source.type = h.normalize(data['type'])
     source.key = h.normalize(data['key'])
     source.address = h.normalize(data['address'])

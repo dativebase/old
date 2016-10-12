@@ -26,6 +26,7 @@ class Tag(Base):
         return '<Tag (%s)>' % self.id
 
     id = Column(Integer, Sequence('tag_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     name = Column(Unicode(255), unique=True)
     description = Column(UnicodeText)
     datetime_modified = Column(DateTime, default=now)
@@ -33,6 +34,7 @@ class Tag(Base):
     def get_dict(self):
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'name': self.name,
             'description': self.description,
             'datetime_modified': self.datetime_modified

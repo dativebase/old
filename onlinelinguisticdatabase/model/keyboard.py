@@ -30,6 +30,7 @@ class Keyboard(Base):
         return "<Keyboard (%s)>" % self.id
 
     id = Column(Integer, Sequence('keyboard_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     name = Column(Unicode(255), unique=True)
     description = Column(UnicodeText)
     keyboard = Column(UnicodeText, default=u'{}')
@@ -56,6 +57,7 @@ class Keyboard(Base):
             keyboard = {}
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'name': self.name,
             'description': self.description,
             'keyboard': keyboard,

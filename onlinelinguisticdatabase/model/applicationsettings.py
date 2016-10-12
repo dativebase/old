@@ -52,6 +52,7 @@ class ApplicationSettings(Base):
 
     id = Column(Integer, Sequence('applicationsettings_seq_id', optional=True),
                 primary_key=True)
+    UUID = Column(Unicode(36))
     object_language_name = Column(Unicode(255))
     object_language_id = Column(Unicode(3))
     metalanguage_name = Column(Unicode(255))
@@ -88,6 +89,7 @@ class ApplicationSettings(Base):
         """
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'object_language_name': self.object_language_name,
             'object_language_id': self.object_language_id,
             'metalanguage_name': self.metalanguage_name,

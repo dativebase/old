@@ -29,6 +29,7 @@ class FormSearch(Base):
         return '<FormSearch (%s)>' % self.id
 
     id = Column(Integer, Sequence('formsearch_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     search = Column(UnicodeText)    # The search params as JSON
     description = Column(UnicodeText)
@@ -39,6 +40,7 @@ class FormSearch(Base):
     def get_dict(self):
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'name': self.name,
             'search': self.json_loads(self.search),
             'description': self.description,

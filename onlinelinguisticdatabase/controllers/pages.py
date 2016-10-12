@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Page
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -276,6 +277,7 @@ def create_new_page(data):
 
     """
     page = Page()
+    page.UUID = unicode(uuid4())
     page.name = h.normalize(data['name'])
     page.heading = h.normalize(data['heading'])
     page.markup_language = data['markup_language']

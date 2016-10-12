@@ -31,6 +31,7 @@ from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import SyntacticCategory
 from forms import update_forms_containing_this_form_as_morpheme
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -239,6 +240,7 @@ def create_new_syntactic_category(data):
 
     """
     syntactic_category = SyntacticCategory()
+    syntactic_category.UUID = unicode(uuid4())
     syntactic_category.name = h.normalize(data['name'])
     syntactic_category.type = data['type']
     syntactic_category.description = h.normalize(data['description'])

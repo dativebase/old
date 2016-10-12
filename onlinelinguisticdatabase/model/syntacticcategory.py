@@ -30,6 +30,7 @@ class SyntacticCategory(Base):
         return '<SyntacticCategory (%s)>' % self.id
 
     id = Column(Integer, Sequence('syntacticcategory_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     type = Column(Unicode(60))
     description = Column(UnicodeText)
@@ -38,6 +39,7 @@ class SyntacticCategory(Base):
     def get_dict(self):
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'name': self.name,
             'type': self.type,
             'description': self.description,

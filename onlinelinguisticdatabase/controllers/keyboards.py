@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Keyboard
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -280,6 +281,7 @@ def create_new_keyboard(data):
 
     """
     keyboard = Keyboard()
+    keyboard.UUID = unicode(uuid4())
     keyboard.name = h.normalize(data['name'])
     keyboard.description = h.normalize(data['description'])
     keyboard.keyboard = h.normalize(data['keyboard'])

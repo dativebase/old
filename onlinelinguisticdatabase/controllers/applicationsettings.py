@@ -30,6 +30,7 @@ from onlinelinguisticdatabase.lib.schemata import ApplicationSettingsSchema
 import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import ApplicationSettings
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -291,6 +292,7 @@ def create_new_application_settings(data):
 
     # Create the application_settings model object.
     application_settings = ApplicationSettings()
+    application_settings.UUID = unicode(uuid4())
     application_settings.object_language_name = data['object_language_name']
     application_settings.object_language_id = data['object_language_id']
     application_settings.metalanguage_name = data['metalanguage_name']

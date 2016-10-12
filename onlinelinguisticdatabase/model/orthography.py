@@ -26,6 +26,7 @@ class Orthography(Base):
         return '<Orthography (%s)>' % self.id
 
     id = Column(Integer, Sequence('orthography_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     orthography = Column(UnicodeText)
     lowercase = Column(Boolean, default=False)

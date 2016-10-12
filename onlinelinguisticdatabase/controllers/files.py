@@ -39,6 +39,7 @@ from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDS
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import File
 from onlinelinguisticdatabase.lib.resize import save_reduced_copy
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -492,6 +493,7 @@ def create_base64_file(data):
     data = schema.to_python(data, state)
 
     file = File()
+    file.UUID = unicode(uuid4())
     file.MIME_type = data['MIME_type']
     file.filename = h.normalize(data['filename'])
 
@@ -528,6 +530,7 @@ def create_externally_hosted_file(data):
     schema = FileExternallyHostedSchema()
     data = schema.to_python(data)
     file = File()
+    file.UUID = unicode(uuid4())
 
     # User-inputted string data
     file.name = h.normalize(data['name'])
@@ -559,6 +562,7 @@ def create_subinterval_referencing_file(data):
     data = schema.to_python(data, state)
 
     file = File()
+    file.UUID = unicode(uuid4())
 
     # Data unique to referencing subinterval files
     file.parent_file = data['parent_file']
@@ -599,6 +603,7 @@ def create_plain_file():
     data = schema.to_python(values)
 
     file = File()
+    file.UUID = unicode(uuid4())
     file.filename = h.normalize(data['filename'])
     file.MIME_type = data['MIME_type']
 

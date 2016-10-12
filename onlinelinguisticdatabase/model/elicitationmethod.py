@@ -26,6 +26,7 @@ class ElicitationMethod(Base):
         return '<ElicitationMethod (%s)>' % self.id
 
     id = Column(Integer, Sequence('elicitationmethod_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
     datetime_modified = Column(DateTime, default=now)

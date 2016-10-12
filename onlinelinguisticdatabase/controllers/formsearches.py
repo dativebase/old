@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import FormSearch
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -292,6 +293,7 @@ def create_new_form_search(data):
     """
 
     form_search = FormSearch()
+    form_search.UUID = unicode(uuid4())
     form_search.name = h.normalize(data['name'])
     form_search.search = data['search']      # Note that this is purposefully not normalized (reconsider this? ...)
     form_search.description = h.normalize(data['description'])

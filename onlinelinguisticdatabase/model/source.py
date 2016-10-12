@@ -30,6 +30,7 @@ class Source(Base):
         return '<Source (%s)>' % self.id
 
     id = Column(Integer, Sequence('source_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     file_id = Column(Integer, ForeignKey('file.id', ondelete='SET NULL'))
     file = relation('File')
     crossref_source_id = Column(Integer, ForeignKey('source.id', ondelete='SET NULL'))

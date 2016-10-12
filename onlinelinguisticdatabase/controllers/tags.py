@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Tag
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -232,6 +233,7 @@ def create_new_tag(data):
 
     """
     tag = Tag()
+    tag.UUID = unicode(uuid4())
     tag.name = h.normalize(data['name'])
     tag.description = h.normalize(data['description'])
     tag.datetime_modified = datetime.datetime.utcnow()

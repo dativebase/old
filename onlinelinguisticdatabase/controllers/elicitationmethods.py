@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import ElicitationMethod
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -230,6 +231,7 @@ def create_new_elicitation_method(data):
 
     """
     elicitation_method = ElicitationMethod()
+    elicitation_method.UUID = unicode(uuid4())
     elicitation_method.name = h.normalize(data['name'])
     elicitation_method.description = h.normalize(data['description'])
     elicitation_method.datetime_modified = datetime.datetime.utcnow()

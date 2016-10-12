@@ -30,6 +30,7 @@ import onlinelinguisticdatabase.lib.helpers as h
 from onlinelinguisticdatabase.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from onlinelinguisticdatabase.model.meta import Session
 from onlinelinguisticdatabase.model import Speaker
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -234,6 +235,7 @@ def create_new_speaker(data):
 
     """
     speaker = Speaker()
+    speaker.UUID = unicode(uuid4())
     speaker.first_name = h.normalize(data['first_name'])
     speaker.last_name = h.normalize(data['last_name'])
     speaker.dialect = h.normalize(data['dialect'])

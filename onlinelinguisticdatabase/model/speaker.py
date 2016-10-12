@@ -26,6 +26,7 @@ class Speaker(Base):
         return '<Speaker (%s)>' % self.id
 
     id = Column(Integer, Sequence('speaker_seq_id', optional=True), primary_key=True)
+    UUID = Column(Unicode(36))
     first_name = Column(Unicode(255))
     last_name = Column(Unicode(255))
     dialect = Column(Unicode(255))
@@ -37,6 +38,7 @@ class Speaker(Base):
     def get_dict(self):
         return {
             'id': self.id,
+            'UUID': self.UUID,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'dialect': self.dialect,
