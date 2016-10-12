@@ -68,3 +68,4 @@ class Globals(object):
             'Tag',
             'User',
         )
+        self.version = '2.0.0'

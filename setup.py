@@ -10,23 +10,24 @@ except ImportError:
 ################################################################################
 #
 # Set the version of this OLD using the version variable here. The following
-# lines then modify the info.py controller so that it stores the appropriate
+# lines then modify the app_globals.py module so that it stores the appropriate
 # version.
 import sys, os, re
 version = '2.0.0'
-p = re.compile('(^\s*[\'"]version[\'"]:\s*[\'"])([0-9\.]+)([\'"].*$)')
+p = re.compile('(^\s*self\.version\s*=\s*[\'"])([0-9\.]+)([\'"].*$)')
 wd = os.path.dirname(os.path.realpath(__file__))
-infopth = os.path.join(wd, 'onlinelinguisticdatabase', 'controllers', 'info.py')
+app_globals_path = os.path.join(
+    wd, 'onlinelinguisticdatabase', 'lib', 'app_globals.py')
 lines = []
 def fixer(match):
     return '%s%s%s' % (match.group(1), version, match.group(3))
-with open(infopth) as f:
+with open(app_globals_path) as f:
     for line in f:
         if p.search(line):
             lines.append(p.sub(fixer, line))
         else:
             lines.append(line)
-with open(infopth, 'w') as f:
+with open(app_globals_path, 'w') as f:
     f.write(''.join(lines))
 # Fix the version number in the onlinelinguisticdatabase/__init__.py file too:
 pkgfile = os.path.join(wd, 'onlinelinguisticdatabase', '__init__.py')

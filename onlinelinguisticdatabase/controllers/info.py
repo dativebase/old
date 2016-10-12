@@ -91,7 +91,7 @@ class InfoController(BaseController):
                     myroutes.append((path, method))
         meta = {
             'app': 'Online Lingusitic Database',
-            'version': '2.0.0',
+            'version': app_globals.version,
             'paths': ['%s %s' % (r[1], r[0]) for r in sorted(myroutes)],
             'resources': resources
         }
