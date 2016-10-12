@@ -8,13 +8,13 @@ models in the target (client-side) OLD.
 """
 
 import pprint
-from oldclient import OLDClient
+from onlinelinguisticdatabase.lib.oldclient import OLDClient
 
-CLIENT_URL = 'http://127.0.0.1:5000'
+CLIENT_URL = 'http://127.0.0.1:5001'
 CLIENT_USERNAME = 'admin'
 CLIENT_PASSWORD = 'adminA_1'
 
-MASTER_URL = 'http://127.0.0.1:5001'
+MASTER_URL = 'http://127.0.0.1:5000'
 MASTER_USERNAME = 'admin'
 MASTER_PASSWORD = 'adminA_1'
 

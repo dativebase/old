@@ -250,7 +250,7 @@ def create_new_sync_state(data):
 
     # Begin syncing if state is set thus.
     if sync_state.state == 'syncing':
-        sync_state.start_sync(app_globals.resource_model_names)
+        sync_state.start_sync()
 
     # The OLD sync logic determines the values of these attributes, not the
     # client.
@@ -282,7 +282,7 @@ def update_sync_state(sync_state, data):
     if original_state == 'syncing' and sync_state.state != 'syncing':
         sync_state.stop_sync()
     if original_state != 'syncing' and sync_state.state == 'syncing':
-        sync_state.start_sync(app_globals.resource_model_names)
+        sync_state.start_sync()
 
     if changed:
         sync_state.datetime_modified = datetime.datetime.utcnow()

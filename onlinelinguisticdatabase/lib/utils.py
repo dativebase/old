@@ -956,17 +956,15 @@ def get_paginated_query_results(query, paginator):
 
 def minimal(models_array):
     """Return a minimal representation of the models in `models_array`. Right
-    now, this means we just return the id, the datetime_entered and the
-    datetime_modified. Useful for graphing data and for checking for updates.
-
+    now, this means we just return the id, the UUID, and the datetime_modified.
+    Useful for graphing data and for checking for updates.
     """
-
     return [minimal_model(model) for model in models_array]
 
 def minimal_model(model):
     return {
         'id': model.id,
-        'datetime_entered': getattr(model, 'datetime_entered', None),
+        'UUID': getattr(model, 'UUID', None),
         'datetime_modified': getattr(model, 'datetime_modified', None)
     }
 
