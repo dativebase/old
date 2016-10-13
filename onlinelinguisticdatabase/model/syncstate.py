@@ -15,6 +15,7 @@
 """Sync State model."""
 
 import logging
+import simplejson as json
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from onlinelinguisticdatabase.model.meta import Base, now, Session, uuid_unicode
@@ -39,9 +40,15 @@ class SyncState(Base):
     between the current (assumedly client-side) OLD and another OLD living on a
     server. It is treated like any other resource.
 
-    TODO: there is a potential issue related to syncing and user authorization.
-    If the user is not an administrator or an unrestricted contributor, then
-    they may not be able to access all resources. How do we deal with this?
+    WARNING: there is a potential issue related to syncing and user
+    authorization.  If the user is not an administrator or an unrestricted
+    contributor, then they may not be able to access all resources. How do we
+    deal with this?
+
+    TODOs:
+
+    1. Create a testing environment that sets up two OLDs and confirms correct
+       syncing behaviour between the client and the master.
     """
 
     __tablename__ = 'syncstate'
@@ -62,10 +69,21 @@ class SyncState(Base):
     # How often to perform a sync, in seconds.
     interval = Column(Integer, default=3)
 
-    # Will hold JSON holding details about the last sync (attempt). For
-    # example, what resources were synced, at what times, and what their last
-    # modified timestamps looked like at the last sync.
-    sync_details = Column(UnicodeText)
+    # Holds a JSON object detailing the last sync (attempt). Currently planned
+    # schema::
+    #   {
+    #       "<resource_name>": {
+    #           "<UUID>": {
+    #               "master_id": "<master.resource.id>",
+    #               "client_id": "<client.resource.id>",
+    #               "sync": {
+    #                   "master_datetime_modified": "<master.resource.datetime_modified>"
+    #                   "client_datetime_modified": "<client.resource.datetime_modified>"
+    #               }
+    #           }
+    #       }
+    #   }
+    sync_details = Column(UnicodeText, default=u'{}')
 
     # When the last sync occurred
     last_sync = Column(DateTime)
@@ -114,8 +132,9 @@ class SyncState(Base):
         app_globals.scheduler.remove_job(self.UUID)
 
     def sync(self):
-        """Sync this OLD to the OLD at ``master_url``. This is the method that
-        is called in a separate thread at regular intervals.
+        """Sync this OLD to the OLD at ``master_url``. This is the scheduled
+        method, i.e., the one that is called in a separate thread at regular
+        intervals.
 
         Steps:
 
@@ -130,6 +149,22 @@ class SyncState(Base):
         the master to the state of the master when we last synced with it, and
         probably also to the current state of the client.
 
+        UUIDs are constant. So we create a JSON object that maps resource UUIDs
+        to objects that encode the last sync, if any. This information is held
+        in ``self.sync_details``::
+
+            {
+                "<resource_name>": {
+                    "<UUID>": {
+                        "master_id": "<master.resource.id>",
+                        "client_id": "<client.resource.id>",
+                        "sync": {
+                            "master_datetime_modified": "<master.resource.datetime_modified>"
+                            "client_datetime_modified": "<client.resource.datetime_modified>"
+                        }
+                    }
+                }
+            }
         """
         log.info('Attempting to sync with master OLD at {} using sync state'
                  ' model {}'.format(self.master_url, self.UUID))
@@ -139,8 +174,72 @@ class SyncState(Base):
                         ' {}'.format(self.master_url))
             return
         local_resources_state = self.get_local_resources_state()
-        #log.info(pprint.pformat(local_resources_state))
+
+        log.info('CLIENT RESOURCE STATE')
+        log.info(pprint.pformat(local_resources_state))
+
+        # TODO: in a single response, the master should be able to respond with
+        # its entire resource state (with HTTP caching). Use info.py controller.
         master_resources_state = self.get_master_resources_state()
+
+        log.info('MASTER RESOURCE STATE')
+        log.info(pprint.pformat(master_resources_state))
+
+        sync_details = json.loads(self.sync_details)
+        """
+        Syncing Algorithm:
+
+        1. Resource X is on master but not client.
+           Q: Has client synced X before (cf. sync_details)?
+           a. Yes. :. X has been deleted locally.
+              Q: Has X been changed on master since last sync (compare
+              sync_details to master state)?
+              i. Yes. :. CONFLICT.
+                 Q: Is remote modifier of X same as current user?
+                 I. Yes. :. Destroy X on master
+                 II. No. :. **Require user intervention?**
+              ii. No. :. Destroy X on master.
+           b. No. :. X was created remotely. Create X locally.
+
+        2. Resource X is on client but not master.
+           Q: Has client synced X before?
+           a. Yes. :. X has been destroyed remotely.
+              Q: Is remote destroyer same as current user?
+              i. Yes. :. Destroy X on client.
+              ii. No. **Require user intervention?**
+                  Choices:
+                  - destroy X on client.
+                  - destroy X on client and then recreate copy of it on client
+                    and master
+           b. No. :. Create X on master
+
+        3. Resource X is on client and on master.
+           - If X has changed on client AND master since last sync, ...
+             - If most recent change is on client, update master X to match
+               client X.
+             - If most recent change is on master, update client X to match
+               master X.
+           - ElIf X has changed on client AND NOT on master since last sync, ...
+             - Update master X to match client X.
+           - ElIf X has changed on master AND NOT on client since last sync, ...
+             - Update client X to match master X.
+           - Else
+             - Do nothing.
+        """
+        for mr_name, mr_state in master_resources_state.iteritems():
+            lr_state = local_resources_state[mr_name]
+            in_master_not_client = [uuid for uuid in mr_state if uuid not in
+                                    lr_state]
+            if in_master_not_client:
+                log.info('The following {} resources are in master but not'
+                         ' client: {}'.format(mr_name,
+                             ' '.join(in_master_not_client)))
+            in_client_not_master = [uuid for uuid in lr_state if uuid not in
+                                    mr_state]
+            if in_client_not_master:
+                log.info('The following {} resources are in client but not'
+                         ' master: {}'.format(mr_name,
+                             ' '.join(in_client_not_master)))
 
     def handshake(self):
         """Ping the master OLD and get its version number. Return ``True`` if
@@ -200,11 +299,11 @@ class SyncState(Base):
         each model instance/resource in the database.
         """
         model = getattr(onlinelinguisticdatabase.model, model_name)
-        return [(a, b, c.isoformat()) for a, b, c in
+        return dict([(uuid, (id_, dm.isoformat())) for id_, uuid, dm in
                 Session.query(model).with_entities(
                     model.id,
                     model.UUID,
-                    model.datetime_modified).all()]
+                    model.datetime_modified).all()])
 
     def get_master_resources_state(self):
         """Get the state of the resources on the master OLD that we want to
@@ -217,9 +316,13 @@ class SyncState(Base):
                     self.request_resource_signature(resource_name)
         return master_resources_state
 
+    # We have to use a paginator because of how the OLD's REST API currently
+    # works. Here we set items per page to 1M to (hopefully) get all.
+    # WARNING: just a hack until we fix the API or do recursive paginated
+    # requests.
     paginator = {
         'page': 1,
-        'items_per_page': 1000,
+        'items_per_page': 1000000,
         'minimal': 1
     }
 
@@ -255,9 +358,13 @@ class SyncState(Base):
         NOTE: the applicationsettings resource is unusual: it always returns an
         array of all application settings resources, and completely ignores
         pagination and minimal GET params.
-
         """
-        resource_state = []
-        r = self.old_client.get(resource_name, params=self.paginator)
-        log.info('Master resource state for {}'.format(resource_name))
-        log.info(r)
+        if resource_name == 'applicationsettings':
+            return dict([(r['UUID'], (r['id'], r['datetime_modified'])) for r in
+                         self.old_client.get(resource_name,
+                         params=self.paginator)])
+        else:
+            return dict([(r['UUID'], (r['id'], r['datetime_modified'])) for r in
+                         self.old_client.get(resource_name,
+                         params=self.paginator).get('items', [])])
+

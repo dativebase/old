@@ -45,8 +45,27 @@ def setup_app(command, conf, vars):
     contributor = h.generate_default_contributor(config_filename=filename)
     viewer = h.generate_default_viewer(config_filename=filename)
 
+    if config.get('sync_client') == '1':
+        log.info('Sync client setup.')
+
+        # TODO: why does this need to be repeated 3 times?
+        Base.metadata.create_all(bind=Session.bind, checkfirst=True)
+        log.info('Tables created.')
+
+        # When setting up a sync client, we just add the languages data and
+        # an administrator.
+        # TODO: it will probably be necessary to create a CLI (and maybe even a
+        # simple TKinter desktop GUI) that allows users to configure multiple
+        # client-side OLDs for syncing. This tool should be responsible for
+        # setting up the initial user and ensuring that that user has the same
+        # username and password as the server-side user model that the
+        # user/person is syncing via.
+        Session.add_all(languages + [administrator])
+        Session.commit()
+
     # If we are running tests, make sure the test db contains only language data.
-    if filename == 'test.ini':
+    elif filename == 'test.ini':
+        log.info('Test setup.')
         # Permanently drop any existing tables
         Base.metadata.drop_all(bind=Session.bind, checkfirst=True)
         log.info("Existing tables dropped.")
@@ -60,6 +79,7 @@ def setup_app(command, conf, vars):
 
     # Not a test: add a bunch of nice defaults.
     else:
+        log.info('Regular setup.')
         # Create the _requests_tests.py script
         requests_tests_path = os.path.join(config['pylons.paths']['root'], 'tests',
                                          'scripts', '_requests_tests.py')
