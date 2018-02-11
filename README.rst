@@ -1,5 +1,13 @@
 ================================================================================
-  The Online Linguistic Database (OLD)
+  Warning: Deprecated
+================================================================================
+
+This OLD is in the process of being deprecated. Do not use this code. Instead,
+please use the `current production OLD`_, rewritten using the `Pyramid
+framework`_.
+
+
+The Online Linguistic Database (OLD)
 ================================================================================
 
 .. image:: OLD-logo.png
@@ -47,4 +55,5 @@ and a MySQL database.
 .. _`Dative's web site`: http://www.dative.ca/
 .. _`Dative app`: http://app.dative.ca/
 .. _`Pylons web framework`: http://www.pylonsproject.org/projects/pylons-framework/about
-
+.. _`current production OLD`: https://github.com/dativebase/old-pyramid
+.. _`Pyramid framework`: https://trypyramid.com/
