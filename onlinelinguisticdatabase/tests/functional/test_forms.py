@@ -1731,6 +1731,7 @@ class TestFormsController(TestController):
 
         # Not logged in: expect 401 Unauthorized
         response = self.app.get(url('edit_form', id=restricted_form_id), status=401)
+
         resp = json.loads(response.body)
         assert response.content_type == 'application/json'
         assert resp['error'] == u'Authentication is required to access this resource.'

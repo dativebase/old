@@ -64,7 +64,7 @@ class LoginController(BaseController):
             user_from_username = Session.query(User).filter(User.username==username).first()
             if user_from_username:
                 salt = user_from_username.salt
-                password = unicode(h.encrypt_password(result['password'], str(salt)))
+                password = unicode(h.encrypt_password(result['password'], salt))
                 user = Session.query(User).filter(User.username==username).filter(
                     User.password==password).first()
                 if user:
@@ -124,7 +124,7 @@ class LoginController(BaseController):
                 try:
                     new_password = h.generate_password()
                     h.send_password_reset_email_to(user, new_password, config=config)
-                    user.password = unicode(h.encrypt_password(new_password, str(user.salt)))
+                    user.password = unicode(h.encrypt_password(new_password, user.salt))
                     Session.add(user)
                     Session.commit()
                     if os.path.split(config['__file__'])[-1] == 'test.ini':

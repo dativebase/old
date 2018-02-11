@@ -22,10 +22,10 @@ command.
 This module initializes the application via ``websetup`` (`paster
 setup-app`) and provides the base testing objects.
 """
-import StringIO
+from io import StringIO
 import gzip
 import os
-import simplejson as json
+import json
 from time import sleep
 import webtest
 from paste.deploy import appconfig
