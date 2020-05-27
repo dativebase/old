@@ -99,6 +99,7 @@ Files
         "Topic :: Education"
     ],
     install_requires=[
+        "Beaker==1.10.0",
         "WebTest<2.0",  # WebTest 2.0.1 requires WebOb>=1.2 and OLD needs WebOb <=1.1.1 -- conflict
         "Pylons==1.0",
         "FormEncode==1.2.4",    # vs. >= 1.2.5 include changes that break the OLD
