@@ -150,7 +150,11 @@ def make_app(global_conf, full_stack=False, static_files=True, **app_conf):
 
     # Routing/Session Middleware
     app = RoutesMiddleware(app, config['routes.map'], singleton=False)
-    app = SessionMiddleware(app, config)
+    app = SessionMiddleware(
+        app,
+        config,
+        samesite='None',
+        secure=True)
 
     # At some point it seems that Pylons converts the Content-Type of any
     # response without a 200 OK status to 'text/html; charset=utf-8'.  Well
