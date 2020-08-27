@@ -100,18 +100,21 @@ Files
     ],
     install_requires=[
         "Beaker==1.10.0",
-        "WebTest<2.0",  # WebTest 2.0.1 requires WebOb>=1.2 and OLD needs WebOb <=1.1.1 -- conflict
+        "WebTest==1.4.3",  # WebTest 2.0.1 requires WebOb>=1.2 and OLD needs WebOb <=1.1.1 -- conflict
         "Pylons==1.0",
+        "MarkupSafe==0.23",
         "FormEncode==1.2.4",    # vs. >= 1.2.5 include changes that break the OLD
-        "SQLAlchemy>=0.5,<=0.7.9",
-        "WebOb<=1.1.1",    # The OLD works with v. <= 1.1.1; Pylons 1.0 works with 1.1.1; DeprecationWarning logged :(
-        "Markdown",
-        "PassLib",
-        "docutils>=0.10",
-        "python-magic",  # interface to libmagic for guessing file type based on contents
-        "requests"  # http requests in Python made easy; good for testing a live system
+        "SQLAlchemy==0.7.9",
+        "WebOb==1.1.1",    # The OLD works with v. <= 1.1.1; Pylons 1.0 works with 1.1.1; DeprecationWarning logged :(
+        "mysqlclient==1.4.6",
+        "Markdown==2.6.5",
+        "Pygments==2.0.2",
+        "PassLib==1.6.5",
+        "docutils==0.12",
+        "python-magic==0.4.10",  # interface to libmagic for guessing file type based on contents
+        "requests==2.9.0"  # http requests in Python made easy; good for testing a live system
     ],
-    setup_requires=["PasteScript>=1.6.3"],
+    setup_requires=["PasteScript==2.0.2"],
     packages=find_packages(exclude=['ez_setup']),
     include_package_data=True,
     test_suite='nose.collector',
@@ -130,6 +133,6 @@ Files
     main = pylons.util:PylonsInstaller
     """,
     extras_require = {
-        'MySQL': ["mysql-python>-1.2"]
+        'MySQL': ["mysql-python==1.2.5"]
     } #'PIL': ["PIL"]  # Python Imagine Library (note: easy_install PIL fails for me ...)
 )
