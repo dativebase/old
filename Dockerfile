@@ -32,7 +32,6 @@ RUN mkdir -p /usr/src/old
 COPY . /usr/src/old
 WORKDIR /usr/src/old
 RUN python setup.py install
-EXPOSE 9091
 CMD tail -f /dev/null
 
 
